@@ -38,24 +38,30 @@ clo.setProblemData(y0(:),p(:));
 clo.settspan(tspan);
 clo.transient();
 clo.trajectory();
-X=clo.getX;
-t=linspace(tspan(1),tspan(2),length(X(:,1)));
+X=clo.getX();
+T=clo.getT();
+nStored=clo.getNstored();
+% t=linspace(tspan(1),tspan(2),length(X(:,1)));
 
 if ~exist('tracjectoryFigID','var'), tracjectoryFigID=figure();end
 figure(tracjectoryFigID)
 clf
 for i=1:nClick
     
-    x=X(:,i:nClick:end);
+    t=T(:,i); ixLast=find(t(2:end)==0,1,'first');
+    x=X(:,:,i);
     
-    tix=find(t>=tspan(1),1,'first'):length(t);
+    t=t(1:nStored(i));
+    x=x(1:nStored(i),:);
+    
+%     tix=find(t>=tspan(1),1,'first'):length(t);
 
     %Time plot
 
     subplot(nClick,1,i)
     
-    plot(t(tix),x(tix,varIx),'k')
-%     plot(t(tix)-t(tix(1)),x(tix,varIx),'k')  %start at t=0
+    plot(t,x(:,varIx),'k')
+    
     
 %     ylim([sys.opt.ylo,sys.opt.yhi])
     
