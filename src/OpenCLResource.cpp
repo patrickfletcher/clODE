@@ -459,5 +459,6 @@ std::string read_file(std::string filename) {
         if(sourceFile.fail()) 
             throw cl::Error(1, "Failed to open OpenCL source file");
         std::string sourceStr(std::istreambuf_iterator<char>(sourceFile),(std::istreambuf_iterator<char>()));
+        sourceFile.close();
 		return sourceStr;
 }
