@@ -48,22 +48,19 @@ figure(tracjectoryFigID)
 clf
 for i=1:nClick
     
-    t=T(:,i); ixLast=find(t(2:end)==0,1,'first');
+    t=T(:,i); 
     x=X(:,:,i);
     
-    t=t(1:nStored(i));
+    t=t(1:nStored(i)); 
+    t=t/1000/60;
+    
     x=x(1:nStored(i),:);
     
-%     tix=find(t>=tspan(1),1,'first'):length(t);
 
     %Time plot
-
-    subplot(nClick,1,i)
-    
+    ax=subplot(nClick,1,i);
     plot(t,x(:,varIx),'k')
     
-    
-%     ylim([sys.opt.ylo,sys.opt.yhi])
     
 % To do features, need to have mRHSfun...
 %     if doFeatures
@@ -78,6 +75,10 @@ for i=1:nClick
 %         thisFmatlab=observer_plateau(t,y,dy,aux,Times,obspars);
 %         Feats(:,i)=thisFmatlab(:);
 %     end
+
+    if i<nClick
+        ax.XTickLabel=[];
+    end
 
     title([pNames{parIx(1)} '=' num2str(p(i,parIx(1))) ', ' pNames{parIx(2)} '=' num2str(p(i,parIx(2)))]);
     xlabel('t'); ylabel(vNames{varIx});
