@@ -1,4 +1,4 @@
-function [t,x,dY]=clickTrajectory(clickAxis,~,clo,ivp,pin,y0in,tspan,parIx,varIx,tracjectoryFigID,nClick,markerColor)
+function clickTrajectory(clickAxis,~,clo,ivp,pin,y0in,tspan,parIx,varIx,tracjectoryFigID,nClick,markerColor)
 %A mouse click inside the axes will trigger a parameter
 %selection crosshair. A second click selects a parameter
 %combination to simulate, and resulting simulation is displayed
@@ -27,62 +27,81 @@ if ~isempty(oldMarks)
     delete(oldMarks);
 end
 
-for i=1:nClick
+for n=1:nClick
     [px,py]=ginput(1);
-    p(i,parIx(1))=px;
-    p(i,parIx(2))=py;
-    h(i)=line(px,py,'marker',markers(i),'linestyle','none','color',markerColor,'linewidth',1,'tag','marks');
+    p(n,parIx(1))=px;
+    p(n,parIx(2))=py;
+    h(n)=line(px,py,'marker',markers(n),'linestyle','none','color',markerColor,'linewidth',1,'tag','marks');
 end
 
 clo.setProblemData(y0(:),p(:));
 clo.settspan(tspan);
 clo.transient();
-clo.trajectory();
-X=clo.getX();
-T=clo.getT();
-nStored=clo.getNstored();
-% t=linspace(tspan(1),tspan(2),length(X(:,1)));
 
 if ~exist('tracjectoryFigID','var'), tracjectoryFigID=figure();end
-figure(tracjectoryFigID)
+hf=figure(tracjectoryFigID);
+
+hf.KeyPressFcn=@keypress;
+
 clf
-for i=1:nClick
-    
-    t=T(:,i); 
-    x=X(:,:,i);
-    
-    t=t(1:nStored(i)); 
-    t=t/1000/60;
-    
-    x=x(1:nStored(i),:);
-    
+[X,T,nStored]=integrate();
+plotTrajectories(X,T,nStored);
 
-    %Time plot
-    ax=subplot(nClick,1,i);
-    plot(t,x(:,varIx),'k')
-    
-    
-% To do features, need to have mRHSfun...
-%     if doFeatures
-%         
-%         dy=zeros(length(t),nVar);
-%         aux=zeros(length(t),nAux);
-%         for i=1:length(t)
-%             [tmpdy, tmpaux]=mRHSfun(t(i),thisY(i,:));
-%             dy(i,:)=tmpdy(:)';
-%         end
-%         
-%         thisFmatlab=observer_plateau(t,y,dy,aux,Times,obspars);
-%         Feats(:,i)=thisFmatlab(:);
-%     end
-
-    if i<nClick
-        ax.XTickLabel=[];
+    function [X,T,nStored]=integrate()
+        clo.trajectory();
+        X=clo.getX();
+        T=clo.getT();
+        nStored=clo.getNstored();
     end
 
-    title([pNames{parIx(1)} '=' num2str(p(i,parIx(1))) ', ' pNames{parIx(2)} '=' num2str(p(i,parIx(2)))]);
-    xlabel('t'); ylabel(vNames{varIx});
-    
-end
+    function keypress(src,evt)
+        switch(evt.Key)
+            case 'c'
+                [X,T,nStored]=integrate();
+                plotTrajectories(X,T,nStored);
+        end 
+    end
+
+    function plotTrajectories(X,T,nStored)
+        
+        for i=1:nClick
+            
+            t=T(:,i);
+            x=X(:,:,i);
+            
+            t=t(1:nStored(i));
+            t=t/1000/60;
+            
+            x=x(1:nStored(i),:);
+            
+            
+            %Time plot
+            ax=subplot(nClick,1,i);
+            plot(t,x(:,varIx),'k')
+            
+            
+            % To do features, need to have mRHSfun...
+            %     if doFeatures
+            %
+            %         dy=zeros(length(t),nVar);
+            %         aux=zeros(length(t),nAux);
+            %         for i=1:length(t)
+            %             [tmpdy, tmpaux]=mRHSfun(t(i),thisY(i,:));
+            %             dy(i,:)=tmpdy(:)';
+            %         end
+            %
+            %         thisFmatlab=observer_plateau(t,y,dy,aux,Times,obspars);
+            %         Feats(:,i)=thisFmatlab(:);
+            %     end
+            
+            if i<nClick
+                ax.XTickLabel=[];
+            end
+            
+            title([pNames{parIx(1)} '=' num2str(p(i,parIx(1))) ', ' pNames{parIx(2)} '=' num2str(p(i,parIx(2)))]);
+            xlabel('t'); ylabel(vNames{varIx});
+            
+        end
+    end
 
 end
