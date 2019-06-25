@@ -36,7 +36,7 @@ end
 
 clo.setProblemData(y0(:),p(:));
 clo.settspan(tspan);
-clo.transient();
+% clo.transient();
 
 if ~exist('tracjectoryFigID','var'), tracjectoryFigID=figure();end
 hf=figure(tracjectoryFigID);
