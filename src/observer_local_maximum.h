@@ -1,11 +1,11 @@
 //use local maxima as events
 
+#ifndef OBSERVER_LOCAL_EXTREMUM_H
+#define OBSERVER_LOCAL_EXTREMUM_H
 
 #include "observers.h"
 #include "clODE_utilities.h"
 
-#ifndef OBSERVER_LOCAL_EXTREMUM_H
-#define OBSERVER_LOCAL_EXTREMUM_H
 
 //events are triggered at local maxima in the variable specified by op.fVarIx
 
@@ -62,6 +62,7 @@ void initializeObserverData(realtype *ti, realtype xi[], realtype dxi[], realtyp
 	//od->tMaxMin[1]= BIG_REAL;
 	//od->tMaxMin[2]= 0;
 	
+	
 	od->xMax[0]=-BIG_REAL;
 	od->xMax[1]= BIG_REAL;
 	od->xMax[2]= 0;
@@ -70,6 +71,9 @@ void initializeObserverData(realtype *ti, realtype xi[], realtype dxi[], realtyp
 	od->xMin[1]= BIG_REAL;
 	od->xMin[2]= 0;
 	
+	od->xLastMin=BIG_REAL;
+	od->tLastMin=0;
+
 	od->eventcount=0;
 	od->stepcount=0;
 	od->buffer_filled=0;
@@ -170,17 +174,19 @@ void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype au
 	od->dxMin=MIN(od->dxMin,dxi[op->fVarIx]);
 	runningMean(&od->xTrajectoryMean, xi[op->fVarIx], od->stepcount);
 	
-	//local max check - simply overwrite tLastMin, xLastMin
-	if (od->dxbuffer[1] <= op->eps_dx && od->dxbuffer[2] > op->eps_dx ) {
-		int ix=0;
-		maxOfArray(od->xbuffer, BUFFER_SIZE, &od->xLastMin, &ix);
-		od->tLastMin=od->tbuffer[ix];
-	}
+	//local min check - one between each max - simply overwrite tLastMin, xLastMin
+	// if (od->dxbuffer[1] <= op->eps_dx && od->dxbuffer[2] > op->eps_dx ) {
+	// 	int ix=0;
+	// 	minOfArray(od->xbuffer, BUFFER_SIZE, &od->xLastMin, &ix);
+	// 	od->tLastMin=od->tbuffer[ix];
+	// }
+	od->xLastMin=MIN(od->xLastMin,xi[op->fVarIx]);
 	
+	//reset intermediate feature storage. Should this be here, or in "computeEventFeatures"?
 	if (eventOccurred) { 
-		//reset event-based quantities like peaksPerEvent...
-		//od->dxMax=-BIG_REAL; //only if even dxMax/min
+		//od->dxMax=-BIG_REAL; //only if looking for event dxMax/min
 		//od->dxMin= BIG_REAL;
+		od->xLastMin=BIG_REAL;
 	}
 }
 
@@ -196,12 +202,12 @@ void finalizeFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi
 	//F[ix++*nPts+i]=od->eventcount>1?od->tMaxMin[0]:0;
 	//F[ix++*nPts+i]=od->eventcount>1?od->tMaxMin[1]:0;
 	//F[ix++*nPts+i]=od->tMaxMin[2];
-	F[ix++*nPts+i]=od->eventcount>0?od->xMax[0]:0;
-	F[ix++*nPts+i]=od->eventcount>0?od->xMax[1]:0;
-	F[ix++*nPts+i]=od->xMax[2];
-	F[ix++*nPts+i]=od->eventcount>0?od->xMin[0]:0;
-	F[ix++*nPts+i]=od->eventcount>0?od->xMin[1]:0;
-	F[ix++*nPts+i]=od->xMin[2];
+	F[ix++*nPts+i]=od->eventcount>0?od->xMax[0]:xi[op->fVarIx];
+	F[ix++*nPts+i]=od->eventcount>0?od->xMax[1]:xi[op->fVarIx];
+	F[ix++*nPts+i]=od->eventcount>0?od->xMax[2]:xi[op->fVarIx];
+	F[ix++*nPts+i]=od->eventcount>0?od->xMin[0]:xi[op->fVarIx];
+	F[ix++*nPts+i]=od->eventcount>0?od->xMin[1]:xi[op->fVarIx];
+	F[ix++*nPts+i]=od->eventcount>0?od->xMin[2]:xi[op->fVarIx];
 	F[ix++*nPts+i]=od->dxMax;
 	F[ix++*nPts+i]=od->dxMin;
 	F[ix++*nPts+i]=od->xTrajectoryMean;
