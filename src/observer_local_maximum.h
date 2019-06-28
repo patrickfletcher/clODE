@@ -13,6 +13,10 @@
 #define BUFFER_SIZE 3
 
 typedef struct ObserverData {
+	int eventcount;
+    int stepcount;
+    int buffer_filled;
+
 	realtype tbuffer[BUFFER_SIZE];
     realtype xbuffer[BUFFER_SIZE]; 
     realtype dxbuffer[BUFFER_SIZE];
@@ -36,10 +40,7 @@ typedef struct ObserverData {
 	//realtype tMaxMin[3]; //max/min/mean
 	realtype xMax[3]; //max/min/mean
 	realtype xMin[3]; //max/min/mean
-	
-	int eventcount;
-    int stepcount;
-    int buffer_filled;
+
 }ObserverData;
 //size: (3*BUFFER_SIZE + 6 + 3*3)*realtype + 2 int 
 

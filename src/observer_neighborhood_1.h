@@ -6,7 +6,7 @@
 #include "observers.h"
 #include "clODE_utilities.h"
 
-//idea: event trigger is return to an "epsilon ball" surrounding the first observed state. Count local maxima between.
+//idea: event trigger is return to an "epsilon ball" surrounding the first observed state. Count local maxima, IMIs between.
 
 //Use a solution buffer of 3 steps to detect extrema
 #define BUFFER_SIZE 3
@@ -32,7 +32,6 @@ typedef struct ObserverData {
 	
 	realtype IMI[3]; //max/min/mean
 	realtype amp[3]; //max/min/mean
-	//realtype tMaxMin[3]; //max/min/mean
 	realtype xMax[3]; //max/min/mean
 	realtype xMin[3]; //max/min/mean
 	

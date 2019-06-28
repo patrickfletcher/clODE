@@ -6,6 +6,7 @@ odefile='lactotroph.ode';
 [~,prob]=ode2cl(odefile,[],clSinglePrecision);
 
 stepper='dorpri5';
+% stepper='bs23'; 
 % stepper='rk4'; 
 vendor='nvidia';
 % vendor='intel';
@@ -14,11 +15,21 @@ observer='localmax';
 
 sp.dt=0.1;
 sp.dtmax=10.00;
-sp.abstol=1e-7;
-sp.reltol=1e-5;
+sp.abstol=1e-6;
+sp.reltol=1e-4;
 sp.max_steps=100000;
 sp.max_store=20000; %making this bigger than adaptive solver needs slows things down
 sp.nout=1;
+
+spt=sp;
+% spt.dt=10;
+% spt.dtmax=150.00;
+% spt.abstol=1e-7;
+% spt.reltol=1e-5;
+% spt.max_steps=1000000;
+% spt.max_store=20000; %making this bigger than adaptive solver needs slows things down
+% spt.nout=1;
+spt.nout=3;
 
 %allocated number of timepoints: min( (tf-t0)/(dt*nout)+1 , max_store).
 %if not enough, tf is not reached. may be too many for adaptive stepper
@@ -38,8 +49,10 @@ op.eps_dx=1e-6;
 
 clo=clODEfeatures(prob, stepper, observer, clSinglePrecision,vendor,devicetype);
 
+cloTraj=clODEtrajectory(prob, stepper, clSinglePrecision,vendor,devicetype);
+
 %%
-tspan=[0,100000];
+tspan=[0,10000];
 nGrid=[32,32];
 
 nPts=prod(nGrid);
@@ -74,6 +87,10 @@ P(:,p2ix)=P2(:);
 clo.initialize(tspan, X0(:), P(:), sp, op);
 clo.seedRNG(0)
 
+X0t=repmat(x0,1,1);
+Pt=repmat(p,1,1);
+cloTraj.initialize(tspan, X0t(:), Pt(:), spt);
+
 %%
 tic
 clo.transient();
@@ -95,7 +112,8 @@ fix=2;
 f=reshape(F(:,fix),nGrid);
 
 figure(1); clf
-imagesc(p1,p2,f)
+hi=imagesc(p1,p2,f);
+hi.HitTest='off';
 set(gca,'ydir','normal');
 hcb=colorbar('northoutside');
 xlabel(prob.parNames(p1ix));
@@ -103,6 +121,9 @@ ylabel(prob.parNames(p2ix));
 
 title(hcb,clo.fNames{fix})
 
+ax=gca;
 axis square
 
-drawnow
+nClick=3;
+
+ax.ButtonDownFcn={@clickTrajectory,cloTraj,prob,p,x0,tspan,[p1ix,p2ix],1,2,nClick};

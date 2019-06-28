@@ -11,6 +11,7 @@
 #ifndef STEPPERS_H_
 #define STEPPERS_H_
 
+#include "realtype.h"
 #include "clODE_struct_defs.h" //for SolverParams struct definition
 
 //forward declaration of the RHS function

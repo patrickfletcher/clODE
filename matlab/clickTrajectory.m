@@ -78,7 +78,7 @@ plotTrajectories(X,T,nStored);
             %Time plot
             ax=subplot(nClick,1,i);
             plot(t,x(:,varIx),'k')
-            
+            xlim([t(1),t(end)]);
             
             % To do features, need to have mRHSfun...
             %     if doFeatures

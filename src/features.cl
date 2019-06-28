@@ -84,26 +84,28 @@ if (doInitialization==1) {
 	}
 	
 	//rewind state to t0, x0, RNG0
+	//or just reset ti->t0?
 	ti = tspan[0];
-	dt=sp->dt;
 
-	for (int j=0; j<N_VAR;++j) 
-		xi[j] = x0[j*nPts + i];
+	// dt=sp->dt;
 
-	for (int j=0; j<N_RNGSTATE; ++j)
-		rd.state[j]=RNGstate[j*nPts+i];
+	// for (int j=0; j<N_VAR;++j) 
+	// 	xi[j] = x0[j*nPts + i];
 
-	rd.randnUselast=0;
+	// for (int j=0; j<N_RNGSTATE; ++j)
+	// 	rd.state[j]=RNGstate[j*nPts+i];
+
+	// rd.randnUselast=0;
 		
-	#ifdef ADAPTIVE_STEPSIZE 
-	for (int j=0; j<N_WIENER; ++j)
-		wi[j]=RCONST(0.0);  
-	#else
-	for (int j=0; j<N_WIENER; ++j)
-		wi[j]=randn(&rd)/sqrt(dt);   
-	#endif   
+	// #ifdef ADAPTIVE_STEPSIZE 
+	// for (int j=0; j<N_WIENER; ++j)
+	// 	wi[j]=RCONST(0.0);  
+	// #else
+	// for (int j=0; j<N_WIENER; ++j)
+	// 	wi[j]=randn(&rd)/sqrt(dt);   
+	// #endif   
 		
-	getRHS(ti, xi, p, dxi, auxi, wi);
+	// getRHS(ti, xi, p, dxi, auxi, wi);
 	
 #endif //TWO_PASS_EVENT_DETECTOR
 

@@ -1,5 +1,5 @@
 /* clODE: a simulator class to run parallel ODE simulations on OpenCL capable hardware.
- * A clODE simulator solves on initial value problem over a grid of parameters and/or initial conditions. At each timestep,
+ * A clODE simulator solves on initial value problem for a set of (parameters, initial conditions). At each timestep,
  * "observer" rountine may be called to record/store/compute features of the solutions. Examples include storing the full
  * trajectory, recording the times and values of local extrema in a variable of the system, or directly computing other 
  * features of the trajectory.  
@@ -7,9 +7,7 @@
 
 //TODO: namespaces?
 
-//TODO: break up computation (timespan) into chunks that don't crash the system...
-
-//TODO: separate build/initialize kernel from initialize?
+//TODO: break up computation (timespan) into chunks that don't crash the system. some fine-grained max time chunk to run a kernel, a while loop in C++ to do all chunks
 
 //TODO: choosing specific RNG - get nRNGstate using a switch
 

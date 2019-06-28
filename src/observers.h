@@ -83,13 +83,11 @@ struct ObserverParams{
 //Threshold-based event detection with relative thresholds in a specified variable xi. 
 // Need to measure the extent of state-space trajectory visits, then compute thresholds as fractions of range
 #ifdef OBSERVER_SECTION_2
-#define TWO_PASS_EVENT_DETECTOR
 #include "observer_section_2.h"
 #endif
 
 //Use a first pass to find a good Xstart (e.g. absolute min of slowest variable)
 #ifdef OBSERVER_NEIGHBORHOOD_2
-#define TWO_PASS_EVENT_DETECTOR
 #include "observer_neighborhood_2.h"
 #endif
 
