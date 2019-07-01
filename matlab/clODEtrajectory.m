@@ -8,6 +8,7 @@ classdef clODEtrajectory<clODE
         nStored
         
         t
+        tscale=1 %conversion factor for time units for display
         x
         dx
         aux

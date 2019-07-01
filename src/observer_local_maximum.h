@@ -3,23 +3,17 @@
 #ifndef OBSERVER_LOCAL_EXTREMUM_H
 #define OBSERVER_LOCAL_EXTREMUM_H
 
+#include "realtype.h"
 #include "observers.h"
 #include "clODE_utilities.h"
 
-
 //events are triggered at local maxima in the variable specified by op.fVarIx
 
-//Use a solution buffer of 3 steps to detect extrema
-#define BUFFER_SIZE 3
-
 typedef struct ObserverData {
-	int eventcount;
-    int stepcount;
-    int buffer_filled;
 
-	realtype tbuffer[BUFFER_SIZE];
-    realtype xbuffer[BUFFER_SIZE]; 
-    realtype dxbuffer[BUFFER_SIZE];
+	realtype tbuffer[3];
+    realtype xbuffer[3]; 
+    realtype dxbuffer[3];
     
 	realtype xTrajectoryMean;
 	//~ realtype nDistinctEvents[N_DISTINCT_MAX];
@@ -41,39 +35,48 @@ typedef struct ObserverData {
 	realtype xMax[3]; //max/min/mean
 	realtype xMin[3]; //max/min/mean
 
+	int eventcount;
+    int stepcount;
+    int buffer_filled; //something fails with bool
+
 }ObserverData;
-//size: (3*BUFFER_SIZE + 6 + 3*3)*realtype + 2 int 
+//size: (3*3 + 6 + 4*3)*realtype + 3 int 
 
 
 //set initial values to relevant fields in ObserverData
 void initializeObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op) {
 	
+	od->tbuffer[2]=*ti;
+	od->xbuffer[2]=xi[op->fVarIx];
+	od->dxbuffer[2]=dxi[op->fVarIx];
+
+	od->xTrajectoryMean=RCONST(0.0);
 	od->dxMax=-BIG_REAL;
 	od->dxMin= BIG_REAL;
 	
 	od->IMI[0]=-BIG_REAL;
 	od->IMI[1]= BIG_REAL;
-	od->IMI[2]= 0;
+	od->IMI[2]= RCONST(0.0);
 	
 	od->amp[0]=-BIG_REAL;
 	od->amp[1]= BIG_REAL;
-	od->amp[2]= 0;
+	od->amp[2]= RCONST(0.0);
 	
 	//od->tMaxMin[0]=-BIG_REAL;
 	//od->tMaxMin[1]= BIG_REAL;
-	//od->tMaxMin[2]= 0;
+	//od->tMaxMin[2]= RCONST(0.0);
 	
 	
 	od->xMax[0]=-BIG_REAL;
 	od->xMax[1]= BIG_REAL;
-	od->xMax[2]= 0;
+	od->xMax[2]= RCONST(0.0);
 	
 	od->xMin[0]=-BIG_REAL;
 	od->xMin[1]= BIG_REAL;
-	od->xMin[2]= 0;
+	od->xMin[2]= RCONST(0.0);
 	
 	od->xLastMin=BIG_REAL;
-	od->tLastMin=0;
+	od->tLastMin=RCONST(0.0);
 
 	od->eventcount=0;
 	od->stepcount=0;
@@ -91,6 +94,7 @@ void initializeEventDetector(realtype *ti, realtype xi[], realtype dxi[], realty
 
 //check buffer of slopes for local max
 bool eventFunction(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op) {
+
 	if (od->buffer_filled==1) {
 		return (od->dxbuffer[1] >= -op->eps_dx && od->dxbuffer[2] < -op->eps_dx );
 	}
@@ -107,7 +111,7 @@ bool computeEventFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype 
 	
 	//Simple Max of xbuffer  
 	int ix=0;
-	maxOfArray(od->xbuffer, BUFFER_SIZE, &xThisMax, &ix);
+	maxOfArray(od->xbuffer, 3, &xThisMax, &ix);
 	tThisMax=od->tbuffer[ix];
 	
 	//Quadratic interpolation for improved accuracy BROKEN??
@@ -117,11 +121,11 @@ bool computeEventFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype 
 	od->xMax[1]=MIN(xThisMax, od->xMax[1]);
 	runningMean(&od->xMax[2],xThisMax,od->eventcount-1);
 	
-	od->xMin[0]=MAX(od->xLastMin, od->xMin[0]);
-	od->xMin[1]=MIN(od->xLastMin, od->xMin[1]);
-	runningMean(&od->xMin[2],od->xLastMin,od->eventcount-1);
-	
 	if (od->eventcount>1) {//implies tLastMax, tLastMin and xLastMin are set
+	
+		od->xMin[0]=MAX(od->xLastMin, od->xMin[0]); //must have had two maxima to have found one minimum
+		od->xMin[1]=MIN(od->xLastMin, od->xMin[1]);
+		runningMean(&od->xMin[2],od->xLastMin,od->eventcount-1);
 		
 		//max/min/mean IMI
 		thisIMI = tThisMax - od->tLastMax;
@@ -156,38 +160,38 @@ bool computeEventFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype 
 // - reset intermediates upon local max event detection
 void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[],  ObserverData *od, __constant struct ObserverParams *op, bool eventOccurred) {
 	
-    ++od->stepcount;
-    
-    if (od->stepcount>BUFFER_SIZE && od->buffer_filled==0) { od->buffer_filled=1;}
+    // ++od->stepcount;
+    if (od->stepcount>2 && od->buffer_filled==0) { od->buffer_filled=1;}
     
 	//advance solution buffer
-	for (int i=0; i<BUFFER_SIZE-1; ++i) {
+	for (int i=0; i<2; ++i) {
 		od->tbuffer[i]=od->tbuffer[i+1];
 		od->xbuffer[i]=od->xbuffer[i+1];
 		od->dxbuffer[i]=od->dxbuffer[i+1];
 	}
-	od->tbuffer[BUFFER_SIZE-1]=*ti;
-	od->xbuffer[BUFFER_SIZE-1]=xi[op->fVarIx];
-	od->dxbuffer[BUFFER_SIZE-1]=dxi[op->fVarIx];
+	od->tbuffer[2]=*ti;
+	od->xbuffer[2]=xi[op->fVarIx];
+	od->dxbuffer[2]=dxi[op->fVarIx];
 	
 	//global dxMax, dxMin
 	od->dxMax=MAX(od->dxMax,dxi[op->fVarIx]); 
 	od->dxMin=MIN(od->dxMin,dxi[op->fVarIx]);
 	runningMean(&od->xTrajectoryMean, xi[op->fVarIx], od->stepcount);
 	
-	//local min check - one between each max - simply overwrite tLastMin, xLastMin
-	// if (od->dxbuffer[1] <= op->eps_dx && od->dxbuffer[2] > op->eps_dx ) {
-	// 	int ix=0;
-	// 	minOfArray(od->xbuffer, BUFFER_SIZE, &od->xLastMin, &ix);
-	// 	od->tLastMin=od->tbuffer[ix];
-	// }
-	od->xLastMin=MIN(od->xLastMin,xi[op->fVarIx]);
-	
-	//reset intermediate feature storage. Should this be here, or in "computeEventFeatures"?
-	if (eventOccurred) { 
-		//od->dxMax=-BIG_REAL; //only if looking for event dxMax/min
-		//od->dxMin= BIG_REAL;
-		od->xLastMin=BIG_REAL;
+	if (od->buffer_filled==1) {
+
+		//local min check - one between each max - simply overwrite tLastMin, xLastMin
+		if (od->dxbuffer[1] <= op->eps_dx && od->dxbuffer[2] > op->eps_dx ) {
+			int ix;
+			minOfArray(od->xbuffer, 3, &od->xLastMin, &ix);
+			od->tLastMin=od->tbuffer[ix];
+		}
+		// od->xLastMin=MIN(od->xLastMin,xi[op->fVarIx]);
+		
+		//reset intermediate feature storage. Should this be here, or in "computeEventFeatures"?
+		if (eventOccurred) { 
+			
+		}
 	}
 }
 
@@ -222,7 +226,7 @@ void finalizeObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype 
 	realtype T=*ti-tspan[0];
 	od->tLastMax=od->tLastMax-T;
 	od->tLastMin=od->tLastMin-T;
-	for (int i=0; i<BUFFER_SIZE; ++i) {
+	for (int i=0; i<3; ++i) {
 		od->tbuffer[i]=od->tbuffer[i]-T; }
 }
 

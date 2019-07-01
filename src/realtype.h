@@ -7,7 +7,7 @@
 #if defined(CLODE_SINGLE_PRECISION)
 
 typedef float realtype;
-# define RCONST(x) x##F
+# define RCONST(x) (x##f)
 # define BIG_REAL FLT_MAX
 # define SMALL_REAL FLT_MIN
 # define UNIT_ROUNDOFF FLT_EPSILON

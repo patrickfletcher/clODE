@@ -26,6 +26,7 @@ realtype ti, dt;
 realtype xi[N_VAR],dxi[N_VAR],auxi[N_AUX];
 realtype p[N_PAR], wi[N_WIENER];
 rngData rd;
+int step, stepflag;
 
 //get private copy of ODE parameters, initial data, and compute slope at initial state
 ti = tspan[0];
@@ -53,7 +54,7 @@ for (int j=0; j<N_WIENER; ++j)
 getRHS(ti, xi, p, dxi, auxi, wi); //slope at initial point, needed for FSAL steppers (bs23, dorpri5)
  
 
-ObserverData odata = OData[i]; //private copy of event data
+ObserverData odata = OData[i]; //private copy of observer data
 
 
 if (doInitialization==1) {
@@ -62,8 +63,8 @@ if (doInitialization==1) {
 	
 #ifdef TWO_PASS_EVENT_DETECTOR
 	
-	int step=0;
-	int stepflag=0;
+	step=0;
+	stepflag=0;
 	while (ti < tspan[1] && step<sp->max_steps && stepflag==0) {
 		
 		++step;
@@ -118,12 +119,15 @@ if (doInitialization==1) {
 
 
 //time-stepping loop, main time interval
-int step=0;
-int stepflag=0;
+step=0;
+stepflag=0;
+bool eventOccurred=false;
 bool terminalEvent=false;
-while (ti < tspan[1] && step<sp->max_steps && stepflag==0 && !terminalEvent) {
+while (ti < tspan[1] && step<sp->max_steps && stepflag==0) {
 	
 	++step;
+	++odata.stepcount;
+	
 #ifdef ADAPTIVE_STEPSIZE
 	//leave the wi=0 for adaptive steppers
 	stepflag=stepper(&ti, xi, dxi, p, sp, &dt, tspan, auxi, wi); 
@@ -137,9 +141,10 @@ while (ti < tspan[1] && step<sp->max_steps && stepflag==0 && !terminalEvent) {
 #endif
 
 	//FSAL: dxi is at new ti, Not FSAL: dxi is at old ti
-	bool eventOccurred=eventFunction(&ti, xi, dxi, auxi, &odata, opars);
+	eventOccurred=eventFunction(&ti, xi, dxi, auxi, &odata, opars);
 	if (eventOccurred) {
 		terminalEvent=computeEventFeatures(&ti, xi, dxi, auxi, &odata, opars);
+		if (terminalEvent){break;};
 	}
 	
 	updateObserverData(&ti, xi, dxi, auxi, &odata, opars, eventOccurred);  //TODO: if not FSAL, dxi buffer is delayed by one. (dxi is slope at LAST timestep)

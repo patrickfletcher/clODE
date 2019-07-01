@@ -11,12 +11,12 @@ stepper='dorpri5';
 vendor='nvidia';
 % vendor='intel';
 devicetype='default';
-observer='localmax';
+observer='nhood2';
 
 sp.dt=0.1;
-sp.dtmax=10.00;
-sp.abstol=1e-6;
-sp.reltol=1e-4;
+sp.dtmax=1.00;
+sp.abstol=1e-7;
+sp.reltol=1e-7;
 sp.max_steps=100000;
 sp.max_store=20000; %making this bigger than adaptive solver needs slows things down
 sp.nout=1;
@@ -29,7 +29,7 @@ spt=sp;
 % spt.max_steps=1000000;
 % spt.max_store=20000; %making this bigger than adaptive solver needs slows things down
 % spt.nout=1;
-spt.nout=3;
+spt.nout=1;
 
 %allocated number of timepoints: min( (tf-t0)/(dt*nout)+1 , max_store).
 %if not enough, tf is not reached. may be too many for adaptive stepper
@@ -45,7 +45,7 @@ op.xUpThresh=0.3;
 op.xDownThresh=0.2;
 op.dxUpThresh=0;
 op.dxDownThresh=0;
-op.eps_dx=1e-6;
+op.eps_dx=1e-10;
 
 clo=clODEfeatures(prob, stepper, observer, clSinglePrecision,vendor,devicetype);
 
@@ -90,25 +90,37 @@ clo.seedRNG(0)
 X0t=repmat(x0,1,1);
 Pt=repmat(p,1,1);
 cloTraj.initialize(tspan, X0t(:), Pt(:), spt);
-
+cloTraj.tscale=1/1000;
 %%
 tic
 clo.transient();
 toc
-%
+
+tic
+clo.transient();
+toc
+% 
+% tic
+% clo.transient();
+% toc
 
 % tspan=[0,50000];
 % clo.settspan(tspan);
-
+%%
 tic
-clo.features();
+clo.features(1);
 toc
 
-F=clo.getF();
+% tic
+% clo.features();
+% toc
+
 
 %% plot
 
-fix=2;
+F=clo.getF();
+
+fix=6;
 f=reshape(F(:,fix),nGrid);
 
 figure(1); clf

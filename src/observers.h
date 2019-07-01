@@ -79,6 +79,7 @@ struct ObserverParams{
 // two-pass detectors
 ////////////////////////////////////////////////
 
+//TODO: make a separate kernel to use for warmup (to break the computation into parts so host doesn't freeze)
 
 //Threshold-based event detection with relative thresholds in a specified variable xi. 
 // Need to measure the extent of state-space trajectory visits, then compute thresholds as fractions of range

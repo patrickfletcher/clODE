@@ -108,17 +108,18 @@ std::string CLODEfeatures::getObserverBuildOpts() {
         case section2:
             observerdefine=" -DOBSERVER_SECTION_2 ";
             observerName="OBSERVER_SECTION_2";
-            nFeatures=30;
-            observerDataSize=2*sizeof(cl_int);
+            nFeatures=11;
+            observerDataSize=(20+6*nVar)*realSize+4*sizeof(cl_int)+sizeof(cl_bool);
             observerDataSize=observerDataSize+observerDataSize%realSize; 
             break;
             
         case neighborhood2:
             observerdefine=" -DOBSERVER_NEIGHBORHOOD_2 ";
             observerName="OBSERVER_NEIGHBORHOOD_2";
-            nFeatures=30;
-            observerDataSize=2*sizeof(cl_int);
+            nFeatures=11;
+            observerDataSize=(20+6*nVar)*realSize+3*sizeof(cl_int)+2*sizeof(cl_bool);
             observerDataSize=observerDataSize+observerDataSize%realSize; 
+			printf("observerDataSize = %d", observerDataSize);
             break;
             
         default:
