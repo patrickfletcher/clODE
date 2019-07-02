@@ -121,12 +121,12 @@ bool computeEventFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype 
 	od->xMax[1]=MIN(xThisMax, od->xMax[1]);
 	runningMean(&od->xMax[2],xThisMax,od->eventcount-1);
 	
-	od->xMin[0]=MAX(od->xLastMin, od->xMin[0]); //must have had two maxima to have found one minimum
-	od->xMin[1]=MIN(od->xLastMin, od->xMin[1]);
-	runningMean(&od->xMin[2],od->xLastMin,od->eventcount-1);
-	
 	if (od->eventcount>1) {//implies tLastMax, tLastMin and xLastMin are set
 		
+		od->xMin[0]=MAX(od->xLastMin, od->xMin[0]); //must have had two maxima to have found one minimum
+		od->xMin[1]=MIN(od->xLastMin, od->xMin[1]);
+		runningMean(&od->xMin[2],od->xLastMin,od->eventcount-1);
+
 		//max/min/mean IMI
 		thisIMI = tThisMax - od->tLastMax;
 		//if(thisIMI > op->minIMI) {
@@ -160,6 +160,11 @@ bool computeEventFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype 
 // - reset intermediates upon local max event detection
 void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[],  ObserverData *od, __constant struct ObserverParams *op, bool eventOccurred) {
 	
+	//reset intermediate feature storage. Should this be here, or in "computeEventFeatures"?
+	if (eventOccurred) { 
+		od->xLastMin=xi[op->fVarIx];
+	}
+
     // ++od->stepcount;
     if (od->stepcount>2 && od->buffer_filled==0) { od->buffer_filled=1;}
     
@@ -174,11 +179,13 @@ void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype au
 	od->dxbuffer[2]=dxi[op->fVarIx];
 	
 	//global dxMax, dxMin
+	// od->xMax=MAX(od->dxMax,dxi[op->fVarIx]); 
+	// od->xMin=MIN(od->dxMin,dxi[op->fVarIx]);
 	od->dxMax=MAX(od->dxMax,dxi[op->fVarIx]); 
 	od->dxMin=MIN(od->dxMin,dxi[op->fVarIx]);
 	runningMean(&od->xTrajectoryMean, xi[op->fVarIx], od->stepcount);
 	
-	// if (od->buffer_filled==1) {
+	if (od->buffer_filled==1) {
 
 		//local min check - one between each max - simply overwrite tLastMin, xLastMin
 		// if (od->dxbuffer[1] <= op->eps_dx && od->dxbuffer[2] > op->eps_dx ) {
@@ -188,11 +195,7 @@ void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype au
 		// }
 		od->xLastMin=MIN(od->xLastMin,xi[op->fVarIx]);
 		
-		//reset intermediate feature storage. Should this be here, or in "computeEventFeatures"?
-		if (eventOccurred) { 
-			
-		}
-	// }
+	}
 }
 
 //Perform and post-integration cleanup and write desired features into the global array F

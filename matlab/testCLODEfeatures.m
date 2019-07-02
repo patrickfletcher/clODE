@@ -11,7 +11,7 @@ stepper='dorpri5';
 vendor='nvidia';
 % vendor='intel';
 devicetype='default';
-observer='nhood2';
+observer='localmax';
 
 sp.dt=0.1;
 sp.dtmax=1.00;
@@ -120,7 +120,7 @@ toc
 
 F=clo.getF();
 
-fix=6;
+fix=12;
 f=reshape(F(:,fix),nGrid);
 
 figure(1); clf
