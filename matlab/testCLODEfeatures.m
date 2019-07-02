@@ -35,7 +35,7 @@ spt.nout=1;
 %if not enough, tf is not reached. may be too many for adaptive stepper
 
 
-op.eVarIx=1;
+op.eVarIx=4;
 op.fVarIx=1;
 op.maxEventCount=5000;
 op.minXamp=0;
@@ -111,9 +111,9 @@ tic
 clo.features(1);
 toc
 
-% tic
-% clo.features();
-% toc
+tic
+clo.features();
+toc
 
 
 %% plot

@@ -59,6 +59,7 @@ void initializeObserverData(realtype *ti, realtype xi[], realtype dxi[], realtyp
 	
 	od->eventcount=0;
 	od->stepcount=0;
+	od->isInNhood = false; 
     
 	//put x0 in the leading position of the solution buffer
 	od->buffer_filled=false;
@@ -69,7 +70,7 @@ void initializeObserverData(realtype *ti, realtype xi[], realtype dxi[], realtyp
 	od->dxbuffer[2]=dxi[op->fVarIx];
 
 	for (int j=0; j<N_VAR;++j) {
-	// 	od->x0[j]=xi[j];
+		od->x0[j]=xi[j];
 	// 	od->xLast[j]=xi[j];
 		od->xMaxDelta[j]=RCONST(0.0); //maximum magnitude of step taken by solver in each state variable direction
 
@@ -132,10 +133,11 @@ void warmupObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype au
 	}
 
 	//find abs min as x0
-	if (xi[op->fVarIx]<od->x0[op->fVarIx]) {
+	if (xi[op->eVarIx] < od->x0[op->eVarIx]) {
 		for (int j=0; j<N_VAR;++j) {
 			od->x0[j]=xi[j];
 		}
+		od->tLastX0=*ti;
 	}
 }
 
@@ -149,8 +151,8 @@ void initializeEventDetector(realtype *ti, realtype xi[], realtype dxi[], realty
         // od->xRange[j]=od->xTrajectoryMax[j]-od->xTrajectoryMin[j];
         // od->dxRange[j]=od->dxTrajectoryMax[j]-od->dxTrajectoryMin[j];
     }
-	od->isInNhood = true; //we are at the center of the neighborhood, x0.
-	od->tLastX0=*ti;
+	// od->isInNhood = true; //we are at the center of the neighborhood, x0.
+	// od->tLastX0=*ti;
 }
 
 //check for entry into "epsilon ball" surrounding od->x0
