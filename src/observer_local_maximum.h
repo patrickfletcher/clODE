@@ -121,11 +121,11 @@ bool computeEventFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype 
 	od->xMax[1]=MIN(xThisMax, od->xMax[1]);
 	runningMean(&od->xMax[2],xThisMax,od->eventcount-1);
 	
-	if (od->eventcount>1) {//implies tLastMax, tLastMin and xLastMin are set
+	od->xMin[0]=MAX(od->xLastMin, od->xMin[0]); //must have had two maxima to have found one minimum
+	od->xMin[1]=MIN(od->xLastMin, od->xMin[1]);
+	runningMean(&od->xMin[2],od->xLastMin,od->eventcount-1);
 	
-		od->xMin[0]=MAX(od->xLastMin, od->xMin[0]); //must have had two maxima to have found one minimum
-		od->xMin[1]=MIN(od->xLastMin, od->xMin[1]);
-		runningMean(&od->xMin[2],od->xLastMin,od->eventcount-1);
+	if (od->eventcount>1) {//implies tLastMax, tLastMin and xLastMin are set
 		
 		//max/min/mean IMI
 		thisIMI = tThisMax - od->tLastMax;
@@ -178,21 +178,21 @@ void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype au
 	od->dxMin=MIN(od->dxMin,dxi[op->fVarIx]);
 	runningMean(&od->xTrajectoryMean, xi[op->fVarIx], od->stepcount);
 	
-	if (od->buffer_filled==1) {
+	// if (od->buffer_filled==1) {
 
 		//local min check - one between each max - simply overwrite tLastMin, xLastMin
-		if (od->dxbuffer[1] <= op->eps_dx && od->dxbuffer[2] > op->eps_dx ) {
-			int ix;
-			minOfArray(od->xbuffer, 3, &od->xLastMin, &ix);
-			od->tLastMin=od->tbuffer[ix];
-		}
-		// od->xLastMin=MIN(od->xLastMin,xi[op->fVarIx]);
+		// if (od->dxbuffer[1] <= op->eps_dx && od->dxbuffer[2] > op->eps_dx ) {
+		// 	int ix;
+		// 	minOfArray(od->xbuffer, 3, &od->xLastMin, &ix);
+		// 	od->tLastMin=od->tbuffer[ix];
+		// }
+		od->xLastMin=MIN(od->xLastMin,xi[op->fVarIx]);
 		
 		//reset intermediate feature storage. Should this be here, or in "computeEventFeatures"?
 		if (eventOccurred) { 
 			
 		}
-	}
+	// }
 }
 
 //Perform and post-integration cleanup and write desired features into the global array F
