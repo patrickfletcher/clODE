@@ -21,8 +21,8 @@ clode_path=clode_path(1:find(clode_path==filesep,1,'last'));
 clode_path=[clode_path,'src/'];
 clode_path=strrep(clode_path,'\','/'); %stupid windows backslash filesep
 
-% debugchar='';
-debugchar='-g';
+debugchar='';
+% debugchar='-g';
 
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

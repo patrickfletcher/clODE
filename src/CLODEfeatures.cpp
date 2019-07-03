@@ -117,10 +117,10 @@ std::string CLODEfeatures::getObserverBuildOpts() {
             observerdefine=" -DOBSERVER_NEIGHBORHOOD_2 ";
             observerName="OBSERVER_NEIGHBORHOOD_2";
             nFeatures=11;
-            observerDataSize=(20+6*nVar)*realSize+3*sizeof(cl_int)+2*sizeof(cl_bool);
+            observerDataSize=(21+7*nVar)*realSize+3*sizeof(cl_int)+3*sizeof(cl_bool);
             observerDataSize=observerDataSize+observerDataSize%realSize; 
 			printf("observerDataSize = %d", observerDataSize);
-            break;
+            break; // ObserverData size: 3*int + (4*3 + 7*nVar + 9)*realtype + 3*bool
             
         default:
             observerdefine=" -DOBSERVER_BASIC ";

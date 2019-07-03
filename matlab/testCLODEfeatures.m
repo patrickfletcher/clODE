@@ -11,12 +11,16 @@ stepper='dorpri5';
 vendor='nvidia';
 % vendor='intel';
 devicetype='default';
-observer='localmax';
+% observer='localmax';
+observer='nhood2';
 
-sp.dt=0.1;
-sp.dtmax=1.00;
+vendorT='intel';
+devicetypeT='cpu';
+
+sp.dt=0.01;
+sp.dtmax=100.00;
 sp.abstol=1e-7;
-sp.reltol=1e-7;
+sp.reltol=1e-5;
 sp.max_steps=100000;
 sp.max_store=20000; %making this bigger than adaptive solver needs slows things down
 sp.nout=1;
@@ -35,21 +39,21 @@ spt.nout=1;
 %if not enough, tf is not reached. may be too many for adaptive stepper
 
 
-op.eVarIx=4;
+op.eVarIx=1;
 op.fVarIx=1;
 op.maxEventCount=5000;
-op.minXamp=0;
-op.minIMI=0;
-op.nHoodRadius=0.01;
+op.minXamp=1;
+op.minIMI=0; %not implemented: 10*sp.dtmax
+op.nHoodRadius=0.1;
 op.xUpThresh=0.3;
-op.xDownThresh=0.2;
+op.xDownThresh=0.02;
 op.dxUpThresh=0;
 op.dxDownThresh=0;
-op.eps_dx=1e-10;
+op.eps_dx=1e-7;
 
 clo=clODEfeatures(prob, stepper, observer, clSinglePrecision,vendor,devicetype);
 
-cloTraj=clODEtrajectory(prob, stepper, clSinglePrecision,vendor,devicetype);
+cloTraj=clODEtrajectory(prob, stepper, clSinglePrecision,vendorT,devicetypeT);
 
 %%
 tspan=[0,10000];
@@ -120,7 +124,7 @@ toc
 
 F=clo.getF();
 
-fix=12;
+fix=5;
 f=reshape(F(:,fix),nGrid);
 
 figure(1); clf
