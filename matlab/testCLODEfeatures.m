@@ -11,8 +11,8 @@ stepper='dorpri5';
 vendor='nvidia';
 % vendor='intel';
 devicetype='default';
-% observer='localmax';
-observer='nhood2';
+observer='localmax';
+% observer='nhood2';
 
 vendorT='intel';
 devicetypeT='cpu';
@@ -46,7 +46,7 @@ op.minXamp=1;
 op.minIMI=0; %not implemented: 10*sp.dtmax
 op.nHoodRadius=0.1;
 op.xUpThresh=0.3;
-op.xDownThresh=0.02;
+op.xDownThresh=0.05;
 op.dxUpThresh=0;
 op.dxDownThresh=0;
 op.eps_dx=1e-7;
@@ -124,7 +124,7 @@ toc
 
 F=clo.getF();
 
-fix=5;
+fix=1;
 f=reshape(F(:,fix),nGrid);
 
 figure(1); clf
@@ -141,5 +141,6 @@ ax=gca;
 axis square
 
 nClick=3;
+var=op.fVarIx;
 
-ax.ButtonDownFcn={@clickTrajectory,cloTraj,prob,p,x0,tspan,[p1ix,p2ix],1,2,nClick};
+ax.ButtonDownFcn={@clickTrajectory,cloTraj,prob,p,x0,tspan,[p1ix,p2ix],var,2,nClick};

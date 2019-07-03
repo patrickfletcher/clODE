@@ -76,7 +76,8 @@ void initializeObserverData(realtype *ti, realtype xi[], realtype dxi[], realtyp
 
 	for (int j = 0; j < N_VAR; ++j)
 	{
-		od->x0[j] = xi[j];
+		// od->x0[j] = xi[j];
+		od->x0[j] = RCONST(0.0);
 		// od->xMaxDelta[j] = RCONST(0.0); //maximum magnitude of step taken by solver in each state variable direction
 										// 	od->xLast[j]=xi[j];
 
@@ -162,6 +163,7 @@ void initializeEventDetector(realtype *ti, realtype xi[], realtype dxi[], realty
 	}
 	
 	od->xThreshold=od->xTrajectoryMin[op->eVarIx] + op->xDownThresh*od->xRange[op->eVarIx];
+	// od->xThreshold=od->xTrajectoryMin[op->eVarIx] + op->xUpThresh*od->xRange[op->eVarIx];
 
 	// od->isInNhood = true; //we are at the center of the neighborhood, x0.
 	// od->tLastX0=*ti;
@@ -177,7 +179,7 @@ bool eventFunction(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[],
 		if (!od->foundX0)
 		{
 			//x0 is first time droppoing below threshold in x[eVarIx] - xbuffer holds previous xi
-			if (od->xbuffer[op->eVarIx*3+0] > od->xThreshold && xi[op->eVarIx] < od->xThreshold)
+			if (od->xbuffer[op->eVarIx*3+2] > od->xThreshold && xi[op->eVarIx] < od->xThreshold)
 			{
 				od->foundX0 = true;
 
@@ -243,6 +245,8 @@ void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype au
 	// realtype tThisMax, xThisMax;
 	// realtype thisIMI, thisTMaxMin, thisAmp;
 
+	if (od->xRange[op->fVarIx]<op->minXamp) {return;}
+
 	// ++od->stepcount;
 	if (od->stepcount > 2 && od->buffer_filled == 0)
 	{
@@ -270,9 +274,9 @@ void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype au
 	od->dxMin = MIN(od->dxMin, dxi[op->fVarIx]);
 	runningMean(&od->xTrajectoryMean, xi[op->fVarIx], od->stepcount);
 
-	// if (od->buffer_filled==1) {
+	if (od->buffer_filled==1) {
 
-	//local max check - one between each min - simply overwrite tLastMax, xLastMax
+	//local max check in fVarIx - one between each min - simply overwrite tLastMax, xLastMax
 	if (od->dxbuffer[1] > -op->eps_dx && od->dxbuffer[2] < -op->eps_dx)
 	{
 		od->thisNMaxima++;
@@ -307,7 +311,7 @@ void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype au
 	// 		// od->tLastX0=*ti;
 	// 	}
 
-	// }
+	}
 
 	//reset intermediate feature storage
 	if (eventOccurred)
@@ -356,6 +360,7 @@ void finalizeFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi
 	// F[ix++*nPts+i]=od->xLast[2];
 	// F[ix++*nPts+i]=od->xLast[3];
 	// F[ix++*nPts+i]=od->xRange[0];
+	// F[ix++*nPts+i]=(od->x0[op->eVarIx] - od->xTrajectoryMin[op->eVarIx] )/od->xRange[op->eVarIx];
 	// F[ix++*nPts+i]=fabs( od->x0[0] - xi[0] ) / od->xRange[0];
 	// F[ix++*nPts+i]=od->xThreshold;
 	// F[ix++*nPts+i]=od->xMaxDelta[0];

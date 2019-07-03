@@ -78,6 +78,7 @@ class CLODEfeatures: public CLODE {
 		void setObserver(ObserverType newObserver);	//rebuild: program, kernel, kernel args. Host + Device data OK
         
         //simulation routines.
+        //TODO: overload transient so that it sets doObserverInitialization=1
         //TODO: overload with newX0, newPars; all four? 
         //TODO: pre-features? update edata basics (min/max x dx) but no event function
         void features(bool newDoObserverInitFlag); //allow manually forcing re-init of observer data

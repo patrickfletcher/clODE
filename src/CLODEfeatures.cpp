@@ -84,8 +84,8 @@ std::string CLODEfeatures::getObserverBuildOpts() {
         case localmax:
             observerdefine=" -DOBSERVER_LOCAL_MAX ";
             observerName="OBSERVER_LOCAL_MAX";
-            nFeatures=17;
-            observerDataSize=27*realSize+3*sizeof(cl_int);
+            nFeatures=18;
+            observerDataSize=29*realSize+3*sizeof(cl_int);
             observerDataSize=observerDataSize+observerDataSize%realSize; 
             break;
             

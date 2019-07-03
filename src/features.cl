@@ -121,12 +121,11 @@ if (doInitialization==1) {
 //time-stepping loop, main time interval
 step=0;
 stepflag=0;
-bool eventOccurred=false;
-bool terminalEvent=false;
+bool eventOccurred;
+bool terminalEvent;
 while (ti < tspan[1] && step<sp->max_steps && stepflag==0) {
 	
 	++step;
-	++odata.stepcount;
 	
 #ifdef ADAPTIVE_STEPSIZE
 	//leave the wi=0 for adaptive steppers
@@ -139,6 +138,8 @@ while (ti < tspan[1] && step<sp->max_steps && stepflag==0) {
 	stepper(&ti, xi, dxi, p, dt, auxi, wi);
 	ti=tspan[0] + step*dt;   //purify ti - Gets nSteps correct
 #endif
+
+	++odata.stepcount;
 
 	//FSAL: dxi is at new ti, Not FSAL: dxi is at old ti
 	eventOccurred=eventFunction(&ti, xi, dxi, auxi, &odata, opars);

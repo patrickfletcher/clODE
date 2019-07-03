@@ -50,6 +50,7 @@ plotTrajectories(X,T,nStored);
     function [X,T,nStored]=integrate()
         clo.trajectory();
         X=clo.getX();
+        AUX=clo.getAux();
         T=clo.getT()*clo.tscale;
         nStored=clo.getNstored();
     end
