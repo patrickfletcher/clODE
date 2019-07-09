@@ -74,32 +74,40 @@ plotTrajectories(X,T,nStored);
             
             x=x(1:nStored(i),:);
             
-            
             %Time plot
             ax=subplot(nClick,1,i);
-            plot(t,x(:,varIx),'k')
-            xlim([t(1),t(end)]);
-            
-            % To do features, need to have mRHSfun...
-            %     if doFeatures
-            %
-            %         dy=zeros(length(t),nVar);
-            %         aux=zeros(length(t),nAux);
-            %         for i=1:length(t)
-            %             [tmpdy, tmpaux]=mRHSfun(t(i),thisY(i,:));
-            %             dy(i,:)=tmpdy(:)';
-            %         end
-            %
-            %         thisFmatlab=observer_plateau(t,y,dy,aux,Times,obspars);
-            %         Feats(:,i)=thisFmatlab(:);
-            %     end
+            if numel(varIx)==1
+                plot(t,x(:,varIx),'k')
+                xlim([t(1),t(end)]);
+                ylabel(vNames{varIx});
+                YLIM=ylim();
+                mx=mean(x(:,varIx(1)));
+                ylim([min(YLIM(1),mx-0.01*abs(mx)), max(YLIM(2),mx+0.01*abs(mx))]);
+                
+            elseif numel(varIx)==2
+                %Time plot
+                yyaxis left
+                plot(t,x(:,varIx(1)))
+                xlim([t(1),t(end)]);
+                YLIM=ylim();
+                mx=mean(x(:,varIx(1)));
+                ylim([min(YLIM(1),mx-0.01*abs(mx)), max(YLIM(2),mx+0.01*abs(mx))]);
+
+                ylabel(vNames{varIx(1)});
+
+                yyaxis right
+                plot(t,x(:,varIx(2)))
+                xlim([t(1),t(end)]);
+                ylabel(vNames{varIx(2)});
+            end
+
             
             if i<nClick
                 ax.XTickLabel=[];
             end
             
             title([pNames{parIx(1)} '=' num2str(p(i,parIx(1))) ', ' pNames{parIx(2)} '=' num2str(p(i,parIx(2)))]);
-            xlabel('t'); ylabel(vNames{varIx});
+            xlabel('t'); 
             
         end
     end
