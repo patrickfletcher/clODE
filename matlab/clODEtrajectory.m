@@ -9,6 +9,7 @@ classdef clODEtrajectory<clODE
         
         t
         tscale=1 %conversion factor for time units for display
+        tunits=[];
         x
         dx
         aux

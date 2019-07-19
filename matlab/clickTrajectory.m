@@ -120,7 +120,7 @@ plotTrajectories(X,T);
             if i<nClick
                 ax.XTickLabel=[];
             else
-                xlabel('t');
+                xlabel(['t' ' (' clo.tunits ')']);
             end
             
             XLIM=xlim();
