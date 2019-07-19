@@ -40,7 +40,8 @@ switch(evt.Key)
         x0lb=[clo.prob.var.lb];
         x0ub=[clo.prob.var.ub];
         X0=x0lb+rand(clo.nPts,length(x0lb)).*(x0ub-x0lb);
-
+        clo.setX0(X0(:));
+        
         tic
         clo.transient();
         toc
