@@ -44,72 +44,89 @@ hf=figure(tracjectoryFigID);
 hf.KeyPressFcn=@keypress;
 
 clf
-[X,T,nStored]=integrate();
-plotTrajectories(X,T,nStored);
+[X,T]=integrate();
+plotTrajectories(X,T);
 
     function [X,T,nStored]=integrate()
         clo.trajectory();
-        X=clo.getX();
-        AUX=clo.getAux();
-        T=clo.getT()*clo.tscale;
+        xx=clo.getX();
+        %         AUX=clo.getAux();
+        tt=clo.getT()*clo.tscale;
         nStored=clo.getNstored();
+        for i=1:nClick
+            T{i}=tt(1:nStored(i),i);
+            X{i}=xx(1:nStored(i),:,i);
+        end
     end
 
     function keypress(src,evt)
         switch(evt.Key)
+            case 'g'
+                [X,T]=integrate();
+                plotTrajectories(X,T);
+                
             case 'c'
-                [X,T,nStored]=integrate();
-                plotTrajectories(X,T,nStored);
-        end 
+                [xx,tt]=integrate();
+                for i=1:nClick
+                    T{i}=[T{i};tt{i}+T{i}(end)];
+                    X{i}=[X{i};xx{i}];
+                end
+                plotTrajectories(X,T);
+        end
     end
 
-    function plotTrajectories(X,T,nStored)
+    function plotTrajectories(X,T)
         
         for i=1:nClick
             
-            t=T(:,i);
-            x=X(:,:,i);
-            
-            t=t(1:nStored(i));
-            
-            x=x(1:nStored(i),:);
+            t=T{i};
+            x=X{i};
             
             %Time plot
             ax=subplot(nClick,1,i);
             if numel(varIx)==1
-                plot(t,x(:,varIx),'k')
+                plot(t,x(:,varIx),'k');
                 xlim([t(1),t(end)]);
                 ylabel(vNames{varIx});
                 YLIM=ylim();
-                mx=mean(x(:,varIx(1)));
-                ylim([min(YLIM(1),mx-0.01*abs(mx)), max(YLIM(2),mx+0.01*abs(mx))]);
+                xmax=max(x(:,varIx(1)));
+                xmin=min(x(:,varIx(1)));
+                ylim([min(YLIM(1),xmin-0.01*abs(xmin)), max(YLIM(2),xmax+0.01*abs(xmax))]);
                 
             elseif numel(varIx)==2
                 %Time plot
                 yyaxis left
-                plot(t,x(:,varIx(1)))
+                plot(t,x(:,varIx(1)));
                 xlim([t(1),t(end)]);
                 YLIM=ylim();
-                mx=mean(x(:,varIx(1)));
-                ylim([min(YLIM(1),mx-0.01*abs(mx)), max(YLIM(2),mx+0.01*abs(mx))]);
-
+                xmax=max(x(:,varIx(1)));
+                xmin=min(x(:,varIx(1)));
+                ylim([min(YLIM(1),xmin-0.01*abs(xmin)), max(YLIM(2),xmax+0.01*abs(xmax))]);
+                
                 ylabel(vNames{varIx(1)});
-
+                
                 yyaxis right
-                plot(t,x(:,varIx(2)))
+                plot(t,x(:,varIx(2)));
                 xlim([t(1),t(end)]);
+                YLIM=ylim();
+                xmax=max(x(:,varIx(2)));
+                xmin=min(x(:,varIx(2)));
+                ylim([min(YLIM(1),xmin-0.01*abs(xmin)), max(YLIM(2),xmax+0.01*abs(xmax))]);
                 ylabel(vNames{varIx(2)});
             end
-
+            
+            box off
             
             if i<nClick
                 ax.XTickLabel=[];
+            else
+                xlabel('t');
             end
             
-            title([pNames{parIx(1)} '=' num2str(p(i,parIx(1))) ', ' pNames{parIx(2)} '=' num2str(p(i,parIx(2)))]);
-            xlabel('t'); 
+            XLIM=xlim();
             
+            line((XLIM(1)+XLIM(end))*0.02,YLIM(2)*0.9,'marker',markers(i),'linestyle','none','color',markerColor,'linewidth',1,'tag','marks');
+            title([pNames{parIx(1)} '=' num2str(p(i,parIx(1)),2) ', ' pNames{parIx(2)} '=' num2str(p(i,parIx(2)),2)]);
         end
     end
-
 end
