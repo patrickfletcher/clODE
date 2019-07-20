@@ -1,10 +1,10 @@
-function clickTrajectory(clickAxis,~,clo,pin,y0in,tspan,parIx,vars,tracjectoryFigID,nClick,markerColor)
+function clickTrajectory(clickAxis,~,clo,pin,x0in,tspan,parIx,vars,tracjectoryFigID,nClick,markerColor)
 %A mouse click inside the axes will trigger a parameter
 %selection crosshair. A second click selects a parameter
 %combination to simulate, and resulting simulation is displayed
 %in a new figure window.
 
-%could find closest solved instance, get y0 for beginning of
+%could find closest solved instance, get x0 for beginning of
 %feature detection interval
 
 if ~exist('vars','var'), vars=clo.prob.varNames(1); end
@@ -13,9 +13,7 @@ if nClick>6, error('I refuse to do more than 6 clicks'); end
 
 if ~exist('markerColor','var'), markerColor='k';end
 
-% y0=repmat([ivp.var(:).value],nClick,1);
-% p=repmat([ivp.par(:).value],nClick,1);
-y0=repmat(y0in(:)',nClick,1);
+x0=repmat(x0in(:)',nClick,1);
 p=repmat(pin(:)',nClick,1);
 
 varIsAux=false(size(vars));
@@ -48,7 +46,7 @@ for n=1:nClick
     h(n)=line(px,py,'marker',markers(n),'linestyle','none','color',markerColor,'linewidth',1,'tag','marks');
 end
 
-clo.setProblemData(y0(:),p(:));
+clo.setProblemData(x0(:),p(:));
 clo.settspan(tspan);
 % clo.transient();
 
@@ -87,6 +85,14 @@ plotTrajectories(X,T,AUX);
                     X{i}=[X{i};xx{i}];
                     AUX{i}=[AUX{i};aux{i}];
                 end
+                plotTrajectories(X,T,AUX);
+                
+            case 'r' %randomize ICs
+                x0lb=[clo.prob.var.lb];
+                x0ub=[clo.prob.var.ub];
+                x0=x0lb+rand(nClick,length(x0lb)).*(x0ub-x0lb);
+                clo.setX0(x0(:));
+                [X,T,AUX]=integrate();
                 plotTrajectories(X,T,AUX);
         end
     end
