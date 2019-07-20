@@ -255,7 +255,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     case Action::SetPars:
 	{ //inputs: pars
         std::vector<double> pars( static_cast<double *>(mxGetData(prhs[2])),  static_cast<double *>(mxGetData(prhs[2])) + mxGetNumberOfElements(prhs[2]) );  
-        instance->setX0(pars);
+        instance->setPars(pars);
         break;
 	}
     case Action::SetSolverPars:
