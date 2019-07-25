@@ -6,18 +6,20 @@ classdef clODE < cppclass
     %properties of the problem
     properties
         
-    prob
-    stepper
-    clSinglePrecision
-    cl_vendor
-    cl_deviceType
-    
-    nPts
-    P
-    X0
-    auxf
-    sp
-    tspan
+        prob
+        stepper
+        clSinglePrecision
+        cl_vendor
+        cl_deviceType
+        
+        nPts
+        P
+        X0
+        auxf
+        sp
+        tspan
+        tscale=1 %conversion factor for time units for display
+        tunits=[];
     end
     
     
@@ -110,14 +112,14 @@ classdef clODE < cppclass
             obj.X0=X0;
             obj.P=P;
             obj.sp=sp;
-            obj.nPts=length(X0)/obj.prob.nVar; 
+            obj.nPts=length(X0)/obj.prob.nVar;
         end
         
         %Set X0 and P together if trying to change nPts
         function setProblemData(obj, X0, P)
             obj.X0=X0;
             obj.P=P;
-            obj.nPts=length(X0)/obj.prob.nVar; 
+            obj.nPts=length(X0)/obj.prob.nVar;
             obj.cppmethod('setproblemdata', X0(:), P(:));
         end
         
@@ -138,7 +140,7 @@ classdef clODE < cppclass
         
         %nPts cannot change here
         function setX0(obj, X0)
-            testnPts=length(X0)/obj.prob.nVar; 
+            testnPts=length(X0)/obj.prob.nVar;
             if testnPts==obj.nPts
                 obj.X0=X0;
                 obj.cppmethod('setx0', X0(:));
@@ -149,7 +151,7 @@ classdef clODE < cppclass
         
         %nPts cannot change here
         function setP(obj, P)
-            testnPts=length(P)/obj.prob.nPar; 
+            testnPts=length(P)/obj.prob.nPar;
             if testnPts==obj.nPts
                 obj.P=P;
                 obj.cppmethod('setpars', P(:));
@@ -191,7 +193,7 @@ classdef clODE < cppclass
     
     %static helper methods
     methods (Static=true)
-    
+        
         function stepperInt=getStepperEnum(steppername)
             switch lower(steppername)
                 case {'euler'}

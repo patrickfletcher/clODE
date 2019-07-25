@@ -1,7 +1,7 @@
 function gridKeyPress(src,evt, clo, hi, Ffun, ftitle, nGrid)
 
 switch(evt.Key)
-    case 'c' %continue
+    case 'c' %'continue' - features without initialization
         tic
         clo.features();
         toc
@@ -10,7 +10,7 @@ switch(evt.Key)
         hcb=colorbar('northoutside');
         title(hcb,ftitle)
         
-    case 'f' %init features
+    case 'g' %'go' - features with initialization
         tic
         clo.features(1);
         toc
@@ -19,7 +19,7 @@ switch(evt.Key)
         hcb=colorbar('northoutside');
         title(hcb,ftitle)
         
-    case 't' %transient
+    case 't' %'transient'
         tic
         clo.transient();
         toc
@@ -28,12 +28,20 @@ switch(evt.Key)
         hcb=colorbar('northoutside');
         title(hcb,clo.prob.varNames(clo.op.fVarIx))
         
+    case 'f' %select feature to plot %%%TODO: add computed features
+%         featureSelectDialog(Ffun,ftitle)
+%         hi.CData=reshape(Ffun(F),nGrid);
+%         hcb=colorbar('northoutside');
+%         title(hcb,ftitle)
+        
     case 'p' %change parameter values
         %select p1, p2?
         %new plb1 plb2 pub1 pub2
         %generate new P(:)
         %upload to GPU
         %run, or wait for 'i'/'c'?
+        
+    case 'i' %set initial condition data
         
     case 'r' %randomize initial condition
         
@@ -54,7 +62,20 @@ switch(evt.Key)
         
 end 
 
+function featureSelectDialog(Ffun,ftitle)
+%     %changes the Ffun and ftitle
+%     hfs=figure('Name','Select Feature to Plot','WindowStyle','modal');
+%     hfl=uicontrol('Style','popupmenu','String',clo.fNames);
+%     hfb=uibutton('Text','OK','ButtonPushedFcn',selectFeature);
+% 
+%     
+%     function selectFeature(src,evt)
+%         Ffun=@
+%     end
 end
 
-function [p,plu,pub]=parameterDialog()
+
+end
+
+function parameterDialog()
 end

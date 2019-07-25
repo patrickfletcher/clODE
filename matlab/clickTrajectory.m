@@ -99,6 +99,7 @@ plotTrajectories(X,T,AUX);
 
     function plotTrajectories(X,T,AUX)
         
+        
         for i=1:nClick
             
             t=T{i};
