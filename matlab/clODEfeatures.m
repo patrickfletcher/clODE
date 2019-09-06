@@ -28,9 +28,7 @@ classdef clODEfeatures<clODE
 %     tspan
     end
     
-    %inherits methods from clODE:
-    %
-    
+   
     methods
        
         function obj = clODEfeatures(prob, stepper, observer, clSinglePrecision, cl_vendor, cl_deviceType, mexFilename)

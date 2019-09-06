@@ -3,7 +3,6 @@ classdef clODE < cppclass
     
     %TODO: this should have a method for default solverparams
     
-    %properties of the problem
     properties
         
         prob
@@ -26,7 +25,6 @@ classdef clODE < cppclass
     %C++ class interaction
     methods
         
-        % Use the name of your MEX file here
         function obj = clODE(prob, stepper, clSinglePrecision, cl_vendor, cl_deviceType, mexFilename, extraArgs)
             
             if nargin==0

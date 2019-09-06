@@ -1,5 +1,5 @@
 /* clODE: a simulator class to run parallel ODE simulations on OpenCL capable hardware.
- * A clODE simulator solves on initial value problem for a set of (parameters, initial conditions). At each timestep,
+ * A clODE simulator solves an initial value problem for a set of (parameters, initial conditions). At each timestep,
  * "observer" rountine may be called to record/store/compute features of the solutions. Examples include storing the full
  * trajectory, recording the times and values of local extrema in a variable of the system, or directly computing other 
  * features of the trajectory.  
@@ -12,6 +12,8 @@
 //TODO: choosing specific RNG - get nRNGstate using a switch
 
 //TODO: device-to-device transfers instead of overwriting x0?
+
+//TODO: separate flags for initialized state and built state
 
 //when compiling, be sure to provide the clODE root directory as a define:
 // -DCLODE_ROOT="path/to/my/clODE/" 

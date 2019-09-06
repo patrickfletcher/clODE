@@ -1,8 +1,8 @@
 //trajectory: stores in global variables directly
 
-//TODO: optionally store only a subset of variables (allow bigger nPts): sp.varIx vector of indices?
-
+//TODO: optionally store only a subset of variables (allow bigger nPts): sp.varIx vector of indices? already in observerpars...???
 //TODO: alternate storage at specified time points only - host sets t vector, interp and store x/dx/aux whenever ti passes t[nextstoreix]
+//TODO: is there any way to avoid writing to global at each store step? shared mem?
 
 #include "realtype.h"
 #include "clODE_utilities.h"
@@ -16,10 +16,10 @@ __global   realtype * x0,				//initial state 				[nPts*nVar] -- overwrites this 
 __constant   realtype * pars,			//parameter values				[nPts*nPar]
 __constant   struct SolverParams * sp,	//dtmin/max, tols, etc
 __global     ulong * RNGstate,   	//state for RNG				[nPts*nRNGstate]
-__global     realtype * t,			//final value of aux variables 	[nPts*nAux]
-__global     realtype * x,			//final value of aux variables 	[nPts*nAux]
-__global     realtype * dx,			//final value of aux variables 	[nPts*nAux]
-__global     realtype * aux,		//final value of aux variables 	[nPts*nAux]
+__global     realtype * t,			//
+__global     realtype * x,			//
+__global     realtype * dx,			//
+__global     realtype * aux,		//
 			 int nStoreMax,
 __global	 int * nStored
 )
@@ -89,9 +89,6 @@ while (ti < tspan[1] && step<sp->max_steps && stepflag==0 && storeix<nStoreMax) 
 	//FSAL: dxi is at new ti, Not FSAL: dxi is at old ti
 #endif
 
-
-	//TODO: multiple output styles: every nOut pts, specific values (free interp methods)
-	//TODO: is there any way to avoid writing to global at each store step?
 
 	//store every sp.nout'th step after the initial point
 	if (step%sp->nout==0) 

@@ -5,7 +5,7 @@
 // class_wrapper_template.cpp
 // Example of using a C++ class via a MEX-file
 // by Jonathan Chappelow (chappjc)
-  
+
 #include "mex.h"
 
 #include <vector>
