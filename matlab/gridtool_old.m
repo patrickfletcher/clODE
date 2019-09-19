@@ -1,4 +1,4 @@
-classdef gridtool<handle
+classdef gridtool_old<handle
     
     %TODO:
     % Build panel:

@@ -90,10 +90,3 @@ classdef clODEtrajectory<clODE
     end
     
 end
-
-function result=reshape3D(input, sz)
-    result=zeros(sz);
-    for i=1:sz(3)
-        result(:,:,i)=input(:,(0:3)*sz(3)+i);
-    end  
-end

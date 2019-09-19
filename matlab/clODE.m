@@ -17,8 +17,8 @@ classdef clODE < cppclass
         auxf
         sp
         tspan
-        tscale=1 %conversion factor for time units for display
-        tunits=[];
+        tscale=1 %should go in IVP  
+        tunits='';
     end
     
     
@@ -110,14 +110,14 @@ classdef clODE < cppclass
             obj.X0=X0;
             obj.P=P;
             obj.sp=sp;
-            obj.nPts=length(X0)/obj.prob.nVar;
+            obj.nPts=numel(X0)/obj.prob.nVar;
         end
         
         %Set X0 and P together if trying to change nPts
         function setProblemData(obj, X0, P)
             obj.X0=X0;
             obj.P=P;
-            obj.nPts=length(X0)/obj.prob.nVar;
+            obj.nPts=numel(X0)/obj.prob.nVar;
             obj.cppmethod('setproblemdata', X0(:), P(:));
         end
         
@@ -138,7 +138,7 @@ classdef clODE < cppclass
         
         %nPts cannot change here
         function setX0(obj, X0)
-            testnPts=length(X0)/obj.prob.nVar;
+            testnPts=numel(X0)/obj.prob.nVar;
             if testnPts==obj.nPts
                 obj.X0=X0;
                 obj.cppmethod('setx0', X0(:));
@@ -149,7 +149,7 @@ classdef clODE < cppclass
         
         %nPts cannot change here
         function setP(obj, P)
-            testnPts=length(P)/obj.prob.nPar;
+            testnPts=numel(P)/obj.prob.nPar;
             if testnPts==obj.nPts
                 obj.P=P;
                 obj.cppmethod('setpars', P(:));

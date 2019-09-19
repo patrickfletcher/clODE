@@ -13,7 +13,7 @@ classdef gridtool < handle %matlab.mixin.SetGet
     properties ( Access = private )
     end
     
-    methods
+    methods ( Access = public )
     end
     
     methods ( Access = private )

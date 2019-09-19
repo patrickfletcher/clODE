@@ -54,7 +54,7 @@ classdef clODEfeatures<clODE
             obj.X0=X0;
             obj.P=P;
             obj.sp=sp;
-            obj.nPts=length(X0)/obj.prob.nVar; 
+            obj.nPts=numel(X0)/obj.prob.nVar; 
             obj.op=op;
             obj.getNFeatures();
             obj.getFeatureNames();
