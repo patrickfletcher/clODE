@@ -108,7 +108,7 @@ OpenCLResource::OpenCLResource(unsigned int platformID, std::vector<unsigned int
 void OpenCLResource::getPlatformAndDevices(cl_deviceType type, cl_vendor vendor) {
 	
 	//query all platform and device info, store as a vector of structs
-	//~ std::vector<platformInfo> pi=queryOpenCL();
+	//~ std::vector<platformInfo> pinfo=queryOpenCL();
     
     // Get available platforms
     std::vector<cl::Platform> platforms;
@@ -271,75 +271,75 @@ std::vector<platformInfo> queryOpenCL() {
     if(platforms.size() == 0)
         throw cl::Error(1, "No OpenCL platforms were found");
     
-    std::vector<platformInfo> pi;
+    std::vector<platformInfo> pinfo;
     
     for(unsigned int i = 0; i < platforms.size(); ++i) {
-		pi.push_back(getPlatformInfo(platforms[i]));
+		pinfo.push_back(getPlatformInfo(platforms[i]));
     }
     
-    return pi;
+    return pinfo;
 }
 
 
 //get info of a given cl::Platform and its devices (optionally only devices of a given type, default is CL_DEVICE_TYPE_ALL)
 platformInfo getPlatformInfo(cl::Platform platform, std::vector<cl::Device> devices){
 	
-	platformInfo pi;
-	platform.getInfo((cl_platform_info)CL_PLATFORM_NAME,&pi.name);
-	platform.getInfo((cl_platform_info)CL_PLATFORM_VENDOR,&pi.vendor);
-	platform.getInfo((cl_platform_info)CL_PLATFORM_VERSION,&pi.version);
+	platformInfo pinfo;
+	platform.getInfo((cl_platform_info)CL_PLATFORM_NAME,&pinfo.name);
+	platform.getInfo((cl_platform_info)CL_PLATFORM_VENDOR,&pinfo.vendor);
+	platform.getInfo((cl_platform_info)CL_PLATFORM_VERSION,&pinfo.version);
 	
 	if (devices.size()==0) { //get all the devices
 		platform.getDevices(CL_DEVICE_TYPE_ALL, &devices);
 	}
 	
-	pi.nDevices=(unsigned int)devices.size();
+	pinfo.nDevices=(unsigned int)devices.size();
 	
-	for (unsigned int j=0; j<pi.nDevices; j++)
-		pi.device_info.push_back(getDeviceInfo(devices[j]));
+	for (unsigned int j=0; j<pinfo.nDevices; j++)
+		pinfo.device_info.push_back(getDeviceInfo(devices[j]));
 	  
-	return pi;
+	return pinfo;
 }
 
 
 //get info for given cl::Device
 deviceInfo getDeviceInfo(cl::Device device){
 
-	deviceInfo di;
+	deviceInfo dinfo;
 
 	//Get device info for this compute resource
-	device.getInfo((cl_device_info)CL_DEVICE_NAME,&di.name);
-	device.getInfo((cl_device_info)CL_DEVICE_VENDOR,&di.vendor);
-	device.getInfo((cl_device_info)CL_DEVICE_VERSION,&di.version);
-	device.getInfo((cl_device_info)CL_DEVICE_TYPE,&di.devType);
-	switch (di.devType) {
+	device.getInfo((cl_device_info)CL_DEVICE_NAME,&dinfo.name);
+	device.getInfo((cl_device_info)CL_DEVICE_VENDOR,&dinfo.vendor);
+	device.getInfo((cl_device_info)CL_DEVICE_VERSION,&dinfo.version);
+	device.getInfo((cl_device_info)CL_DEVICE_TYPE,&dinfo.devType);
+	switch (dinfo.devType) {
 		case CL_DEVICE_TYPE_CPU:
-			di.devTypeStr="CPU";
+			dinfo.devTypeStr="CPU";
 			break;
 		case CL_DEVICE_TYPE_GPU:
-			di.devTypeStr="GPU";
+			dinfo.devTypeStr="GPU";
 			break;
 		case CL_DEVICE_TYPE_ACCELERATOR:
-			di.devTypeStr="Accelerator";
+			dinfo.devTypeStr="Accelerator";
 			break;
 		default:
-			di.devTypeStr="Unknown";
+			dinfo.devTypeStr="Unknown";
 	}
 	
-	device.getInfo((cl_device_info)CL_DEVICE_MAX_COMPUTE_UNITS,&di.computeUnits);
-	device.getInfo((cl_device_info)CL_DEVICE_MAX_CLOCK_FREQUENCY,&di.maxClock);
-	device.getInfo((cl_device_info)CL_DEVICE_MAX_WORK_GROUP_SIZE,&di.maxWorkGroupSize);
-	device.getInfo((cl_device_info)CL_DEVICE_GLOBAL_MEM_SIZE,&di.deviceMemSize);
-	device.getInfo((cl_device_info)CL_DEVICE_MAX_MEM_ALLOC_SIZE,&di.maxMemAllocSize);
-	device.getInfo((cl_device_info)CL_DEVICE_EXTENSIONS,&di.extensions);
+	device.getInfo((cl_device_info)CL_DEVICE_MAX_COMPUTE_UNITS,&dinfo.computeUnits);
+	device.getInfo((cl_device_info)CL_DEVICE_MAX_CLOCK_FREQUENCY,&dinfo.maxClock);
+	device.getInfo((cl_device_info)CL_DEVICE_MAX_WORK_GROUP_SIZE,&dinfo.maxWorkGroupSize);
+	device.getInfo((cl_device_info)CL_DEVICE_GLOBAL_MEM_SIZE,&dinfo.deviceMemSize);
+	device.getInfo((cl_device_info)CL_DEVICE_MAX_MEM_ALLOC_SIZE,&dinfo.maxMemAllocSize);
+	device.getInfo((cl_device_info)CL_DEVICE_EXTENSIONS,&dinfo.extensions);
 
 	std::string doubleStr="fp64";
-	di.doubleSupport=di.extensions.find(doubleStr)!=std::string::npos;
+	dinfo.doubleSupport=dinfo.extensions.find(doubleStr)!=std::string::npos;
 	
-	device.getInfo((cl_device_info)CL_DEVICE_EXTENSIONS,&di.extensions);
-	device.getInfo((cl_device_info)CL_DEVICE_AVAILABLE,&di.deviceAvailable);
+	device.getInfo((cl_device_info)CL_DEVICE_EXTENSIONS,&dinfo.extensions);
+	device.getInfo((cl_device_info)CL_DEVICE_AVAILABLE,&dinfo.deviceAvailable);
 	
-	return di;
+	return dinfo;
 }
 
 
@@ -347,56 +347,56 @@ deviceInfo getDeviceInfo(cl::Device device){
 void printOpenCL() {
 	
     printf("\nQuerying OpenCL platforms...\n");
-	std::vector<platformInfo>  pi = queryOpenCL();
-	printOpenCL(pi);
+	std::vector<platformInfo>  pinfo = queryOpenCL();
+	printOpenCL(pinfo);
 }
 
 
 //print information about all platforms and devices found, given pre-queried array of platformInfo structs
-void printOpenCL(std::vector<platformInfo>  pi) {
+void printOpenCL(std::vector<platformInfo>  pinfo) {
 	
-    printf("Number of platforms found: %u\n", (unsigned int)pi.size());
-    for(unsigned int i = 0; i < pi.size(); ++i) {
+    printf("Number of platforms found: %u\n", (unsigned int)pinfo.size());
+    for(unsigned int i = 0; i < pinfo.size(); ++i) {
 		printf("\nPlatform %d. ------------------------------\n", i);
-		printPlatformInfo(pi[i]);
+		printPlatformInfo(pinfo[i]);
     }
 	printf("\n");
 }
 
 
 //print information about a platform and its devices given pre-queried info in platformInfo struct
-void printPlatformInfo(platformInfo pi) {
-    printf("Name:    %s\n", pi.name.c_str());
-    //~ printf("Vendor: %s\n\n", pi.vendor.c_str());
-    printf("Version: %s\n", pi.version.c_str());
+void printPlatformInfo(platformInfo pinfo) {
+    printf("Name:    %s\n", pinfo.name.c_str());
+    //~ printf("Vendor: %s\n\n", pinfo.vendor.c_str());
+    printf("Version: %s\n", pinfo.version.c_str());
     
-	for (unsigned int j=0; j<pi.nDevices; j++){
+	for (unsigned int j=0; j<pinfo.nDevices; j++){
 		printf("\nDevice %d. --------------------\n", j);
-		printDeviceInfo(pi.device_info[j]);
+		printDeviceInfo(pinfo.device_info[j]);
 	}
 }
 
 
 //print info about a specific cl::Device
 void printDeviceInfo(cl::Device device) {
-	deviceInfo di = getDeviceInfo(device);
-	printDeviceInfo(di);
+	deviceInfo dinfo = getDeviceInfo(device);
+	printDeviceInfo(dinfo);
 }
 
 
 //print info about a specific cl::Device given pre-queried info in deviceInfo struct
-void printDeviceInfo(deviceInfo di) {
-    printf("Name:   %s\n", di.name.c_str());
-    printf("Type:   %s\n", di.devTypeStr.c_str());
-    //~ printf("Vendor: %s\n", di.vendor.c_str());
-    //~ printf("Version: %s\n", di.version.c_str());
-    printf("Compute units (CUs): %d\n", di.computeUnits);
-    printf("Clock frequency:     %d MHz\n", di.maxClock);
-    printf("Global memory size:  %lu MB\n", di.deviceMemSize/1024/1024);
-    printf("Max allocation size: %lu MB\n", di.maxMemAllocSize/1024/1024);
-    printf("Max work group/CU:   %d\n", (int) di.maxWorkGroupSize);
-    printf("Double support:      %s\n", (di.doubleSupport?"true":"false") );
-    printf("Device available:    %s\n", (di.deviceAvailable?"true":"false") );
+void printDeviceInfo(deviceInfo dinfo) {
+    printf("Name:   %s\n", dinfo.name.c_str());
+    printf("Type:   %s\n", dinfo.devTypeStr.c_str());
+    //~ printf("Vendor: %s\n", dinfo.vendor.c_str());
+    //~ printf("Version: %s\n", dinfo.version.c_str());
+    printf("Compute units (CUs): %d\n", dinfo.computeUnits);
+    printf("Clock frequency:     %d MHz\n", dinfo.maxClock);
+    printf("Global memory size:  %lu MB\n", dinfo.deviceMemSize/1024/1024);
+    printf("Max allocation size: %lu MB\n", dinfo.maxMemAllocSize/1024/1024);
+    printf("Max work group/CU:   %d\n", (int) dinfo.maxWorkGroupSize);
+    printf("Double support:      %s\n", (dinfo.doubleSupport?"true":"false") );
+    printf("Device available:    %s\n", (dinfo.deviceAvailable?"true":"false") );
 };
 
 

@@ -15,6 +15,8 @@
 
 //TODO: separate flags for initialized state and built state
 
+//TODO: use kernel.getWorkGroupInfo with CL_KERNEL_PREFERRED_WORK_GROUP_SIZE_MULTIPLE to offer the user a hint of nPts to use
+
 //when compiling, be sure to provide the clODE root directory as a define:
 // -DCLODE_ROOT="path/to/my/clODE/" 
 

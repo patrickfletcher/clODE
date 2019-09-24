@@ -259,7 +259,7 @@ void CLODEfeatures::features() {
 			cl_features.setArg(5, d_odata); 
 			cl_features.setArg(6, d_op); 
 			cl_features.setArg(7, d_F); 
-			cl_features.setArg(8, doObserverInitialization); 
+			cl_features.setArg(8, doObserverInitialization);
 			
 			//execute the kernel
 			opencl.error = opencl.getQueue().enqueueNDRangeKernel(cl_features, cl::NullRange, cl::NDRange(nPts), cl::NullRange);

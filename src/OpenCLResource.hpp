@@ -133,7 +133,6 @@ class OpenCLResource{
 //TODO: query more/all platform and device properties
 //TODO: switch for verbosity of printOpenCL routines: name only, basics, all
 //TODO: other overloads for print opencl/platform/device? eg filters for vendor/type/...
-//TODO: print opencl info to a file (for reference, may change if drivers are uninstalled/reinstalled)
 std::vector<platformInfo> queryOpenCL();
 platformInfo getPlatformInfo(cl::Platform platform, std::vector<cl::Device> devices=std::vector<cl::Device>());
 platformInfo getPlatformInfo(cl::Platform platform, cl::Device device);
