@@ -91,9 +91,9 @@ class CLODE {
 
 		//kernel object
         std::string clprogramstring, buildOptions, ODEsystemsource;
-		cl::Kernel cl_transient;
+		cl::Kernel cl_transient; 
         
-        //flag system to ensure kernel can be executed
+        //flag to ensure kernel can be executed
         bool clInitialized;
 
 

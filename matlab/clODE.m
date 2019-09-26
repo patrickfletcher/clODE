@@ -1,24 +1,33 @@
-classdef clODE < cppclass
+classdef clODE < cppclass & matlab.mixin.SetGet
     % clODE(prob, stepper=rk4, clSinglePrecision=true, cl_vendor=any, cl_deviceType=default)
     
     %TODO: this should have a method for default solverparams
     
     properties
         
+        stepper='rk4'
+        clSinglePrecision=true
+        cl_vendor='any'
+        cl_deviceType='default'
+        
         prob
-        stepper
-        clSinglePrecision
-        cl_vendor
-        cl_deviceType
         
         nPts
         P
         X0
-        auxf
+        
         sp
         tspan
+        
         tscale=1 %should go in IVP  
         tunits='';
+    end
+    
+    properties (Dependent)
+        %nPts
+    end
+    
+    properties (Access = private)
     end
     
     
@@ -77,12 +86,13 @@ classdef clODE < cppclass
         % new and delete are inherited
         
         %set a new problem - must initialize again!
-        function setNewProblem(obj, prob)
+        function set.prob(obj, prob)
+            obj.prob=prob;
             obj.cppmethod('setnewproblem', prob);
         end
         
         %set a new time step method - must initialize again!
-        function setStepper(obj, newStepper)
+        function set.stepper(obj, newStepper)
             obj.stepper=newStepper;
             obj.cppmethod('setstepper', clODE.getStepperEnum(newStepper));
         end
@@ -183,7 +193,6 @@ classdef clODE < cppclass
         function auxf=getAuxf(obj)
             auxf=obj.cppmethod('getauxf');
             auxf=reshape(auxf,obj.nPts,obj.prob.nAux);
-            obj.auxf=auxf;
         end
         
     end

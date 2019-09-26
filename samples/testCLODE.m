@@ -1,12 +1,14 @@
 %test basic clODE
 clear
 
-clSinglePrecision=false;
-[rhsfile,prob]=ode2cl('lactotroph.ode',[],clSinglePrecision);
+odefile='lactotroph.ode';
 
 stepper='dorpri5';
 vendor='nvidia';
 devicetype='default';
+clSinglePrecision=false;
+
+[rhsfile,prob]=ode2cl(odefile,[],clSinglePrecision);
 
 sp.dt=0.1;
 sp.dtmax=100.00;
@@ -18,21 +20,16 @@ sp.nout=50;
 
 tspan=[0,1000];
 
-mySeed=1;
-
 nPts=32;
-
 p=prob.p0;
 x0=[0,0,0,0];
 
 X0=repmat(x0,nPts,1);
 P=repmat(p,nPts,1);
 
-% prob.clRHSfilename=[pwd,'/',rhsfile];
-
 clo=clODE(prob, stepper, clSinglePrecision,vendor,devicetype);
 clo.initialize(tspan, X0(:), P(:), sp);
-clo.seedRNG(0)
+clo.seedRNG(42)
 % clo.transient();
 
 tic
