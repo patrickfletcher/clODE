@@ -255,19 +255,16 @@ void CLODEfeatures::features() {
 			cl_features.setArg(1, d_x0); 
 			cl_features.setArg(2, d_pars); 
 			cl_features.setArg(3, d_sp);
-			cl_features.setArg(4, d_RNGstate); 
-			cl_features.setArg(5, d_odata); 
-			cl_features.setArg(6, d_op); 
-			cl_features.setArg(7, d_F); 
-			cl_features.setArg(8, doObserverInitialization);
+			cl_features.setArg(4, d_xf); 
+			cl_features.setArg(5, d_RNGstate); 
+			cl_features.setArg(6, d_odata); 
+			cl_features.setArg(7, d_op); 
+			cl_features.setArg(8, d_F); 
+			cl_features.setArg(9, doObserverInitialization);
 			
 			//execute the kernel
 			opencl.error = opencl.getQueue().enqueueNDRangeKernel(cl_features, cl::NullRange, cl::NDRange(nPts), cl::NullRange);
 			opencl.getQueue().finish();
-			
-			//don't update tspan: roundoff errors accumulate that make adaptive steppers fail if t gets large, particularly in single precision
-			//~ std::vector<cl_double> newTspan({tspan[1], tspan[1]+(tspan[1]-tspan[0])});
-			//~ setTspan(newTspan);
 			
 			doObserverInitialization=0;
 		}

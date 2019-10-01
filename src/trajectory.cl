@@ -12,9 +12,10 @@
 
 __kernel void trajectory(
 __constant   realtype * tspan,			//time vector [t0,tf] - adds (tf-t0) to these at the end	
-__global   realtype * x0,				//initial state 				[nPts*nVar] -- overwrites this with xf=x(tf) at the end
+__global   realtype * x0,				//initial state 				[nPts*nVar]
 __constant   realtype * pars,			//parameter values				[nPts*nPar]
 __constant   struct SolverParams * sp,	//dtmin/max, tols, etc
+__global     realtype * xf,				//final state 				[nPts*nVar]
 __global     ulong * RNGstate,   	//state for RNG				[nPts*nRNGstate]
 __global     realtype * t,			//
 __global     realtype * x,			//
@@ -130,7 +131,7 @@ for (int j=0; j<N_VAR;++j) {
 
 //get device arrays ready to continue from (tf, xf)
 for (int j=0; j<N_VAR;++j) 
-	x0[j*nPts + i]=xi[j];
+	xf[j*nPts + i]=xi[j];
 
 for (int j=0; j<N_RNGSTATE; ++j)
 	RNGstate[j*nPts+i]=rd.state[j];	

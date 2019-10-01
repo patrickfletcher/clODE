@@ -42,8 +42,11 @@ enum class Action
     SetSolverPars,
     SeedRNG,
     Transient,
+    UpdateTspan,
+    UpdateX0,
     GetTspan,
     GetX0,
+    GetXf,
     GetAuxf,
 //from here are clODEfeatures derived actions
     SetObserverPars,
@@ -70,8 +73,11 @@ const std::map<std::string, Action> actionTypeMap =
     { "setsolverpars",  Action::SetSolverPars },
     { "seedrng",        Action::SeedRNG },
     { "transient",      Action::Transient },
+    { "updatetspan",    Action::UpdateTspan },
+    { "updatex0",       Action::UpdateX0 },
     { "gettspan",       Action::GetTspan },
     { "getx0",          Action::GetX0 },
+    { "getxf",          Action::GetXf },
     { "getauxf",        Action::GetAuxf },
 //from here are clODEfeatures derived actions
     { "setobserverpars", Action::SetObserverPars },
@@ -270,6 +276,18 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         instance->transient();
         break;
 	}
+    case Action::UpdateTspan:
+	{
+        instance->updateTspan();
+
+        break;
+	}
+    case Action::UpdateX0:
+	{
+        instance->updateX0();
+
+        break;
+	}
     case Action::GetTspan:
     {
         std::vector<double> tspan=instance->getTspan();
@@ -282,6 +300,13 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         std::vector<double> x0=instance->getX0();
 		plhs[0]=mxCreateDoubleMatrix(x0.size(), 1, mxREAL);
         std::copy(x0.begin(), x0.end(), (double *)mxGetData(plhs[0]));
+        break;
+	}
+    case Action::GetXf:
+    {
+        std::vector<double> xf=instance->getXf();
+		plhs[0]=mxCreateDoubleMatrix(1, xf.size(), mxREAL);
+        std::copy(xf.begin(), xf.end(), (double *)mxGetData(plhs[0]));
         break;
 	}
     case Action::GetAuxf:

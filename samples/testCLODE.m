@@ -38,6 +38,6 @@ toc
 
 tic
 nextTspan=clo.getTspan;
-xf=clo.getX0;
+xf=clo.getXf;
 auxf=clo.getAuxf;
 toc

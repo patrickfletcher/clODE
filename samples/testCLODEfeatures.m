@@ -56,7 +56,7 @@ clo=clODEfeatures(prob, stepper, observer, clSinglePrecision,vendor,devicetype);
 cloTraj=clODEtrajectory(prob, stepper, clSinglePrecision,vendorT,devicetypeT);
 
 %%
-tspan=[0,10000];
+tspan=[0,1000];
 nGrid=[32,32];
 
 nPts=prod(nGrid);
@@ -100,25 +100,15 @@ tic
 clo.transient();
 toc
 
-tic
-clo.transient();
-toc
-% 
-% tic
-% clo.transient();
-% toc
-
 % tspan=[0,50000];
 % clo.settspan(tspan);
 %%
-tic
-clo.features(1);
-toc
+% clo.updateTspan();
+clo.updateX0();
 
 tic
 clo.features();
 toc
-
 
 %% plot
 

@@ -51,7 +51,7 @@ class CLODEtrajectory: public CLODE {
         
         //simulation routines. 
         //TODO: overload with newX0, newPars; all four? 
-        void trajectory();  //integrate forward an interval of duration (tf-t0). automatically sets device tspan and x0 to be ready to continue forward from (tf,xf)
+        void trajectory();  //integrate forward an interval of duration (tf-t0)
         
         //Get functions
         std::vector<double> getT();   

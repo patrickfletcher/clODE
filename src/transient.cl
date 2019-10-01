@@ -7,9 +7,10 @@
 
 __kernel void transient(
 __constant   realtype * tspan,			//time vector [t0,tf] - adds (tf-t0) to these at the end	
-__global   realtype * x0,				//initial state 				[nPts*nVar] -- overwrites this with xf=x(tf) at the end
+__global   	 realtype * x0,				//initial state 				[nPts*nVar] -- overwrites this with xf=x(tf) at the end
 __constant   realtype * pars,			//parameter values				[nPts*nPar]
 __constant   struct SolverParams * sp,	//dtmin/max, tols, etc
+__global     realtype * xf,				//final state 				[nPts*nVar]
 __global     realtype * auxf,			//final value of aux variables 	[nPts*nAux]
 __global     ulong * RNGstate   //state for RNG					[nPts*nRNGstate]
 )
@@ -69,9 +70,9 @@ while (ti < tspan[1] && step<sp->max_steps && stepflag==0) {
 }
 
 
-//write the final solution values to global memory. get device arrays ready to continue from (tf, xf)
+//write the final solution values to global memory.
 for (int j=0; j<N_VAR;++j) 
-	x0[j*nPts + i]=xi[j];
+	xf[j*nPts + i]=xi[j];
 	
 for (int j=0; j<N_AUX;++j) 
 	auxf[j*nPts + i]=auxi[j];

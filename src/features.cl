@@ -9,9 +9,10 @@
 
 __kernel void features(
 __constant   realtype * tspan,			//time vector [t0,tf] - adds (tf-t0) to these at the end	
-__global     realtype * x0,				//initial state 				[nPts*nVar] -- overwrites this with xf=x(tf) at the end
+__global     realtype * x0,				//initial state 				[nPts*nVar]
 __constant   realtype * pars,			//parameter values				[nPts*nPar]
 __constant   struct SolverParams * sp,	//dtmin/max, tols, etc
+__global     realtype * xf,				//final state 				[nPts*nVar]
 __global     ulong * RNGstate,          //enables host seeding/continued streams	    [nPts*nRNGstate]
 __global   	 ObserverData * OData,	    //for continue
 __constant   struct ObserverParams * opars,
@@ -159,7 +160,7 @@ finalizeObserverData(&ti, xi, dxi, auxi, &odata, opars, tspan);
 
 //set global variables to be ready to continue 
 for (int j=0; j<N_VAR;++j) {
-	x0[j*nPts + i]=xi[j];}
+	xf[j*nPts + i]=xi[j];}
 
 for (int j=0; j<N_RNGSTATE; ++j) {
 	RNGstate[j*nPts+i]=rd.state[j];}

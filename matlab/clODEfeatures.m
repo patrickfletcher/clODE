@@ -23,6 +23,7 @@ classdef clODEfeatures<clODE
 %     nPts
 %     P
 %     X0
+%     Xf
 %     auxf
 %     sp
 %     tspan

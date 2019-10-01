@@ -9,7 +9,6 @@ if ismac
     libopencl='';
     compflags='$COMPFLAGS -framework OpenCL';
     ldflags='$LDFLAGS -framework OpenCL';
-    libopencl='';
 elseif isunix
     % Code to run on Linux plaform
     opencl_include_dir = '/usr/local/cuda-7.5/targets/x86_64-linux/include';

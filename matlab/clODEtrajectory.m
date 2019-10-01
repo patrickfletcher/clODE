@@ -22,6 +22,7 @@ classdef clODEtrajectory<clODE
 %     nPts
 %     P
 %     X0
+%     Xf
 %     auxf
 %     sp
 %     tspan

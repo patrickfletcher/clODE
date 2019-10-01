@@ -6,6 +6,8 @@
 // Example of using a C++ class via a MEX-file
 // by Jonathan Chappelow (chappjc)
 
+//TODO: is it better or more convenient to use the new matlab C++ data API?
+
 #include "mex.h"
 
 #include <vector>
@@ -42,8 +44,11 @@ enum class Action
     SetSolverPars,
     SeedRNG,
     Transient,
+    UpdateTspan,
+    UpdateX0,
     GetTspan,
     GetX0,
+    GetXf,
     GetAuxf
 };
 
@@ -64,8 +69,11 @@ const std::map<std::string, Action> actionTypeMap =
     { "setsolverpars",  Action::SetSolverPars },
     { "seedrng",        Action::SeedRNG },
     { "transient",      Action::Transient },
+    { "updatetspan",    Action::UpdateTspan },
+    { "updatex0",       Action::UpdateX0 },
     { "gettspan",       Action::GetTspan },
     { "getx0",          Action::GetX0 },
+    { "getxf",          Action::GetXf },
     { "getauxf",        Action::GetAuxf },
 }; 
 
@@ -249,6 +257,18 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
         break;
 	}
+    case Action::UpdateTspan:
+	{
+        instance->updateTspan();
+
+        break;
+	}
+    case Action::UpdateX0:
+	{
+        instance->updateX0();
+
+        break;
+	}
     case Action::GetTspan:
     {
         std::vector<double> tspan=instance->getTspan();
@@ -261,6 +281,13 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         std::vector<double> x0=instance->getX0();
 		plhs[0]=mxCreateDoubleMatrix(1, x0.size(), mxREAL);
         std::copy(x0.begin(), x0.end(), (double *)mxGetData(plhs[0]));
+        break;
+	}
+    case Action::GetXf:
+    {
+        std::vector<double> xf=instance->getXf();
+		plhs[0]=mxCreateDoubleMatrix(1, xf.size(), mxREAL);
+        std::copy(xf.begin(), xf.end(), (double *)mxGetData(plhs[0]));
         break;
 	}
     case Action::GetAuxf:

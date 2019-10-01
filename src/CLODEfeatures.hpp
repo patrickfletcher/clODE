@@ -82,7 +82,7 @@ class CLODEfeatures: public CLODE {
         //TODO: overload with newX0, newPars; all four? 
         //TODO: pre-features? update edata basics (min/max x dx) but no event function
         void features(bool newDoObserverInitFlag); //allow manually forcing re-init of observer data
-        void features();  //integrate forward an interval of duration (tf-t0). automatically sets device tspan, x0, and edata to be ready to continue forward from (tf,xf)
+        void features();  //integrate forward an interval of duration (tf-t0)
         
         //Get functions
         int getNFeatures() {return nFeatures;};

@@ -246,6 +246,7 @@ void CLODE::setNpts(int newNpts){
 		//resize host variables
 		x0.resize(x0elements);
 		pars.resize(parselements);
+		xf.resize(x0elements);
 		auxf.resize(auxfelements);
 		RNGstate.resize(RNGelements); 
 		
@@ -256,6 +257,8 @@ void CLODE::setNpts(int newNpts){
 			// printf("1\n");
 			d_pars = cl::Buffer(opencl.getContext(), CL_MEM_READ_ONLY, realSize * parselements, NULL, &opencl.error);
 			// printf("2\n");
+			d_xf   = cl::Buffer(opencl.getContext(), CL_MEM_READ_WRITE, realSize * x0elements, NULL, &opencl.error);
+			// printf("1\n");
 			d_auxf  = cl::Buffer(opencl.getContext(), CL_MEM_WRITE_ONLY, realSize * auxfelements, NULL, &opencl.error);
 			// printf("3\n");
 			d_RNGstate  = cl::Buffer(opencl.getContext(), CL_MEM_READ_WRITE, sizeof(cl_ulong) * RNGelements, NULL, &opencl.error);
@@ -292,6 +295,11 @@ void CLODE::setTspan( std::vector<double>  newTspan) {
 	}
 }
 
+void CLODE::updateTspan(){
+	std::vector<double> newTspan({tspan[1], tspan[1]+(tspan[1]-tspan[0])});
+	setTspan(newTspan);
+}
+
 
 //set new x0. Cannot update nPts
 void CLODE::setX0( std::vector<double>  newX0){
@@ -322,6 +330,16 @@ void CLODE::setX0( std::vector<double>  newX0){
     }
 }
 
+void CLODE::updateX0(){
+	//device to device transfer of Xf to X0???
+	try {
+		opencl.error = opencl.getQueue().enqueueCopyBuffer(d_xf, d_x0, 0, 0, realSize * x0elements);
+	}
+	catch (cl::Error &er) {
+		printf("ERROR: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str() );
+		throw er;
+	}    
+}
 
 
 //set new Pars. Cannot update nPts
@@ -443,16 +461,13 @@ void CLODE::transient() {
 			cl_transient.setArg(1, d_x0); 
 			cl_transient.setArg(2, d_pars); 
 			cl_transient.setArg(3, d_sp);
-			cl_transient.setArg(4, d_auxf);
-			cl_transient.setArg(5, d_RNGstate); 
+			cl_transient.setArg(4, d_xf); 
+			cl_transient.setArg(5, d_auxf);
+			cl_transient.setArg(6, d_RNGstate); 
 			
 			//execute the kernel
 			opencl.error = opencl.getQueue().enqueueNDRangeKernel(cl_transient, cl::NullRange, cl::NDRange(nPts), cl::NullRange);
 			opencl.getQueue().finish();
-			
-			//don't update tspan: roundoff errors accumulate that make adaptive steppers fail if t gets large, particularly in single precision
-			//~ std::vector<double> newTspan({tspan[1], tspan[1]+(tspan[1]-tspan[0])});
-			//~ setTspan(newTspan);
 		}
 		catch (cl::Error &er) {
 			printf("ERROR: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str() );
@@ -479,6 +494,22 @@ std::vector<double> CLODE::getX0() {
 		}
 		
 		return x0;
+}
+
+
+
+std::vector<double> CLODE::getXf() {
+
+		if (clSinglePrecision) { //cast back to double
+			std::vector<float> xfF(x0elements);
+			opencl.error = copy(opencl.getQueue(), d_xf, xfF.begin(), xfF.end());
+			xf.assign(xfF.begin(),xfF.end());
+		}
+		else {
+			opencl.error = copy(opencl.getQueue(), d_xf, xf.begin(), xf.end());
+		}
+		
+		return xf;
 }
 
 

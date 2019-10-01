@@ -118,21 +118,18 @@ void CLODEtrajectory::trajectory() {
 			cl_trajectory.setArg(1, d_x0); 
 			cl_trajectory.setArg(2, d_pars); 
 			cl_trajectory.setArg(3, d_sp);
-			cl_trajectory.setArg(4, d_RNGstate); 
-			cl_trajectory.setArg(5, d_t); 
-			cl_trajectory.setArg(6, d_x); 
-			cl_trajectory.setArg(7, d_dx); 
-			cl_trajectory.setArg(8, d_aux); 
-			cl_trajectory.setArg(9, nStoreMax);
-			cl_trajectory.setArg(10, d_nStored); 
+			cl_trajectory.setArg(4, d_xf); 
+			cl_trajectory.setArg(5, d_RNGstate); 
+			cl_trajectory.setArg(6, d_t); 
+			cl_trajectory.setArg(7, d_x); 
+			cl_trajectory.setArg(8, d_dx); 
+			cl_trajectory.setArg(9, d_aux); 
+			cl_trajectory.setArg(10, nStoreMax);
+			cl_trajectory.setArg(11, d_nStored); 
 			
 			//execute the kernel
 			opencl.error = opencl.getQueue().enqueueNDRangeKernel(cl_trajectory, cl::NullRange, cl::NDRange(nPts), cl::NullRange);
 			opencl.getQueue().finish();
-			
-			//don't update tspan: roundoff errors accumulate that make adaptive steppers fail if t gets large, particularly in single precision
-			//~ std::vector<double> newTspan({tspan[1], tspan[1]+(tspan[1]-tspan[0])});
-			//~ setTspan(newTspan);
 		}
 		catch (cl::Error &er) {
 			printf("ERROR: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str() );

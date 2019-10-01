@@ -15,6 +15,7 @@ classdef clODE < cppclass & matlab.mixin.SetGet
         nPts
         P
         X0
+        Xf
         
         sp
         tspan
@@ -179,6 +180,14 @@ classdef clODE < cppclass & matlab.mixin.SetGet
             obj.cppmethod('transient');
         end
         
+        function updateTspan(obj)
+            obj.cppmethod('updatetspan');
+        end
+        
+        function updateX0(obj)
+            obj.cppmethod('updatex0');
+        end
+        
         function tspan=getTspan(obj)
             tspan=obj.cppmethod('gettspan');
             obj.tspan=tspan;
@@ -188,6 +197,12 @@ classdef clODE < cppclass & matlab.mixin.SetGet
             X0=obj.cppmethod('getx0');
             X0=reshape(X0,obj.nPts,obj.prob.nVar);
             obj.X0=X0;
+        end
+        
+        function Xf=getXf(obj)
+            Xf=obj.cppmethod('getxf');
+            Xf=reshape(Xf,obj.nPts,obj.prob.nVar);
+            obj.Xf=Xf;
         end
         
         function auxf=getAuxf(obj)

@@ -81,13 +81,13 @@ class CLODE {
         int nRNGstate; //TODO: different RNGs could be selected like steppers...?
         
         SolverParams<double> sp;
-        std::vector<double> tspan, x0, pars, auxf;
+        std::vector<double> tspan, x0, pars, xf, auxf;
         size_t x0elements, parselements, auxfelements, RNGelements;
         
         std::vector<cl_ulong> RNGstate;
         
         //Device variables
-        cl::Buffer d_tspan, d_x0, d_pars, d_sp, d_auxf, d_RNGstate; 
+        cl::Buffer d_tspan, d_x0, d_pars, d_sp, d_xf, d_auxf, d_RNGstate; 
 
 		//kernel object
         std::string clprogramstring, buildOptions, ODEsystemsource;
@@ -136,10 +136,18 @@ class CLODE {
 		void seedRNG(int mySeed); //TODO: overload for setting reproducible seeds
         
         //simulation routine
-        void transient();  //integrate forward an interval of duration (tf-t0). automatically sets device tspan and x0 to be ready to continue forward from (tf,xf)
+        void transient();  //integrate forward an interval of duration (tf-t0).
         
-        std::vector<double> getTspan(){return tspan;};  //returns "current" tspan
-        std::vector<double> getX0(); //returns the vector of x values at current time (x0 on device is overwritten with xf after integration)
+        void updateTspan(); //t0 <- tf, tf<-(tf + tf-t0)  
+        void updateX0(); //X0 <- Xf (device to device transfer)
+
+        //go: transient repeated does same calculation: t0->tf, x0->xf
+        //shift/continue: transient, updateTspan+updateX0, transient (only for trajectory?)
+        //last: transient, updateX0, transient
+
+        std::vector<double> getTspan(){return tspan;}; 
+        std::vector<double> getX0();
+        std::vector<double> getXf(); 
         std::vector<double> getAuxf();
         std::string programString() {return clprogramstring;};
         
