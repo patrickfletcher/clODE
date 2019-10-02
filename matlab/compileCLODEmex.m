@@ -4,22 +4,22 @@ clear
 % %%%%%%%%%%%%%%%% CONFIGURATION %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 if ismac
     % Code to run on Mac plaform
-    opencl_include_dir = '/path/to/cl.hpp';
-    opencl_lib_dir = '';
+    opencl_include_dir = '/path/to/cl.hpp'; %cl.hpp for OpenCL C++ bindings
+    opencl_lib_dir = ''; %leave empty; taken care of by the -framework option
     libopencl='';
     compflags='COMPFLAGS="$COMPFLAGS -framework OpenCL"';
     ldflags='LDFLAGS="$LDFLAGS -framework OpenCL"';
 elseif isunix
     % Code to run on Linux plaform
-    opencl_include_dir = '/usr/local/cuda-7.5/targets/x86_64-linux/include';
-    opencl_lib_dir = '/usr/lib64/nvidia';
+    opencl_include_dir = '/usr/local/cuda-7.5/targets/x86_64-linux/include'; %cl.hpp
+    opencl_lib_dir = '/usr/lib64/nvidia'; %libOpenCL.so
     libopencl='-lOpenCL';
     compflags='';
     ldflags='';
 elseif ispc
     % Code to run on Windows platform 
-    opencl_include_dir = 'C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v10.1/include';
-    opencl_lib_dir = 'C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v10.1/lib/x64';
+    opencl_include_dir = 'C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v10.1/include'; %cl.hpp
+    opencl_lib_dir = 'C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v10.1/lib/x64';  %OpenCL.lib
     libopencl='-lOpenCL';
     compflags='';
     ldflags='';

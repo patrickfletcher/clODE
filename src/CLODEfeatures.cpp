@@ -34,30 +34,30 @@ void CLODEfeatures::initialize(std::vector<cl_double> newTspan, std::vector<cl_d
 	
 	//(re)build the program
 	buildProgram(observerBuildOpts);
-    printf("Using observer: %s\n",observerName.c_str());
+    // printf("Using observer: %s\n",observerName.c_str());
 	
 	//Base class initialize kernel:
 	initializeTransientKernel();
-	printf("Transient kernel initialized.\n");
+	// printf("Transient kernel initialized.\n");
     
 	//initialize the trajectory kernel
 	initializeFeaturesKernel();
-	printf("Features kernel initialized.\n");
+	// printf("Features kernel initialized.\n");
     
 	setSolverParams(newSp);
-	printf("Solver parameters set.\n");
+	// printf("Solver parameters set.\n");
 	setObserverParams(newOp);
-	printf("Observer parameters set.\n");
+	// printf("Observer parameters set.\n");
     setTspan(newTspan);
-	printf("Integration time span set.\n");
+	// printf("Integration time span set.\n");
     
 	setProblemData(newX0, newPars); //will set nPts
-	printf("Problem data set.\n");
+	// printf("Problem data set.\n");
 	
 	resizeFeaturesVariables(); //set up d_F and d_odata too, which depend on nPts
 	
 	clInitialized=true;
-	printf("Initialization complete.\n");
+	// printf("Initialization complete.\n");
 	
 }
 
@@ -153,6 +153,11 @@ void CLODEfeatures::initializeFeaturesKernel() {
 		}
         cl_features = cl::Kernel(opencl.getProgram(), "features", &opencl.error);
         
+		size_t preferred_multiple;
+		cl::Device dev;
+		opencl.getProgram().getInfo(CL_PROGRAM_DEVICES,&dev);
+		cl_features.getWorkGroupInfo(dev,CL_KERNEL_PREFERRED_WORK_GROUP_SIZE_MULTIPLE,&preferred_multiple);
+		printf("Preferred work size multiple (features): %d\n",preferred_multiple);
     }
     catch (cl::Error &er) {
         printf("ERROR: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str() );

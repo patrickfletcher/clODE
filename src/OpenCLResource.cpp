@@ -226,11 +226,18 @@ void OpenCLResource::buildProgramFromString(std::string sourceStr, std::string b
     std::string buildLog;
     program=cl::Program(context, source);
     
-    try { program.build(devices, buildOptions.c_str()); } 
+    try { 
+        program.build(devices, buildOptions.c_str());
+
+        std::string kernelnames;
+        program.getInfo(CL_PROGRAM_KERNEL_NAMES,&kernelnames);
+        printf("Kernels built:   %s\n", kernelnames.c_str());
+
+        } 
     catch(cl::Error &er) {
         if(er.err() == CL_BUILD_PROGRAM_FAILURE) {
 			for (unsigned int i=0; i<devices.size(); ++i){
-				program.getBuildInfo(devices[i],(cl_program_build_info)CL_PROGRAM_BUILD_LOG, &buildLog);
+				program.getBuildInfo(devices[i],CL_PROGRAM_BUILD_LOG, &buildLog);
 				printf( "OpenCL build log, Device %u:\n", i);
 				printf( "%s\n", buildLog.c_str());
 			}
@@ -285,9 +292,9 @@ std::vector<platformInfo> queryOpenCL() {
 platformInfo getPlatformInfo(cl::Platform platform, std::vector<cl::Device> devices){
 	
 	platformInfo pinfo;
-	platform.getInfo((cl_platform_info)CL_PLATFORM_NAME,&pinfo.name);
-	platform.getInfo((cl_platform_info)CL_PLATFORM_VENDOR,&pinfo.vendor);
-	platform.getInfo((cl_platform_info)CL_PLATFORM_VERSION,&pinfo.version);
+	platform.getInfo(CL_PLATFORM_NAME,&pinfo.name);
+	platform.getInfo(CL_PLATFORM_VENDOR,&pinfo.vendor);
+	platform.getInfo(CL_PLATFORM_VERSION,&pinfo.version);
 	
 	if (devices.size()==0) { //get all the devices
 		platform.getDevices(CL_DEVICE_TYPE_ALL, &devices);
@@ -308,10 +315,10 @@ deviceInfo getDeviceInfo(cl::Device device){
 	deviceInfo dinfo;
 
 	//Get device info for this compute resource
-	device.getInfo((cl_device_info)CL_DEVICE_NAME,&dinfo.name);
-	device.getInfo((cl_device_info)CL_DEVICE_VENDOR,&dinfo.vendor);
-	device.getInfo((cl_device_info)CL_DEVICE_VERSION,&dinfo.version);
-	device.getInfo((cl_device_info)CL_DEVICE_TYPE,&dinfo.devType);
+	device.getInfo(CL_DEVICE_NAME,&dinfo.name);
+	device.getInfo(CL_DEVICE_VENDOR,&dinfo.vendor);
+	device.getInfo(CL_DEVICE_VERSION,&dinfo.version);
+	device.getInfo(CL_DEVICE_TYPE,&dinfo.devType);
 	switch (dinfo.devType) {
 		case CL_DEVICE_TYPE_CPU:
 			dinfo.devTypeStr="CPU";
@@ -326,18 +333,18 @@ deviceInfo getDeviceInfo(cl::Device device){
 			dinfo.devTypeStr="Unknown";
 	}
 	
-	device.getInfo((cl_device_info)CL_DEVICE_MAX_COMPUTE_UNITS,&dinfo.computeUnits);
-	device.getInfo((cl_device_info)CL_DEVICE_MAX_CLOCK_FREQUENCY,&dinfo.maxClock);
-	device.getInfo((cl_device_info)CL_DEVICE_MAX_WORK_GROUP_SIZE,&dinfo.maxWorkGroupSize);
-	device.getInfo((cl_device_info)CL_DEVICE_GLOBAL_MEM_SIZE,&dinfo.deviceMemSize);
-	device.getInfo((cl_device_info)CL_DEVICE_MAX_MEM_ALLOC_SIZE,&dinfo.maxMemAllocSize);
-	device.getInfo((cl_device_info)CL_DEVICE_EXTENSIONS,&dinfo.extensions);
+	device.getInfo(CL_DEVICE_MAX_COMPUTE_UNITS,&dinfo.computeUnits);
+	device.getInfo(CL_DEVICE_MAX_CLOCK_FREQUENCY,&dinfo.maxClock);
+	device.getInfo(CL_DEVICE_MAX_WORK_GROUP_SIZE,&dinfo.maxWorkGroupSize);
+	device.getInfo(CL_DEVICE_GLOBAL_MEM_SIZE,&dinfo.deviceMemSize);
+	device.getInfo(CL_DEVICE_MAX_MEM_ALLOC_SIZE,&dinfo.maxMemAllocSize);
+	device.getInfo(CL_DEVICE_EXTENSIONS,&dinfo.extensions);
 
 	std::string doubleStr="fp64";
 	dinfo.doubleSupport=dinfo.extensions.find(doubleStr)!=std::string::npos;
 	
-	device.getInfo((cl_device_info)CL_DEVICE_EXTENSIONS,&dinfo.extensions);
-	device.getInfo((cl_device_info)CL_DEVICE_AVAILABLE,&dinfo.deviceAvailable);
+	device.getInfo(CL_DEVICE_EXTENSIONS,&dinfo.extensions);
+	device.getInfo(CL_DEVICE_AVAILABLE,&dinfo.deviceAvailable);
 	
 	return dinfo;
 }

@@ -43,6 +43,12 @@ void CLODEtrajectory::initializeTrajectoryKernel() {
 	
 	try { 
         cl_trajectory = cl::Kernel(opencl.getProgram(), "trajectory", &opencl.error);
+        
+		size_t preferred_multiple;
+		cl::Device dev;
+		opencl.getProgram().getInfo(CL_PROGRAM_DEVICES,&dev);
+		cl_trajectory.getWorkGroupInfo(dev,CL_KERNEL_PREFERRED_WORK_GROUP_SIZE_MULTIPLE,&preferred_multiple);
+		printf("Preferred work size multiple (trajectory): %d\n",preferred_multiple);
     }
     catch (cl::Error &er) {
         printf("ERROR: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str() );

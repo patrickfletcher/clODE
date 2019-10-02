@@ -1,10 +1,8 @@
-//TODO: Force all steppers to follow FSAL? allows "free" interpolation in any timestep (important for event detection, trajectory output at specified times). if purifying ti (fixed steppers) must get new dxi in main loop.
-
+//TODO: Force all steppers to follow FSAL? allows "free" interpolation in any timestep (important for event detection, trajectory output at specified times). 
+//      if purifying ti (fixed steppers) must get new dxi in main loop.
 //TODO: Adaptive stepper seems to fail to keep stepsize small enough to prevent blowups. Something to do with abstol??
-
 //TODO: stepper wishlist: Multi-step method support,  implicit methods
-
-//TODO: does fma(a,b,c)=a*b+c for improved accuracy?
+//TODO: does fma(a,b,c)=a*b+c for improved accuracy? vs mad? Does compiler do it anyway (if so write normal version for readability)? 
 //TODO: fixed stepsize: if always purifying ti in main loop (t0+step*dt), don't update ti here?
 //TODO: test speed increases for "minimizing registers" vs reuse of computations (e.g. h2=*dt*0.5)
 
