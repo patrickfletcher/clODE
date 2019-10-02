@@ -210,7 +210,7 @@ void CLODE::setProblemData(std::vector<double> newX0, std::vector<double> newPar
 	// now check if newX0 and newPars represent same number of sets
 	int nPtsX0=newX0.size()/nVar;
 	int nPtsPars=newPars.size()/nPar;
-	printf("Computed nPts: %d %d\n", nPtsX0, nPtsPars);
+	// printf("Computed nPts: %d %d\n", nPtsX0, nPtsPars);
 	if (nPtsX0!=nPtsPars) {
         printf("Initial contition and parameter vector dimensions don't match");
         printf("...Expected %d sets of each, recieved %d for x0 and %d for pars\n", nPts, nPtsX0, nPtsPars);
@@ -220,13 +220,13 @@ void CLODE::setProblemData(std::vector<double> newX0, std::vector<double> newPar
 
 	//set nPts
 	setNpts(nPtsX0);
-	printf("set nPts\n");
+	// printf("set nPts\n");
 
 	//set things that depend on nPts
 	setX0(newX0);
-	printf("set X0\n");
+	// printf("set X0\n");
 	setPars(newPars);
-	printf("set P\n");
+	// printf("set P\n");
 }
 
 
@@ -235,7 +235,7 @@ void CLODE::setNpts(int newNpts){
 	
 	//unlikely that any of these should ever exceed memory limits...
 	size_t largestAlloc = std::max(nVar, std::max(nPar, nAux)) * nPts * realSize;
-	printf("Computed largestAlloc: %d\n", largestAlloc);
+	// printf("Computed largestAlloc: %d\n", largestAlloc);
 	
 	if (largestAlloc > opencl.getMaxMemAllocSize()) {
 		throw std::invalid_argument("nPts*nVar, nPts*nPar, or nPts*nAux is too large");
@@ -337,7 +337,7 @@ void CLODE::setX0( std::vector<double>  newX0){
 }
 
 void CLODE::updateX0(){
-	//device to device transfer of Xf to X0???
+	//device to device transfer of Xf to X0
 	try {
 		opencl.error = opencl.getQueue().enqueueCopyBuffer(d_xf, d_x0, 0, 0, realSize * x0elements);
 	}
