@@ -63,7 +63,7 @@ classdef clODEtrajectory<clODE
             x=obj.cppmethod('getx');
             x=reshape(x,obj.nPts,obj.prob.nVar,obj.nSteps);
             x=permute(x,[3,2,1]);
-            x=squeeze(x);
+%             x=squeeze(x);
             obj.x=x;
         end
         
@@ -71,7 +71,7 @@ classdef clODEtrajectory<clODE
             dx=obj.cppmethod('getdx');
             dx=reshape(dx,obj.nPts,obj.prob.nVar,obj.nSteps);
             dx=permute(dx,[3,2,1]);
-            dx=squeeze(dx);
+%             dx=squeeze(dx);
             obj.dx=dx;
         end
         
@@ -79,7 +79,7 @@ classdef clODEtrajectory<clODE
             aux=obj.cppmethod('getaux');
             aux=reshape(aux,obj.nPts,obj.prob.nAux,obj.nSteps);
             aux=permute(aux,[3,2,1]);
-            aux=squeeze(aux);
+%             aux=squeeze(aux);
             obj.aux=aux;
         end
 

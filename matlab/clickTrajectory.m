@@ -8,6 +8,7 @@ function clickTrajectory(clickAxis,~,clo,pin,x0in,tspan,parIx,vars,tracjectoryFi
 %feature detection interval
 
 if ~exist('vars','var'), vars=clo.prob.varNames(1); end
+if ischar(vars), vars={vars}; end
 if ~exist('nClick','var'), nClick=1; end
 if nClick>6, error('I refuse to do more than 6 clicks'); end
 
@@ -75,10 +76,12 @@ plotTrajectories(X,T,AUX);
     function keypress(src,evt)
         switch(evt.Key)
             case 'g'
+                clo.settspan(tspan);
                 [X,T,AUX]=integrate();
                 plotTrajectories(X,T,AUX);
                 
             case 'c'
+                clo.updateX0();
                 [xx,tt,aux]=integrate();
                 for i=1:nClick
                     T{i}=[T{i};tt{i}+T{i}(end)];
@@ -88,6 +91,7 @@ plotTrajectories(X,T,AUX);
                 plotTrajectories(X,T,AUX);
                 
             case 'r' %randomize ICs
+                clo.settspan(tspan);
                 x0lb=[clo.prob.var.lb];
                 x0ub=[clo.prob.var.ub];
                 x0=x0lb+rand(nClick,length(x0lb)).*(x0ub-x0lb);

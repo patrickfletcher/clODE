@@ -87,7 +87,7 @@ P=repmat(p,nPts,1);
 P(:,p1ix)=P1(:);
 P(:,p2ix)=P2(:);
 
-%
+
 clo.initialize(tspan, X0(:), P(:), sp, op);
 clo.seedRNG(0)
 
@@ -100,11 +100,8 @@ tic
 clo.transient();
 toc
 
-% tspan=[0,50000];
-% clo.settspan(tspan);
 %%
-% clo.updateTspan();
-clo.updateX0();
+clo.updateX0(); %sets X0 to continue from the end of the transient
 
 tic
 clo.features();
@@ -120,17 +117,18 @@ f=reshape(F(:,fix),nGrid);
 figure(1); clf
 hi=imagesc(p1,p2,f);
 hi.HitTest='off';
-set(gca,'ydir','normal');
+ax=gca;
+ax.YDir='normal';
 hcb=colorbar('northoutside');
 xlabel(prob.parNames(p1ix));
 ylabel(prob.parNames(p2ix));
-
 title(hcb,clo.fNames{fix})
-
-ax=gca;
 axis square
 
 nClick=3;
-var=op.fVarIx;
 
-ax.ButtonDownFcn={@clickTrajectory,cloTraj,prob,p,x0,tspan,[p1ix,p2ix],var,2,nClick};
+%variables to plot (use the name)
+vars={'v'}; %one variable
+% vars={'v','c'}; %two variables
+
+ax.ButtonDownFcn={@clickTrajectory,cloTraj,p,x0,tspan,[p1ix,p2ix],vars,2,nClick};
