@@ -1,13 +1,22 @@
-#include <stdexcept>
+#define dbg_printf printf
+//~ #define dbg_printf 
+
+//if we are compiling from matlab MEX, redefine printf to mexPrintf so it prints to matlab command window.
+#ifdef MATLAB_MEX_FILE
+    #include "mex.h"
+    #define printf mexPrintf
+#endif
+
+#include <vector>
 #include <stdio.h>
 #include <string>
-#include <algorithm>
+#include <algorithm> //std::max
 #include <random>
-#include <stdint.h>
 
 #include "OpenCLResource.hpp"  
 #include "CLODE.hpp"
 #include "clODE_struct_defs.h"
+
 
 //constructor sets problem info and builds the base clprogramstring
 CLODE::CLODE(ProblemInfo prob, StepperType stepper, bool clSinglePrecision, OpenCLResource opencl) 

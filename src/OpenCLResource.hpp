@@ -14,13 +14,6 @@
 #ifndef OPENCL_RESOURCE_HPP_
 #define OPENCL_RESOURCE_HPP_
 
-//if compiling from matlab MEX, redefine printf to mexPrintf so it prints to matlab command window.
-#ifdef MATLAB_MEX_FILE
-    #include "mex.h"
-    #define printf mexPrintf
-#endif
-
-
 #define __CL_ENABLE_EXCEPTIONS
 #if defined(__APPLE__) || defined(__MACOSX)
     #include "OpenCL/cl.hpp"

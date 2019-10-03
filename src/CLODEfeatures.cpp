@@ -1,7 +1,16 @@
-#include <stdexcept>
+#define dbg_printf printf
+//~ #define dbg_printf 
+
+//if we are compiling from matlab MEX, redefine printf to mexPrintf so it prints to matlab command window.
+#ifdef MATLAB_MEX_FILE
+    #include "mex.h"
+    #define printf mexPrintf
+#endif
+
+#include <vector>
 #include <stdio.h>
-#include <algorithm>
 #include <string>
+#include <algorithm> //std::max
 
 #include "CLODEfeatures.hpp"
 

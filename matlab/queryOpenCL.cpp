@@ -5,12 +5,6 @@
 #include "mex.h"
 #include "OpenCLResource.hpp"
 
-#if defined(__APPLE__) || defined(__MACOSX)
-    #include "OpenCL/cl.hpp"
-#else
-    #include <CL/cl.hpp>
-#endif	   
-
 void mexFunction( int nlhs, mxArray *plhs[], 
 		  int nrhs, const mxArray*prhs[] )
 {

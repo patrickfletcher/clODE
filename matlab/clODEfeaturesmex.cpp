@@ -10,11 +10,7 @@
 
 #include <vector>
 #include <map>
-#include <algorithm>
-#include <memory>
-#include <string>
 #include <sstream>
-#include <iostream>
 
 ////////////////////////  BEGIN Step 1: Configuration  ////////////////////////
 

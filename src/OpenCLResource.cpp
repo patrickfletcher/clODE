@@ -5,8 +5,16 @@
  * 
  */
 
+
+//if compiling from matlab MEX, redefine printf to mexPrintf so it prints to matlab command window.
+#ifdef MATLAB_MEX_FILE
+    #include "mex.h"
+    #define printf mexPrintf
+#endif
+
 #include <stdexcept>
 #include <fstream>
+#include <stdio.h>
 
 #include "OpenCLResource.hpp"
 
@@ -178,7 +186,7 @@ void OpenCLResource::getPlatformAndDevices(unsigned int platformID, std::vector<
     if(platforms.size() == 0)
         throw cl::Error(1, "No OpenCL platforms were found");
     
-    if (platformID<platforms.size() && platformID>=0){
+    if (platformID<platforms.size()){
         platform=platforms[platformID];
     }
     else {
@@ -189,7 +197,7 @@ void OpenCLResource::getPlatformAndDevices(unsigned int platformID, std::vector<
     platform.getDevices(CL_DEVICE_TYPE_ALL, &tempDevices);
 	for (unsigned int i=0; i<deviceIDs.size(); ++i) {
 		
-		if (deviceIDs[i]<tempDevices.size() && deviceIDs[i]>=0){
+		if (deviceIDs[i]<tempDevices.size()){
 			devices.push_back(tempDevices[deviceIDs[i]]);
 		}
 		else {
@@ -399,8 +407,8 @@ void printDeviceInfo(deviceInfo dinfo) {
     //~ printf("Version: %s\n", dinfo.version.c_str());
     printf("Compute units (CUs): %d\n", dinfo.computeUnits);
     printf("Clock frequency:     %d MHz\n", dinfo.maxClock);
-    printf("Global memory size:  %lu MB\n", dinfo.deviceMemSize/1024/1024);
-    printf("Max allocation size: %lu MB\n", dinfo.maxMemAllocSize/1024/1024);
+    printf("Global memory size:  %llu MB\n", dinfo.deviceMemSize/1024/1024);
+    printf("Max allocation size: %llu MB\n", dinfo.maxMemAllocSize/1024/1024);
     printf("Max work group/CU:   %d\n", (int) dinfo.maxWorkGroupSize);
     printf("Double support:      %s\n", (dinfo.doubleSupport?"true":"false") );
     printf("Device available:    %s\n", (dinfo.deviceAvailable?"true":"false") );
