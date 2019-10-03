@@ -14,15 +14,6 @@
 
 #include "CLODEfeatures.hpp"
 
-typedef struct ObserverData{
-	cl_double xTrajectoryMax;
-	cl_double xTrajectoryMin;
-	cl_double xTrajectoryMean;
-	cl_double dxTrajectoryMax;
-	cl_double dxTrajectoryMin;
-    cl_int stepcount;
-} ObserverData;
-
 CLODEfeatures::CLODEfeatures(ProblemInfo prob, StepperType stepper, ObserverType observer, bool clSinglePrecision, OpenCLResource opencl) 
     : CLODE(prob, stepper, clSinglePrecision, opencl), observer(observer)
 {
