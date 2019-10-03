@@ -29,10 +29,6 @@
 #endif
 
 
-#include <stdio.h>
-#include <fstream>
-
-
 typedef cl_device_type cl_deviceType;
 
 enum cl_vendor {
