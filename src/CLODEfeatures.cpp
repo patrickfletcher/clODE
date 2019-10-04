@@ -1,12 +1,3 @@
-#define dbg_printf printf
-//~ #define dbg_printf 
-
-//if we are compiling from matlab MEX, redefine printf to mexPrintf so it prints to matlab command window.
-#ifdef MATLAB_MEX_FILE
-    #include "mex.h"
-    #define printf mexPrintf
-#endif
-
 #include <vector>
 #include <stdio.h>
 #include <string>
@@ -154,11 +145,11 @@ void CLODEfeatures::initializeFeaturesKernel() {
 		}
         cl_features = cl::Kernel(opencl.getProgram(), "features", &opencl.error);
         
-		size_t preferred_multiple;
-		cl::Device dev;
-		opencl.getProgram().getInfo(CL_PROGRAM_DEVICES,&dev);
-		cl_features.getWorkGroupInfo(dev,CL_KERNEL_PREFERRED_WORK_GROUP_SIZE_MULTIPLE,&preferred_multiple);
-		printf("Preferred work size multiple (features): %d\n",preferred_multiple);
+		// size_t preferred_multiple;
+		// cl::Device dev;
+		// opencl.getProgram().getInfo(CL_PROGRAM_DEVICES,&dev);
+		// cl_features.getWorkGroupInfo(dev,CL_KERNEL_PREFERRED_WORK_GROUP_SIZE_MULTIPLE,&preferred_multiple);
+		// printf("Preferred work size multiple (features): %d\n",preferred_multiple);
     }
     catch (cl::Error &er) {
         printf("ERROR: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str() );

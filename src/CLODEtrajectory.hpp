@@ -12,6 +12,15 @@
 #ifndef CLODE_TRAJECTORY_HPP_
 #define CLODE_TRAJECTORY_HPP_
 
+#define dbg_printf printf
+//~ #define dbg_printf 
+
+//if we are compiling from matlab MEX, redefine printf to mexPrintf so it prints to matlab command window.
+#ifdef MATLAB_MEX_FILE
+    #include "mex.h"
+    #define printf mexPrintf
+#endif
+
 #include "CLODE.hpp"
 #include "OpenCLResource.hpp"
 #include "clODE_struct_defs.h"
