@@ -382,7 +382,7 @@ void printOpenCL(std::vector<platformInfo>  pinfo) {
 //print information about a platform and its devices given pre-queried info in platformInfo struct
 void printPlatformInfo(platformInfo pinfo) {
     printf("Name:    %s\n", pinfo.name.c_str());
-    //~ printf("Vendor: %s\n\n", pinfo.vendor.c_str());
+    printf("Vendor:  %s\n", pinfo.vendor.c_str());
     printf("Version: %s\n", pinfo.version.c_str());
     
 	for (unsigned int j=0; j<pinfo.nDevices; j++){
