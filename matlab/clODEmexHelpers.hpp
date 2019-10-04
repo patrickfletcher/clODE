@@ -41,16 +41,11 @@ SolverParams<double> getMatlabSPstruct(const mxArray *spptr) {
 
 
 ProblemInfo getMatlabProblemStruct(const mxArray *probptr) {
-	std::string clFilename=getMatlabString( mxGetField(probptr,0,"clRHSfilename") );
-	int nVar = mxGetScalar( mxGetField(probptr,0,"nVar") );
-	int nPar = mxGetScalar( mxGetField(probptr,0,"nPar") );
-	int nAux = mxGetScalar( mxGetField(probptr,0,"nAux") );
-	int nWiener = mxGetScalar( mxGetField(probptr,0,"nWiener") );
 	ProblemInfo newProblem;
-	newProblem.clRHSfilename=clFilename;
-	newProblem.nVar=nVar;
-	newProblem.nPar=nPar;
-	newProblem.nAux=nAux;
-	newProblem.nWiener=nWiener;
+	newProblem.clRHSfilename=getMatlabString( mxGetField(probptr,0,"clRHSfilename") );
+	newProblem.nVar=mxGetScalar( mxGetField(probptr,0,"nVar") );
+	newProblem.nPar=mxGetScalar( mxGetField(probptr,0,"nPar") );
+	newProblem.nAux=mxGetScalar( mxGetField(probptr,0,"nAux") );
+	newProblem.nWiener=mxGetScalar( mxGetField(probptr,0,"nWiener") );
 	return newProblem;
 }

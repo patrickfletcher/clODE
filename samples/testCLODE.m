@@ -6,7 +6,7 @@ odefile='lactotroph.ode';
 stepper='dorpri5';
 vendor='nvidia';
 devicetype='default';
-clSinglePrecision=false;
+clSinglePrecision=true;
 
 [rhsfile,prob]=ode2cl(odefile,[],clSinglePrecision);
 
