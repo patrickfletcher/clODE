@@ -11,6 +11,7 @@
 #include "mex.h"
 
 #include <vector>
+#include <memory> //shared_ptr
 #include <map>
 #include <sstream>
 

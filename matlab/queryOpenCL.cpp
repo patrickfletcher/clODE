@@ -22,7 +22,7 @@ void mexFunction( int nlhs, mxArray *plhs[],
     std::vector<platformInfo> pinfo = queryOpenCL(); 
 
     //convert this info to a Matlab struct array, one element per device
-    int nElem=0;
+    unsigned int nElem=0;
     for(unsigned int i = 0; i < pinfo.size(); ++i) {
         nElem+=pinfo[i].nDevices;
     }

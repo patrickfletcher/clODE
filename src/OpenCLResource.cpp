@@ -407,8 +407,8 @@ void printDeviceInfo(deviceInfo dinfo) {
     //~ printf("Version: %s\n", dinfo.version.c_str());
     printf("Compute units (CUs): %d\n", dinfo.computeUnits);
     printf("Clock frequency:     %d MHz\n", dinfo.maxClock);
-    printf("Global memory size:  %llu MB\n", dinfo.deviceMemSize/1024/1024);
-    printf("Max allocation size: %llu MB\n", dinfo.maxMemAllocSize/1024/1024);
+    printf("Global memory size:  %llu MB\n", (long long unsigned int) (dinfo.deviceMemSize/1024/1024));
+    printf("Max allocation size: %llu MB\n", (long long unsigned int) (dinfo.maxMemAllocSize/1024/1024));
     printf("Max work group/CU:   %d\n", (int) dinfo.maxWorkGroupSize);
     printf("Double support:      %s\n", (dinfo.doubleSupport?"true":"false") );
     printf("Device available:    %s\n", (dinfo.deviceAvailable?"true":"false") );
