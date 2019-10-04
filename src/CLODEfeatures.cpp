@@ -11,6 +11,7 @@
 #include <stdio.h>
 #include <string>
 #include <algorithm> //std::max
+#include <cmath>
 
 #include "CLODEfeatures.hpp"
 
