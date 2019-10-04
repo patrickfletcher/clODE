@@ -126,9 +126,7 @@ void OpenCLResource::getPlatformAndDevices(cl_deviceType type, cl_vendor vendor)
         throw cl::Error(1, "No OpenCL platforms were found");
 
     int tempID = -1;
-	std::vector<cl::Device> tempDevices;
     if(vendor != VENDOR_ANY) {
-		std::vector<cl::Platform> tempPlatforms;
         std::string vendorStr;
         switch(vendor) {
             case VENDOR_NVIDIA:
@@ -145,6 +143,7 @@ void OpenCLResource::getPlatformAndDevices(cl_deviceType type, cl_vendor vendor)
             break;
         }
         
+		std::vector<cl::Platform> tempPlatforms;
         for(unsigned int i = 0; i < platforms.size(); i++) {
             if(platforms[i].getInfo<CL_PLATFORM_VENDOR>().find(vendorStr) != std::string::npos) {
                 tempPlatforms.push_back(platforms[i]);
@@ -154,7 +153,7 @@ void OpenCLResource::getPlatformAndDevices(cl_deviceType type, cl_vendor vendor)
         platforms=tempPlatforms; //keep only the platforms with correct vendor
     } 
     
-    
+	std::vector<cl::Device> tempDevices;
 	for(unsigned int i = 0; i < platforms.size(); i++) {
 		try {
 			platforms[i].getDevices(type, &tempDevices);
@@ -166,7 +165,6 @@ void OpenCLResource::getPlatformAndDevices(cl_deviceType type, cl_vendor vendor)
 		}
 	}
 	
-
     if(tempID == -1) 
         throw cl::Error(1, "No compatible OpenCL platform found");
         
@@ -403,8 +401,8 @@ void printDeviceInfo(cl::Device device) {
 void printDeviceInfo(deviceInfo dinfo) {
     printf("Name:   %s\n", dinfo.name.c_str());
     printf("Type:   %s\n", dinfo.devTypeStr.c_str());
-    //~ printf("Vendor: %s\n", dinfo.vendor.c_str());
-    //~ printf("Version: %s\n", dinfo.version.c_str());
+    printf("Vendor: %s\n", dinfo.vendor.c_str());
+    printf("Version: %s\n", dinfo.version.c_str());
     printf("Compute units (CUs): %d\n", dinfo.computeUnits);
     printf("Clock frequency:     %d MHz\n", dinfo.maxClock);
     printf("Global memory size:  %llu MB\n", (long long unsigned int) (dinfo.deviceMemSize/1024/1024));

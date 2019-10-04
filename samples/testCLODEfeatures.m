@@ -5,17 +5,21 @@ clSinglePrecision=true;
 odefile='lactotroph.ode';
 [~,prob]=ode2cl(odefile,[],clSinglePrecision);
 
-stepper='dorpri5';
-% stepper='bs23'; 
-% stepper='rk4'; 
+%Device to use for feature grid computation
 vendor='nvidia';
 % vendor='intel';
 devicetype='default';
-observer='localmax';
-% observer='nhood2';
 
+%device to use for trajectory computation
 vendorT='intel';
 devicetypeT='cpu';
+
+stepper='dorpri5';
+% stepper='bs23'; 
+% stepper='rk4';
+
+observer='localmax';
+% observer='nhood2';
 
 sp.dt=0.01;
 sp.dtmax=100.00;
@@ -37,7 +41,6 @@ spt.nout=1;
 
 %allocated number of timepoints: min( (tf-t0)/(dt*nout)+1 , max_store).
 %if not enough, tf is not reached. may be too many for adaptive stepper
-
 
 op.eVarIx=1;
 op.fVarIx=1;
