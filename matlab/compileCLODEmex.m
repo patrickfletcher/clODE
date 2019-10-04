@@ -1,31 +1,36 @@
-%test for new mex version of clODE:
+% Script to compile clODE mex interface, so it can be used from Matlab.
+% Make sure to set the correct paths to files in the Configuration block!
+
 clear
 
 % %%%%%%%%%%%%%%%% CONFIGURATION %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-if ismac
-    % Code to run on Mac plaform
+
+if ismac % Code to run on Mac plaform
     opencl_include_dir = '/path/to/cl.hpp'; %cl.hpp for OpenCL C++ bindings
     opencl_lib_dir = ''; %leave empty; taken care of by the -framework option
     libopencl='';
     compflags='COMPFLAGS="$COMPFLAGS -framework OpenCL"';
     ldflags='LDFLAGS="$LDFLAGS -framework OpenCL"';
-elseif isunix
-    % Code to run on Linux plaform
-    opencl_include_dir = '/usr/local/cuda-7.5/targets/x86_64-linux/include'; %cl.hpp
+    
+elseif isunix % Code to run on Linux plaform
+    opencl_include_dir = '/usr/local/cuda-10.1/targets/x86_64-linux/include'; %cl.hpp
     opencl_lib_dir = '/usr/lib64/nvidia'; %libOpenCL.so
     libopencl='-lOpenCL';
     compflags='';
+%     compflags='COMPFLAGS="$COMPFLAGS -W -Wall -Werror -ansi -pedantic"';
     ldflags='';
-elseif ispc
-    % Code to run on Windows platform 
+    
+elseif ispc % Code to run on Windows platform 
     opencl_include_dir = 'C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v10.1/include'; %cl.hpp
     opencl_lib_dir = 'C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v10.1/lib/x64';  %OpenCL.lib
     libopencl='-lOpenCL';
     compflags='';
+%     compflags='COMPFLAGS="$COMPFLAGS -Wall"';
     ldflags='';
 else
     disp('Cannot recognize platform')
 end
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 clode_path=pwd; 
 clode_path=clode_path(1:find(clode_path==filesep,1,'last'));
@@ -38,7 +43,10 @@ debugchar='';
 verbosechar='';
 % verbosechar='-v';
 
-%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Compile commands:
+
+%% queryOpenCL
 
 mex('queryOpenCL.cpp',[clode_path,'OpenCLResource.cpp'],...
     debugchar,verbosechar,compflags,...
@@ -53,7 +61,7 @@ mex('clODEmex.cpp',[clode_path,'OpenCLResource.cpp'],[clode_path,'CLODE.cpp'],..
     ['-I' clode_path], ['-I' opencl_include_dir],...
     ldflags, ['-L' opencl_lib_dir], libopencl );
 
-%%
+%% CLODEfeatures
 
 mex('clODEtrajectorymex.cpp',[clode_path,'OpenCLResource.cpp'],[clode_path,'CLODE.cpp'],...
     [clode_path,'CLODEtrajectory.cpp'],...
@@ -62,7 +70,7 @@ mex('clODEtrajectorymex.cpp',[clode_path,'OpenCLResource.cpp'],[clode_path,'CLOD
     ['-I' clode_path], ['-I' opencl_include_dir],...
     ldflags, ['-L' opencl_lib_dir], libopencl );
 
-%%
+%% CLODEtrajectory
 
 mex('clODEfeaturesmex.cpp',[clode_path,'OpenCLResource.cpp'],[clode_path,'CLODE.cpp'],...
     [clode_path,'CLODEfeatures.cpp'],...
