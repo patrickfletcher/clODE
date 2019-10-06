@@ -173,9 +173,14 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 		bool clSinglePrecision=(bool) mxGetScalar(prhs[3]);
         
         //opencl device selection: force matlab user to use "vendor" and/or "devicetype", always pass in args for this
-		cl_vendor vendor = static_cast<cl_vendor>((int)mxGetScalar(prhs[4]));
-		cl_deviceType devicetype = getDeviceTypeEnum(static_cast<int>(mxGetScalar(prhs[5])) );	
-		OpenCLResource opencl(devicetype,vendor);
+		// cl_vendor vendor = static_cast<cl_vendor>((int)mxGetScalar(prhs[4]));
+		// cl_deviceType devicetype = getDeviceTypeEnum(static_cast<int>(mxGetScalar(prhs[5])) );	
+		// OpenCLResource opencl(devicetype,vendor);
+
+        //opencl device selection: assume the matlab caller selects by plaformID and deviceID, as returned by queryOpenCL 
+        unsigned int platformID = (unsigned int)mxGetScalar(prhs[4]); 
+        unsigned int deviceID = (unsigned int)mxGetScalar(prhs[5]);
+		OpenCLResource opencl(platformID, deviceID);
 		
         //correct integer must be supplied from MatLab
 		int obsint=(int) mxGetScalar(prhs[6]);

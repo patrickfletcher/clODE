@@ -1,25 +1,32 @@
 %test basic clODE
 clear
 
-clSinglePrecision=true;
 odefile='lactotroph.ode';
-[~,prob]=ode2cl(odefile,[],clSinglePrecision);
-
-%Device to use for feature grid computation
-vendor='nvidia';
-% vendor='intel';
-devicetype='default';
-
-%device to use for trajectory computation
-vendorT='intel';
-devicetypeT='cpu';
-
+precision='single';
 stepper='dorpri5';
 % stepper='bs23'; 
 % stepper='rk4';
 
-observer='localmax';
-% observer='nhood2';
+% %Device to use for feature grid computation
+% vendor='nvidia';
+% % vendor='intel';
+% devicetype='default';
+% 
+clo=clODEfeatures(odefile,precision);
+% clo.stepper='rk4'; %default='dorpri5'
+% clo.selectDevice(); %{'type','gpu'}, {'vendor','nvidia'}, {platID,devID}, 'maxComputeUnits','maxClock' 
+% clo.observer='localmax';
+% clo.observer='nhood2';
+
+% %device to use for trajectory computation
+% vendorT='intel';
+% devicetypeT='cpu';
+%
+selectedDevice=2;
+cloTraj=clODEtrajectory(clo.prob,precision,selectedDevice);
+% cloTraj.
+
+
 
 sp.dt=0.01;
 sp.dtmax=100.00;
@@ -54,10 +61,6 @@ op.dxUpThresh=0;
 op.dxDownThresh=0;
 op.eps_dx=1e-7;
 
-clo=clODEfeatures(prob, stepper, observer, clSinglePrecision,vendor,devicetype);
-
-cloTraj=clODEtrajectory(prob, stepper, clSinglePrecision,vendorT,devicetypeT);
-
 %%
 tspan=[0,1000];
 nGrid=[32,32];
@@ -66,18 +69,18 @@ nPts=prod(nGrid);
 
 mySeed=1;
 
-p=prob.p0;
+p=clo.prob.p0;
 
-plb=[prob.par.lb];
-pub=[prob.par.ub];
-p1ix=find(prob.parNames=="gbk");
-p2ix=find(prob.parNames=="taubk");
+plb=[clo.prob.par.lb];
+pub=[clo.prob.par.ub];
+p1ix=find(clo.prob.parNames=="gbk");
+p2ix=find(clo.prob.parNames=="taubk");
 
 p1=linspace(plb(p1ix),pub(p1ix),nGrid(1));
 p2=linspace(plb(p2ix),pub(p2ix),nGrid(2));
 [P1,P2]=meshgrid(p1,p2);
 
-x0=prob.x0;
+x0=clo.prob.x0;
 X0=repmat(x0,nPts,1);
 
 % x0lb=[prob.var.lb];
@@ -123,8 +126,8 @@ hi.HitTest='off';
 ax=gca;
 ax.YDir='normal';
 hcb=colorbar('northoutside');
-xlabel(prob.parNames(p1ix));
-ylabel(prob.parNames(p2ix));
+xlabel(clo.prob.parNames(p1ix));
+ylabel(clo.prob.parNames(p2ix));
 title(hcb,clo.fNames{fix})
 axis square
 
