@@ -3,6 +3,8 @@
 
 clear
 
+%TODO: auto detect paths for some common setups? e.g. CUDA
+
 % %%%%%%%%%%%%%%%% CONFIGURATION %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 if ismac % Code to run on Mac plaform

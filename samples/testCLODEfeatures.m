@@ -7,24 +7,27 @@ stepper='dorpri5';
 % stepper='bs23'; 
 % stepper='rk4';
 
-% %Device to use for feature grid computation
-% vendor='nvidia';
-% % vendor='intel';
-% devicetype='default';
-% 
-clo=clODEfeatures(odefile,precision);
+openclDevices=queryOpenCL(); %inspect this struct to see properties of OpenCL devices found
+
+% selectedDevice=selectDevice(); %TODO: function to get a device with
+% specific properties: e.g. vendor=nvidia, type=cpu, fastest clock, most
+% compute units...
+
+%Device to use for feature grid computation
+%The following uses the default device: first one found. It also parses the
+%ODEfile and writes the OpenCL code for the ODE system. 
+clo=clODEfeatures(odefile,precision); 
+
+%set properties 
 % clo.stepper='rk4'; %default='dorpri5'
-% clo.selectDevice(); %{'type','gpu'}, {'vendor','nvidia'}, {platID,devID}, 'maxComputeUnits','maxClock' 
-% clo.observer='localmax';
+clo.observer='localmax';
 % clo.observer='nhood2';
 
-% %device to use for trajectory computation
-% vendorT='intel';
-% devicetypeT='cpu';
-%
-selectedDevice=2;
-cloTraj=clODEtrajectory(clo.prob,precision,selectedDevice);
-% cloTraj.
+%device to use for trajectory computation
+% clo.prob contains all the info parsed from the ODEfile above. We can
+% reuse that info by passing it in as first argument.
+selectedDevice=2; %select a specific device
+cloTraj=clODEtrajectory(clo.prob,precision,selectedDevice); 
 
 
 
