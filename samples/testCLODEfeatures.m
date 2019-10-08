@@ -110,7 +110,7 @@ clo.transient();
 toc
 
 %%
-clo.updateX0(); %sets X0 to continue from the end of the transient
+clo.shiftX0(); %sets X0 to continue from the end of the transient
 
 tic
 clo.features();

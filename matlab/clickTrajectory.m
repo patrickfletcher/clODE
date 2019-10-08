@@ -81,7 +81,7 @@ plotTrajectories(X,T,AUX);
                 plotTrajectories(X,T,AUX);
                 
             case 'c'
-                clo.updateX0();
+                clo.shiftX0();
                 [xx,tt,aux]=integrate();
                 for i=1:nClick
                     T{i}=[T{i};tt{i}+T{i}(end)];

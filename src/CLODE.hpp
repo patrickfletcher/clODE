@@ -134,13 +134,13 @@ class CLODE {
         void setSolverParams(SolverParams<double> newSp);
         
 		void seedRNG();
-		void seedRNG(int mySeed); //TODO: overload for setting reproducible seeds
+		void seedRNG(int mySeed); //overload for setting reproducible seeds
         
         //simulation routine
         void transient();  //integrate forward an interval of duration (tf-t0).
         
-        void updateTspan(); //t0 <- tf, tf<-(tf + tf-t0)  
-        void updateX0(); //X0 <- Xf (device to device transfer)
+        void shiftTspan(); //t0 <- tf, tf<-(tf + tf-t0)  
+        void shiftX0(); //X0 <- Xf (device to device transfer)
 
         //go: transient repeated does same calculation: t0->tf, x0->xf
         //shift/continue: transient, updateTspan+updateX0, transient (only for trajectory?)

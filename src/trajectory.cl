@@ -16,6 +16,7 @@ __global   realtype * x0,				//initial state 				[nPts*nVar]
 __constant   realtype * pars,			//parameter values				[nPts*nPar]
 __constant   struct SolverParams * sp,	//dtmin/max, tols, etc
 __global     realtype * xf,				//final state 				[nPts*nVar]
+__global     realtype * auxf,			//final value of aux variables 	[nPts*nAux]
 __global     ulong * RNGstate,   	//state for RNG				[nPts*nRNGstate]
 __global     realtype * t,			//
 __global     realtype * x,			//
@@ -98,19 +99,18 @@ while (ti < tspan[1] && step<sp->max_steps && stepflag==0 && storeix<nStoreMax) 
 		
 		t[storeix*nPts+i]=ti; //adaptive steppers give different timepoints for each trajectory
 		
-		for (int j=0; j<N_VAR;++j) {
-			x[storeix*nPts*N_VAR+j*nPts+i]=xi[j]; }
+		for (int j=0; j<N_VAR;++j)
+			x[storeix*nPts*N_VAR+j*nPts+i]=xi[j];
         
-		for (int j=0; j<N_VAR;++j) {
+		for (int j=0; j<N_VAR;++j)
 #ifdef FSAL_STEP_PROPERTY
 			dx[storeix*nPts*N_VAR+j*nPts+i]=dxi[j];
 #else
 			dx[(storeix-1)*nPts*N_VAR+j*nPts+i]=dxi[j]; //without FSAL, dxi returned by stepper is evaluated at beginning of timestep
 #endif
-		}
 		
-		for (int j=0; j<N_AUX;++j) {
-			aux[storeix*nPts*N_AUX+j*nPts+i]=auxi[j]; }
+		for (int j=0; j<N_AUX;++j)
+			aux[storeix*nPts*N_AUX+j*nPts+i]=auxi[j];
 		
 	}
 
@@ -124,14 +124,17 @@ for (int j=0; j<N_WIENER; ++j)
 
 getRHS(ti, xi, p, dxi, auxi, wi);
 
-for (int j=0; j<N_VAR;++j) {
-	dx[storeix*nPts*N_VAR+j*nPts+i]=dxi[j]; }
+for (int j=0; j<N_VAR;++j)
+	dx[storeix*nPts*N_VAR+j*nPts+i]=dxi[j];
 #endif
 
 
-//get device arrays ready to continue from (tf, xf)
+//get device arrays ready to continue
 for (int j=0; j<N_VAR;++j) 
 	xf[j*nPts + i]=xi[j];
+	
+for (int j=0; j<N_AUX;++j) 
+	auxf[j*nPts + i]=auxi[j];
 
 for (int j=0; j<N_RNGSTATE; ++j)
 	RNGstate[j*nPts+i]=rd.state[j];	

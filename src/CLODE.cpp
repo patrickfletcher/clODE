@@ -315,7 +315,7 @@ void CLODE::setTspan( std::vector<double>  newTspan) {
 	}
 }
 
-void CLODE::updateTspan(){
+void CLODE::shiftTspan(){
 	std::vector<double> newTspan({tspan[1], tspan[1]+(tspan[1]-tspan[0])});
 	setTspan(newTspan);
 }
@@ -350,7 +350,7 @@ void CLODE::setX0( std::vector<double>  newX0){
     }
 }
 
-void CLODE::updateX0(){
+void CLODE::shiftX0(){
 	//device to device transfer of Xf to X0
 	try {
 		opencl.error = opencl.getQueue().enqueueCopyBuffer(d_xf, d_x0, 0, 0, realSize * x0elements);

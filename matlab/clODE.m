@@ -208,12 +208,12 @@ classdef clODE < cppclass & matlab.mixin.SetGet
             obj.cppmethod('transient');
         end
         
-        function updateTspan(obj)
-            obj.cppmethod('updatetspan');
+        function shiftTspan(obj)
+            obj.cppmethod('shifttspan');
         end
         
-        function updateX0(obj)
-            obj.cppmethod('updatex0');
+        function shiftX0(obj)
+            obj.cppmethod('shiftx0');
         end
         
         function tspan=getTspan(obj)

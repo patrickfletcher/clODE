@@ -77,6 +77,7 @@ for (int j=0; j<N_VAR;++j)
 for (int j=0; j<N_AUX;++j) 
 	auxf[j*nPts + i]=auxi[j];
 
+// To get same RNG on repeat (non-continued) run, need to set the seed to same value
 for (int j=0; j<N_RNGSTATE; ++j)
 	RNGstate[j*nPts+i]=rd.state[j];
 	

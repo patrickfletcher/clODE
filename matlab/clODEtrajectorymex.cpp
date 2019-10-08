@@ -42,8 +42,8 @@ enum class Action
     SetSolverPars,
     SeedRNG,
     Transient,
-    UpdateTspan,
-    UpdateX0,
+    ShiftTspan,
+    ShiftX0,
     GetTspan,
     GetX0,
     GetXf,
@@ -75,8 +75,8 @@ const std::map<std::string, Action> actionTypeMap =
     { "setsolverpars",  Action::SetSolverPars },
     { "seedrng",        Action::SeedRNG },
     { "transient",      Action::Transient },
-    { "updatetspan",    Action::UpdateTspan },
-    { "updatex0",       Action::UpdateX0 },
+    { "shifttspan",     Action::ShiftTspan },
+    { "shiftx0",        Action::ShiftX0 },
     { "gettspan",       Action::GetTspan },
     { "getx0",          Action::GetX0 },
     { "getxf",          Action::GetXf },
@@ -286,15 +286,15 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         instance->transient();
         break;
 	}
-    case Action::UpdateTspan:
+    case Action::ShiftTspan:
 	{
-        instance->updateTspan();
+        instance->shiftTspan();
 
         break;
 	}
-    case Action::UpdateX0:
+    case Action::ShiftX0:
 	{
-        instance->updateX0();
+        instance->shiftX0();
 
         break;
 	}
