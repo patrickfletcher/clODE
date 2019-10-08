@@ -1,12 +1,26 @@
-#include <vector>
-#include <stdio.h>
-#include <string>
-#include <algorithm> //std::max
-#include <random>
-
-#include "OpenCLResource.hpp"  
 #include "CLODE.hpp"
 #include "clODE_struct_defs.h"
+#include "OpenCLResource.hpp"  
+
+// #define __CL_ENABLE_EXCEPTIONS
+// #if defined(__APPLE__) || defined(__MACOSX)
+//     #include "OpenCL/cl.hpp"
+// #else
+//     #include <CL/cl.hpp>
+// #endif
+
+#define dbg_printf printf
+//~ #define dbg_printf 
+#ifdef MATLAB_MEX_FILE
+    #include "mex.h"
+    #define printf mexPrintf
+#endif
+
+#include <algorithm> //std::max
+#include <cmath>
+#include <random>
+#include <stdexcept>
+#include <stdio.h>
 
 
 //constructor sets problem info and builds the base clprogramstring

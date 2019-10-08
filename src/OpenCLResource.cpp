@@ -6,7 +6,18 @@
  */
 
 
+#include "OpenCLResource.hpp"
+
+// #define __CL_ENABLE_EXCEPTIONS
+// #if defined(__APPLE__) || defined(__MACOSX)
+//     #include "OpenCL/cl.hpp"
+// #else
+//     #include <CL/cl.hpp>
+// #endif
+
 //if compiling from matlab MEX, redefine printf to mexPrintf so it prints to matlab command window.
+#define dbg_printf printf
+//~ #define dbg_printf 
 #ifdef MATLAB_MEX_FILE
     #include "mex.h"
     #define printf mexPrintf
@@ -16,7 +27,6 @@
 #include <fstream>
 #include <stdio.h>
 
-#include "OpenCLResource.hpp"
 
 /******************************** 
  * OpenCLResource Member Functions

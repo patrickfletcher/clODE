@@ -12,19 +12,20 @@
 #ifndef CLODE_FEATURES_HPP_
 #define CLODE_FEATURES_HPP_
 
-#define dbg_printf printf
-//~ #define dbg_printf 
-
-//if we are compiling from matlab MEX, redefine printf to mexPrintf so it prints to matlab command window.
-#ifdef MATLAB_MEX_FILE
-    #include "mex.h"
-    #define printf mexPrintf
-#endif
-
 #include "CLODE.hpp"
-#include "OpenCLResource.hpp"
 #include "clODE_struct_defs.h"
 #include "observers.h"
+#include "OpenCLResource.hpp"
+
+#define __CL_ENABLE_EXCEPTIONS
+#if defined(__APPLE__) || defined(__MACOSX)
+    #include "OpenCL/cl.hpp"
+#else
+    #include <CL/cl.hpp>
+#endif
+
+#include <string>
+#include <vector>
 
 
 //enum for observer type

@@ -1,10 +1,24 @@
-#include <vector>
-#include <stdio.h>
-#include <string>
+#include "CLODEfeatures.hpp"
+
+// #define __CL_ENABLE_EXCEPTIONS
+// #if defined(__APPLE__) || defined(__MACOSX)
+//     #include "OpenCL/cl.hpp"
+// #else
+//     #include <CL/cl.hpp>
+// #endif
+
+#define dbg_printf printf
+//~ #define dbg_printf 
+#ifdef MATLAB_MEX_FILE
+    #include "mex.h"
+    #define printf mexPrintf
+#endif
+
 #include <algorithm> //std::max
 #include <cmath>
+#include <stdexcept>
+#include <stdio.h>
 
-#include "CLODEfeatures.hpp"
 
 CLODEfeatures::CLODEfeatures(ProblemInfo prob, StepperType stepper, ObserverType observer, bool clSinglePrecision, OpenCLResource opencl) 
     : CLODE(prob, stepper, clSinglePrecision, opencl), observer(observer)

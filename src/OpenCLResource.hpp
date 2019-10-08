@@ -21,6 +21,9 @@
     #include <CL/cl.hpp>
 #endif
 
+#include <string>
+#include <vector>
+
 
 typedef cl_device_type cl_deviceType;
 
