@@ -153,8 +153,8 @@ std::string CLODE::getStepperDefine() {
             stepperName="Dormand-Prince 45";
             break;
         default:
-            stepperDefine=" -DRUNGE_KUTTA4";
-            stepperName="Runge-Kutta 4";
+            stepperDefine=" -DDORPRI5";
+            stepperName="Dormand-Prince 45";
     }
     
     return stepperDefine;
