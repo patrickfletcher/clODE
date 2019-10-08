@@ -9,7 +9,7 @@ classdef clODEfeatures<clODE
     properties
         fNames
         F
-        observername
+        observer
         op
         nFeatures
         
@@ -32,20 +32,35 @@ classdef clODEfeatures<clODE
    
     methods
        
-        function obj = clODEfeatures(prob, stepper, observer, clSinglePrecision, cl_vendor, cl_deviceType, mexFilename)
+        function obj = clODEfeatures(arg1, precision, selectedDevice, stepper, observer, mexFilename)
             %hack to get correct mexfile for classes derived from this one.
             %I want the subclass to get all the methods contained here, but
             %it needs to use a mex function that unfortunately has to
             %repeat base class method dispatch code.
             
+            if  ~exist('precision','var')||isempty(precision)
+                precision=[]; %default handled in clODE.m
+            end
+            
+            if  ~exist('selectedDevice','var')||isempty(selectedDevice)
+                selectedDevice=[]; %default handled in clODE.m
+            end
+            
+            if  ~exist('stepper','var')||isempty(stepper)
+                stepper=[]; %default handled in clODE.m
+            end
+            
+            if ~exist('observer','var')
+                observer='localmax';
+            end
             observerInt=clODEfeatures.getObserverEnum(observer);
             
             if ~exist('mexFilename','var')
                 mexFilename='clODEfeaturesmex';
             end
-            obj@clODE(prob, stepper, clSinglePrecision, cl_vendor, cl_deviceType, mexFilename, observerInt);
+            obj@clODE(arg1, precision, selectedDevice, stepper, mexFilename, observerInt);
             
-            obj.observername=observer;
+            obj.observer=observer;
         end
         
         %override initialize to include observerparams arg
@@ -66,8 +81,9 @@ classdef clODEfeatures<clODE
             obj.cppmethod('setobserverpars', op);
         end
         
-        function setObserver(obj, observername)
-            observerint=getObserverEnum(observername);
+        function set.observer(obj, newObserver)
+            observerint=clODEfeatures.getObserverEnum(newObserver);
+            obj.observer=newObserver;
             obj.cppmethod('setobserver', observerint);
         end
         
@@ -96,7 +112,7 @@ classdef clODEfeatures<clODE
         
         function fNames=getFeatureNames(obj)
             fNames={};
-            switch lower(obj.observername)
+            switch lower(obj.observer)
                 case {'basic'}
                     fNames{end+1}=['max ' obj.prob.varNames{obj.op.fVarIx}];
                     fNames{end+1}=['min ' obj.prob.varNames{obj.op.fVarIx}];

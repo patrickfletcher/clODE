@@ -2,14 +2,12 @@
 clear
 
 odefile='lactotroph.ode';
+precision='single';
+clo=clODE(odefile,precision);
+% clo.stepper='rk4'; %default='dorpri5'
+% clo.selectDevice(); %{'type','gpu'}, {'vendor','nvidia'}, {platID,devID}, 'maxComputeUnits','maxClock' 
 
-stepper='dorpri5';
-vendor='nvidia';
-devicetype='default';
-clSinglePrecision=true;
-
-[rhsfile,prob]=ode2cl(odefile,[],clSinglePrecision);
-
+%solver parameters
 sp.dt=0.1;
 sp.dtmax=100.00;
 sp.abstol=1e-6;
@@ -20,22 +18,25 @@ sp.nout=50;
 
 tspan=[0,1000];
 
+%set up parameters and initial conditions
 nPts=32;
-p=prob.p0;
+p=clo.prob.p0;
 x0=[0,0,0,0];
 
 X0=repmat(x0,nPts,1);
 P=repmat(p,nPts,1);
 
-clo=clODE(prob, stepper, clSinglePrecision,vendor,devicetype);
+
 clo.initialize(tspan, X0(:), P(:), sp);
 clo.seedRNG(42)
-% clo.transient();
+clo.transient(); %warm up the GPU for timing
 
+%run the simulation
 tic
 clo.transient();
 toc
 
+%read data back from the GPU
 tic
 nextTspan=clo.getTspan;
 xf=clo.getXf;

@@ -6,9 +6,12 @@ classdef clODE < cppclass & matlab.mixin.SetGet
     properties
         
         stepper='rk4'
-        clSinglePrecision=true
-        cl_vendor='any'
-        cl_deviceType='default'
+        precision='single'
+        
+%         cl_vendor='any'
+%         cl_deviceType='default'
+        devices %array of structs describing OpenCL compatible devices
+        selectedDevice=1
         
         prob
         
@@ -35,34 +38,48 @@ classdef clODE < cppclass & matlab.mixin.SetGet
     %C++ class interaction
     methods
         
-        function obj = clODE(prob, stepper, clSinglePrecision, cl_vendor, cl_deviceType, mexFilename, extraArgs)
+        function obj = clODE(arg1, precision, selectedDevice, stepper, mexFilename, extraArgs)
             
             if nargin==0
                 error('Problem info struct is a required argument')
             end
             
-            args{1}=prob;
+            if  ~exist('precision','var')||isempty(precision)
+                precision='single';
+            end
+            clSinglePrecision=true;
+            if precision=="double", clSinglePrecision=false;end
+            
+            if ischar(arg1)
+                [~,prob]=ode2cl(arg1,[],clSinglePrecision);
+            elseif isstruct(arg1)
+                prob=arg1;
+            else
+%                 if nargin==0 || isempty(source)
+%                     [name,path]=uigetfile('.ode','Select an ODE file');
+%                     if ~ischar(name)
+%                         disp('File selection canceled, quitting...')
+%                         return
+%                     end
+%                     source=fullfile(path,name);
+%                 end
+            end
             
             if  ~exist('stepper','var')||isempty(stepper)
-                stepper='rungekutta4';
+                stepper='dorpri5';
             end
+            
+            devices=queryOpenCL(); %default: first device
+            if  ~exist('selectedDevice','var')||isempty(selectedDevice)
+                selectedDevice=1;
+            end
+            
+            args{1}=prob;
             args{2}=clODE.getStepperEnum(stepper);
-            
-            if  ~exist('clSinglePrecision','var')||isempty(clSinglePrecision)
-                clSinglePrecision=true;
-            end
             args{3}=clSinglePrecision;
-            
-            if  ~exist('cl_vendor','var')||isempty(cl_vendor)
-                cl_vendor='any';
-            end
-            args{4}=clODE.getVendorEnum(cl_vendor);
-            
-            if  ~exist('cl_deviceType','var')||isempty(cl_deviceType)
-                cl_deviceType='default';
-            end
-            args{5}=clODE.getDeviceTypeEnum(cl_deviceType);
-            
+            args{4}=devices(selectedDevice).platformID;
+            args{5}=devices(selectedDevice).deviceID;
+
             %hack to get correct mexfile for classes derived from this one.
             %I want the subclass to get all the methods contained here, but
             %it needs to use a mex function that unfortunately has to
@@ -79,9 +96,9 @@ classdef clODE < cppclass & matlab.mixin.SetGet
             
             obj.prob=prob;
             obj.stepper=stepper;
-            obj.clSinglePrecision=clSinglePrecision;
-            obj.cl_vendor=cl_vendor;
-            obj.cl_deviceType=cl_deviceType;
+            obj.precision=precision;
+            obj.devices=devices;
+            obj.selectedDevice=selectedDevice;
         end
         
         % new and delete are inherited
@@ -94,13 +111,24 @@ classdef clODE < cppclass & matlab.mixin.SetGet
         
         %set a new time step method - must initialize again!
         function set.stepper(obj, newStepper)
+            stepperEnum=clODE.getStepperEnum(newStepper);
             obj.stepper=newStepper;
-            obj.cppmethod('setstepper', clODE.getStepperEnum(newStepper));
+            obj.cppmethod('setstepper', stepperEnum);
         end
         
-        %set single precision true/false - must initialize again!
-        function setPrecision(obj, clSinglePrecision)
-            obj.clSinglePrecision=clSinglePrecision;
+        %set single precision true/false - must initialize again! 
+        %TODO::: Need to run ode2cl again???
+        function set.precision(obj, newPrecision)
+            clSinglePrecision=true; %default to single
+            obj.precision='single';
+            switch lower(newPrecision)
+                case {'single',1}
+                case {'double',2}
+                    obj.precision='double';
+                    clSinglePrecision=false;
+                otherwise
+                    warning('Precision must be set to ''single'' or ''double''. Using single precision.')
+            end
             obj.cppmethod('setprecision', clSinglePrecision);
         end
         
@@ -228,11 +256,11 @@ classdef clODE < cppclass & matlab.mixin.SetGet
                     stepperInt=3;
                 case {'bs23','bogackishampine'}
                     stepperInt=4;
-                case {'dorpri5'}
+                case {'dorpri5','dorpri'}
                     stepperInt=5;
                 otherwise
-                    warning('Unrecognized stepper method name. Using default: RK4')
-                    stepperInt=2;
+                    warning('Unrecognized stepper method name. Using default: dorpri5')
+                    stepperInt=5;
             end
         end
         

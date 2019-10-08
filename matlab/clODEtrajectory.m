@@ -30,15 +30,28 @@ classdef clODEtrajectory<clODE
     
     methods
        
-        function obj = clODEtrajectory(prob, stepper, clSinglePrecision, cl_vendor, cl_deviceType, mexFilename)
+        function obj = clODEtrajectory(arg1, precision, selectedDevice, stepper, mexFilename)
             %hack to get correct mexfile for classes derived from this one.
             %I want the subclass to get all the methods contained here, but
             %it needs to use a mex function that unfortunately has to
             %repeat base class method dispatch code.
+            
+            if  ~exist('precision','var')||isempty(precision)
+                precision=[]; %default handled in clODE.m
+            end
+            
+            if  ~exist('selectedDevice','var')||isempty(selectedDevice)
+                selectedDevice=[]; %default handled in clODE.m
+            end
+            
+            if  ~exist('stepper','var')||isempty(stepper)
+                stepper=[]; %default handled in clODE.m
+            end
+            
             if ~exist('mexFilename','var')
                 mexFilename='clODEtrajectorymex';
             end
-            obj@clODE(prob, stepper, clSinglePrecision, cl_vendor, cl_deviceType, mexFilename);
+            obj@clODE(arg1, precision, selectedDevice, stepper, mexFilename);
         end
         
         

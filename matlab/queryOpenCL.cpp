@@ -29,7 +29,7 @@ void mexFunction( int nlhs, mxArray *plhs[],
     mwSize dims[2]={1, nElem};
 
     //TODO: add version and platform stuff too
-    const char *field_names[] = {"name", "type","vendor","computeUnits","maxClock","memSize","doubleSupport","available"};
+    const char *field_names[] = {"platformID","deviceID","name", "type","vendor","computeUnits","maxClock","memSize","doubleSupport","available"};
     int nFields = sizeof(field_names) / sizeof(*field_names);
 
     plhs[0] = mxCreateStructArray(2,dims,nFields,field_names);
@@ -39,6 +39,8 @@ void mexFunction( int nlhs, mxArray *plhs[],
         for (unsigned int j=0; j<pinfo[i].nDevices; j++){
             deviceInfo dinfo=pinfo[i].device_info[j];
 
+            mxSetField(plhs[0],ix,"platformID",mxCreateDoubleScalar(i));
+            mxSetField(plhs[0],ix,"deviceID",mxCreateDoubleScalar(j));
             mxSetField(plhs[0],ix,"name",mxCreateString(dinfo.name.c_str()));
             mxSetField(plhs[0],ix,"type",mxCreateString(dinfo.devTypeStr.c_str()));
             mxSetField(plhs[0],ix,"vendor",mxCreateString(dinfo.vendor.c_str()));
