@@ -3,6 +3,7 @@ function gridKeyPress(src,evt, clo, hi, Ffun, ftitle, nGrid)
 switch(evt.Key)
     case 'c' %'continue' - features without initialization
         tic
+        clo.shiftX0();
         clo.features();
         toc
         F=clo.getF();

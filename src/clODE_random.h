@@ -1,6 +1,8 @@
 #ifndef CLODE_RANDOM_H_
 #define CLODE_RANDOM_H_
 
+#include "realtype.h"
+
 // A private stream of PRNs will be generated, since the whole ODE solver is per work item. 
 // Seed can be created as global array. final state of RNG can be returned to global 
 
