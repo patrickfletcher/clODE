@@ -240,9 +240,10 @@ void OpenCLResource::buildProgramFromString(std::string sourceStr, std::string b
     
     cl::Program::Sources source(1, std::make_pair(sourceStr.c_str(), sourceStr.length()));
     std::string buildLog;
+    cl_int builderror;
     try { 
         program=cl::Program(context, source);
-        program.build(devices, buildOptions.c_str());
+        builderror=program.build(devices, buildOptions.c_str());
 
         // std::string kernelnames;
         // program.getInfo(CL_PROGRAM_KERNEL_NAMES,&kernelnames);
@@ -258,7 +259,7 @@ void OpenCLResource::buildProgramFromString(std::string sourceStr, std::string b
 			}
         }
 		else{
-			 printf("ERROR: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str() );
+			 printf("ERROR: %s(%s)\n", er.what(), CLErrorString(builderror).c_str() );
 		}
         throw er;
     }
