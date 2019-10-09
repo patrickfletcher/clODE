@@ -9,7 +9,7 @@ clear
 
 if ismac % Code to run on Mac plaform
     opencl_include_dir = '/path/to/cl.hpp'; %cl.hpp for OpenCL C++ bindings
-    opencl_lib_dir = ''; %leave empty; taken care of by the -framework option
+    opencl_lib_dir = '.'; %leave empty; taken care of by the -framework option
     libopencl='';
     compflags='COMPFLAGS="$COMPFLAGS -framework OpenCL"';
     ldflags='LDFLAGS="$LDFLAGS -framework OpenCL"';

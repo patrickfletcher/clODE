@@ -16,7 +16,8 @@ openclDevices=queryOpenCL(); %inspect this struct to see properties of OpenCL de
 %Device to use for feature grid computation
 %The following uses the default device: first one found. It also parses the
 %ODEfile and writes the OpenCL code for the ODE system. 
-clo=clODEfeatures(odefile,precision); 
+selectedDevice=1; %select a specific device
+clo=clODEfeatures(odefile,precision,selectedDevice); 
 
 %set properties 
 % clo.stepper='rk4'; %default='dorpri5'
