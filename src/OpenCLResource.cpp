@@ -242,13 +242,15 @@ void OpenCLResource::buildProgramFromString(std::string sourceStr, std::string b
     std::string buildLog;
     cl_int builderror;
     try { 
-        program=cl::Program(context, source);
+        program=cl::Program(context, source, &error);
         builderror=program.build(devices, buildOptions.c_str());
 
         // std::string kernelnames;
         // program.getInfo(CL_PROGRAM_KERNEL_NAMES,&kernelnames);
         // printf("Kernels built:   %s\n", kernelnames.c_str());
-
+        
+        printf("Program Object build error code: %s\n",CLErrorString(error).c_str());
+        printf("Program Object build error code: %s\n",CLErrorString(builderror).c_str());
         } 
     catch(cl::Error &er) {
         if(er.err() == CL_BUILD_PROGRAM_FAILURE) {
