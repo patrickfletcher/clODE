@@ -244,7 +244,7 @@ void OpenCLResource::buildProgramFromString(std::string sourceStr, std::string b
     try { 
         program=cl::Program(context, source, &error);
         printf("Program Object build error code: %s\n",CLErrorString(error).c_str());
-        
+
         builderror=program.build(devices, buildOptions.c_str());
         printf("Program Object build error code: %s\n",CLErrorString(builderror).c_str());
 
@@ -254,15 +254,13 @@ void OpenCLResource::buildProgramFromString(std::string sourceStr, std::string b
         
         } 
     catch(cl::Error &er) {
+        printf("ERROR: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str() );
         if(er.err() == CL_BUILD_PROGRAM_FAILURE) {
 			for (unsigned int i=0; i<devices.size(); ++i){
 				program.getBuildInfo(devices[i],CL_PROGRAM_BUILD_LOG, &buildLog);
 				printf( "OpenCL build log, Device %u:\n", i);
 				printf( "%s\n", buildLog.c_str());
 			}
-        }
-		else{
-			 printf("ERROR: %s(%s)\n", er.what(), CLErrorString(builderror).c_str() );
 		}
         throw er;
     }
