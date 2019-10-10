@@ -75,19 +75,25 @@ plotTrajectories(X,T,AUX);
 
     function keypress(src,evt)
         switch(evt.Key)
-            case 'g'
-                clo.settspan(tspan);
-                [X,T,AUX]=integrate();
-                plotTrajectories(X,T,AUX);
-                
             case 'c'
+                clo.shiftTspan();
                 clo.shiftX0();
                 [xx,tt,aux]=integrate();
                 for i=1:nClick
-                    T{i}=[T{i};tt{i}+T{i}(end)];
+                    T{i}=[T{i};tt{i}];
                     X{i}=[X{i};xx{i}];
                     AUX{i}=[AUX{i};aux{i}];
                 end
+                plotTrajectories(X,T,AUX);
+                
+            case 'g' %go
+                [X,T,AUX]=integrate();
+                plotTrajectories(X,T,AUX);
+                
+            case 'l' %last
+                clo.settspan(tspan);
+                clo.shiftX0();
+                [X,T,AUX]=integrate();
                 plotTrajectories(X,T,AUX);
                 
             case 'r' %randomize ICs
@@ -96,6 +102,12 @@ plotTrajectories(X,T,AUX);
                 x0ub=[clo.prob.var.ub];
                 x0=x0lb+rand(nClick,length(x0lb)).*(x0ub-x0lb);
                 clo.setX0(x0(:));
+                [X,T,AUX]=integrate();
+                plotTrajectories(X,T,AUX);
+                
+            case 's' %shift
+                clo.shiftTspan();
+                clo.shiftX0();
                 [X,T,AUX]=integrate();
                 plotTrajectories(X,T,AUX);
         end

@@ -99,6 +99,7 @@ classdef clODE < cppclass & matlab.mixin.SetGet
             obj.precision=precision;
             obj.devices=devices;
             obj.selectedDevice=selectedDevice;
+            obj.sp=clODE.solverParams(); %default solver params
         end
         
         % new and delete are inherited
@@ -117,7 +118,7 @@ classdef clODE < cppclass & matlab.mixin.SetGet
         end
         
         %set single precision true/false - must initialize again! 
-        %TODO::: Need to run ode2cl again???
+        %TODO::: Need to run ode2cl again!!!
         function set.precision(obj, newPrecision)
             clSinglePrecision=true; %default to single
             obj.precision='single';
@@ -243,6 +244,16 @@ classdef clODE < cppclass & matlab.mixin.SetGet
     
     %static helper methods
     methods (Static=true)
+        
+        function sp=solverParams()
+            sp.dt=10;
+            sp.dtmax=100.00;
+            sp.abstol=1e-6;
+            sp.reltol=1e-3;
+            sp.max_steps=1000000;
+            sp.max_store=10000; %allocated number of timepoints: min( (tf-t0)/(dt*nout)+1 , sp.max_store)
+            sp.nout=1;
+        end
         
         function stepperInt=getStepperEnum(steppername)
             switch lower(steppername)

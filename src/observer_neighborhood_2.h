@@ -27,6 +27,7 @@ typedef struct ObserverData
 	// realtype dxTrajectoryMin[N_VAR];
 	// realtype dxRange[N_VAR];
 
+	//period-wise features
 	realtype nMaxima[3]; //max/min/mean
 	realtype period[3];  //max/min/mean
 	// realtype IMI[3]; //max/min/mean
@@ -37,9 +38,12 @@ typedef struct ObserverData
 	realtype tLastX0;
 	realtype xThreshold;
 
-	realtype dxMax;
-	realtype dxMin;
+	//global trajectory features
 	realtype xTrajectoryMean;
+	realtype xGlobalMax;
+	realtype xGlobalMin;
+	realtype dxGlobalMax;
+	realtype dxGlobalMin;
 
 	realtype xLastMax;
 	realtype tLastMax;
@@ -121,8 +125,10 @@ void initializeObserverData(realtype *ti, realtype xi[], realtype dxi[], realtyp
 	// od->xMin[2]= RCONST(0.0);
 
 	od->xTrajectoryMean = RCONST(0.0);
-	od->dxMax = -BIG_REAL;
-	od->dxMin = BIG_REAL;
+	od->xGlobalMax = -BIG_REAL;
+	od->xGlobalMin = BIG_REAL;
+	od->dxGlobalMax = -BIG_REAL;
+	od->dxGlobalMin = BIG_REAL;
 }
 
 //restricted per-timestep update of observer data for initializing event detector
@@ -269,9 +275,11 @@ void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype au
 	od->dxbuffer[1] = od->dxbuffer[2];
 	od->dxbuffer[2] = dxi[op->fVarIx];
 
-	//global dxMax, dxMin
-	od->dxMax = MAX(od->dxMax, dxi[op->fVarIx]);
-	od->dxMin = MIN(od->dxMin, dxi[op->fVarIx]);
+	//global 
+	od->xGlobalMax=MAX(od->xGlobalMax,xi[op->fVarIx]);
+	od->xGlobalMin=MIN(od->xGlobalMin,xi[op->fVarIx]);
+	od->dxGlobalMax = MAX(od->dxGlobalMax, dxi[op->fVarIx]);
+	od->dxGlobalMin = MIN(od->dxGlobalMin, dxi[op->fVarIx]);
 	runningMean(&od->xTrajectoryMean, xi[op->fVarIx], od->stepcount);
 
 	if (od->buffer_filled==1) {
@@ -323,7 +331,7 @@ void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype au
 void finalizeFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op, __global realtype *F, int i, int nPts)
 {
 	int ix = 0;
-
+	F[ix++ * nPts + i] = od->xGlobalMax-od->xGlobalMin;
 	F[ix++ * nPts + i] = od->eventcount > 1 ? od->period[0] : RCONST(0.0);
 	F[ix++ * nPts + i] = od->eventcount > 1 ? od->period[1] : RCONST(0.0);
 	F[ix++ * nPts + i] = od->eventcount > 1 ? od->period[2] : RCONST(0.0);
@@ -379,8 +387,8 @@ void finalizeFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi
 	// F[ix++*nPts+i]=fabs(od->x0[1]-xi[1])/od->xMaxDelta[1];
 	// F[ix++*nPts+i]=fabs(od->x0[2]-xi[2])/od->xMaxDelta[2];
 	// F[ix++*nPts+i]=fabs(od->x0[3]-xi[3])/od->xMaxDelta[3];
-	F[ix++ * nPts + i] = od->dxMax;
-	F[ix++ * nPts + i] = od->dxMin;
+	F[ix++ * nPts + i] = od->dxGlobalMax;
+	F[ix++ * nPts + i] = od->dxGlobalMin;
 	F[ix++ * nPts + i] = od->xTrajectoryMean;
 	F[ix++ * nPts + i] = od->eventcount;
 	F[ix++ * nPts + i] = od->stepcount;

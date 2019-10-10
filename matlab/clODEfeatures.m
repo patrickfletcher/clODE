@@ -1,4 +1,4 @@
-classdef clODEfeatures<clODE
+classdef clODEfeatures<clODE & matlab.mixin.SetGet
     % clODEfeatures(prob, stepper=rk4, observer=basic, clSinglePrecision=true, cl_vendor=any, cl_deviceType=default)
    
     %TODO: this should have a method for default observer params
@@ -60,6 +60,7 @@ classdef clODEfeatures<clODE
             end
             obj@clODE(arg1, precision, selectedDevice, stepper, mexFilename, observerInt);
             
+            obj.op=clODEfeatures.observerParams();
             obj.observer=observer;
         end
         
@@ -83,8 +84,10 @@ classdef clODEfeatures<clODE
         
         function set.observer(obj, newObserver)
             observerint=clODEfeatures.getObserverEnum(newObserver);
-            obj.observer=newObserver;
             obj.cppmethod('setobserver', observerint);
+            
+            obj.observer=newObserver;
+            obj.getFeatureNames();
         end
         
         %overloads to fetch data if desired
@@ -102,10 +105,14 @@ classdef clODEfeatures<clODE
             nf=obj.nFeatures;
         end
         
-        function F=getF(obj)
+        function F=getF(obj, fix)
             F=obj.cppmethod('getf'); 
             F=reshape(F,obj.nPts,obj.nFeatures); %force column
             obj.F=F;
+            if nargin==2 
+                %return argument is just the subset fix of features 
+                F=F(:,fix);
+            end
         end
         
         
@@ -170,6 +177,7 @@ classdef clODEfeatures<clODE
                     
                 case {'neighborhood2','nhood2'}
                     fNames={...
+                        'amplitude',...
                         'max period',...
                         'min period',...
                         'mean period',...
@@ -201,7 +209,22 @@ classdef clODEfeatures<clODE
     
     %static helper methods
     methods (Static=true)
-    
+        
+        function op = observerParams()
+
+            op.eVarIx=1; %not implemented
+            op.fVarIx=1; %feature detection variable
+            op.maxEventCount=5000; %stops if this many events found
+            op.minXamp=0;  %don't record oscillation features if units of variable fVarIx
+            op.minIMI=0; %not implemented
+            op.nHoodRadius=0.25;  %size of neighborhood
+            op.xUpThresh=0.3;  %not implemented
+            op.xDownThresh=0.2; %selecting neighborhood centerpoint: first time fVarIx drops below this fraction of its amplitude {nhood2}
+            op.dxUpThresh=0;  %not implemented
+            op.dxDownThresh=0; %not implemented
+            op.eps_dx=1e-6; %for checking for min/max
+        end
+        
         function observerint=getObserverEnum(observername)
             switch lower(observername)
                 case {'basic'}

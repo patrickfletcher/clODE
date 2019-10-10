@@ -17,8 +17,6 @@ if ismac % Code to run on Mac plaform
 elseif isunix % Code to run on Linux plaform
     opencl_include_dir = '~/src'; %cl.hpp
     opencl_lib_dir = '~/src'; %libOpenCL.so
-%     opencl_include_dir = '/usr/local/cuda-10.1/targets/x86_64-linux/include'; %cl.hpp
-%     opencl_lib_dir = '/usr/lib64/nvidia'; %libOpenCL.so
     libopencl='-lOpenCL';
     compflags='COMPFLAGS="$COMPFLAGS -std=c++11"';
 %     compflags='COMPFLAGS="$COMPFLAGS -W -Wall -Werror -ansi -pedantic"';

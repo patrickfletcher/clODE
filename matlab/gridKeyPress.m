@@ -22,6 +22,7 @@ switch(evt.Key)
         
     case 't' %'transient'
         tic
+        clo.shiftX0();
         clo.transient();
         toc
         X0=clo.getX0();

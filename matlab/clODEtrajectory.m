@@ -1,4 +1,4 @@
-classdef clODEtrajectory<clODE
+classdef clODEtrajectory<clODE & matlab.mixin.SetGet
     % clODEtrajectory(prob, stepper=rk4, clSinglePrecision=true, cl_vendor=any, cl_deviceType=default)
     
     %TODO: return only valid time points for each trajectory - cell array??
