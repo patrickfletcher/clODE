@@ -73,10 +73,10 @@ void CLODEtrajectory::initializeTrajectoryKernel() {
 
 void CLODEtrajectory::resizeTrajectoryVariables() {
 
+	int currentStoreAlloc=sp.max_store; //TODO: always alloc sp.max_store? or try to compute something?
 	//catch any changes to tspan, dt, or nout:
-	int currentStoreAlloc=(tspan[1]-tspan[0])/(sp.dt*sp.nout)+1;
-	
-	currentStoreAlloc=std::min(currentStoreAlloc, sp.max_store);
+	// int currentStoreAlloc=(tspan[1]-tspan[0])/(sp.dt*sp.nout)+1;
+	// currentStoreAlloc=std::min(currentStoreAlloc, sp.max_store);
 	//~ if (currentStoreAlloc > sp.max_store) {
 		//~ currentStoreAlloc=sp.max_store;
 		//~ printf("Warning: (tspan[1]-tspan[0])/(dt*nout)+1 > max_store. Reducing storage to max_store=%d timepoints. \n",sp.max_store);
@@ -86,8 +86,8 @@ void CLODEtrajectory::resizeTrajectoryVariables() {
 	size_t largestAlloc = std::max(1/*t*/, std::max(nVar/*x, dx*/, nAux/*aux*/))*nPts*currentStoreAlloc*realSize;
 	
 	if (largestAlloc > opencl.getMaxMemAllocSize()) {
-		currentStoreAlloc=std::floor(opencl.getMaxMemAllocSize()/(std::max(1, std::max(nVar, nAux))*nPts*realSize));
-		printf("ERROR: storage requested exceeds device maximum vairable size. Reason: %s. Try reducing storage to <=%d time points, or reducing nPts. \n",nAux>nVar?"aux vars":"state vars", currentStoreAlloc);
+		int estimatedMaxStoreAlloc=std::floor(opencl.getMaxMemAllocSize()/(std::max(1, std::max(nVar, nAux))*nPts*realSize));
+		printf("ERROR: storage requested exceeds device maximum vairable size. Reason: %s. Try reducing storage to <%d time points, or reducing nPts. \n",nAux>nVar?"aux vars":"state vars", estimatedMaxStoreAlloc);
 		throw std::invalid_argument("nPts*nStoreMax*nVar*realSize or nPts*nStoreMax*nAux*realSize is too big");
 	}
 	

@@ -17,7 +17,7 @@ openclDevices=queryOpenCL(); %inspect this struct to see properties of OpenCL de
 %The following uses the default device: first one found. It also parses the
 %ODEfile and writes the OpenCL code for the ODE system. 
 selectedDevice=1; %select a specific device
-clo=clODEfeatures(odefile,precision,selectedDevice,stepper); 
+clo=clODEfeatures(odefile,precision,selectedDevice,stepper);
 
 %set properties 
 % clo.stepper='rk4'; %default='dorpri5'
@@ -149,20 +149,25 @@ selectedDevice=2; %choose a CPU if available (device with highest clockrate)
 % clo.prob contains all the info parsed from the ODEfile above; reuse it:
 cloTraj=clODEtrajectory(clo.prob,precision,selectedDevice,stepper); 
 
-spt=clODE.solverParams(); %default params struct
-% spt.dt=10;
-% spt.dtmax=150.00;
+spt=clo.sp; %copy feature solver's parameters
+% spt=clODE.solverParams(); %default params struct
+spt.dt=0.01; %starting dt. 
+% spt.dtmax=1000.00;
 % spt.abstol=1e-7;
 % spt.reltol=1e-5;
-% spt.max_steps=1000000;
-spt.max_store=20000; %allocated number of timepoints: min( (tf-t0)/(dt*nout)+1 , sp.max_store)
+spt.max_steps=10000000;
+spt.max_store=20000; %number of time points allocated for trajectory result
 spt.nout=1;
 
+%Note: large max_store will slow things down. If final time in tspan is not
+%reached, increase max_store. To query actual number of steps taken:
+% cloTraj.getNstored
 
 X0t=repmat(x0,1,1);
 Pt=repmat(p,1,1);
 cloTraj.initialize(tspan, X0t(:), Pt(:), spt);
 cloTraj.tscale=1/1000;
+cloTraj.tunits='s';
 
 %attach the "clicker" to the imagesc object in Figure 1. 
 trajFig=2; %will plot trajectories in Figure 2
