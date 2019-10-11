@@ -8,7 +8,7 @@ clear
 % %%%%%%%%%%%%%%%% CONFIGURATION %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 if ismac % Code to run on Mac plaform
-    opencl_include_dir = '/path/to/cl.hpp'; %cl.hpp for OpenCL C++ bindings
+    opencl_include_dir = pwd; %cl.hpp for OpenCL C++ bindings
     opencl_lib_dir = ''; %leave empty; taken care of by the -framework option
     libopencl='';
     compflags='COMPFLAGS="$COMPFLAGS -std=c++11 -framework OpenCL"';
@@ -37,7 +37,7 @@ else
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-cd ../src
+cd ../src/
 clode_path=[pwd filesep]; 
 cd ../matlab/
 clode_path=strrep(clode_path,'\','/'); %stupid windows backslash filesep

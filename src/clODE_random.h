@@ -86,7 +86,7 @@ realtype rand(rngstatetype *state) {
 //polar method, generates two at a time requiring  external storage of useLast switch and y2.... ugly! but no access to work-item private static vars..
 realtype randn(rngData *rd) {
 	
-	float x1, x2, w, y1;
+	realtype x1, x2, w, y1;
 
 	if (rd->randnUselast) {
 		y1 = rd->randnLast;
@@ -94,12 +94,12 @@ realtype randn(rngData *rd) {
 	}
 	else {
 		do {
-			x1 = 2.0 * rand(rd->state) - 1.0;
-			x2 = 2.0 * rand(rd->state) - 1.0;
+			x1 = RCONST(2.0) * rand(rd->state) - RCONST(1.0);
+			x2 = RCONST(2.0) * rand(rd->state) - RCONST(1.0);
 			w = x1 * x1 + x2 * x2;
-		} while ( w >= 1.0 );
+		} while ( w >= RCONST(1.0) );
 
-		w = sqrt( (-2.0 * log( w ) ) / w );
+		w = sqrt( (-RCONST(2.0) * log( w ) ) / w );
 		y1 = x1 * w;
 		rd->randnLast = x2 * w;
 		rd->randnUselast = 1;

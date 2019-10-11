@@ -359,7 +359,7 @@ void adaptiveOneStep(realtype *ti, realtype xi[], realtype k1[], realtype pars[]
 #ifdef ADAPTIVE_STEPSIZE
 
 //Wrapper to handle step-size adaptation.  note: wi should be zeros
-int stepper(realtype *ti, realtype xi[], realtype k1[], realtype pars[], __constant struct SolverParams* sp, realtype *dt, __constant realtype tspan[], realtype aux[], realtype wi[])
+int stepper(realtype *ti, realtype xi[], realtype k1[], realtype pars[], __constant struct SolverParams* sp, realtype *dt, __constant realtype *tspan, realtype aux[], realtype wi[])
 {
 	realtype err[N_VAR];
 	realtype normErr, newDt=*dt;

@@ -32,6 +32,7 @@ int nPts=get_global_size(0);
 realtype ti, dt; 
 realtype p[N_PAR], xi[N_VAR],dxi[N_VAR],auxi[N_AUX], wi[N_WIENER];
 rngData rd;
+__constant realtype *tspanPtr=tspan;
 
 //get private copy of ODE parameters, initial data, and compute slope at initial state
 ti = tspan[0];
@@ -80,7 +81,7 @@ while (ti < tspan[1] && step<sp->max_steps && stepflag==0 && storeix<nStoreMax) 
 	++step;
 #ifdef ADAPTIVE_STEPSIZE
 	//leave the wi=0 for adaptive steppers
-	stepflag=stepper(&ti, xi, dxi, p, sp, &dt, tspan, auxi, wi); 
+	stepflag=stepper(&ti, xi, dxi, p, sp, &dt, tspanPtr, auxi, wi); 
 #else
 	//update Wiener variables - fixed size steppers can scale by dt here
 	for (int j=0; j<N_WIENER; ++j)
