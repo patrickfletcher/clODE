@@ -2,7 +2,8 @@
 clear
 
 odefile='lactotroph.ode';
-precision='single';
+% precision='single';
+precision='double';
 stepper='dorpri5';
 % stepper='bs23'; 
 % stepper='rk4';
@@ -31,22 +32,23 @@ clo.observer='nhood2'; %"Poincare ball": period detection by trajectory returnin
 %solver parameters
 sp=clODE.solverParams();%create required ODE solver parameter struct
 % sp.dt=1;
-% sp.dtmax=150.00;
+sp.dtmax=100.00;
 sp.abstol=1e-9;
 sp.reltol=1e-7; %nhood2 may require fairly strict reltol
 % sp.max_steps=100000;
 
 op=clODEfeatures.observerParams(); %create required observer parameter struct
+op.eVarIx=1; %nhood2: variable used for deciding centerpoint of neighborhood
 op.fVarIx=1; %feature detection variable. used in: {basic, localmax, nhood2}
 op.maxEventCount=1000; %stops if this many events found {localmax, nhood2}
-op.minXamp=1; %don't record oscillation features if units of variable fVarIx {nhood2}
-op.nHoodRadius=0.1; %size of neighborhood {nhood2} 
-op.xDownThresh=0.2; %selecting neighborhood centerpoint: first time fVarIx drops below this fraction of its amplitude {nhood2}
-op.eps_dx=1e-6; %for checking for min/max
+op.minXamp=0; %don't record oscillation features if units of variable fVarIx {nhood2}
+op.nHoodRadius=0.05; %size of neighborhood {nhood2} 
+op.xDownThresh=0.05; %selecting neighborhood centerpoint: first time eVarIx drops below this fraction of its amplitude {nhood2}
+op.eps_dx=1e-7; %for checking for min/max
 
 %%
 tspan=[0,10000];
-nGrid=[32,32];
+nGrid=[64,64];
 
 nPts=prod(nGrid);
 
@@ -98,7 +100,7 @@ toc
 
 %build a feature-selection function, Ffun. The following simply extracts
 %feature sith index fix:
-fix=7; 
+fix=12; 
 fscale=1; %in case want to change feature's units
 Ffun=@(F)F(:,fix)*fscale; 
 ftitle=clo.fNames{fix}; %grab the feature name from the object
@@ -151,7 +153,7 @@ cloTraj=clODEtrajectory(clo.prob,precision,selectedDevice,stepper);
 
 spt=clo.sp; %copy feature solver's parameters
 % spt=clODE.solverParams(); %default params struct
-spt.dt=0.01; %starting dt. 
+% spt.dt=0.01; %starting dt. 
 % spt.dtmax=1000.00;
 % spt.abstol=1e-7;
 % spt.reltol=1e-5;
