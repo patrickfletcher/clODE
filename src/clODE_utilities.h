@@ -113,8 +113,14 @@ inline void runningMeanVar(realtype *mean, realtype *variance,  realtype thisVal
 	}
 }
 
-//estimate yi at specified ti, using linear interpolation of three points
-inline realtype linearInterp(realtype t[], realtype y[], realtype ti) {
+//estimate yi at specified ti, using linear interpolation of two points
+inline realtype linearInterp(realtype t0, realtype t1, realtype y0, realtype y1, realtype ti) {
+    realtype yi=y0+(ti-t0)*(y1-y0)/(t1-t0);
+	return yi;
+}
+
+//estimate yi at specified ti, using linear interpolation of three points (for convenience of passing in a 3-element t/y array...)
+inline realtype linearInterpArray(realtype t[], realtype y[], realtype ti) {
     realtype yi;
     if (ti<t[1])
 		yi=y[0]+(ti-t[0])*(y[1]-y[0])/(t[1]-t[0]);

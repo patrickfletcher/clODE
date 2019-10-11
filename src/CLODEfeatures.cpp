@@ -115,7 +115,7 @@ std::string CLODEfeatures::getObserverBuildOpts() {
             observerdefine=" -DOBSERVER_SECTION_2 ";
             observerName="OBSERVER_SECTION_2";
             nFeatures=11;
-            observerDataSize=(20+6*nVar)*realSize+4*sizeof(cl_int)+sizeof(cl_bool);
+            observerDataSize=(22+6*nVar)*realSize+4*sizeof(cl_int)+sizeof(cl_bool);
             observerDataSize=observerDataSize+observerDataSize%realSize; 
             break;
             
@@ -276,8 +276,10 @@ void CLODEfeatures::features() {
 			
 			//execute the kernel
 			opencl.error = opencl.getQueue().enqueueNDRangeKernel(cl_features, cl::NullRange, cl::NDRange(nPts), cl::NullRange);
-			opencl.getQueue().finish();
-			
+        	printf("Enqueue error code: %s\n",CLErrorString(opencl.error).c_str());
+			opencl.error = opencl.getQueue().finish();
+        	printf("Finish Queue error code: %s\n",CLErrorString(opencl.error).c_str());
+
 			doObserverInitialization=0;
 		}
 		catch (cl::Error &er) {
