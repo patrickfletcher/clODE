@@ -42,13 +42,13 @@ op.eVarIx=1; %nhood2: variable used for deciding centerpoint of neighborhood
 op.fVarIx=1; %feature detection variable. used in: {basic, localmax, nhood2}
 op.maxEventCount=1000; %stops if this many events found {localmax, nhood2}
 op.minXamp=0; %don't record oscillation features if units of variable fVarIx {nhood2}
-op.nHoodRadius=0.05; %size of neighborhood {nhood2} 
+op.nHoodRadius=0.1; %size of neighborhood {nhood2} 
 op.xDownThresh=0.05; %selecting neighborhood centerpoint: first time eVarIx drops below this fraction of its amplitude {nhood2}
 op.eps_dx=1e-7; %for checking for min/max
 
 %%
 tspan=[0,10000];
-nGrid=[64,64];
+nGrid=[32,32];
 
 nPts=prod(nGrid);
 
@@ -88,7 +88,7 @@ clo.transient();
 toc
 
 %%
-clo.shiftX0(); %sets X0 to continue from the end of the transient
+% clo.shiftX0(); %sets X0 to continue from the end of the transient
 
 tic
 clo.features();
@@ -100,7 +100,7 @@ toc
 
 %build a feature-selection function, Ffun. The following simply extracts
 %feature sith index fix:
-fix=12; 
+fix=7; 
 fscale=1; %in case want to change feature's units
 Ffun=@(F)F(:,fix)*fscale; 
 ftitle=clo.fNames{fix}; %grab the feature name from the object

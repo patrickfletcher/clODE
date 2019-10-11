@@ -276,9 +276,9 @@ void CLODEfeatures::features() {
 			
 			//execute the kernel
 			opencl.error = opencl.getQueue().enqueueNDRangeKernel(cl_features, cl::NullRange, cl::NDRange(nPts), cl::NullRange);
-        	printf("Enqueue error code: %s\n",CLErrorString(opencl.error).c_str());
+        	// printf("Enqueue error code: %s\n",CLErrorString(opencl.error).c_str());
 			opencl.error = opencl.getQueue().finish();
-        	printf("Finish Queue error code: %s\n",CLErrorString(opencl.error).c_str());
+        	// printf("Finish Queue error code: %s\n",CLErrorString(opencl.error).c_str());
 
 			doObserverInitialization=0;
 		}

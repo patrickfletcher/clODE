@@ -243,10 +243,10 @@ void OpenCLResource::buildProgramFromString(std::string sourceStr, std::string b
     cl_int builderror;
     try { 
         program=cl::Program(context, source, &error);
-        printf("Program Object creation error code: %s\n",CLErrorString(error).c_str());
+        // printf("Program Object creation error code: %s\n",CLErrorString(error).c_str());
 
         builderror=program.build(devices, buildOptions.c_str());
-        printf("Program Object build error code: %s\n",CLErrorString(builderror).c_str());
+        // printf("Program Object build error code: %s\n",CLErrorString(builderror).c_str());
 
         // std::string kernelnames;
         // program.getInfo(CL_PROGRAM_KERNEL_NAMES,&kernelnames);
