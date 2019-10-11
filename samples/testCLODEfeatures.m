@@ -2,8 +2,8 @@
 clear
 
 odefile='lactotroph.ode';
-% precision='single';
-precision='double';
+precision='single';
+% precision='double';
 stepper='dorpri5';
 % stepper='bs23'; 
 % stepper='rk4';
@@ -79,7 +79,7 @@ P(:,p1ix)=P1(:);
 P(:,p2ix)=P2(:);
 
 
-clo.initialize(tspan, X0(:), P(:), sp, op);
+clo.initialize(tspan, X0, P, sp, op);
 clo.seedRNG(0)
 
 %%

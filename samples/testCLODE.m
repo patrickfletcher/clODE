@@ -26,7 +26,7 @@ X0=repmat(x0,nPts,1);
 P=repmat(p,nPts,1);
 
 
-clo.initialize(tspan, X0(:), P(:), sp);
+clo.initialize(tspan, X0, P, sp);
 clo.seedRNG(42)
 clo.transient(); %warm up the GPU for timing
 
