@@ -3,8 +3,8 @@
 #ifndef OBSERVER_BASIC_ALLVAR_H
 #define OBSERVER_BASIC_ALLVAR_H
 
-#include "observers.h"
-#include "clODE_utilities.h"
+#include "observers.cl"
+#include "clODE_utilities.cl"
 
 typedef struct ObserverData {
 	realtype xTrajectoryMax[N_VAR];

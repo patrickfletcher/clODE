@@ -3,7 +3,7 @@
 #ifndef CL_UTILITIES_H_
 #define CL_UTILITIES_H_
 
-#include "realtype.h"
+#include "realtype.cl"
 
 //computation done by preprocessor:
 #define MIN(a, b) ((a) < (b) ? (a) : (b)) //TODO: use builtin fmin/fmax (just make sure to not mix arg type)
@@ -56,7 +56,7 @@ inline void maxOfArray(realtype inArray[], int N, realtype *maxVal, int *index){
 	*index=0;
 	for (int k=0; k<N;k++)
 	{
-		if (inArray[k]>=*maxVal)
+		if (inArray[k]>*maxVal) //return first occurrence (>= returns last)
 		{
 			*maxVal=inArray[k];
 			*index=k;
@@ -70,7 +70,7 @@ inline void minOfArray(realtype inArray[], int N, realtype *minVal, int *index){
 	*index=0;
 	for (int k=0; k<N;k++)
 	{
-		if (inArray[k]<=*minVal)
+		if (inArray[k]<*minVal) //return first occurrence (<= returns last)
 		{
 			*minVal=inArray[k];
 			*index=k;
@@ -151,7 +151,7 @@ inline void quadraticInterpVertex(realtype t[], realtype y[], realtype* tv, real
     b1=( y[1]-b0 )/( t[1]-t[0] );
     b2=( y[2]- b0 - b1*(t[2]-t[0]) )/( (t[2]-t[0])*(t[2]-t[1]) ); 
     
-    *tv=-(b1-b2*(t[0]+t[1])) / (2*b2);
+    *tv=-(b1-b2*(t[0]+t[1])) / (RCONST(2.0)*b2);
     *yv=b0+b1*(*tv-t[0])+b2*(*tv-t[0])*(*tv-t[1]);
 }
 

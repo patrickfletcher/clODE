@@ -1,7 +1,7 @@
 #ifndef CLODE_RANDOM_H_
 #define CLODE_RANDOM_H_
 
-#include "realtype.h"
+#include "realtype.cl"
 
 // A private stream of PRNs will be generated, since the whole ODE solver is per work item. 
 // Seed can be created as global array. final state of RNG can be returned to global 
@@ -25,8 +25,12 @@
 #define N_RNGSTATE (2)
 
 typedef ulong rngstatetype;
-#define RNGNORM (5.421010862427522e-20); // 1.0/(2^64 - 1) double precision
-//~ #define RNGNORM (5.4210109e-20); // 1.0/(2^64 - 1) single precision
+#define RNGNORM RCONST(5.421010862427522e-20)
+// #if defined(CLODE_SINGLE_PRECISION)
+// 	#define RNGNORM (5.4210109e-20f) // 1.0/(2^64 - 1) single precision
+// #elif defined(CLODE_DOUBLE_PRECISION)
+// 	#define RNGNORM (5.421010862427522e-20) // 1.0/(2^64 - 1) double precision
+// #endif 
 
 static inline ulong rotl(const ulong x, int k) {
 	return (x << k) | (x >> (64 - k));
@@ -52,8 +56,7 @@ ulong next(ulong s[]) {
 #define N_RNGSTATE (2)
 
 typedef ulong rngstatetype;
-#define RNGNORM (5.421010862427522e-20); // 1.0/(2^64 - 1) double precision
-//~ #define RNGNORM (5.4210109e-20); // 1.0/(2^64 - 1) single precision
+#define RNGNORM RCONST(5.421010862427522e-20)
 
 ulong next(ulong s[]) {
 	ulong s1 = s[0];

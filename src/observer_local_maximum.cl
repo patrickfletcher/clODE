@@ -3,9 +3,9 @@
 #ifndef OBSERVER_LOCAL_EXTREMUM_H
 #define OBSERVER_LOCAL_EXTREMUM_H
 
-#include "realtype.h"
-#include "observers.h"
-#include "clODE_utilities.h"
+#include "realtype.cl"
+#include "observers.cl"
+#include "clODE_utilities.cl"
 
 //events are triggered at local maxima in the variable specified by op.fVarIx
 

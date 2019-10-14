@@ -256,7 +256,8 @@ void OpenCLResource::buildProgramFromString(std::string sourceStr, std::string b
     catch(cl::Error &er) {
         printf("ERROR: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str() );
         if(er.err() == CL_BUILD_PROGRAM_FAILURE) {
-			for (unsigned int i=0; i<devices.size(); ++i){
+			// printf("%s\n",sourceStr.c_str());
+            for (unsigned int i=0; i<devices.size(); ++i){
 				program.getBuildInfo(devices[i],CL_PROGRAM_BUILD_LOG, &buildLog);
 				printf( "OpenCL build log, Device %u:\n", i);
 				printf( "%s\n", buildLog.c_str());
@@ -479,10 +480,11 @@ std::string CLErrorString(cl_int error) {
 
 // Read source file
 std::string read_file(std::string filename) {
-        std::ifstream sourceFile(filename.c_str(), std::ios::in | std::ios::binary);
+        std::ifstream sourceFile(filename.c_str());
         if(sourceFile.fail()) 
             throw cl::Error(1, "Failed to open OpenCL source file");
-        std::string sourceStr(std::istreambuf_iterator<char>(sourceFile),(std::istreambuf_iterator<char>()));
+        std::string sourceStr(std::istreambuf_iterator<char>(sourceFile),(std::istreambuf_iterator<char>())); //second arg is "end of stream" iterator
         sourceFile.close();
+        // printf("%s",sourceStr.c_str());
 		return sourceStr;
 }

@@ -1,5 +1,5 @@
 #include "CLODE.hpp"
-#include "clODE_struct_defs.h"
+#include "clODE_struct_defs.cl"
 #include "OpenCLResource.hpp"  
 
 // #define __CL_ENABLE_EXCEPTIONS

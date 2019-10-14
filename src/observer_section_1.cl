@@ -3,8 +3,8 @@
 #ifndef OBSERVER_SECTION_1_H
 #define OBSERVER_SECTION_1_H
 
-#include "observers.h"
-#include "clODE_utilities.h"
+#include "observers.cl"
+#include "clODE_utilities.cl"
 
 
 typedef struct ObserverData {

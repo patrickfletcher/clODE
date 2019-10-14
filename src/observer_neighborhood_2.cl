@@ -3,8 +3,9 @@
 #ifndef OBSERVER_NEIGHBORHOOD_2_H
 #define OBSERVER_NEIGHBORHOOD_2_H
 
-#include "observers.h"
-#include "clODE_utilities.h"
+#include "realtype.cl"
+#include "observers.cl"
+#include "clODE_utilities.cl"
 
 #define TWO_PASS_EVENT_DETECTOR
 

@@ -46,16 +46,16 @@ struct ObserverParams{
 
 //basic detector: no events. All features are computed per step (max/min/mean vars/aux)
 #ifdef OBSERVER_BASIC
-#include "observer_basic.h"
+#include "observer_basic.cl"
 #endif
 
 #ifdef OBSERVER_BASIC_ALLVAR
-#include "observer_basic_allVar.h"
+#include "observer_basic_allVar.cl"
 #endif
 
 //Event is the detection of local extremum (max and/or min) in a specified variable xi
 #ifdef OBSERVER_LOCAL_MAX
-#include "observer_local_maximum.h"
+#include "observer_local_maximum.cl"
 #endif
 
 //Threshold-based event detection with absolute thresholds in a specified variable xi. Three flavors:
@@ -63,13 +63,13 @@ struct ObserverParams{
 // 2) xup = value of xi, xdown = value of xi < xup (Shmitt trigger)
 // 3) xup, xdown, dxup, dxdown. (Shmitt with slope thresholds)
 #ifdef OBSERVER_SECTION_1
-#include "observer_section_1.h"
+#include "observer_section_1.cl"
 #endif
 
 //Event is the return of trajectory to small neighborhood of Xstart (specified state, eg. x0)
 // can use transient to approach periodic solution, then use x0
 #ifdef OBSERVER_NEIGHBORHOOD_1
-#include "observer_neighborhood_1.h"
+#include "observer_neighborhood_1.cl"
 #endif
 
 
@@ -84,12 +84,12 @@ struct ObserverParams{
 //Threshold-based event detection with relative thresholds in a specified variable xi. 
 // Need to measure the extent of state-space trajectory visits, then compute thresholds as fractions of range
 #ifdef OBSERVER_SECTION_2
-#include "observer_section_2.h"
+#include "observer_section_2.cl"
 #endif
 
 //Use a first pass to find a good Xstart (e.g. absolute min of slowest variable)
 #ifdef OBSERVER_NEIGHBORHOOD_2
-#include "observer_neighborhood_2.h"
+#include "observer_neighborhood_2.cl"
 #endif
 
 

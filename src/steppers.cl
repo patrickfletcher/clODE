@@ -9,8 +9,8 @@
 #ifndef STEPPERS_H_
 #define STEPPERS_H_
 
-#include "realtype.h"
-#include "clODE_struct_defs.h" //for SolverParams struct definition
+#include "realtype.cl"
+#include "clODE_struct_defs.cl" //for SolverParams struct definition
 
 //forward declaration of the RHS function
 void getRHS(realtype t, realtype x_[], realtype p_[], realtype dx_[], realtype aux_[], realtype w_[]);
@@ -124,8 +124,8 @@ void stepper(realtype * ti, realtype xi[], realtype k1[], realtype pars[],const 
 
 #ifdef HEUN_EULER
 #define ADAPTIVE_STEPSIZE
-#define ORDERPLUSONE	RCONST(2.0)
-#define ADAPTIVE_STEP_MAX_SHRINK  RCONST(0.5)
+#define ORDERPLUSONE RCONST(2.0)
+#define ADAPTIVE_STEP_MAX_SHRINK RCONST(0.5)
 
 void adaptiveOneStep(realtype *ti, realtype xi[], realtype k1[], realtype pars[], const realtype dt, realtype aux[], realtype err[], realtype wi[])
 {
@@ -160,7 +160,7 @@ void adaptiveOneStep(realtype *ti, realtype xi[], realtype k1[], realtype pars[]
 #ifdef BOGACKI_SHAMPINE23
 #define ADAPTIVE_STEPSIZE
 #define FSAL_STEP_PROPERTY
-#define ORDERPLUSONE	RCONST(3.0)
+#define ORDERPLUSONE RCONST(3.0)
 #define ADAPTIVE_STEP_MAX_SHRINK RCONST(0.5)
 
 #define B1 RCONST(0.222222222222222)
@@ -238,7 +238,7 @@ void adaptiveOneStep(realtype *ti, realtype xi[], realtype k1[], realtype pars[]
 #ifdef DORPRI5
 #define ADAPTIVE_STEPSIZE
 #define FSAL_STEP_PROPERTY
-#define ORDERPLUSONE	RCONST(5.0)
+#define ORDERPLUSONE RCONST(5.0)
 #define ADAPTIVE_STEP_MAX_SHRINK RCONST(0.1)
 
 #define C2 RCONST(0.200000000000000)

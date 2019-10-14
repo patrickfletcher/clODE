@@ -1,76 +1,19 @@
-//
+// template to show function sigs
 
-#ifndef OBSERVER_SECTION_2_H
-#define OBSERVER_SECTION_2_H
+#ifndef OBSERVER_TEMPLATE_H
+#define OBSERVER_TEMPLATE_H
 
-#include "observers.h"
-#include "clODE_utilities.h"
+//Number of features output. ObserverData must have a field F of this size, host also needs this info to allocate ObserverData and Feature arrays.
+//TODO: could be defined by host as compiler flag have hardcoded value in only one place: host observer switch block.
 
-//Use a solution buffer of 3 steps to detect extrema
-#define BUFFER_SIZE 3
+#include "observers.cl" //data structs
+#include "clODE_utilities.cl" //common math functions
 
-typedef struct ObserverData {
-	
-	//compute using max/min operators
-	realtype xTrajectoryMax[N_VAR];
-	realtype xTrajectoryMin[N_VAR];
-	realtype dxTrajectoryMax[N_VAR];
-	realtype dxTrajectoryMin[N_VAR];
-	realtype auxTrajectoryMax[N_AUX];
-	realtype auxTrajectoryMin[N_AUX];
-	
-	//event data, update at event detection
-	realtype tThisEvent;
-	realtype xThisEvent[N_VAR];
-	realtype dxThisEvent[N_VAR];
-	realtype auxThisEvent[N_AUX];
-	//~ realtype nDistinctEvents[N_DISTINCT_MAX];
-	
-	//event data, update after computing event-triggered  features
-	realtype tLastEvent;
-	realtype xLastEvent[N_VAR];
-	realtype dxLastEvent[N_VAR];
-	realtype auxLastEvent[N_AUX];
-	
-	//compute using max/min operators, reset after computing event-triggered features
-	realtype xEventMax[N_VAR];
-	realtype xEventMin[N_VAR];
-	realtype dxEventMax[N_VAR];
-	realtype dxEventMin[N_VAR];
-	realtype auxEventMax[N_AUX];
-	realtype auxEventMin[N_AUX];
-	
-	//thresholds
-    realtype xUp;
-    realtype xDown;
-    realtype dxUp;
-    realtype dxDown;
-	
-	realtype tAtDown;
-	realtype xAtDown[N_VAR];
-	realtype dxAtDown[N_VAR];
-	realtype auxAtDown[N_AUX];
-	
-	//local extrema (optionally computed, using sign change in slope)
-	realtype tLastMax;
-	realtype xLastMax[N_VAR];
-	realtype dxLastMax[N_VAR];
-	realtype auxLastMax[N_AUX];
-	
-	realtype tLastMin;
-	realtype xLastMin[N_VAR];
-	realtype dxLastMin[N_VAR];
-	realtype auxLastMin[N_AUX];
-	
-    int stepcount;
+//typedef to select the correct observer struct from the header
+typedef struct ObserverDataBasic{
 	int eventcount;
-	int mincount;
-	int eventmincount;
-	int maxcount;
-	int eventmaxcount;
-	bool inUpstate;
-}ObserverData;
-
+    int stepcount;
+} ObserverData;
 
 //set initial values to relevant fields in ObserverData
 void initializeObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op) {
@@ -107,11 +50,15 @@ void finalizeFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi
 	//Number of features is determined by this function. Must hardcode that number into the host program in order to allocate memory for F... 
 }
 
+//prepare observer data to ensure it is ready for continuation if needed
+//void prepareObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op) {
+	 //eg. times of last events need to be shifted left of t0. If last run had t0=0, then will be negative. However might continue from t0!=0, then need to add new t0.
+//}
+
 //Perform and post-integration cleanup of observer data to ensure it is ready for continuation if needed
 void finalizeObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op, __constant realtype tspan[]) {
-	//nothing to do
+	//eg. times of last events need to be shifted left of t0
 }
 
-
-#endif // OBSERVER_SECTION_2_H
+#endif // OBSERVER_TEMPLATE_H
 

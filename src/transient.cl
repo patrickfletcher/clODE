@@ -1,9 +1,8 @@
-
-#include "realtype.h"
-#include "clODE_utilities.h"
-#include "clODE_random.h"
-#include "clODE_struct_defs.h"
-#include "steppers.h"
+#include "clODE_random.cl"
+#include "clODE_struct_defs.cl"
+#include "clODE_utilities.cl"
+#include "steppers.cl"
+#include "realtype.cl"
 
 __kernel void transient(
 __constant   realtype * tspan,			//time vector [t0,tf] - adds (tf-t0) to these at the end	
@@ -40,7 +39,7 @@ rd.randnUselast=0;
 	
 #ifdef ADAPTIVE_STEPSIZE 
 for (int j=0; j<N_WIENER; ++j)
-	wi[j]=0.0; 
+	wi[j]=RCONST(0.0); 
 #else
 for (int j=0; j<N_WIENER; ++j)
 	wi[j]=randn(&rd)/sqrt(dt);   
@@ -48,12 +47,10 @@ for (int j=0; j<N_WIENER; ++j)
 	
 getRHS(ti, xi, p, dxi, auxi, wi); //slope at initial point
 
-
 //time-stepping loop, main time interval
 int step=0;
 int stepflag=0;
-while (ti < tspan[1] && step<sp->max_steps && stepflag==0) {
-	
+while (ti < tspan[1] && step<sp->max_steps && stepflag==0) {	
 	++step;
 #ifdef ADAPTIVE_STEPSIZE
 	//leave the wi=0 for adaptive steppers
@@ -67,9 +64,7 @@ while (ti < tspan[1] && step<sp->max_steps && stepflag==0) {
 	ti=tspan[0] + step*dt;   //purify ti - Gets nSteps correct, but incompatible with shrinking final step without conditional to check if doing the last step
 	//FSAL: dxi is at new ti, Not FSAL: dxi is at old ti
 #endif
-
 }
-
 
 //write the final solution values to global memory.
 for (int j=0; j<N_VAR;++j) 
@@ -80,6 +75,5 @@ for (int j=0; j<N_AUX;++j)
 
 // To get same RNG on repeat (non-continued) run, need to set the seed to same value
 for (int j=0; j<N_RNGSTATE; ++j)
-	RNGstate[j*nPts+i]=rd.state[j];
-	
+	RNGstate[j*nPts+i]=rd.state[j];	
 }

@@ -4,11 +4,11 @@
 //TODO: alternate storage at specified time points only - host sets t vector, interp and store x/dx/aux whenever ti passes t[nextstoreix]
 //TODO: is there any way to avoid writing to global at each store step? shared mem?
 
-#include "realtype.h"
-#include "clODE_utilities.h"
-#include "clODE_random.h"
-#include "clODE_struct_defs.h"
-#include "steppers.h"
+#include "clODE_random.cl"
+#include "clODE_struct_defs.cl"
+#include "clODE_utilities.cl"
+#include "steppers.cl"
+#include "realtype.cl"
 
 __kernel void trajectory(
 __constant   realtype * tspan,			//time vector [t0,tf] - adds (tf-t0) to these at the end	

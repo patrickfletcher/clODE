@@ -23,7 +23,7 @@
 #ifndef CLODE_HPP_
 #define CLODE_HPP_
 
-#include "clODE_struct_defs.h"
+#include "clODE_struct_defs.cl"
 #include "OpenCLResource.hpp"
 
 #define __CL_ENABLE_EXCEPTIONS

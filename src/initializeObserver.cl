@@ -1,9 +1,9 @@
-//~ #include "realtype.h"
-//~ #include "cl_utilities.h"
-//~ #include "clODE_random.h"
-//~ #include "clODE_struct_defs.h"
-//~ #include "steppers.h"
-//~ #include "observers.h"
+//~ #include "realtype.cl"
+//~ #include "cl_utilities.cl"
+//~ #include "clODE_random.cl"
+//~ #include "clODE_struct_defs.cl"
+//~ #include "steppers.cl"
+//~ #include "observers.cl"
 
 __kernel void initializeObserver(
 __constant   realtype * tspan,			//time vector [t0,tf] - adds (tf-t0) to these at the end	

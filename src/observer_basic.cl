@@ -3,9 +3,9 @@
 #ifndef OBSERVER_BASIC_H
 #define OBSERVER_BASIC_H
 
-#include "clODE_utilities.h"
-#include "observers.h"
-#include "realtype.h"
+#include "clODE_utilities.cl"
+#include "observers.cl"
+#include "realtype.cl"
 
 typedef struct ObserverData{
 	realtype xTrajectoryMax;
