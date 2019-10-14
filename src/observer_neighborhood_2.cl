@@ -140,13 +140,13 @@ void warmupObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype au
 {
     for (int j = 0; j < N_VAR; ++j)
     {
-        // od->xMaxDelta[j]=MAX( fabs( xi[j] - od->xLast[j] ), od->xMaxDelta[j] );
+        // od->xMaxDelta[j]=fmax( fabs( xi[j] - od->xLast[j] ), od->xMaxDelta[j] );
         // od->xLast[j]=xi[j];
 
-        od->xTrajectoryMax[j] = MAX(xi[j], od->xTrajectoryMax[j]);
-        od->xTrajectoryMin[j] = MIN(xi[j], od->xTrajectoryMin[j]);
-        // od->dxTrajectoryMax[j]=MAX(dxi[j], od->dxTrajectoryMax[j]);
-        // od->dxTrajectoryMin[j]=MIN(dxi[j], od->dxTrajectoryMin[j]);
+        od->xTrajectoryMax[j] = fmax(xi[j], od->xTrajectoryMax[j]);
+        od->xTrajectoryMin[j] = fmin(xi[j], od->xTrajectoryMin[j]);
+        // od->dxTrajectoryMax[j]=fmax(dxi[j], od->dxTrajectoryMax[j]);
+        // od->dxTrajectoryMin[j]=fmin(dxi[j], od->dxTrajectoryMin[j]);
     }
 
     // //find abs min as x0
@@ -187,7 +187,8 @@ bool eventFunction(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[],
         if (!od->foundX0)
         {
             //x0 is first time droppoing below threshold in x[eVarIx] - xbuffer holds previous xi
-            if (od->xbuffer[op->eVarIx * 3 + 1] > od->xThreshold && xi[op->eVarIx] < od->xThreshold)
+			float lastX=od->xbuffer[op->eVarIx * 3 + 2], thisX=xi[op->eVarIx];
+            if (lastX > od->xThreshold && thisX < od->xThreshold)
             {
 
                 od->foundX0 = true;
@@ -254,14 +255,14 @@ bool computeEventFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype 
         //alts: linearly interp to get tThisEvent using thisNormXDiff/lastNormXDiff; use norm values as x, since we know the interp value of that
         tThisEvent = linearInterp(od->lastNormXdiff, od->thisNormXdiff, od->tbuffer[1], *ti, op->nHoodRadius);
 
-        od->nMaxima[0] = MAX((realtype)od->thisNMaxima, od->nMaxima[0]); //cast to realtype (for mean)
-        od->nMaxima[1] = MIN((realtype)od->thisNMaxima, od->nMaxima[1]);
+        od->nMaxima[0] = fmax((realtype)od->thisNMaxima, od->nMaxima[0]); //cast to realtype (for mean)
+        od->nMaxima[1] = fmin((realtype)od->thisNMaxima, od->nMaxima[1]);
         runningMean(&od->nMaxima[2], (realtype)od->thisNMaxima, od->eventcount - 1);
 
         realtype thisPeriod = tThisEvent - od->tLastEvent;
         //realtype thisPeriod=*ti-tThisEvent;
-        od->period[0] = MAX(thisPeriod, od->period[0]);
-        od->period[1] = MIN(thisPeriod, od->period[1]);
+        od->period[0] = fmax(thisPeriod, od->period[0]);
+        od->period[1] = fmin(thisPeriod, od->period[1]);
         runningMean(&od->period[2], thisPeriod, od->eventcount - 1);
     }
 
@@ -309,10 +310,10 @@ void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype au
     od->dxbuffer[2] = dxi[op->fVarIx];
 
     //global
-    od->xGlobalMax = MAX(od->xGlobalMax, xi[op->fVarIx]);
-    od->xGlobalMin = MIN(od->xGlobalMin, xi[op->fVarIx]);
-    od->dxGlobalMax = MAX(od->dxGlobalMax, dxi[op->fVarIx]);
-    od->dxGlobalMin = MIN(od->dxGlobalMin, dxi[op->fVarIx]);
+    od->xGlobalMax = fmax(od->xGlobalMax, xi[op->fVarIx]);
+    od->xGlobalMin = fmin(od->xGlobalMin, xi[op->fVarIx]);
+    od->dxGlobalMax = fmax(od->dxGlobalMax, dxi[op->fVarIx]);
+    od->dxGlobalMin = fmin(od->dxGlobalMin, dxi[op->fVarIx]);
     runningMean(&od->xTrajectoryMean, xi[op->fVarIx], od->stepcount);
 
     if (od->buffer_filled == 1)
@@ -347,7 +348,7 @@ void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype au
         // {
 
         // 	for (int j=0; j<N_VAR; ++j){
-        // 	// 	od->xMaxDelta[j]=od->xLast[j]-xi[j];//MAX( fabs(od->xLast[j]-xi[j]), od->xMaxDelta[j] );
+        // 	// 	od->xMaxDelta[j]=od->xLast[j]-xi[j];//fmax( fabs(od->xLast[j]-xi[j]), od->xMaxDelta[j] );
         // 		// od->x0[j]=xi[j];
         // 		od->xLast[j]=xi[j];
         // 		// od->tLastEvent=*ti;

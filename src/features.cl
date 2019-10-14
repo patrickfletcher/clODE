@@ -69,17 +69,17 @@ __kernel void features(
 		{
 
 			++step;
-#ifdef ADAPTIVE_STEPSIZE
+	#ifdef ADAPTIVE_STEPSIZE
 			//leave the wi=0 for adaptive steppers
 			stepflag = stepper(&ti, xi, dxi, p, sp, &dt, tspanPtr, auxi, wi);
-#else
+	#else
 			//update Wiener variables - fixed size steppers can scale by dt here
 			for (int j = 0; j < N_WIENER; ++j)
 				wi[j] = randn(&rd) / sqrt(dt); //NOTE: divide by sqrt(dt) because Euler will multiply this by dt in the stepper.
 
 			stepper(&ti, xi, dxi, p, dt, auxi, wi);
 			ti = tspan[0] + step * dt; //purify ti - Gets nSteps correct, but incompatible with shrinking final step without conditional to check if doing the last step
-#endif
+	#endif
 
 			//FSAL: dxi is at new ti, Not FSAL: dxi is at old ti
 			warmupObserverData(&ti, xi, dxi, auxi, &odata, opars);
@@ -98,13 +98,13 @@ __kernel void features(
 
 		rd.randnUselast = 0;
 
-#ifdef ADAPTIVE_STEPSIZE
+	#ifdef ADAPTIVE_STEPSIZE
 		for (int j = 0; j < N_WIENER; ++j)
 			wi[j] = RCONST(0.0);
-#else
+	#else
 		for (int j = 0; j < N_WIENER; ++j)
 			wi[j] = randn(&rd) / sqrt(dt);
-#endif
+	#endif
 
 		getRHS(ti, xi, p, dxi, auxi, wi);
 

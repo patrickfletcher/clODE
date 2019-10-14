@@ -520,7 +520,7 @@ void CLODE::transient()
 			cl_transient.setArg(6, d_RNGstate);
 
 			//execute the kernel
-			opencl.error = opencl.getQueue().enqueueNDRangeKernel(cl_transient, cl::NullRange, cl::NDRange(nPts), cl::NullRange);
+			opencl.error = opencl.getQueue().enqueueNDRangeKernel(cl_transient, cl::NullRange, cl::NDRange(nPts));
 			opencl.getQueue().finish();
 		}
 		catch (cl::Error &er)

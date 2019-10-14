@@ -121,35 +121,35 @@ bool computeEventFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype 
     //Quadratic interpolation for improved accuracy BROKEN??
     //quadraticInterpVertex(od->tbuffer, od->xbuffer, &tThisMax, &xThisMax);
 
-    od->xMax[0] = MAX(xThisMax, od->xMax[0]);
-    od->xMax[1] = MIN(xThisMax, od->xMax[1]);
+    od->xMax[0] = fmax(xThisMax, od->xMax[0]);
+    od->xMax[1] = fmin(xThisMax, od->xMax[1]);
     runningMean(&od->xMax[2], xThisMax, od->eventcount - 1);
 
     if (od->eventcount > 1)
     { //implies tLastMax, tLastMin and xLastMin are set
 
-        od->xMin[0] = MAX(od->xLastMin, od->xMin[0]); //must have had two maxima to have found one minimum
-        od->xMin[1] = MIN(od->xLastMin, od->xMin[1]);
+        od->xMin[0] = fmax(od->xLastMin, od->xMin[0]); //must have had two maxima to have found one minimum
+        od->xMin[1] = fmin(od->xLastMin, od->xMin[1]);
         runningMean(&od->xMin[2], od->xLastMin, od->eventcount - 1);
 
         //max/min/mean IMI
         thisIMI = tThisMax - od->tLastMax;
         //if(thisIMI > op->minIMI) {
-        od->IMI[0] = MAX(thisIMI, od->IMI[0]);
-        od->IMI[1] = MIN(thisIMI, od->IMI[1]);
+        od->IMI[0] = fmax(thisIMI, od->IMI[0]);
+        od->IMI[1] = fmin(thisIMI, od->IMI[1]);
         runningMean(&od->IMI[2], thisIMI, od->eventcount - 1);
         //}
 
         //max/min/mean tMaxMin
         //thisTMaxMin=tThisMax-od->tLastMin;
-        //od->tMaxMin[0]=MAX(thisTMaxMin, od->tMaxMin[0]);
-        //od->tMaxMin[1]=MIN(thisTMaxMin, od->tMaxMin[1]);
+        //od->tMaxMin[0]=fmax(thisTMaxMin, od->tMaxMin[0]);
+        //od->tMaxMin[1]=fmin(thisTMaxMin, od->tMaxMin[1]);
         //runningMean(&od->tMaxMin[2],thisTMaxMin,od->eventcount-1);
 
         //max/min/mean amp
         thisAmp = xThisMax - od->xLastMin;
-        od->amp[0] = MAX(thisAmp, od->amp[0]);
-        od->amp[1] = MIN(thisAmp, od->amp[1]);
+        od->amp[0] = fmax(thisAmp, od->amp[0]);
+        od->amp[1] = fmin(thisAmp, od->amp[1]);
         runningMean(&od->amp[2], thisAmp, od->eventcount - 1);
     }
 
@@ -186,10 +186,10 @@ void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype au
     od->dxbuffer[2] = dxi[op->fVarIx];
 
     //global dxMax, dxMin
-    od->xGlobalMax = MAX(od->xGlobalMax, xi[op->fVarIx]);
-    od->xGlobalMin = MIN(od->xGlobalMin, xi[op->fVarIx]);
-    od->dxGlobalMax = MAX(od->dxGlobalMax, dxi[op->fVarIx]);
-    od->dxGlobalMin = MIN(od->dxGlobalMin, dxi[op->fVarIx]);
+    od->xGlobalMax = fmax(od->xGlobalMax, xi[op->fVarIx]);
+    od->xGlobalMin = fmin(od->xGlobalMin, xi[op->fVarIx]);
+    od->dxGlobalMax = fmax(od->dxGlobalMax, dxi[op->fVarIx]);
+    od->dxGlobalMin = fmin(od->dxGlobalMin, dxi[op->fVarIx]);
     runningMean(&od->xTrajectoryMean, xi[op->fVarIx], od->stepcount);
 
     if (od->buffer_filled == 1)
@@ -202,7 +202,7 @@ void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype au
             minOfArray(od->xbuffer, 3, &od->xLastMin, &ix);
             od->tLastMin = od->tbuffer[ix];
         }
-        // od->xLastMin = MIN(od->xLastMin, xi[op->fVarIx]);
+        // od->xLastMin = fmin(od->xLastMin, xi[op->fVarIx]);
     }
     //reset intermediate feature storage. Should this be here, or in "computeEventFeatures"?
     if (eventOccurred)

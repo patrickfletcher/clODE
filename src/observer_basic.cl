@@ -38,11 +38,11 @@ void warmupObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype au
 void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op, bool eventOccurred)
 {
     ++od->stepcount;
-    od->xTrajectoryMax = MAX(xi[op->fVarIx], od->xTrajectoryMax);
-    od->xTrajectoryMin = MIN(xi[op->fVarIx], od->xTrajectoryMin);
+    od->xTrajectoryMax = fmax(xi[op->fVarIx], od->xTrajectoryMax);
+    od->xTrajectoryMin = fmin(xi[op->fVarIx], od->xTrajectoryMin);
     runningMean(&od->xTrajectoryMean, xi[op->fVarIx], od->stepcount);
-    od->dxTrajectoryMax = MAX(dxi[op->fVarIx], od->dxTrajectoryMax);
-    od->dxTrajectoryMin = MIN(dxi[op->fVarIx], od->dxTrajectoryMin);
+    od->dxTrajectoryMax = fmax(dxi[op->fVarIx], od->dxTrajectoryMax);
+    od->dxTrajectoryMin = fmin(dxi[op->fVarIx], od->dxTrajectoryMin);
 }
 
 //no events

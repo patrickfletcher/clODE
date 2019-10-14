@@ -489,7 +489,7 @@ void stepper(realtype *ti, realtype xi[], realtype k1[], realtype pars[], __cons
 		*dt = min(sp->dtmax, fabs(tspan[1]-tspan[0]));
 		realtype tmp[N_VAR];
 		for (int j=0; j<N_VAR; ++j) { 
-			tmp[j]=k1[j] / MAX(fabs(xi[j]),threshold);
+			tmp[j]=k1[j] / fmax(fabs(xi[j]),threshold);
 		}
 		realtype rh = norm_inf(tmp, N_VAR) / ( 0.8*pow(sp->reltol, RCONST(1.0)/ORDERPLUSONE) );
 		if (*dt*rh > RCONST(1.0)) {
@@ -515,7 +515,7 @@ void stepper(realtype *ti, realtype xi[], realtype k1[], realtype pars[], __cons
 		adaptiveOneStep(&tNew, newxi, newk1, pars, *dt, aux, err, tempWi);
 		
 		for (int j=0; j<N_VAR; j++)
-			err[j]/=MAX( MAX(fabs(xi[j]),fabs(newxi[j])), threshold);
+			err[j]/=fmax( fmax(fabs(xi[j]),fabs(newxi[j])), threshold);
 			
 		//infinity norm of error
 		//~ normErr=*dt*norm_1(err, N_VAR);
@@ -539,13 +539,13 @@ void stepper(realtype *ti, realtype xi[], realtype k1[], realtype pars[], __cons
 
 		// update step size
 		dtScale = 0.8 * pow (sp->reltol/normErr, RCONST(1.0)/ORDERPLUSONE); // multiplier for dt of the next step
-		dtScale = MAX (dtScale, 0.1);					  // minimum multiplier = 1/10
-		dtScale = MIN (dtScale, 2.0);					  // maximum multiplier = 2
+		dtScale = fmax (dtScale, 0.1);					  // minimum multiplier = 1/10
+		dtScale = fmin (dtScale, 2.0);					  // maximum multiplier = 2
 		*dt *= dtScale;				  
 		
-		*dt = MIN(*dt, tspan[1]-tNew);  	  // Hit final time exactly
-		*dt = MAX(*dt, sp->dtmin);
-		*dt = MIN(*dt, sp->dtmax);
+		*dt = fmin(*dt, tspan[1]-tNew);  	  // Hit final time exactly
+		*dt = fmax(*dt, sp->dtmin);
+		*dt = fmin(*dt, sp->dtmax);
 	}
 }
 */

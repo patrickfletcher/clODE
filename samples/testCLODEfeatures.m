@@ -27,12 +27,12 @@ clo=clODEfeatures(odefile,precision,selectedDevice,stepper);
 % clo.observer='basicall'; %same as above but for all variables
 % clo.observer='localmax'; %features derived from local maxima and minima only
 clo.observer='nhood2'; %"Poincare ball": period detection by trajectory returning to within a neighborhood of a specific point in state space
-
+% clo.observer='nhood1'; %specific point is x0. unreliable... 
 
 %solver parameters`
 sp=clODE.solverParams();%create required ODE solver parameter struct
 % sp.dt=1;
-sp.dtmax=1000.00;
+sp.dtmax=100.00;
 sp.abstol=1e-6;
 sp.reltol=1e-4; %nhood2 may require fairly strict reltol
 % sp.max_steps=100000;
@@ -40,14 +40,14 @@ sp.reltol=1e-4; %nhood2 may require fairly strict reltol
 op=clODEfeatures.observerParams(); %create required observer parameter struct
 op.eVarIx=4; %nhood2: variable used for deciding centerpoint of neighborhood
 op.fVarIx=1; %feature detection variable. used in: {basic, localmax, nhood2}
-op.maxEventCount=1000; %stops if this many events found {localmax, nhood2}
+op.maxEventCount=10000; %stops if this many events found {localmax, nhood2}
 op.minXamp=0; %don't record oscillation features if units of variable fVarIx {nhood2}
-op.nHoodRadius=0.1; %size of neighborhood {nhood2} 
+op.nHoodRadius=.2; %size of neighborhood {nhood2} 
 op.xDownThresh=0.5; %selecting neighborhood centerpoint: first time eVarIx drops below this fraction of its amplitude {nhood2}
 op.eps_dx=1e-7; %for checking for min/max
 
 %%
-tspan=[0,10000];
+tspan=[0,30000];
 nGrid=[32,32];
 
 
@@ -101,7 +101,7 @@ toc
 
 %build a feature-selection function, Ffun. The following simply extracts
 %feature sith index fix:
-fix=4; 
+fix=5; 
 fscale=1; %in case want to change feature's units
 Ffun=@(F)F(:,fix)*fscale; 
 ftitle=clo.fNames{fix}; %grab the feature name from the object

@@ -105,8 +105,8 @@ std::string CLODEfeatures::getObserverBuildOpts()
 	case neighborhood1:
 		observerdefine = " -DOBSERVER_NEIGHBORHOOD_1 ";
 		observerName = "OBSERVER_NEIGHBORHOOD_1";
-		nFeatures = 30;
-		observerDataSize = 2 * sizeof(cl_int);
+		nFeatures = 12;
+		observerDataSize = (23 + 7 * nVar) * realSize + 3 * sizeof(cl_int) + 3 * sizeof(cl_bool);
 		observerDataSize = observerDataSize + observerDataSize % realSize;
 		break;
 
@@ -287,7 +287,7 @@ void CLODEfeatures::features()
 			cl_features.setArg(10, doObserverInitialization);
 
 			//execute the kernel
-			opencl.error = opencl.getQueue().enqueueNDRangeKernel(cl_features, cl::NullRange, cl::NDRange(nPts), cl::NullRange);
+			opencl.error = opencl.getQueue().enqueueNDRangeKernel(cl_features, cl::NullRange, cl::NDRange(nPts));
 			// printf("Enqueue error code: %s\n",CLErrorString(opencl.error).c_str());
 			opencl.error = opencl.getQueue().finish();
 			// printf("Finish Queue error code: %s\n",CLErrorString(opencl.error).c_str());

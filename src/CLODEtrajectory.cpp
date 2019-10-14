@@ -156,7 +156,7 @@ void CLODEtrajectory::trajectory()
 			cl_trajectory.setArg(12, d_nStored);
 
 			//execute the kernel
-			opencl.error = opencl.getQueue().enqueueNDRangeKernel(cl_trajectory, cl::NullRange, cl::NDRange(nPts), cl::NullRange);
+			opencl.error = opencl.getQueue().enqueueNDRangeKernel(cl_trajectory, cl::NullRange, cl::NDRange(nPts));
 			opencl.getQueue().finish();
 		}
 		catch (cl::Error &er)

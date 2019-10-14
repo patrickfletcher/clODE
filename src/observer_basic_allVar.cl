@@ -54,16 +54,16 @@ void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype au
     ++od->stepcount;
     for (int j = 0; j < N_VAR; ++j)
     {
-        od->xTrajectoryMax[j] = MAX(xi[j], od->xTrajectoryMax[j]);
-        od->xTrajectoryMin[j] = MIN(xi[j], od->xTrajectoryMin[j]);
+        od->xTrajectoryMax[j] = fmax(xi[j], od->xTrajectoryMax[j]);
+        od->xTrajectoryMin[j] = fmin(xi[j], od->xTrajectoryMin[j]);
         runningMean(&od->xTrajectoryMean[j], xi[j], od->stepcount);
-        od->dxTrajectoryMax[j] = MAX(dxi[j], od->dxTrajectoryMax[j]);
-        od->dxTrajectoryMin[j] = MIN(dxi[j], od->dxTrajectoryMin[j]);
+        od->dxTrajectoryMax[j] = fmax(dxi[j], od->dxTrajectoryMax[j]);
+        od->dxTrajectoryMin[j] = fmin(dxi[j], od->dxTrajectoryMin[j]);
     }
     for (int j = 0; j < N_AUX; ++j)
     {
-        od->auxTrajectoryMax[j] = MAX(auxi[j], od->auxTrajectoryMax[j]);
-        od->auxTrajectoryMin[j] = MIN(auxi[j], od->auxTrajectoryMin[j]);
+        od->auxTrajectoryMax[j] = fmax(auxi[j], od->auxTrajectoryMax[j]);
+        od->auxTrajectoryMin[j] = fmin(auxi[j], od->auxTrajectoryMin[j]);
         runningMean(&od->auxTrajectoryMean[j], auxi[j], od->stepcount);
     }
 }
