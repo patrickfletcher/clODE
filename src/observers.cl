@@ -14,31 +14,29 @@
  */
 
 #ifdef __cplusplus
-template<typename realtype>
+template <typename realtype>
 #endif
-struct ObserverParams{
-    
+struct ObserverParams
+{
     int eVarIx; //variable for event detection
     int fVarIx; //variable for features
-    
-    //time loop limiter
-    int maxEventCount;
-	realtype minXamp;  //consider oscillations lower than this to be steady state (return mean X)
-	realtype minIMI;
-	
-	//neighborhood return map
-	realtype nHoodRadius;
-	
-	//section. Two interpretations: absolute, relative
-	realtype xUpThresh;
-	realtype xDownThresh;
-	realtype dxUpThresh;
-	realtype dxDownThresh;
-	
-	//local extremum - tolerance for zero crossing of dx - for single precision: if RHS involves sum of terms of O(1), dx=zero is noise at O(1e-7)
-	realtype eps_dx;
-};
 
+    int maxEventCount; //time loop limiter
+    realtype minXamp;  //consider oscillations lower than this to be steady state (return mean X)
+    realtype minIMI;
+
+    //neighborhood return map
+    realtype nHoodRadius;
+
+    //section. Two interpretations: absolute, relative
+    realtype xUpThresh;
+    realtype xDownThresh;
+    realtype dxUpThresh;
+    realtype dxDownThresh;
+
+    //local extremum - tolerance for zero crossing of dx - for single precision: if RHS involves sum of terms of O(1), dx=zero is noise at O(1e-7)
+    realtype eps_dx;
+};
 
 ////////////////////////////////////////////////
 // one-pass detectors
@@ -72,16 +70,13 @@ struct ObserverParams{
 #include "observer_neighborhood_1.cl"
 #endif
 
-
-
-
 ////////////////////////////////////////////////
 // two-pass detectors
 ////////////////////////////////////////////////
 
 //TODO: make a separate kernel to use for warmup (to break the computation into parts so host doesn't freeze)
 
-//Threshold-based event detection with relative thresholds in a specified variable xi. 
+//Threshold-based event detection with relative thresholds in a specified variable xi.
 // Need to measure the extent of state-space trajectory visits, then compute thresholds as fractions of range
 #ifdef OBSERVER_SECTION_2
 #include "observer_section_2.cl"
@@ -92,10 +87,7 @@ struct ObserverParams{
 #include "observer_neighborhood_2.cl"
 #endif
 
-
-
 #endif //OBSERVERS_H_
-
 
 /*
 struct SolBuffer {

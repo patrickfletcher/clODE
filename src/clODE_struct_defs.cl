@@ -4,9 +4,10 @@
 //TODO: bounds param (like XPP) to catch numerical instability/blow up in finite time?
 
 #ifdef __cplusplus
-template<typename realtype>
+template <typename realtype>
 #endif
-struct SolverParams{
+struct SolverParams
+{
 	realtype dt;
 	realtype dtmax;
 	realtype abstol;
@@ -15,7 +16,5 @@ struct SolverParams{
 	int max_store;
 	int nout;
 };
-
-
 
 #endif //CLODE_STRUCT_DEFS_H_
