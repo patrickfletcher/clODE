@@ -13,8 +13,8 @@
 #define CLODE_FEATURES_HPP_
 
 #include "CLODE.hpp"
-#include "clODE_struct_defs.h"
-#include "observers.h"
+#include "clODE_struct_defs.cl"
+#include "observers.cl"
 #include "OpenCLResource.hpp"
 
 #define __CL_ENABLE_EXCEPTIONS

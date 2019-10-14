@@ -1,10 +1,10 @@
 //TODO: investigate sources of roundoff error in long "continues" - running means?
-#include "clODE_random.h"
-#include "clODE_struct_defs.h"
-#include "clODE_utilities.h"
-#include "observers.h"
-#include "steppers.h"
-#include "realtype.h"
+#include "clODE_random.cl"
+#include "clODE_struct_defs.cl"
+#include "clODE_utilities.cl"
+#include "observers.cl"
+#include "steppers.cl"
+#include "realtype.cl"
 
 __kernel void features(
 __constant   realtype * tspan,			//time vector [t0,tf] - adds (tf-t0) to these at the end	
