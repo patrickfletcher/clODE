@@ -16,7 +16,7 @@ To compile the mex files, first edit the appropriate path variables in `compileC
 ```
 Next, run the script. Requires a [C++ compiler compatible with Matlab MEX-file compilation](https://www.mathworks.com/support/requirements/supported-compilers.html).
 
-The specification of ODE systems can be done using XPPAUT style ODE files. To use this, please also [download XPPToolbox](https://github.com/patrickfletcher/xppToolbox) and add it to your Matlab path. 
+The specification of ODE systems can be done using XPPAUT style ODE files. To use this feature, please also [download XPPToolbox](https://github.com/patrickfletcher/xppToolbox) and [add it to your Matlab path](https://www.mathworks.com/help/matlab/ref/addpath.html). 
 
 ## Basics
 

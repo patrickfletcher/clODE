@@ -5,62 +5,59 @@
  * features of the trajectory.  
  */
 
-
 //when compiling, be sure to provide the clODE root directory as a define:
-// -DCLODE_ROOT="path/to/my/clODE/" 
+// -DCLODE_ROOT="path/to/my/clODE/"
 
 #ifndef CLODE_TRAJECTORY_HPP_
 #define CLODE_TRAJECTORY_HPP_
 
 #include "CLODE.hpp"
-#include "clODE_struct_defs.h"
+#include "clODE_struct_defs.cl"
 #include "OpenCLResource.hpp"
 
 #define __CL_ENABLE_EXCEPTIONS
 #if defined(__APPLE__) || defined(__MACOSX)
-    #include "OpenCL/cl.hpp"
+#include "OpenCL/cl.hpp"
 #else
-    #include <CL/cl.hpp>
+#include <CL/cl.hpp>
 #endif
 
 #include <string>
 #include <vector>
 
-class CLODEtrajectory: public CLODE {
-		
-	protected:
-		
-		cl_int nStoreMax;
-		std::vector<int>  nStored;
-        std::vector<double> t, x, dx, aux; //new result vectors
-        size_t telements, xelements, auxelements;
-		
-        cl::Buffer d_t, d_x, d_dx, d_aux, d_nStored; 
-		cl::Kernel cl_trajectory;
-		
-		void initializeTrajectoryKernel();
-		void resizeTrajectoryVariables(); //creates trajectory output global variables, called just before launching trajectory kernel
-		
-    public:
-        
-        CLODEtrajectory(ProblemInfo prob, StepperType stepper, bool clSinglePrecision, OpenCLResource opencl); //will construct the base class with same arguments
-        ~CLODEtrajectory();
+class CLODEtrajectory : public CLODE
+{
 
-		//build program, set all problem data needed to run
-        virtual void initialize(std::vector<double> newTspan, std::vector<double> newX0, std::vector<double> newPars, SolverParams<double> newSp);
-        
-        //simulation routines. 
-        //TODO: overload with newX0, newPars; all four? 
-        void trajectory();  //integrate forward an interval of duration (tf-t0)
-        
-        //Get functions
-        std::vector<double> getT();   
-        std::vector<double> getX();   
-        std::vector<double> getDx();  
-        std::vector<double> getAux();
-        int getNStoreMax(){return nStoreMax;};
-        std::vector<int> getNstored();
+protected:
+    cl_int nStoreMax;
+    std::vector<int> nStored;
+    std::vector<double> t, x, dx, aux; //new result vectors
+    size_t telements, xelements, auxelements;
+
+    cl::Buffer d_t, d_x, d_dx, d_aux, d_nStored;
+    cl::Kernel cl_trajectory;
+
+    void initializeTrajectoryKernel();
+    void resizeTrajectoryVariables(); //creates trajectory output global variables, called just before launching trajectory kernel
+
+public:
+    CLODEtrajectory(ProblemInfo prob, StepperType stepper, bool clSinglePrecision, OpenCLResource opencl); //will construct the base class with same arguments
+    ~CLODEtrajectory();
+
+    //build program, set all problem data needed to run
+    virtual void initialize(std::vector<double> newTspan, std::vector<double> newX0, std::vector<double> newPars, SolverParams<double> newSp);
+
+    //simulation routines.
+    //TODO: overload with newX0, newPars; all four?
+    void trajectory(); //integrate forward an interval of duration (tf-t0)
+
+    //Get functions
+    std::vector<double> getT();
+    std::vector<double> getX();
+    std::vector<double> getDx();
+    std::vector<double> getAux();
+    int getNStoreMax() { return nStoreMax; };
+    std::vector<int> getNstored();
 };
-
 
 #endif //CLODE_HPP_
