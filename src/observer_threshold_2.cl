@@ -1,7 +1,7 @@
 //
 
-#ifndef OBSERVER_SECTION_2_H
-#define OBSERVER_SECTION_2_H
+#ifndef OBSERVER_THRESHOLD_2_H
+#define OBSERVER_THRESHOLD_2_H
 
 #include "clODE_utilities.cl"
 #include "observers.cl"
@@ -122,4 +122,4 @@ void finalizeObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype 
     //nothing to do
 }
 
-#endif // OBSERVER_SECTION_2_H
+#endif // OBSERVER_THRESHOLD_2_H

@@ -1,7 +1,7 @@
 //
 
-#ifndef OBSERVER_SECTION_1_H
-#define OBSERVER_SECTION_1_H
+#ifndef OBSERVER_THRESHOLD_1_H
+#define OBSERVER_THRESHOLD_1_H
 
 #include "clODE_utilities.cl"
 #include "observers.cl"
@@ -113,4 +113,4 @@ void finalizeFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi
     //Number of features is determined by this function. Must hardcode that number into the host program in order to allocate memory for F...
 }
 
-#endif // OBSERVER_SECTION_1_H
+#endif // OBSERVER_THRESHOLD_1_H
