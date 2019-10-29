@@ -250,10 +250,10 @@ bool computeEventFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype 
     {
 
         //simplest: time and state of trajectory point that landed in the neighborhood.
-        //tThisEvent=*ti;
+        // tThisEvent=*ti;
 
         //alts: linearly interp to get tThisEvent using thisNormXDiff/lastNormXDiff; use norm values as x, since we know the interp value of that
-        tThisEvent = linearInterp(od->lastNormXdiff, od->thisNormXdiff, od->tbuffer[1], *ti, op->nHoodRadius);
+        tThisEvent = linearInterp(od->lastNormXdiff, od->thisNormXdiff, od->tbuffer[2], *ti, op->nHoodRadius);
 
         od->nMaxima[0] = fmax((realtype)od->thisNMaxima, od->nMaxima[0]); //cast to realtype (for mean)
         od->nMaxima[1] = fmin((realtype)od->thisNMaxima, od->nMaxima[1]);
@@ -282,32 +282,7 @@ void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype au
     // realtype tThisMax, xThisMax;
     // realtype thisIMI, thisTMaxMin, thisAmp;
 
-    if (od->xRange[op->fVarIx] < op->minXamp)
-    {
-        return;
-    }
-
     // ++od->stepcount;
-    if (od->stepcount > 2 && od->buffer_filled == 0)
-    {
-        od->buffer_filled = 1;
-    }
-
-    //advance solution buffer
-    od->tbuffer[0] = od->tbuffer[1];
-    od->tbuffer[1] = od->tbuffer[2];
-    od->tbuffer[2] = *ti;
-
-    for (int j = 0; j < N_VAR; ++j)
-    {
-        od->xbuffer[j * 3 + 0] = od->xbuffer[j * 3 + 1];
-        od->xbuffer[j * 3 + 1] = od->xbuffer[j * 3 + 2];
-        od->xbuffer[j * 3 + 2] = xi[j];
-    }
-
-    od->dxbuffer[0] = od->dxbuffer[1];
-    od->dxbuffer[1] = od->dxbuffer[2];
-    od->dxbuffer[2] = dxi[op->fVarIx];
 
     //global
     od->xGlobalMax = fmax(od->xGlobalMax, xi[op->fVarIx]);
@@ -315,6 +290,29 @@ void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype au
     od->dxGlobalMax = fmax(od->dxGlobalMax, dxi[op->fVarIx]);
     od->dxGlobalMin = fmin(od->dxGlobalMin, dxi[op->fVarIx]);
     runningMean(&od->xTrajectoryMean, xi[op->fVarIx], od->stepcount);
+    if (od->xGlobalMax - od->xGlobalMin < op->minXamp)
+    {
+        return;
+    }
+
+    //advance solution buffer
+    od->tbuffer[0] = od->tbuffer[1];
+    od->tbuffer[1] = od->tbuffer[2];
+    od->tbuffer[2] = *ti;
+    for (int j = 0; j < N_VAR; ++j)
+    {
+        od->xbuffer[j * 3 + 0] = od->xbuffer[j * 3 + 1];
+        od->xbuffer[j * 3 + 1] = od->xbuffer[j * 3 + 2];
+        od->xbuffer[j * 3 + 2] = xi[j];
+    }
+    od->dxbuffer[0] = od->dxbuffer[1];
+    od->dxbuffer[1] = od->dxbuffer[2];
+    od->dxbuffer[2] = dxi[op->fVarIx];
+
+    if (od->stepcount > 2 && od->buffer_filled == 0)
+    {
+        od->buffer_filled = 1;
+    }
 
     if (od->buffer_filled == 1)
     {

@@ -101,7 +101,7 @@ toc
 
 %build a feature-selection function, Ffun. The following simply extracts
 %feature sith index fix:
-fix=5; 
+fix=2; 
 fscale=1; %in case want to change feature's units
 Ffun=@(F)F(:,fix)*fscale; 
 ftitle=clo.fNames{fix}; %grab the feature name from the object
