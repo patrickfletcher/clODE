@@ -6,40 +6,19 @@
 #include "clODE_utilities.cl"
 #include "observers.cl"
 
-//Use a solution buffer of 3 steps to detect extrema
-#define BUFFER_SIZE 3
-
 typedef struct ObserverData
 {
-
     //compute using max/min operators
-    realtype xTrajectoryMax[N_VAR];
-    realtype xTrajectoryMin[N_VAR];
-    realtype dxTrajectoryMax[N_VAR];
-    realtype dxTrajectoryMin[N_VAR];
-    realtype auxTrajectoryMax[N_AUX];
-    realtype auxTrajectoryMin[N_AUX];
+    realtype xTrajectoryMax;
+    realtype xTrajectoryMin;
+    realtype xTrajectoryAmp;
 
-    //event data, update at event detection
-    realtype tThisEvent;
-    realtype xThisEvent[N_VAR];
-    realtype dxThisEvent[N_VAR];
-    realtype auxThisEvent[N_AUX];
-    //~ realtype nDistinctEvents[N_DISTINCT_MAX];
+    realtype dxTrajectoryMax;
+    realtype dxTrajectoryMin;
+    realtype dxTrajectoryAmp;
 
-    //event data, update after computing event-triggered  features
-    realtype tLastEvent;
-    realtype xLastEvent[N_VAR];
-    realtype dxLastEvent[N_VAR];
-    realtype auxLastEvent[N_AUX];
-
-    //compute using max/min operators, reset after computing event-triggered features
-    realtype xEventMax[N_VAR];
-    realtype xEventMin[N_VAR];
-    realtype dxEventMax[N_VAR];
-    realtype dxEventMin[N_VAR];
-    realtype auxEventMax[N_AUX];
-    realtype auxEventMin[N_AUX];
+    // realtype auxTrajectoryMax[N_AUX];
+    // realtype auxTrajectoryMin[N_AUX];
 
     //thresholds
     realtype xUp;
@@ -47,21 +26,40 @@ typedef struct ObserverData
     realtype dxUp;
     realtype dxDown;
 
+    //event data, update at event detection
+    realtype tThisEvent;
+    // realtype xThisEvent[N_VAR];
+    // realtype dxThisEvent[N_VAR];
+    // realtype auxThisEvent[N_AUX];
+    //~ realtype nDistinctEvents[N_DISTINCT_MAX];
+
+    //event data, update after computing event-triggered features
+    realtype tLastEvent;
+    // realtype xLastEvent[N_VAR];
+    // realtype dxLastEvent[N_VAR];
+    // realtype auxLastEvent[N_AUX];
+
+    //compute using max/min operators, reset after computing event-triggered features
+    // realtype xEventMax[N_VAR];
+    // realtype xEventMin[N_VAR];
+    // realtype dxEventMax[N_VAR];
+    // realtype dxEventMin[N_VAR];
+    // realtype auxEventMax[N_AUX];
+    // realtype auxEventMin[N_AUX];
+
     realtype tAtDown;
-    realtype xAtDown[N_VAR];
-    realtype dxAtDown[N_VAR];
-    realtype auxAtDown[N_AUX];
+    // realtype xAtDown[N_VAR];
+    // realtype dxAtDown[N_VAR];
+    // realtype auxAtDown[N_AUX];
 
     //local extrema (optionally computed, using sign change in slope)
     realtype tLastMax;
-    realtype xLastMax[N_VAR];
-    realtype dxLastMax[N_VAR];
-    realtype auxLastMax[N_AUX];
+    // realtype xLastMax[N_VAR];
+    // realtype auxLastMax[N_AUX];
 
     realtype tLastMin;
-    realtype xLastMin[N_VAR];
-    realtype dxLastMin[N_VAR];
-    realtype auxLastMin[N_AUX];
+    // realtype xLastMin[N_VAR];
+    // realtype auxLastMin[N_AUX];
 
     int stepcount;
     int eventcount;
@@ -80,11 +78,32 @@ void initializeObserverData(realtype *ti, realtype xi[], realtype dxi[], realtyp
 //restricted per-timestep update of observer data for initializing event detector
 void warmupObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
 {
+    od->xTrajectoryMax[op->eVarIx] = fmax(xi[op->eVarIx], od->xTrajectoryMax[op->eVarIx]);
+    od->xTrajectoryMin[op->eVarIx] = fmin(xi[op->eVarIx], od->xTrajectoryMin[op->eVarIx]);
+    od->dxTrajectoryMax[op->eVarIx] = fmax(dxi[op->eVarIx], od->dxTrajectoryMax[op->eVarIx]);
+    od->dxTrajectoryMin[op->eVarIx] = fmin(dxi[op->eVarIx], od->dxTrajectoryMin[op->eVarIx]);
 }
 
 //process warmup data to compute relevant event detector quantities (e.g. thresholds)
 void initializeEventDetector(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
 {
+    od->xTrajectoryAmp = od->xTrajectoryMax - od->xTrajectoryMin;
+    od->dxTrajectoryAmp = od->dxTrajectoryMax - od->dxTrajectoryMin;
+
+    od->xUp = od->xTrajectoryMin + op->xUpThresh * od->xTrajectoryAmp;
+	if(op->xDownThresh>RCONST(0.0))
+		od->xDown = od->xTrajectoryMin + op->xDownThresh * od->xTrajectoryAmp;
+	else
+		obs->xDown = obs->xUp;
+
+    od->dxUp = od->dxTrajectoryMin + op->dxUpThresh * od->dxTrajectoryAmp;
+	if(op->xDownThresh>RCONST(0.0))
+        od->dxDown = od->dxTrajectoryMin + op->dxDownThresh * od->dxTrajectoryAmp;
+	else
+		obs->dxDown = obs->dxUp;
+
+	//determine if we are up or down.
+	obs->inUpstate=(xi[op->eVarIx] > obs->xUp) ? true : false;
 }
 
 //per-timestep check for an event.  Option: refine event (t,x,dx,aux) within the timestep with interpolation
