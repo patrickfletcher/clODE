@@ -121,6 +121,7 @@ classdef clODEfeatures<clODE & matlab.mixin.SetGet
             fNames={};
             switch lower(obj.observer)
                 case {'basic'}
+                    fNames{end+1}=[obj.prob.varNames{obj.op.fVarIx} ' amplitude'];
                     fNames{end+1}=['max ' obj.prob.varNames{obj.op.fVarIx}];
                     fNames{end+1}=['min ' obj.prob.varNames{obj.op.fVarIx}];
                     fNames{end+1}=['mean ' obj.prob.varNames{obj.op.fVarIx}];
@@ -129,6 +130,12 @@ classdef clODEfeatures<clODE & matlab.mixin.SetGet
                     fNames{end+1}='step count';
                     
                 case {'basicallvar','basicall'}
+                    for i=1:obj.prob.nVar
+                        fNames{end+1}=[obj.prob.varNames{i} ' amplitude'];
+                    end
+                    for i=1:obj.prob.nAux
+                        fNames{end+1}=[obj.prob.auxNames{i} ' amplitude'];
+                    end
                     for i=1:obj.prob.nVar
                         fNames{end+1}=['max ' obj.prob.varNames{i}];
                         fNames{end+1}=['min ' obj.prob.varNames{i}];

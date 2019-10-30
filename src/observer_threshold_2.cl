@@ -103,10 +103,10 @@ void initializeObserverData(realtype *ti, realtype xi[], realtype dxi[], realtyp
 //restricted per-timestep update of observer data for initializing event detector
 void warmupObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
 {
-    od->xGlobalMax = fmax(od->xGlobalMax, xi[op->fVarIx]);
-    od->xGlobalMin = fmin(od->xGlobalMin, xi[op->fVarIx]);
-    od->dxGlobalMax = fmax(od->dxGlobalMax, dxi[op->fVarIx]);
-    od->dxGlobalMin = fmin(od->dxGlobalMin, dxi[op->fVarIx]);
+    od->xGlobalMax = fmax(od->xGlobalMax, xi[op->eVarIx]);
+    od->xGlobalMin = fmin(od->xGlobalMin, xi[op->eVarIx]);
+    od->dxGlobalMax = fmax(od->dxGlobalMax, dxi[op->eVarIx]);
+    od->dxGlobalMin = fmin(od->dxGlobalMin, dxi[op->eVarIx]);
 }
 
 //process warmup data to compute relevant event detector quantities (e.g. thresholds)

@@ -171,7 +171,7 @@ void initializeEventDetector(realtype *ti, realtype xi[], realtype dxi[], realty
         // od->dxRange[j]=od->dxTrajectoryMax[j]-od->dxTrajectoryMin[j];
     }
 
-    od->xThreshold = od->xTrajectoryMin[op->eVarIx] + op->xDownThresh * od->xRange[op->eVarIx];
+    od->xThreshold = od->xTrajectoryMin[op->eVarIx] + op->xDownThresh * od->xRange[op->eVarIx]; //TODO: add downward threshold too, for "up" and "down" state durations
     // od->xThreshold=od->xTrajectoryMin[op->eVarIx] + op->xUpThresh*od->xRange[op->eVarIx];
 
     // od->isInNhood = true; //we are at the center of the neighborhood, x0.
@@ -191,7 +191,7 @@ bool eventFunction(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[],
         //check for x0
         if (!od->foundX0)
         {
-            //x0 is first time droppoing below threshold in x[eVarIx] - xbuffer holds previous xi
+            //x0 is first time dropping below threshold in x[eVarIx] - xbuffer holds previous xi
 			float lastX=od->xbuffer[op->eVarIx * 3 + 2], thisX=xi[op->eVarIx];
             if (lastX > od->xThreshold && thisX < od->xThreshold)
             {
@@ -300,19 +300,6 @@ void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype au
         return;
     }
 
-    //advance solution buffer
-    od->tbuffer[0] = od->tbuffer[1];
-    od->tbuffer[1] = od->tbuffer[2];
-    od->tbuffer[2] = *ti;
-    for (int j = 0; j < N_VAR; ++j)
-    {
-        od->xbuffer[j * 3 + 0] = od->xbuffer[j * 3 + 1];
-        od->xbuffer[j * 3 + 1] = od->xbuffer[j * 3 + 2];
-        od->xbuffer[j * 3 + 2] = xi[j];
-    }
-    od->dxbuffer[0] = od->dxbuffer[1];
-    od->dxbuffer[1] = od->dxbuffer[2];
-    od->dxbuffer[2] = dxi[op->fVarIx];
 
     if (od->stepcount > 2 && od->buffer_filled == 0)
     {
@@ -323,7 +310,8 @@ void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype au
     {
 
         //local max check in fVarIx - one between each min - simply overwrite tLastMax, xLastMax
-        if (od->dxbuffer[1] > -op->eps_dx && od->dxbuffer[2] < -op->eps_dx)
+        // if (od->dxbuffer[1] > -op->eps_dx && od->dxbuffer[2] < -op->eps_dx)
+        if (od->dxbuffer[2] > -op->eps_dx && dxi[op->fVarIx] < -op->eps_dx)
         {
             od->thisNMaxima++;
             // int ix;
@@ -358,6 +346,20 @@ void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype au
         // 	}
     }
 
+    //advance solution buffer
+    od->tbuffer[0] = od->tbuffer[1];
+    od->tbuffer[1] = od->tbuffer[2];
+    od->tbuffer[2] = *ti;
+    for (int j = 0; j < N_VAR; ++j)
+    {
+        od->xbuffer[j * 3 + 0] = od->xbuffer[j * 3 + 1];
+        od->xbuffer[j * 3 + 1] = od->xbuffer[j * 3 + 2];
+        od->xbuffer[j * 3 + 2] = xi[j];
+    }
+    od->dxbuffer[0] = od->dxbuffer[1];
+    od->dxbuffer[1] = od->dxbuffer[2];
+    od->dxbuffer[2] = dxi[op->fVarIx];
+    
     //reset intermediate feature storage
     if (eventOccurred)
     {

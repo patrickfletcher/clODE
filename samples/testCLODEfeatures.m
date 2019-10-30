@@ -33,6 +33,8 @@ sp.reltol=1e-3; %nhood2 may require fairly strict reltol
 
 
 op=clODEfeatures.observerParams(); %create required observer parameter struct
+op.eVarIx=1; %nhood2: variable used for deciding centerpoint of neighborhood
+op.fVarIx=1; %feature detection variable. used in: {basic, localmax, nhood2}
 op.maxEventCount=10000; %stops if this many events found {localmax, nhood2}
 op.eps_dx=1e-7; %for checking for min/max
 op.minXamp=0.5; %don't record oscillation features if units of variable fVarIx {nhood2}
@@ -41,23 +43,23 @@ op.minXamp=0.5; %don't record oscillation features if units of variable fVarIx {
 % clo.observer='basicall'; %same as above but for all variables
 % clo.observer='localmax'; %features derived from local maxima and minima only
 
-% clo.observer='nhood2'; %"Poincare ball": period detection by trajectory returning to within a neighborhood of a specific point in state space
-% % clo.observer='nhood1'; %specific point is x0. unreliable... 
-% op.eVarIx=4; %nhood2: variable used for deciding centerpoint of neighborhood
-% op.fVarIx=1; %feature detection variable. used in: {basic, localmax, nhood2}
-% op.minXamp=0; %don't record oscillation features if units of variable fVarIx {nhood2}
-% op.nHoodRadius=.2; %size of neighborhood {nhood2} 
-% op.xDownThresh=0.5; %selecting neighborhood centerpoint: first time eVarIx drops below this fraction of its amplitude {nhood2}
+clo.observer='nhood2'; %"Poincare ball": period detection by trajectory returning to within a neighborhood of a specific point in state space
+% clo.observer='nhood1'; %specific point is x0. unreliable... 
+op.minXamp=0; %don't record oscillation features if units of variable fVarIx {nhood2}
+op.eVarIx=4; %nhood2: variable used for deciding centerpoint of neighborhood
+op.nHoodRadius=.2; %size of neighborhood {nhood2} 
+op.xDownThresh=0.5; %selecting neighborhood centerpoint: first time eVarIx drops below this fraction of its amplitude {nhood2}
 
-clo.observer='thresh2'; 
-op.xUpThresh=0.3;
-op.xDownThresh=0.15; 
-op.dxUpThresh=0.;
-op.dxDownThresh=0.; 
+
+% clo.observer='thresh2'; 
+% op.xUpThresh=0.3;
+% op.xDownThresh=0.15; 
+% op.dxUpThresh=0.;
+% op.dxDownThresh=0.; 
 
 %%
 tspan=[0,30000];
-nGrid=[32,32];
+nGrid=[64,64];
 
 
 nPts=prod(nGrid);
@@ -110,7 +112,7 @@ toc
 
 %build a feature-selection function, Ffun. The following simply extracts
 %feature sith index fix:
-fix=19; 
+fix=2; 
 fscale=1; %in case want to change feature's units
 Ffun=@(F)F(:,fix)*fscale; 
 ftitle=clo.fNames{fix}; %grab the feature name from the object
@@ -152,6 +154,8 @@ hf.KeyPressFcn={@gridKeyPress,clo, hi, Ffun, ftitle, nGrid};
 % r - Randomize X0 within x0lb=[clo.prob.var.lb]; and x0ub=[clo.prob.var.ub];
 
 nClick=3; %number of mouse clicks to select parameters for trajectories
+% tspanT=tspan;
+tspanT=[0,10000];
 
 %variables to plot (use the name)
 vars={'v'}; %one variable
@@ -177,10 +181,10 @@ spt.nout=1;
 
 X0t=repmat(x0,1,1);
 Pt=repmat(p,1,1);
-cloTraj.initialize(tspan, X0t(:), Pt(:), spt);
+cloTraj.initialize(tspanT, X0t(:), Pt(:), spt);
 cloTraj.tscale=1/1000;
 cloTraj.tunits='s';
 
 %attach the "clicker" to the imagesc object in Figure 1. 
 trajFig=2; %will plot trajectories in Figure 2
-ax.ButtonDownFcn={@clickTrajectory,cloTraj,p,x0,tspan,[p1ix,p2ix],vars,trajFig,nClick};
+ax.ButtonDownFcn={@clickTrajectory,cloTraj,p,x0,tspanT,[p1ix,p2ix],vars,trajFig,nClick};

@@ -65,6 +65,7 @@ bool computeEventFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype 
 void finalizeFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op, __global realtype *F, const int i, const int nPts)
 {
     int ix = 0;
+    F[ix++ * nPts + i] = od->xTrajectoryMax-od->xTrajectoryMin;
     F[ix++ * nPts + i] = od->xTrajectoryMax;
     F[ix++ * nPts + i] = od->xTrajectoryMin;
     F[ix++ * nPts + i] = od->xTrajectoryMean;

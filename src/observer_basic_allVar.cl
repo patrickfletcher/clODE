@@ -91,6 +91,15 @@ void finalizeFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi
     int ix = 0;
     for (int j = 0; j < N_VAR; ++j)
     {
+        F[ix++ * nPts + i] = od->xTrajectoryMax[j]-od->xTrajectoryMin[j];
+    }
+    for (int j = 0; j < N_AUX; ++j)
+    {
+        F[ix++ * nPts + i] = od->auxTrajectoryMax[j]-od->auxTrajectoryMin[j];
+    }
+    
+    for (int j = 0; j < N_VAR; ++j)
+    {
         F[ix++ * nPts + i] = od->xTrajectoryMax[j];
         F[ix++ * nPts + i] = od->xTrajectoryMin[j];
         F[ix++ * nPts + i] = od->xTrajectoryMean[j];

@@ -73,7 +73,7 @@ std::string CLODEfeatures::getObserverBuildOpts()
 	case basic:
 		observerdefine = " -DOBSERVER_BASIC ";
 		observerName = "OBSERVER_BASIC";
-		nFeatures = 6;
+		nFeatures = 7;
 		observerDataSize = 5 * realSize + 2 * sizeof(cl_int);
 		observerDataSize = observerDataSize + observerDataSize % realSize; //need to align the struct to a multiple of the largest type inside (here, realtype)...
 		break;
@@ -81,7 +81,7 @@ std::string CLODEfeatures::getObserverBuildOpts()
 	case basicAllVar:
 		observerdefine = " -DOBSERVER_BASIC_ALLVAR ";
 		observerName = "OBSERVER_BASIC_ALLVAR";
-		nFeatures = 5 * nVar + 3 * nAux + 1;
+		nFeatures = 6 * nVar + 4 * nAux + 1;
 		observerDataSize = 5 * realSize * nVar + 3 * realSize * nAux + 2 * sizeof(cl_int);
 		observerDataSize = observerDataSize + observerDataSize % realSize;
 		break;
