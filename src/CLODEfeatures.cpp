@@ -94,9 +94,9 @@ std::string CLODEfeatures::getObserverBuildOpts()
 		observerDataSize = observerDataSize + observerDataSize % realSize;
 		break;
 
-	case section1:
-		observerdefine = " -DOBSERVER_SECTION_1 ";
-		observerName = "OBSERVER_SECTION_1";
+	case threshold1:
+		observerdefine = " -DOBSERVER_THRESHOLD_1 ";
+		observerName = "OBSERVER_THRESHOLD_1";
 		nFeatures = 30;
 		observerDataSize = 2 * sizeof(cl_int);
 		observerDataSize = observerDataSize + observerDataSize % realSize;
@@ -110,11 +110,11 @@ std::string CLODEfeatures::getObserverBuildOpts()
 		observerDataSize = observerDataSize + observerDataSize % realSize;
 		break;
 
-	case section2:
-		observerdefine = " -DOBSERVER_SECTION_2 ";
-		observerName = "OBSERVER_SECTION_2";
-		nFeatures = 11;
-		observerDataSize = (22 + 6 * nVar) * realSize + 4 * sizeof(cl_int) + sizeof(cl_bool);
+	case threshold2:
+		observerdefine = " -DOBSERVER_THRESHOLD_2 ";
+		observerName = "OBSERVER_THRESHOLD_2";
+		nFeatures = 20;
+		observerDataSize = (7 * 3 + 13) * realSize + 3 * sizeof(cl_long) + 2 * sizeof(cl_bool);
 		observerDataSize = observerDataSize + observerDataSize % realSize;
 		break;
 

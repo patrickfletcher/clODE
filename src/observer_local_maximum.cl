@@ -80,7 +80,7 @@ void initializeObserverData(realtype *ti, realtype xi[], realtype dxi[], realtyp
 
     od->eventcount = 0;
     od->stepcount = 0;
-    od->buffer_filled = 0;
+    od->buffer_filled = false;
 }
 
 //no warmup needed

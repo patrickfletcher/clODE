@@ -57,11 +57,11 @@ struct ObserverParams
 #endif
 
 //Threshold-based event detection with absolute thresholds in a specified variable xi. Three flavors:
-// 1) xup = value of xi. (simple section)
+// 1) xup = value of xi. (simple threshold)
 // 2) xup = value of xi, xdown = value of xi < xup (Shmitt trigger)
 // 3) xup, xdown, dxup, dxdown. (Shmitt with slope thresholds)
-#ifdef OBSERVER_SECTION_1
-#include "observer_section_1.cl"
+#ifdef OBSERVER_THRESHOLD_1
+#include "observer_threshold_1.cl"
 #endif
 
 //Event is the return of trajectory to small neighborhood of Xstart (specified state, eg. x0)
@@ -78,8 +78,8 @@ struct ObserverParams
 
 //Threshold-based event detection with relative thresholds in a specified variable xi.
 // Need to measure the extent of state-space trajectory visits, then compute thresholds as fractions of range
-#ifdef OBSERVER_SECTION_2
-#include "observer_section_2.cl"
+#ifdef OBSERVER_THRESHOLD_2
+#include "observer_threshold_2.cl"
 #endif
 
 //Use a first pass to find a good Xstart (e.g. absolute min of slowest variable)

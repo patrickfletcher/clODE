@@ -32,9 +32,9 @@ typedef enum ObserverType
     basic = 0,
     basicAllVar,
     localmax,
-    section1,
+    threshold1,
     neighborhood1,
-    section2,
+    threshold2,
     neighborhood2
 } ObserverType;
 

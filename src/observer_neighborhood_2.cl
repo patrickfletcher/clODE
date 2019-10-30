@@ -176,6 +176,11 @@ void initializeEventDetector(realtype *ti, realtype xi[], realtype dxi[], realty
 
     // od->isInNhood = true; //we are at the center of the neighborhood, x0.
     // od->tLastEvent=*ti;
+
+    od->xGlobalMax = -BIG_REAL;
+    od->xGlobalMin = BIG_REAL;
+    // od->dxGlobalMax = -BIG_REAL;
+    // od->dxGlobalMin = BIG_REAL;
 }
 
 //check for entry into "epsilon ball" surrounding od->x0
@@ -290,7 +295,7 @@ void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype au
     od->dxGlobalMax = fmax(od->dxGlobalMax, dxi[op->fVarIx]);
     od->dxGlobalMin = fmin(od->dxGlobalMin, dxi[op->fVarIx]);
     runningMean(&od->xTrajectoryMean, xi[op->fVarIx], od->stepcount);
-    if (od->xGlobalMax - od->xGlobalMin < op->minXamp)
+    if (od->xRange[op->fVarIx] < op->minXamp)
     {
         return;
     }

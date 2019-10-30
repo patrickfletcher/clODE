@@ -116,8 +116,13 @@ __kernel void trajectory(
 
 #if !defined(FSAL_STEP_PROPERTY)
     //get the slope at the last point
-    for (int j = 0; j < N_WIENER; ++j)
-        wi[j] = randn(&rd) / sqrt(dt);
+    #ifdef ADAPTIVE_STEPSIZE
+        // for (int j = 0; j < N_WIENER; ++j)
+        //     wi[j] = RCONST(0.0);
+    #else
+        for (int j = 0; j < N_WIENER; ++j)
+            wi[j] = randn(&rd) / sqrt(dt);
+    #endif
 
     getRHS(ti, xi, p, dxi, auxi, wi);
 
