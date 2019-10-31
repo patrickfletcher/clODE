@@ -66,8 +66,8 @@ switch(evt.Key)
         
     case 'z' %zoom using rbbox
         
-        tmp=get(gco(src),'ButtonDownFcn'); %
-        set(gco(src),'ButtonDownFcn',[]); %temporarily turn off clicktrajectory
+        tmp=get(hi.Parent,'ButtonDownFcn'); %
+        set(hi.Parent,'ButtonDownFcn',[]); %temporarily turn off clicktrajectory
         
         gridAxis=gca;
         
@@ -89,9 +89,8 @@ switch(evt.Key)
         else
             disp('Window Zoom-in canceled by keypress')
         end
-       
         
-        set(gco(src),'ButtonDownFcn',tmp); %restore clicktrajectory
+        set(hi.Parent,'ButtonDownFcn',tmp); %restore clicktrajectory
         
     case '1'
         setBounds(initBounds([1,3]),initBounds([2,4]));

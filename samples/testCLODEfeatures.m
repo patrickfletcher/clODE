@@ -59,7 +59,7 @@ op.xDownThresh=0.5; %selecting neighborhood centerpoint: first time eVarIx drops
 
 %%
 tspan=[0,30000];
-nGrid=[32,32];
+nGrid=[64,64];
 
 
 nPts=prod(nGrid);
@@ -112,7 +112,7 @@ toc
 
 %build a feature-selection function, Ffun. The following simply extracts
 %feature sith index fix:
-fix=5; 
+fix=7; 
 fscale=1; %in case want to change feature's units
 Ffun=@(F)F(:,fix)*fscale; 
 ftitle=clo.fNames{fix}; %grab the feature name from the object
