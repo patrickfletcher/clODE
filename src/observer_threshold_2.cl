@@ -103,10 +103,10 @@ void initializeObserverData(realtype *ti, realtype xi[], realtype dxi[], realtyp
 //restricted per-timestep update of observer data for initializing event detector
 void warmupObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
 {
-    od->xGlobalMax = fmax(od->xGlobalMax, xi[op->eVarIx]);
-    od->xGlobalMin = fmin(od->xGlobalMin, xi[op->eVarIx]);
-    od->dxGlobalMax = fmax(od->dxGlobalMax, dxi[op->eVarIx]);
-    od->dxGlobalMin = fmin(od->dxGlobalMin, dxi[op->eVarIx]);
+    od->xGlobalMax = fmax(od->xGlobalMax, xi[op->fVarIx]);
+    od->xGlobalMin = fmin(od->xGlobalMin, xi[op->fVarIx]);
+    od->dxGlobalMax = fmax(od->dxGlobalMax, dxi[op->fVarIx]);
+    od->dxGlobalMin = fmin(od->dxGlobalMin, dxi[op->fVarIx]);
 }
 
 //process warmup data to compute relevant event detector quantities (e.g. thresholds)
@@ -129,7 +129,7 @@ void initializeEventDetector(realtype *ti, realtype xi[], realtype dxi[], realty
 		od->dxDown = od->dxUp;
 
 	//determine if we are up or down.
-	od->inUpstate=(xi[op->eVarIx] > od->xUp) ? true : false;
+	od->inUpstate=(xi[op->fVarIx] > od->xUp) ? true : false;
     // od->xGlobalMax = -BIG_REAL; //TODO: need to keep a separate "globalAmp" from init, or don't wipe globalMax/Min: for minAmp to work
     // od->xGlobalMin = BIG_REAL;
     // od->dxGlobalMax = -BIG_REAL;
@@ -140,7 +140,7 @@ void initializeEventDetector(realtype *ti, realtype xi[], realtype dxi[], realty
 bool eventFunction(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
 {
     //event is marked by upward threshold crossing
-    return (xi[op->eVarIx] >= od->xUp && dxi[op->eVarIx] >= od->dxUp && !od->inUpstate);
+    return (xi[op->fVarIx] >= od->xUp && dxi[op->fVarIx] >= od->dxUp && !od->inUpstate);
     
 }
 
@@ -156,7 +156,7 @@ bool computeEventFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype 
     // tThisUp=*ti;
 
     //alts: linearly interp to get more accurate tThisUp within the last time step: xi-1, xi, ti-1, ti; get t @ x=xUp
-    tThisUp = linearInterp(od->xbuffer[2], xi[op->eVarIx], od->tbuffer[2], *ti, od->xUp);
+    tThisUp = linearInterp(od->xbuffer[2], xi[op->fVarIx], od->tbuffer[2], *ti, od->xUp);
 
     if (od->eventcount > 1)
     {
@@ -224,13 +224,13 @@ void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype au
         // }
 
         //Check for downward threshold crossing (end of "active phase")
-        if (xi[op->eVarIx] <= od->xDown && dxi[op->eVarIx] >= od->dxDown && od->inUpstate)
+        if (xi[op->fVarIx] <= od->xDown && dxi[op->fVarIx] >= od->dxDown && od->inUpstate)
         {
             //simplest: time and state of trajectory point that landed in the neighborhood.
             // od->tThisDown=*ti;
 
             //alts: linearly interp to get more accurate tThisUp within the last time step: xi-1, xi, ti-1, ti; get t @ x=xUp
-            od->tThisDown = linearInterp(od->xbuffer[2], xi[op->eVarIx], od->tbuffer[2], *ti, od->xDown);
+            od->tThisDown = linearInterp(od->xbuffer[2], xi[op->fVarIx], od->tbuffer[2], *ti, od->xDown);
             od->inUpstate = false;
         }
     }

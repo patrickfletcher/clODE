@@ -28,13 +28,11 @@ sp=clODE.solverParams();%create required ODE solver parameter struct
 sp.dt=1;
 sp.dtmax=100.00;
 sp.abstol=1e-6;
-sp.reltol=1e-3; %nhood2 may require fairly strict reltol
+sp.reltol=1e-5; %nhood2 may require fairly strict reltol
 % sp.max_steps=100000;
 
 
 op=clODEfeatures.observerParams(); %create required observer parameter struct
-op.eVarIx=1; %nhood2: variable used for deciding centerpoint of neighborhood
-op.fVarIx=1; %feature detection variable. used in: {basic, localmax, nhood2}
 op.maxEventCount=10000; %stops if this many events found {localmax, nhood2}
 op.eps_dx=1e-7; %for checking for min/max
 op.minXamp=0.5; %don't record oscillation features if units of variable fVarIx {nhood2}
@@ -43,23 +41,25 @@ op.minXamp=0.5; %don't record oscillation features if units of variable fVarIx {
 % clo.observer='basicall'; %same as above but for all variables
 % clo.observer='localmax'; %features derived from local maxima and minima only
 
-clo.observer='nhood2'; %"Poincare ball": period detection by trajectory returning to within a neighborhood of a specific point in state space
-% clo.observer='nhood1'; %specific point is x0. unreliable... 
-op.minXamp=0; %don't record oscillation features if units of variable fVarIx {nhood2}
-op.eVarIx=4; %nhood2: variable used for deciding centerpoint of neighborhood
-op.nHoodRadius=.2; %size of neighborhood {nhood2} 
-op.xDownThresh=0.5; %selecting neighborhood centerpoint: first time eVarIx drops below this fraction of its amplitude {nhood2}
+% clo.observer='nhood2'; %"Poincare ball": period detection by trajectory returning to within a neighborhood of a specific point in state space
+% % clo.observer='nhood1'; %specific point is x0. unreliable... 
+% op.eVarIx=4; %nhood2: variable used for deciding centerpoint of neighborhood
+% op.fVarIx=1; %feature detection variable
+% op.nHoodRadius=.1; %size of neighborhood {nhood2} 
+% op.xDownThresh=0.5; %selecting neighborhood centerpoint: first time eVarIx drops below this fraction of its amplitude 
 
 
-% clo.observer='thresh2'; 
-% op.xUpThresh=0.3;
-% op.xDownThresh=0.15; 
-% op.dxUpThresh=0.;
-% op.dxDownThresh=0.; 
+clo.observer='thresh2'; %event detection and features both measured in variable fVarIx
+op.fVarIx=1;
+%for constructing up/down thresholds:
+op.xUpThresh=0.3; %must provide xUpThresh at least
+op.dxUpThresh=0.; %dxUpThresh=0 => don't use
+op.xDownThresh=0.15; %xDownThresh=0 => use same as xUpThresh
+op.dxDownThresh=0.; %dxUpThresh=0 => use same as dxUpThresh
 
 %%
 tspan=[0,30000];
-nGrid=[64,64];
+nGrid=[32,32];
 
 
 nPts=prod(nGrid);
@@ -112,7 +112,7 @@ toc
 
 %build a feature-selection function, Ffun. The following simply extracts
 %feature sith index fix:
-fix=2; 
+fix=5; 
 fscale=1; %in case want to change feature's units
 Ffun=@(F)F(:,fix)*fscale; 
 ftitle=clo.fNames{fix}; %grab the feature name from the object
