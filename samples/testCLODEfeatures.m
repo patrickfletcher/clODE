@@ -28,7 +28,7 @@ sp=clODE.solverParams();%create required ODE solver parameter struct
 sp.dt=1;
 sp.dtmax=100.00;
 sp.abstol=1e-6;
-sp.reltol=1e-5; %nhood2 may require fairly strict reltol
+sp.reltol=1e-4; %nhood2 may require fairly strict reltol
 % sp.max_steps=100000;
 
 
@@ -41,21 +41,21 @@ op.minXamp=0.5; %don't record oscillation features if units of variable fVarIx {
 % clo.observer='basicall'; %same as above but for all variables
 % clo.observer='localmax'; %features derived from local maxima and minima only
 
-% clo.observer='nhood2'; %"Poincare ball": period detection by trajectory returning to within a neighborhood of a specific point in state space
-% % clo.observer='nhood1'; %specific point is x0. unreliable... 
-% op.eVarIx=4; %nhood2: variable used for deciding centerpoint of neighborhood
-% op.fVarIx=1; %feature detection variable
-% op.nHoodRadius=.1; %size of neighborhood {nhood2} 
-% op.xDownThresh=0.5; %selecting neighborhood centerpoint: first time eVarIx drops below this fraction of its amplitude 
+clo.observer='nhood2'; %"Poincare ball": period detection by trajectory returning to within a neighborhood of a specific point in state space
+% clo.observer='nhood1'; %specific point is x0. unreliable... 
+op.eVarIx=4; %nhood2: variable used for deciding centerpoint of neighborhood
+op.fVarIx=1; %feature detection variable
+op.nHoodRadius=.1; %size of neighborhood {nhood2} 
+op.xDownThresh=0.5; %selecting neighborhood centerpoint: first time eVarIx drops below this fraction of its amplitude 
 
 
-clo.observer='thresh2'; %event detection and features both measured in variable fVarIx
-op.fVarIx=1;
-%for constructing up/down thresholds:
-op.xUpThresh=0.3; %must provide xUpThresh at least
-op.dxUpThresh=0.; %dxUpThresh=0 => don't use
-op.xDownThresh=0.15; %xDownThresh=0 => use same as xUpThresh
-op.dxDownThresh=0.; %dxUpThresh=0 => use same as dxUpThresh
+% clo.observer='thresh2'; %event detection and features both measured in variable fVarIx
+% op.fVarIx=1;
+% %for constructing up/down thresholds:
+% op.xUpThresh=0.3; %must provide xUpThresh at least
+% op.dxUpThresh=0.; %dxUpThresh=0 => don't use
+% op.xDownThresh=0.15; %xDownThresh=0 => use same as xUpThresh
+% op.dxDownThresh=0.; %dxUpThresh=0 => use same as dxUpThresh
 
 %%
 tspan=[0,30000];
@@ -143,7 +143,8 @@ axis square
 % for example, do 'r', then 't' a few times, then 'g', then 'c' until
 % the heatmap stabilizes. The idea is to get to a steady-state trajectory
 
-hf.KeyPressFcn={@gridKeyPress,clo, hi, Ffun, ftitle, nGrid};
+initBounds=[plb(p1ix),pub(p1ix),plb(p2ix),pub(p2ix)];
+hf.KeyPressFcn={@gridKeyPress,clo, hi, Ffun, ftitle, nGrid,[p1ix,p2ix],initBounds};
 
 %% set up a clODEtrajectory object for clickTrajectory
 % also provides keypresses to interact with the trajectories:

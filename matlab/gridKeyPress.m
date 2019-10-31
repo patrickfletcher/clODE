@@ -1,4 +1,4 @@
-function gridKeyPress(src,evt, clo, hi, Ffun, ftitle, nGrid)
+function gridKeyPress(src,evt, clo, hi, Ffun, ftitle, nGrid, pix,initBounds)
 
 switch(evt.Key)
     case 'c' %'continue' - features without initialization
@@ -10,6 +10,7 @@ switch(evt.Key)
         hi.CData=reshape(Ffun(F),nGrid);
         hcb=colorbar('northoutside');
         title(hcb,ftitle)
+%         axis tight
         
     case 'g' %'go' - features with initialization
         tic
@@ -19,6 +20,7 @@ switch(evt.Key)
         hi.CData=reshape(Ffun(F),nGrid);
         hcb=colorbar('northoutside');
         title(hcb,ftitle)
+%         axis tight
         
     case 't' %'transient'
         tic
@@ -29,6 +31,7 @@ switch(evt.Key)
         hi.CData=reshape(X0(:,clo.op.fVarIx),nGrid);
         hcb=colorbar('northoutside');
         title(hcb,clo.prob.varNames(clo.op.fVarIx))
+%         axis tight
         
     case 'f' %select feature to plot %%%TODO: add computed features
 %         featureSelectDialog(Ffun,ftitle)
@@ -59,22 +62,66 @@ switch(evt.Key)
         hi.CData=reshape(X0(:,clo.op.fVarIx),nGrid);
         hcb=colorbar('northoutside');
         title(hcb,clo.prob.varNames(clo.op.fVarIx))
+%         axis tight
         
-    case 'z' %zoom using ginput
+    case 'z' %zoom using rbbox
         
-end 
+        tmp=get(gco(src),'ButtonDownFcn'); %
+        set(gco(src),'ButtonDownFcn',[]); %temporarily turn off clicktrajectory
+        
+        gridAxis=gca;
+        
+        k=waitforbuttonpress;
+        if k==0
+            point1 = gridAxis.CurrentPoint;    % location when mouse clicked
+            rbbox;                 % rubberbox
+            point2 = gridAxis.CurrentPoint;    % location when mouse released
+            point1 = point1(1,1:2);            % extract x and y
+            point2 = point2(1,1:2);
+            lb = min(point1,point2);           % calculate bounds
+            ub = max(point1,point2);           % calculate bounds
 
-function featureSelectDialog(Ffun,ftitle)
-%     %changes the Ffun and ftitle
-%     hfs=figure('Name','Select Feature to Plot','WindowStyle','modal');
-%     hfl=uicontrol('Style','popupmenu','String',clo.fNames);
-%     hfb=uibutton('Text','OK','ButtonPushedFcn',selectFeature);
-% 
-%     
-%     function selectFeature(src,evt)
-%         Ffun=@
-%     end
-end
+            if all(ub-lb>0)
+                setBounds(lb,ub);
+            else
+                disp('Try selecting new bounds more slowly...')
+            end
+        else
+            disp('Window Zoom-in canceled by keypress')
+        end
+       
+        
+        set(gco(src),'ButtonDownFcn',tmp); %restore clicktrajectory
+        
+    case '1'
+        setBounds(initBounds([1,3]),initBounds([2,4]));
+        
+end  
+
+    function setBounds(lb,ub)
+        p1=linspace(lb(1),ub(1),nGrid(1));
+        p2=linspace(lb(2),ub(2),nGrid(2));
+        [P1,P2]=meshgrid(p1,p2);
+        P=clo.P;
+        P(:,pix(1))=P1(:);
+        P(:,pix(2))=P2(:);
+        clo.setP(P);
+        axis(gca,[lb(1),ub(1),lb(2),ub(2)]);
+        hi.XData=[lb(1),ub(1)];
+        hi.YData=[lb(2),ub(2)];
+    end
+
+    function featureSelectDialog(Ffun,ftitle)
+    %     %changes the Ffun and ftitle
+    %     hfs=figure('Name','Select Feature to Plot','WindowStyle','modal');
+    %     hfl=uicontrol('Style','popupmenu','String',clo.fNames);
+    %     hfb=uibutton('Text','OK','ButtonPushedFcn',selectFeature);
+    % 
+    %     
+    %     function selectFeature(src,evt)
+    %         Ffun=@
+    %     end
+    end
 
 
 end
