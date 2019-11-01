@@ -17,7 +17,7 @@ openclDevices=queryOpenCL(); %inspect this struct to see properties of OpenCL de
 %Device to use for feature grid computation
 %The following uses the default device: first one found. It also parses the
 %ODEfile and writes the OpenCL code for the ODE system. 
-selectedDevice=1; %select a specific device
+selectedDevice=2; %select a specific device
 clo=clODEfeatures(odefile,precision,selectedDevice,stepper);
 
 %set properties 
@@ -41,25 +41,25 @@ op.minXamp=0.5; %don't record oscillation features if units of variable fVarIx {
 % clo.observer='basicall'; %same as above but for all variables
 % clo.observer='localmax'; %features derived from local maxima and minima only
 
-clo.observer='nhood2'; %"Poincare ball": period detection by trajectory returning to within a neighborhood of a specific point in state space
-% clo.observer='nhood1'; %specific point is x0. unreliable... 
-op.eVarIx=4; %nhood2: variable used for deciding centerpoint of neighborhood
-op.fVarIx=1; %feature detection variable
-op.nHoodRadius=.1; %size of neighborhood {nhood2} 
-op.xDownThresh=0.5; %selecting neighborhood centerpoint: first time eVarIx drops below this fraction of its amplitude 
+% clo.observer='nhood2'; %"Poincare ball": period detection by trajectory returning to within a neighborhood of a specific point in state space
+% % clo.observer='nhood1'; %specific point is x0. unreliable... 
+% op.eVarIx=4; %nhood2: variable used for deciding centerpoint of neighborhood
+% op.fVarIx=1; %feature detection variable
+% op.nHoodRadius=.1; %size of neighborhood {nhood2} 
+% op.xDownThresh=0.5; %selecting neighborhood centerpoint: first time eVarIx drops below this fraction of its amplitude 
 
 
-% clo.observer='thresh2'; %event detection and features both measured in variable fVarIx
-% op.fVarIx=1;
-% %for constructing up/down thresholds:
-% op.xUpThresh=0.3; %must provide xUpThresh at least
-% op.dxUpThresh=0.; %dxUpThresh=0 => don't use
-% op.xDownThresh=0.15; %xDownThresh=0 => use same as xUpThresh
-% op.dxDownThresh=0.; %dxUpThresh=0 => use same as dxUpThresh
+clo.observer='thresh2'; %event detection and features both measured in variable fVarIx
+op.fVarIx=1;
+%for constructing up/down thresholds:
+op.xUpThresh=0.3; %must provide xUpThresh at least
+op.dxUpThresh=0.; %dxUpThresh=0 => don't use
+op.xDownThresh=0.15; %xDownThresh=0 => use same as xUpThresh
+op.dxDownThresh=0.; %dxUpThresh=0 => use same as dxUpThresh
 
 %%
 tspan=[0,30000];
-nGrid=[64,64];
+nGrid=[32,32];
 
 
 nPts=prod(nGrid);
@@ -162,7 +162,7 @@ tspanT=[0,10000];
 vars={'v'}; %one variable
 % vars={'v','c'}; %two variables
 
-selectedDevice=2; %choose a CPU if available (device with highest clockrate)
+selectedDevice=1; %choose a CPU if available (device with highest clockrate)
 % clo.prob contains all the info parsed from the ODEfile above; reuse it:
 cloTraj=clODEtrajectory(clo.prob,precision,selectedDevice,stepper); 
 

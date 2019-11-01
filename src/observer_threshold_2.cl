@@ -280,7 +280,7 @@ void finalizeFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi
 }
 
 //Perform and post-integration cleanup of observer data to ensure it is ready for continuation if needed
-void finalizeObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op, __constant realtype tspan[])
+void finalizeObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op, __constant realtype *tspan)
 {
     // od->stepcount = 0;
     //shift all time-based observer members left by [tf-t0]

@@ -113,4 +113,9 @@ void finalizeFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi
     //Number of features is determined by this function. Must hardcode that number into the host program in order to allocate memory for F...
 }
 
+//Perform and post-integration cleanup of observer data to ensure it is ready for continuation if needed
+void finalizeObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op, __constant realtype *tspan)
+{
+    //eg. times of last events need to be shifted left of t0
+}
 #endif // OBSERVER_THRESHOLD_1_H
