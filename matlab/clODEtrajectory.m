@@ -59,6 +59,9 @@ classdef clODEtrajectory<clODE & matlab.mixin.SetGet
         function trajectory(obj)
             obj.cppmethod('trajectory');
             obj.getNsteps();
+            if any(obj.nStored==obj.sp.max_store)
+                warning('Maximum storage reached')
+            end
         end
         
             

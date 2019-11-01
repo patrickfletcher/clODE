@@ -205,7 +205,10 @@ classdef clODE < cppclass & matlab.mixin.SetGet
         
         %matlab object becomes de-synchronized from GPU arrays when calling
         %simulation routines. User must trigger data fetch from GPU
-        function transient(obj)
+        function transient(obj, tspan)
+            if exist('tspan','var')
+                obj.settspan(tspan);
+            end
             obj.cppmethod('transient');
         end
         
