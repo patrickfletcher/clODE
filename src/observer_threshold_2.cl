@@ -121,12 +121,11 @@ void initializeEventDetector(realtype *ti, realtype xi[], realtype dxi[], realty
 		od->xDown = od->xUp;
 
     //threshold for dx
-    realtype dxTrajectoryAmp = od->dxGlobalMax - od->dxGlobalMin;
-    od->dxUp = od->dxGlobalMin + op->dxUpThresh * dxTrajectoryAmp;
-	if(op->xDownThresh>RCONST(0.0))
-        od->dxDown = od->dxGlobalMin + op->dxDownThresh * dxTrajectoryAmp;
+    od->dxUp =  op->dxUpThresh * od->dxGlobalMax;
+	if(op->dxDownThresh>RCONST(0.0))
+        od->dxDown = op->dxDownThresh * od->dxGlobalMin;
 	else
-		od->dxDown = od->dxUp;
+		od->dxDown = od->dxGlobalMin;
 
 	//determine if we are up or down.
 	od->inUpstate=(xi[op->fVarIx] > od->xUp) ? true : false;
