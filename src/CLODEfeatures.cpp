@@ -114,7 +114,7 @@ std::string CLODEfeatures::getObserverBuildOpts()
 		observerdefine = " -DOBSERVER_THRESHOLD_2 ";
 		observerName = "OBSERVER_THRESHOLD_2";
 		nFeatures = 20;
-		observerDataSize = (7 * 3 + 13) * realSize + 3 * sizeof(cl_long) + 2 * sizeof(cl_bool);
+		observerDataSize = (7 * 3 + 13) * realSize + 3 * sizeof(cl_int) + 2 * sizeof(cl_bool);
 		observerDataSize = observerDataSize + observerDataSize % realSize;
 		break;
 

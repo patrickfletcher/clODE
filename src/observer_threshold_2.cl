@@ -43,9 +43,9 @@ typedef struct ObserverData
     realtype maxDt;
     realtype minDt;
 
-    long thisNMaxima;
-    long stepcount;
-    long eventcount;
+    int thisNMaxima;
+    int stepcount;
+    int eventcount;
     bool buffer_filled;
     bool inUpstate;
 } ObserverData;
