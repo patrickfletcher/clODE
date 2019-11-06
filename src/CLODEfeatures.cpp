@@ -121,8 +121,8 @@ std::string CLODEfeatures::getObserverBuildOpts()
 	case neighborhood2:
 		observerdefine = " -DOBSERVER_NEIGHBORHOOD_2 ";
 		observerName = "OBSERVER_NEIGHBORHOOD_2";
-		nFeatures = 12;
-		observerDataSize = (23 + 7 * nVar) * realSize + 3 * sizeof(cl_int) + 3 * sizeof(cl_bool);
+		nFeatures = 11 + 5 * nVar + 3 * nAux;
+		observerDataSize = (19 + 13*nVar) * realSize + 3*nAux * realSize + 3 * sizeof(cl_int) + 3 * sizeof(cl_bool);
 		observerDataSize = observerDataSize + observerDataSize % realSize;
 		break;
 

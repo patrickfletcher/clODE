@@ -5,7 +5,7 @@ classdef clODE < cppclass & matlab.mixin.SetGet
     
     properties
         
-        stepper='rk4'
+        stepper='dopri5'
         precision='single'
         
 %         cl_vendor='any'

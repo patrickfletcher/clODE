@@ -29,7 +29,7 @@ void initializeObserverData(realtype *ti, realtype xi[], realtype dxi[], realtyp
     {
         od->xTrajectoryMax[j] = -BIG_REAL;
         od->xTrajectoryMin[j] = BIG_REAL;
-        od->xTrajectoryMean[j] = 0;
+        od->xTrajectoryMean[j] = RCONST(0.0);
         od->dxTrajectoryMax[j] = -BIG_REAL;
         od->dxTrajectoryMin[j] = BIG_REAL;
     }
@@ -37,7 +37,7 @@ void initializeObserverData(realtype *ti, realtype xi[], realtype dxi[], realtyp
     {
         od->auxTrajectoryMax[j] = -BIG_REAL;
         od->auxTrajectoryMin[j] = BIG_REAL;
-        od->auxTrajectoryMean[j] = 0;
+        od->auxTrajectoryMean[j] = RCONST(0.0);
     }
     od->eventcount = 0;
     od->stepcount = 0;

@@ -195,43 +195,47 @@ void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype au
     od->dxGlobalMin = fmin(od->dxGlobalMin, dxi[op->fVarIx]);
     runningMean(&od->xTrajectoryMean, xi[op->fVarIx], od->stepcount);
 
-    if (od->xGlobalMax - od->xGlobalMin < op->minXamp)
-    {
-        return;
-    }
+    // if (od->xGlobalMax - od->xGlobalMin < op->minXamp)
+    // {
+    //     return;
+    // }
 
-    if (od->stepcount > 2 && od->buffer_filled == 0)
+    if (od->xGlobalMax - od->xGlobalMin > op->minXamp)
     {
-        od->buffer_filled = 1;
-    }
-
-    //buffer-based computations
-    if (od->buffer_filled == 1)
-    {        
-        //local max check in fVarIx - one between each min - simply overwrite tLastMax, xLastMax
-        if (od->dxbuffer[1] >= -op->eps_dx && od->dxbuffer[2] < -op->eps_dx)
+        if (od->stepcount > 2 && od->buffer_filled == 0)
         {
-            od->thisNMaxima++;
-            // int ix;
-            // maxOfArray(od->xbuffer, 3, &od->xLastMax, &ix);
-            // od->tLastMax = od->tbuffer[ix];
+            od->buffer_filled = 1;
         }
 
-        // //local min check in fVarIx - one between each max - simply overwrite tLastMin, xLastMin
-        // if (od->dxbuffer[1] <= op->eps_dx && od->dxbuffer[2] > op->eps_dx)
-        // {
-        // }
+        //buffer-based computations
+        if (od->buffer_filled == 1)
+        {        
+            //local max check in fVarIx - one between each min - simply overwrite tLastMax, xLastMax
+            if (od->dxbuffer[1] >= -op->eps_dx && od->dxbuffer[2] < -op->eps_dx)
+            {
+                od->thisNMaxima++;
+                // int ix;
+                // maxOfArray(od->xbuffer, 3, &od->xLastMax, &ix);
+                // od->tLastMax = od->tbuffer[ix];
+            }
 
-        //Check for downward threshold crossing (end of "active phase")
-        if (xi[op->fVarIx] <= od->xDown && dxi[op->fVarIx] >= od->dxDown && od->inUpstate)
-        {
-            //simplest: time and state of trajectory point that landed in the neighborhood.
-            // od->tThisDown=*ti;
+            // //local min check in fVarIx - one between each max - simply overwrite tLastMin, xLastMin
+            // if (od->dxbuffer[1] <= op->eps_dx && od->dxbuffer[2] > op->eps_dx)
+            // {
+            // }
 
-            //alts: linearly interp to get more accurate tThisUp within the last time step: xi-1, xi, ti-1, ti; get t @ x=xUp
-            od->tThisDown = linearInterp(od->xbuffer[2], xi[op->fVarIx], od->tbuffer[2], *ti, od->xDown);
-            od->inUpstate = false;
+            //Check for downward threshold crossing (end of "active phase")
+            if (xi[op->fVarIx] <= od->xDown && dxi[op->fVarIx] >= od->dxDown && od->inUpstate)
+            {
+                //simplest: time and state of trajectory point that landed in the neighborhood.
+                // od->tThisDown=*ti;
+
+                //alts: linearly interp to get more accurate tThisUp within the last time step: xi-1, xi, ti-1, ti; get t @ x=xUp
+                od->tThisDown = linearInterp(od->xbuffer[2], xi[op->fVarIx], od->tbuffer[2], *ti, od->xDown);
+                od->inUpstate = false;
+            }
         }
+
     }
 
     //advance solution buffer last (so really have: buffer[0,1,2],xi) TODO: alt - update buffers immediately after step, so only use buffers for event/obs? Related: FSAL.
