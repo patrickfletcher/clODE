@@ -17,14 +17,13 @@ __kernel void transient(
     int i = get_global_id(0);
     int nPts = get_global_size(0);
 
-    realtype ti, dt;
     realtype p[N_PAR], xi[N_VAR], dxi[N_VAR], auxi[N_AUX], wi[N_WIENER];
     rngData rd;
     __constant realtype *tspanPtr = tspan;
 
     //get private copy of ODE parameters, initial data, and compute slope at initial state
-    ti = tspan[0];
-    dt = sp->dt;
+    realtype ti = tspan[0];
+    realtype dt = sp->dt;
 
     for (int j = 0; j < N_PAR; ++j)
         p[j] = pars[j * nPts + i];

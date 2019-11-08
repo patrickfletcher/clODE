@@ -133,12 +133,9 @@ void adaptiveOneStep(realtype *ti, realtype xi[], realtype k1[], realtype pars[]
     //compute k1
     getRHS(*ti, xi, pars, k1, aux, wi);
 
-    //compute k2
+    //compute k2: tmp[k]=xi[k]+dt*k1[k]; 
     for (int k = 0; k < N_VAR; k++)
-    {
         tmp[k] = fma(dt, k1[k], xi[k]);
-    }
-    //~ tmp[k]=xi[k]+dt*k1[k]; }
 
     getRHS(th, tmp, pars, k2, aux, wi);
 
@@ -161,9 +158,9 @@ void adaptiveOneStep(realtype *ti, realtype xi[], realtype k1[], realtype pars[]
 #define ORDERPLUSONE RCONST(3.0)
 #define ADAPTIVE_STEP_MAX_SHRINK RCONST(0.5)
 
-#define B1 RCONST(0.222222222222222)
-#define B2 RCONST(0.333333333333333)
-#define B3 RCONST(0.444444444444444)
+#define B1 RCONST(2.0)/RCONST(9.0)
+#define B2 RCONST(1.0)/RCONST(3.0)
+#define B3 RCONST(4.0)/RCONST(9.0)
 
 /*
 #define _B1 RCONST(0.291666666666666)
@@ -172,60 +169,52 @@ void adaptiveOneStep(realtype *ti, realtype xi[], realtype k1[], realtype pars[]
 #define _B4 RCONST(0.125000000000000)
 */
 
-// _E1=B1-_B1 directly in error estimate dt*(E dot k) = xnew_B - xnewB
-#define _E1 RCONST(-0.069444444444444)
-#define _E2 RCONST(0.083333333333333)
-#define _E3 RCONST(0.111111111111111)
-#define _E4 RCONST(-0.125000000000000)
+// E1=B1-_B1 directly in error estimate dt*(E dot k) = xnew_B - xnewB
+#define E1 RCONST(-5.0)/RCONST(72.0)
+#define E2 RCONST(1.0)/RCONST(12.0)
+#define E3 RCONST(1.0)/RCONST(9.0)
+#define E4 RCONST(-1.0)/RCONST(8.0)
 
 //TODO: doensn't match Matlab exactly...
 
 //this is ode23 in matlab
-void adaptiveOneStep(realtype *ti, realtype xi[], realtype k1[], realtype pars[], const realtype dt, realtype aux[], realtype err[], realtype wi[])
+realtype adaptiveOneStep(realtype *ti, realtype xi[], realtype k1[], realtype pars[], const realtype dt, realtype aux[], realtype err[], realtype wi[])
 {
-    realtype h2 = dt * RCONST(0.5), h3 = dt * RCONST(0.75), th = *ti + dt;
-    realtype tmp[N_VAR], k2[N_VAR], k3[N_VAR], k4[N_VAR];
+    realtype xtmp[N_VAR], k2[N_VAR], k3[N_VAR], k4[N_VAR];
 
     //expects k1 to be precomputed (FSAL)
 
-    //compute k2
+    //compute k2: xtmp[k]=xi[k]+h2*k1[k]; xtmp[k] = fma(h2, k1[k], xi[k]);
     for (int k = 0; k < N_VAR; k++)
-    {
-        tmp[k] = fma(h2, k1[k], xi[k]);
-    }
-    //~ tmp[k]=xi[k]+h2*k1[k];
-    for (int k = 0; k < N_VAR; k++)
-        tmp[k] = xi[k] + h2 * k1[k];
-    getRHS(*ti + h2, tmp, pars, k2, aux, wi);
+        xtmp[k]=xi[k] + dt * RCONST(0.5) * k1[k];
+    getRHS(*ti + dt * RCONST(0.5), xtmp, pars, k2, aux, wi);
 
-    //compute k3
+    //compute k3: xtmp[k]=xi[k]+h3*k2[k]; xtmp[k] = fma(h3, k2[k], xi[k]);
     for (int k = 0; k < N_VAR; k++)
-    {
-        tmp[k] = fma(h3, k2[k], xi[k]);
-    }
-    //~ tmp[k]=xi[k]+h3*k2[k];
-    getRHS(*ti + h3, tmp, pars, k3, aux, wi);
+        xtmp[k]=xi[k] + dt * RCONST(0.75) * k2[k]; 
+    getRHS(*ti + dt * RCONST(0.75), xtmp, pars, k3, aux, wi);
+
+    realtype tNew = *ti + dt;
+    realtype newDt = tNew - *ti;
 
     //update xi
     for (int k = 0; k < N_VAR; k++)
-    {
-        //~ tmp[k]=xi[k];
-        xi[k] += dt * (B1 * k1[k] + B2 * k2[k] + B3 * k3[k]); //third order
-    }
+        xi[k] += newDt * (B1 * k1[k] + B2 * k2[k] + B3 * k3[k]); //third order
 
     //compute k4
-    getRHS(th, xi, pars, k4, aux, wi);
+    getRHS(tNew, xi, pars, k4, aux, wi);
 
     //update error estimate
     for (int k = 0; k < N_VAR; k++)
     {
-        //~ tmp[k]+=dt*(_B1*k1[k] +_B2*k2[k] +_B3*k3[k] +_B4*k4[k]); //second order
-        //~ err[k]=xi[k]-tmp[k];
-        err[k] = dt * (_E1 * k1[k] + _E2 * k2[k] + _E3 * k3[k] + _E4 * k4[k]);
+        //~ xtmp[k]+=dt*(_B1*k1[k] +_B2*k2[k] +_B3*k3[k] +_B4*k4[k]); //second order
+        //~ err[k]=xi[k]-xtmp[k];
+        err[k] = E1 * k1[k] + E2 * k2[k] + E3 * k3[k] + E4 * k4[k];
         k1[k] = k4[k]; //first same as last (FSAL) property
     }
 
-    *ti = th;
+    *ti = tNew;
+    return newDt;
 }
 #endif
 
@@ -235,36 +224,37 @@ void adaptiveOneStep(realtype *ti, realtype xi[], realtype k1[], realtype pars[]
 //~
 //~ #endif
 
+//this is ode45 in matlab
 #ifdef DORPRI5
 #define ADAPTIVE_STEPSIZE
 #define FSAL_STEP_PROPERTY
 #define ORDERPLUSONE RCONST(5.0)
 #define ADAPTIVE_STEP_MAX_SHRINK RCONST(0.1)
 
-#define C2 RCONST(0.200000000000000)
-#define C3 RCONST(0.300000000000000)
-#define C4 RCONST(0.800000000000000)
-#define C5 RCONST(0.888888888888889)
-#define A21 RCONST(0.200000000000000)
-#define A31 RCONST(0.075000000000000)
-#define A32 RCONST(0.225000000000000)
-#define A41 RCONST(0.977777777777778)
-#define A42 RCONST(-3.733333333333333)
-#define A43 RCONST(3.555555555555555)
-#define A51 RCONST(2.952598689224204)
-#define A52 RCONST(-11.595793324188385)
-#define A53 RCONST(9.822892851699436)
-#define A54 RCONST(-0.290809327846365)
-#define A61 RCONST(2.846275252525253)
-#define A62 RCONST(-10.757575757575758)
-#define A63 RCONST(8.906422717743473)
-#define A64 RCONST(0.278409090909091)
-#define A65 RCONST(-0.273531303602058)
-#define B1 RCONST(0.091145833333333)
-#define B3 RCONST(0.449236298292902)
-#define B4 RCONST(0.651041666666667)
-#define B5 RCONST(-0.322376179245283)
-#define B6 RCONST(0.130952380952381)
+#define A2 RCONST(1.0)/RCONST(5.0)
+#define A3 RCONST(3.0)/RCONST(10.0)
+#define A4 RCONST(4.0)/RCONST(5.0)
+#define A5 RCONST(8.0)/RCONST(9.0)
+#define B11 RCONST(1.0)/RCONST(5.0)
+#define B21 RCONST(3.0)/RCONST(40.0)
+#define B31 RCONST(44.0)/RCONST(45.0)
+#define B41 RCONST(19372.0)/RCONST(6561.0)
+#define B51 RCONST(9017.0)/RCONST(3168.0)
+#define B61 RCONST(35.0)/RCONST(384.0)
+#define B22 RCONST(9.0)/RCONST(44.0)
+#define B32 RCONST(-56.0)/RCONST(15.0)
+#define B42 RCONST(-25360.0)/RCONST(2187.0)
+#define B52 RCONST(-355.0)/RCONST(33.0)
+#define B33 RCONST(32.0)/RCONST(9.0)
+#define B43 RCONST(64448.0)/RCONST(6561.0)
+#define B53 RCONST(46732.0)/RCONST(5247.0)
+#define B63 RCONST(500.0)/RCONST(1113.0)
+#define B44 RCONST(-212.0)/RCONST(729.0)
+#define B54 RCONST(49.0)/RCONST(176.0)
+#define B64 RCONST(125.0)/RCONST(192.0)
+#define B55 RCONST(-5103.0)/RCONST(18656.0)
+#define B65 RCONST(-2187.0)/RCONST(6784.0)
+#define B66 RCONST(11.0)/RCONST(84.0)
 
 /*
 #define _B1 RCONST(0.089913194444444)
@@ -275,69 +265,68 @@ void adaptiveOneStep(realtype *ti, realtype xi[], realtype k1[], realtype pars[]
 #define _B7 RCONST(0.025000000000000)
 */
 
-//Matlab uses _E1=B1-_B1 directly in error estimate dt*(f dot E)
-#define _E1 RCONST(0.001232638888889)
-#define _E3 RCONST(-0.004252770290506)
-#define _E4 RCONST(0.036979166666667)
-#define _E5 RCONST(-0.050863797169811)
-#define _E6 RCONST(0.041904761904762)
-#define _E7 RCONST(-0.025000000000000)
+//Matlab uses E1=B1-_B1 directly in error estimate dt*(f dot E)
+#define E1 RCONST(71.0)/RCONST(57600.0)
+#define E3 RCONST(-71.0)/RCONST(16695.0)
+#define E4 RCONST(71.0)/RCONST(1920.0)
+#define E5 RCONST(-17253.0)/RCONST(339200.0)
+#define E6 RCONST(22.0)/RCONST(525.0)
+#define E7 RCONST(-1.0)/RCONST(40.0)
 
-//NOTE: alternative error coefficients exist, use matlab's?
-
-//this is ode45 in matlab
-void adaptiveOneStep(realtype *ti, realtype xi[], realtype k1[], realtype pars[], const realtype dt, realtype aux[], realtype err[], realtype wi[])
+realtype adaptiveOneStep(realtype *ti, realtype xi[], realtype k1[], realtype pars[], const realtype dt, realtype aux[], realtype err[], realtype wi[])
 {
-    realtype th = *ti + dt;
-    realtype tmp[N_VAR], k2[N_VAR], k3[N_VAR], k4[N_VAR], k5[N_VAR], k6[N_VAR], k7[N_VAR];
+    realtype xtmp[N_VAR], k2[N_VAR], k3[N_VAR], k4[N_VAR], k5[N_VAR], k6[N_VAR], k7[N_VAR];
+    //matlab: k <-> f, x <-> y, 
 
     //expects k1 to be precomputed (FSAL)
 
     //compute k2
     for (int k = 0; k < N_VAR; k++)
-        tmp[k] = xi[k] + A21 * dt * k1[k];
-    getRHS(*ti + C2 * dt, tmp, pars, k2, aux, wi);
+        xtmp[k] = xi[k] + dt * (B11 * k1[k]);
+    getRHS(*ti + A2 * dt, xtmp, pars, k2, aux, wi);
 
     //compute k3
     for (int k = 0; k < N_VAR; k++)
-        tmp[k] = xi[k] + dt * (A31 * k1[k] + A32 * k2[k]);
-    getRHS(*ti + C3 * dt, tmp, pars, k3, aux, wi);
+        xtmp[k] = xi[k] + dt * (B21 * k1[k] + B22 * k2[k]);
+    getRHS(*ti + A3 * dt, xtmp, pars, k3, aux, wi);
 
     //compute k4
     for (int k = 0; k < N_VAR; k++)
-        tmp[k] = xi[k] + dt * (A41 * k1[k] + A42 * k2[k] + A43 * k3[k]);
-    getRHS(*ti + C4 * dt, tmp, pars, k4, aux, wi);
+        xtmp[k] = xi[k] + dt * (B31 * k1[k] + B32 * k2[k] + B33 * k3[k]);
+    getRHS(*ti + A4 * dt, xtmp, pars, k4, aux, wi);
 
     //compute k5
     for (int k = 0; k < N_VAR; k++)
-        tmp[k] = xi[k] + dt * (A51 * k1[k] + A52 * k2[k] + A53 * k3[k] + A54 * k4[k]);
-    getRHS(*ti + C5 * dt, tmp, pars, k5, aux, wi);
+        xtmp[k] = xi[k] + dt * (B41 * k1[k] + B42 * k2[k] + B43 * k3[k] + B44 * k4[k]);
+    getRHS(*ti + A5 * dt, xtmp, pars, k5, aux, wi);
 
     //compute k6
     for (int k = 0; k < N_VAR; k++)
-        tmp[k] = xi[k] + dt * (A61 * k1[k] + A62 * k2[k] + A63 * k3[k] + A64 * k4[k] + A65 * k5[k]);
-    getRHS(th, tmp, pars, k6, aux, wi);
+        xtmp[k] = xi[k] + dt * (B51 * k1[k] + B52 * k2[k] + B53 * k3[k] + B54 * k4[k] + B55 * k5[k]);
+    getRHS(*ti + dt, xtmp, pars, k6, aux, wi);
+
+    realtype tNew = *ti + dt;
+    realtype newDt = tNew - *ti;
 
     //update xi
     for (int k = 0; k < N_VAR; k++)
-    {
-        //~ tmp[k]=xi[k];
-        xi[k] += dt * (B1 * k1[k] + B3 * k3[k] + B4 * k4[k] + B5 * k5[k] + B6 * k6[k]); //fifth order
-    }
+        xi[k] += newDt * (B61 * k1[k] + B63 * k3[k] + B64 * k4[k] + B65 * k5[k] + B66 * k6[k]); //fifth order
 
     //compute k7
-    getRHS(th, xi, pars, k7, aux, wi);
+    getRHS(tNew, xi, pars, k7, aux, wi);
 
     //update error estimate
     for (int k = 0; k < N_VAR; k++)
     {
-        //~ tmp[k]+=dt*(_B1*k1[k] +_B3*k3[k] +_B4*k4[k] +_B5*k5[k] +_B6*k6[k] +_B7*k7[k]); //fourth order
-        //~ err[k]=xi[k]-tmp[k];
-        err[k] = dt * (_E1 * k1[k] + _E3 * k3[k] + _E4 * k4[k] + _E5 * k5[k] + _E6 * k6[k] + _E7 * k7[k]); //fourth order
-        k1[k] = k7[k];                                                                                     //first same as last (FSAL) property
+        //~ xtmp[k]+=dt*(_B1*k1[k] +_B3*k3[k] +_B4*k4[k] +_B5*k5[k] +_B6*k6[k] +_B7*k7[k]); //fourth order
+        //~ err[k]=xi[k]-xtmp[k];
+        err[k] = E1 * k1[k] + E3 * k3[k] + E4 * k4[k] + E5 * k5[k] + E6 * k6[k] + E7 * k7[k]; //fourth order
+        k1[k] = k7[k];                                                                                 //first same as last (FSAL) property
     }
 
-    *ti = th;
+    *ti=tNew;
+    return newDt;
+
 }
 
 #endif
@@ -398,20 +387,18 @@ int stepper(realtype *ti, realtype xi[], realtype k1[], realtype pars[], __const
             newk1[j] = k1[j];
         }
 
-        adaptiveOneStep(&tNew, newxi, newk1, pars, newDt, aux, err, wi);
-
-        //purify dt: roundoff reduces accuracy of ti+dt, so use the portion of dt that had an effect...
-        newDt = tNew - *ti;
+        newDt = adaptiveOneStep(&tNew, newxi, newk1, pars, newDt, aux, err, wi);
+        //returns purified dt: roundoff reduces accuracy of ti+dt, so use the portion of dt that had an effect...
 
         //Error estimation - elementwise
         for (int j = 0; j < N_VAR; j++)
         {
-            err[j] /= fmax(fmax(fabs(xi[j]), fabs(newxi[j])), threshold);
+            err[j] /= fmax( fmax( fabs(xi[j]), fabs(newxi[j]) ) , threshold);
         }
 
-        normErr = norm_inf(err, N_VAR); //largest relative error among variables
-        // normErr=norm_2(err, N_VAR);
-        // normErr=norm_1(err, N_VAR);
+        normErr = newDt * norm_inf(err, N_VAR); //largest relative error among variables
+        // normErr=newDt * norm_2(err, N_VAR);
+        // normErr=newDt * norm_1(err, N_VAR);
 
         //Error estimation - normcontrol
         //~ realtype nXi=norm_2(xi, N_VAR);
@@ -419,8 +406,14 @@ int stepper(realtype *ti, realtype xi[], realtype k1[], realtype pars[], __const
         //~ normErr=norm_2(err, N_VAR)/fmax(fmax(nXi,nNewXi),threshold);
 
         //shrink dt if too much error
-        if (normErr >= sp->reltol)
+        if (normErr > sp->reltol)
         {
+            if (newDt <= hmin)
+            {
+                newDt=NAN;
+                return -1;
+            } //pass some error signal back to main loop
+
             if (nofailed)
             { //first failure: shrink proportional to error
                 nofailed = false;
@@ -432,10 +425,6 @@ int stepper(realtype *ti, realtype xi[], realtype k1[], realtype pars[], __const
             }
             newDt = fmax(newDt, hmin);
 
-            if (newDt <= hmin)
-            {
-                return -1;
-            } //pass some error signal back to main loop
         }
         else
         {
