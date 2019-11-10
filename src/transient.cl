@@ -49,12 +49,14 @@ __kernel void transient(
     //time-stepping loop, main time interval
     int step = 0;
     int stepflag = 0;
-    while (ti < tspan[1] && step < sp->max_steps && stepflag == 0)
+    while (ti < tspan[1] && step < sp->max_steps)
     {
         ++step;
 #ifdef ADAPTIVE_STEPSIZE
         //leave the wi=0 for adaptive steppers
         stepflag = stepper(&ti, xi, dxi, p, sp, &dt, tspanPtr, auxi, wi);
+        if (stepflag!=0)
+            break;
 #else
         //update Wiener variables - fixed size steppers can scale by dt here
         for (int j = 0; j < N_WIENER; ++j)

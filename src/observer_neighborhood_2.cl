@@ -351,7 +351,6 @@ void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype au
         // 	}
     }
 
-
     //advance solution buffer
     od->tbuffer[0] = od->tbuffer[1];
     od->tbuffer[1] = od->tbuffer[2];
@@ -365,16 +364,13 @@ void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype au
     od->dxbuffer[0] = od->dxbuffer[1];
     od->dxbuffer[1] = od->dxbuffer[2];
     od->dxbuffer[2] = dxi[op->fVarIx];
-    
+
+    //record actual dt
     realtype thisDt = od->tbuffer[2] - od->tbuffer[1];
     od->stepDt[0] = fmax(thisDt, od->stepDt[0]);
     od->stepDt[1] = fmin(thisDt, od->stepDt[1]);
-    runningMean(&od->stepDt[2], thisDt, od->stepcount - 1);
+    runningMean(&od->stepDt[2], thisDt, od->stepcount);
     
-    //reset intermediate feature storage
-    if (eventOccurred)
-    {
-    }
 }
 
 //Perform and post-integration cleanup and write desired features into the global array F
