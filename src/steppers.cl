@@ -162,13 +162,13 @@ realtype adaptiveOneStep(realtype *ti, realtype xi[], realtype k1[], realtype pa
 #define B3 RCONST(4.0)/RCONST(9.0)
 
 /*
-#define _B1 RCONST(7.0)/RCONST(24.0)
+#define _C1 RCONST(7.0)/RCONST(24.0)
 #define _B2 RCONST(1.0)/RCONST(4.0)
-#define _B3 RCONST(1.0)/RCONST(3.0)
-#define _B4 RCONST(1.0)/RCONST(8.0)
+#define _C3 RCONST(1.0)/RCONST(3.0)
+#define _C4 RCONST(1.0)/RCONST(8.0)
 */
 
-// E1=B1-_B1 directly in error estimate dt*(E dot k) = xnew_B - xnewB
+// E1=B1-_C1 directly in error estimate dt*(E dot k) = xnew_B - xnewB
 #define E1 RCONST(-5.0)/RCONST(72.0)
 #define E2 RCONST(1.0)/RCONST(12.0)
 #define E3 RCONST(1.0)/RCONST(9.0)
@@ -205,8 +205,8 @@ realtype adaptiveOneStep(realtype *ti, realtype xi[], realtype k1[], realtype pa
     //update error estimate
     for (int k = 0; k < N_VAR; k++)
     {
-        //~ xtmp[k] = xi[k] + newDt*(_B1*k1[k] +_B2*k2[k] +_B3*k3[k] +_B4*k4[k]); //second order
-        //~ err[k]=xi[k]-xtmp[k] =  newDt*( (B1-_B1)*k1[k] + (B2-_B2)*k2[k] + (B3-_B3)*k3[k] + (B4-_B4)*k4[k]);
+        //~ xtmp[k] = xi[k] + newDt*(_C1*k1[k] +_B2*k2[k] +_C3*k3[k] +_C4*k4[k]); //second order
+        //~ err[k]=xi[k]-xtmp[k] =  newDt*( (B1-_C1)*k1[k] + (B2-_B2)*k2[k] + (B3-_C3)*k3[k] + (B4-_C4)*k4[k]);
         err[k] = newDt * (E1 * k1[k] + E2 * k2[k] + E3 * k3[k] + E4 * k4[k]);
         k1[k] = k4[k]; //first same as last (FSAL) property
     }
@@ -233,37 +233,43 @@ realtype adaptiveOneStep(realtype *ti, realtype xi[], realtype k1[], realtype pa
 #define A3 RCONST(3.0)/RCONST(10.0)
 #define A4 RCONST(4.0)/RCONST(5.0)
 #define A5 RCONST(8.0)/RCONST(9.0)
-#define B11 RCONST(1.0)/RCONST(5.0)
-#define B21 RCONST(3.0)/RCONST(40.0)
-#define B31 RCONST(44.0)/RCONST(45.0)
-#define B41 RCONST(19372.0)/RCONST(6561.0)
-#define B51 RCONST(9017.0)/RCONST(3168.0)
-#define B61 RCONST(35.0)/RCONST(384.0)
-#define B22 RCONST(9.0)/RCONST(40.0)
-#define B32 RCONST(-56.0)/RCONST(15.0)
-#define B42 RCONST(-25360.0)/RCONST(2187.0)
-#define B52 RCONST(-355.0)/RCONST(33.0)
-#define B33 RCONST(32.0)/RCONST(9.0)
-#define B43 RCONST(64448.0)/RCONST(6561.0)
-#define B53 RCONST(46732.0)/RCONST(5247.0)
-#define B63 RCONST(500.0)/RCONST(1113.0)
-#define B44 RCONST(-212.0)/RCONST(729.0)
-#define B54 RCONST(49.0)/RCONST(176.0)
-#define B64 RCONST(125.0)/RCONST(192.0)
-#define B55 RCONST(-5103.0)/RCONST(18656.0)
-#define B65 RCONST(-2187.0)/RCONST(6784.0)
-#define B66 RCONST(11.0)/RCONST(84.0)
+
+#define B21 RCONST(1.0)/RCONST(5.0)
+
+#define B31 RCONST(3.0)/RCONST(40.0)
+#define B32 RCONST(9.0)/RCONST(40.0)
+
+#define B41 RCONST(44.0)/RCONST(45.0)
+#define B42 RCONST(-56.0)/RCONST(15.0)
+#define B43 RCONST(32.0)/RCONST(9.0)
+
+#define B51 RCONST(19372.0)/RCONST(6561.0)
+#define B52 RCONST(-25360.0)/RCONST(2187.0)
+#define B53 RCONST(64448.0)/RCONST(6561.0)
+#define B54 RCONST(-212.0)/RCONST(729.0)
+
+#define B61 RCONST(9017.0)/RCONST(3168.0)
+#define B62 RCONST(-355.0)/RCONST(33.0)
+#define B63 RCONST(46732.0)/RCONST(5247.0)
+#define B64 RCONST(49.0)/RCONST(176.0)
+#define B65 RCONST(-5103.0)/RCONST(18656.0)
+
+#define C1 RCONST(35.0)/RCONST(384.0)
+#define C3 RCONST(500.0)/RCONST(1113.0)
+#define C4 RCONST(125.0)/RCONST(192.0)
+#define C5 RCONST(-2187.0)/RCONST(6784.0)
+#define C6 RCONST(11.0)/RCONST(84.0)
 
 /*
-#define _B1 RCONST(0.089913194444444)
-#define _B3 RCONST(0.453489068583408)
-#define _B4 RCONST(0.614062500000000)
-#define _B5 RCONST(-0.271512382075472)
-#define _B6 RCONST(0.089047619047619)
-#define _B7 RCONST(0.025000000000000)
+#define _C1 RCONST(5179.0)/RCONST(57600.0)
+#define _C3 RCONST(7571.0)/RCONST(16695.0)
+#define _C4 RCONST(393.0)/RCONST(640.0)
+#define _C5 RCONST(-92097.0)/RCONST(339200.0)
+#define _C6 RCONST(187.0)/RCONST(2100.0)
+#define _C7 RCONST(1.0)/RCONST(40.0)
 */
 
-//Matlab uses E1=B1-_B1 directly in error estimate dt*(f dot E)
+//Use E1=B1-_C1 directly in error estimate
 #define E1 RCONST(71.0)/RCONST(57600.0)
 #define E3 RCONST(-71.0)/RCONST(16695.0)
 #define E4 RCONST(71.0)/RCONST(1920.0)
@@ -282,32 +288,32 @@ realtype adaptiveOneStep(realtype *ti, realtype xi[], realtype k1[], realtype pa
 
     //compute k2
     for (int k = 0; k < N_VAR; k++)
-        xtmp[k] = xi[k] + newDt * (B11 * k1[k]);
+        xtmp[k] = xi[k] + newDt * (B21 * k1[k]);
     getRHS(*ti + A2 * newDt, xtmp, pars, k2, aux, wi);
 
     //compute k3
     for (int k = 0; k < N_VAR; k++)
-        xtmp[k] = xi[k] + newDt * (B21 * k1[k] + B22 * k2[k]);
+        xtmp[k] = xi[k] + newDt * (B31 * k1[k] + B32 * k2[k]);
     getRHS(*ti + A3 * newDt, xtmp, pars, k3, aux, wi);
 
     //compute k4
     for (int k = 0; k < N_VAR; k++)
-        xtmp[k] = xi[k] + newDt * (B31 * k1[k] + B32 * k2[k] + B33 * k3[k]);
+        xtmp[k] = xi[k] + newDt * (B41 * k1[k] + B42 * k2[k] + B43 * k3[k]);
     getRHS(*ti + A4 * newDt, xtmp, pars, k4, aux, wi);
 
     //compute k5
     for (int k = 0; k < N_VAR; k++)
-        xtmp[k] = xi[k] + newDt * (B41 * k1[k] + B42 * k2[k] + B43 * k3[k] + B44 * k4[k]);
+        xtmp[k] = xi[k] + newDt * (B51 * k1[k] + B52 * k2[k] + B53 * k3[k] + B54 * k4[k]);
     getRHS(*ti + A5 * newDt, xtmp, pars, k5, aux, wi);
 
     //compute k6
     for (int k = 0; k < N_VAR; k++)
-        xtmp[k] = xi[k] + newDt * (B51 * k1[k] + B52 * k2[k] + B53 * k3[k] + B54 * k4[k] + B55 * k5[k]);
+        xtmp[k] = xi[k] + newDt * (B61 * k1[k] + B62 * k2[k] + B63 * k3[k] + B64 * k4[k] + B65 * k5[k]);
     getRHS(*ti + newDt, xtmp, pars, k6, aux, wi);
 
     //update xi
     for (int k = 0; k < N_VAR; k++)
-        xi[k] = xi[k] + newDt * (B61 * k1[k] + B63 * k3[k] + B64 * k4[k] + B65 * k5[k] + B66 * k6[k]); //fifth order
+        xi[k] = xi[k] + newDt * (C1 * k1[k] + C3 * k3[k] + C4 * k4[k] + C5 * k5[k] + C6 * k6[k]); //fifth order
 
     //compute k7
     getRHS(tNew, xi, pars, k7, aux, wi);
@@ -315,7 +321,7 @@ realtype adaptiveOneStep(realtype *ti, realtype xi[], realtype k1[], realtype pa
     //update error estimate
     for (int k = 0; k < N_VAR; k++)
     {
-        //~ xtmp[k]=xi[k]+newDt*(_B1*k1[k] +_B3*k3[k] +_B4*k4[k] +_B5*k5[k] +_B6*k6[k] +_B7*k7[k]); //fourth order
+        //~ xtmp[k]=xi[k]+newDt*(_C1*k1[k] +_C3*k3[k] +_C4*k4[k] +_C5*k5[k] +_C6*k6[k] +_C7*k7[k]); //fourth order
         //~ err[k]=xi[k]-xtmp[k];
         err[k] = newDt * (E1 * k1[k] + E3 * k3[k] + E4 * k4[k] + E5 * k5[k] + E6 * k6[k] + E7 * k7[k]); //fourth order
         k1[k] = k7[k];                                                                                 //first same as last (FSAL) property
@@ -366,7 +372,7 @@ int stepper(realtype *ti, realtype xi[], realtype k1[], realtype pars[], __const
         newDt=clamp(newDt, hmin, sp->dtmax);
     }
 
-    bool nofailed = true;
+    bool noFailedSteps = true;
     while (true)
     {
         tNew = *ti;
@@ -400,18 +406,19 @@ int stepper(realtype *ti, realtype xi[], realtype k1[], realtype pars[], __const
             {
                 *dt = hmin;
                 return -1;
-            } //pass some error signal back to main loop
+            } //pass error signal back to main loop..
 
-            if (nofailed)
+            if (noFailedSteps)
             { //first failure: shrink proportional to error
-                nofailed = false;
-                newDt = fmax(hmin, newDt*fmax(ADAPTIVE_STEP_MAX_SHRINK, RCONST(0.8) * pow(sp->reltol / normErr, expon)) );
+                noFailedSteps = false;
+                newDt *= fmax(ADAPTIVE_STEP_MAX_SHRINK, RCONST(0.8) * pow(sp->reltol / normErr, expon)); //limited shrink rate
             }
             else
             { //repeated failed step: cut stepsize in half
-                newDt = fmax(hmin, newDt*RCONST(0.5) ); 
+                newDt *= RCONST(0.5) ; 
             }
-
+            
+            newDt = clamp(newDt, hmin, sp->dtmax); //limiters
         }
         else
         {
@@ -428,21 +435,17 @@ int stepper(realtype *ti, realtype xi[], realtype k1[], realtype pars[], __const
     }
 
     //no failure this step => attempt to increase dt for next timestep
-    if (nofailed)
+    if (noFailedSteps)
     {
-        // newDt /= RCONST(1.25) * pow(normErr / sp->reltol, expon);
-        realtype temp = RCONST(1.25) * pow(normErr / sp->reltol, expon); //in case normErr=0
-        if (temp > RCONST(0.2))
-            newDt /= temp;
+        realtype temp = RCONST(0.8) / pow(normErr / sp->reltol, expon); //in case normErr=0
+        if (temp < RCONST(5.0))
+            newDt *= temp;
         else
             newDt *= RCONST(5.0); //max increase is 5-fold
     }
 
-    //hit the final time exactly
-    newDt = fmin(newDt, fabs(tspan[1] - *ti));
-
-    //limit newDt into [hmin, sp->dtmax]
-    newDt = clamp(newDt, hmin, sp->dtmax); 
+    newDt = fmin(newDt, fabs(tspan[1] - *ti)); //hit the final time exactly
+    newDt = clamp(newDt, hmin, sp->dtmax); //limiters
     
     *dt = newDt; //new step size to attempt on next step
 
