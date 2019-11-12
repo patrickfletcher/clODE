@@ -15,334 +15,73 @@
 //forward declaration of the RHS function
 void getRHS(realtype t, realtype x_[], realtype p_[], realtype dx_[], realtype aux_[], realtype w_[]);
 
+//store name/define pairs of available steppers as a map for access in C++
+#ifdef __cplusplus
+#include <unordered_map>
+std::unordered_map<std::string,std::string> stepperDefineMap;
+stepperDefineMap["explicitEuler"]="EXPLICIT_EULER";
+stepperDefineMap["explicitTrapezoidal"]="EXPLICIT_TRAPEZOIDAL";
+#endif
+
 // FIXED STEPSIZE EXPLICIT METHODS
-
 /* The fixed steppers use stepcount to purify the T values (eliminates roundoff)
- * This means we duplicate the first step's DX computation for trajectory storage, and we need one extra DX computation for the final step
+ * This means the returned "k1" is dx at the previous step; need one extra DX computation for the final step
  */
-
 #ifdef FORWARD_EULER
-//Forward Euler
-void stepper(realtype *ti, realtype xi[], realtype k1[], realtype pars[], const realtype dt, realtype aux[], realtype wi[])
-{
-
-    //compute k1
-    getRHS(*ti, xi, pars, k1, aux, wi);
-
-    //update to new ti, xi, k1
-    for (int k = 0; k < N_VAR; k++)
-    {
-        xi[k] = fma(dt, k1[k], xi[k]);
-    } //more accurate?
-      //~ xi[k] += dt * k1[k]; }
-
-    //~ *ti += dt;
-}
+#include "steppers/fixed_explicitEuler.clh"
 #endif
 
 #ifdef HEUN
-
-void stepper(realtype *ti, realtype xi[], realtype k1[], realtype pars[], const realtype dt, realtype aux[], realtype wi[])
-{
-    //Heun's method (improved Euler) time step. Also returns the derivative k1 at (ti,xi), for features
-
-    realtype th = *ti + dt;
-    realtype tmp[N_VAR], k2[N_VAR];
-
-    //compute k1
-    getRHS(*ti, xi, pars, k1, aux, wi);
-
-    //compute k2
-    for (int k = 0; k < N_VAR; k++)
-    {
-        tmp[k] = fma(dt, k1[k], xi[k]);
-    }
-    //~ tmp[k]=xi[k]+dt*k1[k]; }
-
-    getRHS(th, tmp, pars, k2, aux, wi);
-
-    //update to new ti, xi, k1
-    for (int k = 0; k < N_VAR; k++)
-        xi[k] += dt * RCONST(0.5) * (k1[k] + k2[k]);
-
-    //*ti = th;
-}
-
+#include "steppers/fixed_explicitTrapezoidal.clh"
 #endif
+
+//~ #ifdef MIDPOINT
+//~ #endif
 
 #ifdef RUNGE_KUTTA4
-
-//Explicit Runge-Kutta 4 time step. Also returns the derivative k1 at ti,xi, for features.
-void stepper(realtype *ti, realtype xi[], realtype k1[], realtype pars[], const realtype dt, realtype aux[], realtype wi[])
-{
-    realtype h2 = dt * RCONST(0.5), th2 = *ti + h2, th = *ti + dt;
-    realtype tmp[N_VAR], k2[N_VAR], k3[N_VAR], k4[N_VAR];
-
-    //compute k1
-    getRHS(th, xi, pars, k1, aux, wi);
-
-    //compute k2 //~ tmp[k]=xi[k]+h2*k1[k];
-    for (int k = 0; k < N_VAR; k++)
-        tmp[k] = fma(h2, k1[k], xi[k]);
-    getRHS(th2, tmp, pars, k2, aux, wi);
-
-    //compute k3 //~ tmp[k]=xi[k]+h2*k2[k];
-    for (int k = 0; k < N_VAR; k++)
-        tmp[k] = fma(h2, k2[k], xi[k]);
-    getRHS(th2, tmp, pars, k3, aux, wi);
-
-    //compute k4  //~ tmp[k]=xi[k]+ dt*k3[k];
-    for (int k = 0; k < N_VAR; k++)
-        tmp[k] = fma(dt, k3[k], xi[k]);
-    getRHS(th, tmp, pars, k4, aux, wi);
-
-    //update to new ti and xi
-    for (int k = 0; k < N_VAR; k++)
-        xi[k] += dt * (k1[k] + RCONST(2.0) * k2[k] + RCONST(2.0) * k3[k] + k4[k]) / RCONST(6.0);
-
-    //*ti = th;
-}
-
+#include "steppers/fixed_explicitRK4.clh"
 #endif
+
+//~ #ifdef RK higher order?
+//~ #endif
+
+//~ #ifdef SSPRK3
+//~ #endif
 
 // TODO: FIXED STEP MULTI STEP METHODS
 // need to fill the first few steps with a single stepper, so if MULTI_STEP is defined also include Euler or RK4 or something
 // #define MULTI_STEP
 
+
 // ADAPTIVE STEPSIZE EXPLICIT METHODS
-
 #ifdef HEUN_EULER
-#define ADAPTIVE_STEPSIZE
-#define FSAL_STEP_PROPERTY
-#define ORDERPLUSONE RCONST(2.0)
-#define ADAPTIVE_STEP_MAX_SHRINK RCONST(0.5)
-
-realtype adaptiveOneStep(realtype *ti, realtype xi[], realtype k1[], realtype pars[], const realtype dt, realtype aux[], realtype err[], realtype wi[])
-{
-    realtype tNew = *ti + dt;
-    realtype newDt = tNew - *ti;
-    realtype xtmp[N_VAR], k2[N_VAR];
-
-    //compute k1
-    //getRHS(*ti, xi, pars, k1, aux, wi);
-
-    //compute k2: xtmp[k]=xi[k]+dt*k1[k];  fma(dt, k1[k], xi[k]);
-    for (int k = 0; k < N_VAR; k++)
-        xtmp[k] = xi[k] + newDt*k1[k];  //Euler
-    getRHS(tNew, xtmp, pars, k2, aux, wi);
-
-    //update to new xi
-    for (int k = 0; k < N_VAR; k++)
-        xi[k] = xi[k] + newDt * RCONST(0.5) * (k1[k] + k2[k]); //Heun/mod-Euler
-
-    //error estimate in each variable
-    for (int k = 0; k < N_VAR; k++) 
-    {
-        //err[k] = newDt * (-RCONST(0.5) * k1[k] + RCONST(0.5) * k2[k]);
-        err[k] = xi[k] - xtmp[k];
-        // xi[k] = xtmp[k]; //use euler?
-        // xi[k] += err[k]; //Richardson?
-        k1[k] = k2[k];
-    }
-        
-    *ti = tNew;
-    return newDt;
-}
-
+#include "steppers/adaptive_he12.clh"
 #endif
 
 #ifdef BOGACKI_SHAMPINE23
-#define ADAPTIVE_STEPSIZE
-#define FSAL_STEP_PROPERTY
-#define ORDERPLUSONE RCONST(3.0)
-#define ADAPTIVE_STEP_MAX_SHRINK RCONST(0.5)
-
-#define B1 RCONST(2.0)/RCONST(9.0)
-#define B2 RCONST(1.0)/RCONST(3.0)
-#define B3 RCONST(4.0)/RCONST(9.0)
-
-/*
-#define _C1 RCONST(7.0)/RCONST(24.0)
-#define _B2 RCONST(1.0)/RCONST(4.0)
-#define _C3 RCONST(1.0)/RCONST(3.0)
-#define _C4 RCONST(1.0)/RCONST(8.0)
-*/
-
-// E1=B1-_C1 directly in error estimate dt*(E dot k) = xnew_B - xnewB
-#define E1 RCONST(-5.0)/RCONST(72.0)
-#define E2 RCONST(1.0)/RCONST(12.0)
-#define E3 RCONST(1.0)/RCONST(9.0)
-#define E4 RCONST(-1.0)/RCONST(8.0)
-
-//TODO: doensn't match Matlab exactly...
-
-//this is ode23 in matlab
-realtype adaptiveOneStep(realtype *ti, realtype xi[], realtype k1[], realtype pars[], const realtype dt, realtype aux[], realtype err[], realtype wi[])
-{
-    realtype tNew = *ti + dt;
-    realtype newDt = tNew - *ti;
-    realtype xtmp[N_VAR], k2[N_VAR], k3[N_VAR], k4[N_VAR];
-
-    //expects k1 to be precomputed (FSAL)
-
-    //compute k2: xtmp[k]=xi[k]+h2*k1[k]; xtmp[k] = fma(h2, k1[k], xi[k]);
-    for (int k = 0; k < N_VAR; k++)
-        xtmp[k]=xi[k] + newDt * RCONST(0.5) * k1[k];
-    getRHS(*ti + newDt * RCONST(0.5), xtmp, pars, k2, aux, wi);
-
-    //compute k3: xtmp[k]=xi[k]+h3*k2[k]; xtmp[k] = fma(h3, k2[k], xi[k]);
-    for (int k = 0; k < N_VAR; k++)
-        xtmp[k]=xi[k] + newDt * RCONST(0.75) * k2[k]; 
-    getRHS(*ti + newDt * RCONST(0.75), xtmp, pars, k3, aux, wi);
-
-    //update xi
-    for (int k = 0; k < N_VAR; k++)
-        xi[k] = xi[k] + newDt * (B1 * k1[k] + B2 * k2[k] + B3 * k3[k]); //third order
-
-    //compute k4
-    getRHS(tNew, xi, pars, k4, aux, wi);
-
-    //update error estimate
-    for (int k = 0; k < N_VAR; k++)
-    {
-        //~ xtmp[k] = xi[k] + newDt*(_C1*k1[k] +_B2*k2[k] +_C3*k3[k] +_C4*k4[k]); //second order
-        //~ err[k]=xi[k]-xtmp[k] =  newDt*( (B1-_C1)*k1[k] + (B2-_B2)*k2[k] + (B3-_C3)*k3[k] + (B4-_C4)*k4[k]);
-        err[k] = newDt * (E1 * k1[k] + E2 * k2[k] + E3 * k3[k] + E4 * k4[k]);
-        k1[k] = k4[k]; //first same as last (FSAL) property
-    }
-
-    *ti = tNew;
-    return newDt;
-}
+#include "steppers/adaptive_bs23.clh"
 #endif
 
 //~ #ifdef CASH_KARP
-//~ #define ADAPTIVE_STEPSIZE
-//~ #define ORDERPLUSONE	5
-//~
 //~ #endif
 
-//this is ode45 in matlab
 #ifdef DORPRI5
-#define ADAPTIVE_STEPSIZE
-#define FSAL_STEP_PROPERTY
-#define ORDERPLUSONE RCONST(5.0)
-#define ADAPTIVE_STEP_MAX_SHRINK RCONST(0.1)
-
-#define A2 RCONST(1.0)/RCONST(5.0)
-#define A3 RCONST(3.0)/RCONST(10.0)
-#define A4 RCONST(4.0)/RCONST(5.0)
-#define A5 RCONST(8.0)/RCONST(9.0)
-
-#define B21 RCONST(1.0)/RCONST(5.0)
-
-#define B31 RCONST(3.0)/RCONST(40.0)
-#define B32 RCONST(9.0)/RCONST(40.0)
-
-#define B41 RCONST(44.0)/RCONST(45.0)
-#define B42 RCONST(-56.0)/RCONST(15.0)
-#define B43 RCONST(32.0)/RCONST(9.0)
-
-#define B51 RCONST(19372.0)/RCONST(6561.0)
-#define B52 RCONST(-25360.0)/RCONST(2187.0)
-#define B53 RCONST(64448.0)/RCONST(6561.0)
-#define B54 RCONST(-212.0)/RCONST(729.0)
-
-#define B61 RCONST(9017.0)/RCONST(3168.0)
-#define B62 RCONST(-355.0)/RCONST(33.0)
-#define B63 RCONST(46732.0)/RCONST(5247.0)
-#define B64 RCONST(49.0)/RCONST(176.0)
-#define B65 RCONST(-5103.0)/RCONST(18656.0)
-
-#define C1 RCONST(35.0)/RCONST(384.0)
-#define C3 RCONST(500.0)/RCONST(1113.0)
-#define C4 RCONST(125.0)/RCONST(192.0)
-#define C5 RCONST(-2187.0)/RCONST(6784.0)
-#define C6 RCONST(11.0)/RCONST(84.0)
-
-/*
-#define _C1 RCONST(5179.0)/RCONST(57600.0)
-#define _C3 RCONST(7571.0)/RCONST(16695.0)
-#define _C4 RCONST(393.0)/RCONST(640.0)
-#define _C5 RCONST(-92097.0)/RCONST(339200.0)
-#define _C6 RCONST(187.0)/RCONST(2100.0)
-#define _C7 RCONST(1.0)/RCONST(40.0)
-*/
-
-//Use E1=B1-_C1 directly in error estimate
-#define E1 RCONST(71.0)/RCONST(57600.0)
-#define E3 RCONST(-71.0)/RCONST(16695.0)
-#define E4 RCONST(71.0)/RCONST(1920.0)
-#define E5 RCONST(-17253.0)/RCONST(339200.0)
-#define E6 RCONST(22.0)/RCONST(525.0)
-#define E7 RCONST(-1.0)/RCONST(40.0)
-
-realtype adaptiveOneStep(realtype *ti, realtype xi[], realtype k1[], realtype pars[], const realtype dt, realtype aux[], realtype err[], realtype wi[])
-{
-    realtype tNew = *ti + dt;
-    realtype newDt = tNew - *ti;
-    realtype xtmp[N_VAR], k2[N_VAR], k3[N_VAR], k4[N_VAR], k5[N_VAR], k6[N_VAR], k7[N_VAR];
-    //matlab: k <-> f, x <-> y, 
-
-    //expects k1 to be precomputed (FSAL)
-
-    //compute k2
-    for (int k = 0; k < N_VAR; k++)
-        xtmp[k] = xi[k] + newDt * (B21 * k1[k]);
-    getRHS(*ti + A2 * newDt, xtmp, pars, k2, aux, wi);
-
-    //compute k3
-    for (int k = 0; k < N_VAR; k++)
-        xtmp[k] = xi[k] + newDt * (B31 * k1[k] + B32 * k2[k]);
-    getRHS(*ti + A3 * newDt, xtmp, pars, k3, aux, wi);
-
-    //compute k4
-    for (int k = 0; k < N_VAR; k++)
-        xtmp[k] = xi[k] + newDt * (B41 * k1[k] + B42 * k2[k] + B43 * k3[k]);
-    getRHS(*ti + A4 * newDt, xtmp, pars, k4, aux, wi);
-
-    //compute k5
-    for (int k = 0; k < N_VAR; k++)
-        xtmp[k] = xi[k] + newDt * (B51 * k1[k] + B52 * k2[k] + B53 * k3[k] + B54 * k4[k]);
-    getRHS(*ti + A5 * newDt, xtmp, pars, k5, aux, wi);
-
-    //compute k6
-    for (int k = 0; k < N_VAR; k++)
-        xtmp[k] = xi[k] + newDt * (B61 * k1[k] + B62 * k2[k] + B63 * k3[k] + B64 * k4[k] + B65 * k5[k]);
-    getRHS(*ti + newDt, xtmp, pars, k6, aux, wi);
-
-    //update xi
-    for (int k = 0; k < N_VAR; k++)
-        xi[k] = xi[k] + newDt * (C1 * k1[k] + C3 * k3[k] + C4 * k4[k] + C5 * k5[k] + C6 * k6[k]); //fifth order
-
-    //compute k7
-    getRHS(tNew, xi, pars, k7, aux, wi);
-
-    //update error estimate
-    for (int k = 0; k < N_VAR; k++)
-    {
-        //~ xtmp[k]=xi[k]+newDt*(_C1*k1[k] +_C3*k3[k] +_C4*k4[k] +_C5*k5[k] +_C6*k6[k] +_C7*k7[k]); //fourth order
-        //~ err[k]=xi[k]-xtmp[k];
-        err[k] = newDt * (E1 * k1[k] + E3 * k3[k] + E4 * k4[k] + E5 * k5[k] + E6 * k6[k] + E7 * k7[k]); //fourth order
-        k1[k] = k7[k];                                                                                 //first same as last (FSAL) property
-    }
-
-    *ti=tNew;
-    return newDt;
-
-}
-
+#include "steppers/adaptive_dp45.clh"
 #endif
 
-//TODO: modify to work in my context
+//~ #ifdef RKF87
+//~ #endif
+
 // low-register use adaptive stepsize solvers, from rktides
 //~ #ifdef RK435_KENNEDY
-//~ #define ADAPTIVE_STEPSIZE
 //~ #endif
 
 //~ #ifdef RK549_KENNEDY
-//~ #define ADAPTIVE_STEPSIZE
 //~ #endif
+
+
+//TODO: implicit fixed/adaptive steppers
+
 
 #ifdef ADAPTIVE_STEPSIZE
 
@@ -411,7 +150,7 @@ int stepper(realtype *ti, realtype xi[], realtype k1[], realtype pars[], __const
             if (noFailedSteps)
             { //first failure: shrink proportional to error
                 noFailedSteps = false;
-                newDt *= fmax(ADAPTIVE_STEP_MAX_SHRINK, RCONST(0.8) * pow(sp->reltol / normErr, expon)); //limited shrink rate
+                newDt *= fmax(ADAPTIVE_STEP_MAX_SHRINK, RCONST(0.9) * pow(sp->reltol / normErr, expon)); //limited shrink rate
             }
             else
             { //repeated failed step: cut stepsize in half
@@ -437,7 +176,7 @@ int stepper(realtype *ti, realtype xi[], realtype k1[], realtype pars[], __const
     //no failure this step => attempt to increase dt for next timestep
     if (noFailedSteps)
     {
-        realtype temp = RCONST(0.8) / pow(normErr / sp->reltol, expon); //in case normErr=0
+        realtype temp = RCONST(0.9) / pow(normErr / sp->reltol, expon); //in case normErr=0
         if (temp < RCONST(5.0))
             newDt *= temp;
         else
