@@ -100,7 +100,7 @@ void getRHS(realtype t, realtype x_[], realtype p_[], realtype dx_[], realtype a
 
 
 #ifdef ADAPTIVE_STEPSIZE
-#include "adaptive_explicit_step.clh";
+#include "steppers/adaptive_explicit_step.clh"
 #endif
 
 

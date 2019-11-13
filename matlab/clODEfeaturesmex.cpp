@@ -45,6 +45,8 @@ enum class Action
     GetX0,
     GetXf,
     GetAuxf,
+    GetStepperNames,
+    GetProgramString,
 //from here are clODEfeatures derived actions
     SetObserverPars,
     SetObserver,
@@ -76,6 +78,8 @@ const std::map<std::string, Action> actionTypeMap =
     { "getx0",          Action::GetX0 },
     { "getxf",          Action::GetXf },
     { "getauxf",        Action::GetAuxf },
+    { "getsteppernames",        Action::GetStepperNames },
+    { "getprogramstring",        Action::GetProgramString },
 //from here are clODEfeatures derived actions
     { "setobserverpars", Action::SetObserverPars },
     { "setobserver",    Action::SetObserver },
@@ -167,8 +171,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         newProblem.nWiener=nWiener;
         
         //correct integer must be supplied from MatLab
-		int stepint=(int) mxGetScalar(prhs[2]);
-        StepperType steppertype=(StepperType) stepint;
+        std::string stepper = mxArrayToString(prhs[2]);
         
 		bool clSinglePrecision=(bool) mxGetScalar(prhs[3]);
         
@@ -187,7 +190,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         ObserverType observertype=(ObserverType) obsint;
         
 			
-		insResult = instanceTab.insert(indPtrPair_type(newHandle, std::make_shared<class_type>(newProblem,steppertype,observertype,clSinglePrecision, opencl)));
+		insResult = instanceTab.insert(indPtrPair_type(newHandle, std::make_shared<class_type>(newProblem,stepper,observertype,clSinglePrecision, opencl)));
 
         if (!insResult.second) // sanity check
             mexPrintf("Oh, bad news.  Tried to add an existing handle."); // shouldn't ever happen
@@ -214,10 +217,9 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         break;
 	}
     case Action::SetStepper:
-	{ //inputs: steppertype int
-		int stepint=(int) mxGetScalar(prhs[2]);
-        StepperType steppertype=(StepperType) stepint;
-        instance->setStepper(steppertype);
+	{ //inputs: stepper name
+        std::string stepper = mxArrayToString(prhs[2]);
+        instance->setStepper(stepper);
         break;
 	}
     case Action::SetPrecision:
@@ -318,6 +320,20 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         std::copy(auxf.begin(), auxf.end(), (double *)mxGetData(plhs[0]));
         break;
 	}
+    case Action::GetStepperNames:
+    {
+        std::vector<std::string> names=instance->getAvailableSteppers();
+		plhs[0]=mxCreateCellMatrix(names.size(), 1);    
+        for (mwIndex i=0; i<names.size(); i++)
+            mxSetCell(plhs[0], i, mxCreateString(names[i].c_str()));
+        break;
+    }
+    case Action::GetProgramString:
+    {
+		plhs[0]=mxCreateCellMatrix(1, 1);    
+        mxSetCell(plhs[0], 0, mxCreateString(instance->getProgramString().c_str()));
+        break;
+    }
 	//CLODEfeatures methods:
     case Action::Initialize:
 	{ //inputs: tspan, x0, pars, sp, op //OVERRIDE

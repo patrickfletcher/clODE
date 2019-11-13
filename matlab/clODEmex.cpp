@@ -47,7 +47,8 @@ enum class Action
     GetX0,
     GetXf,
     GetAuxf,
-    GetStepperNames
+    GetStepperNames,
+    GetProgramString,
 };
 
 // Map string (first input argument to mexFunction) to an Action
@@ -74,6 +75,7 @@ const std::map<std::string, Action> actionTypeMap =
     { "getxf",          Action::GetXf },
     { "getauxf",        Action::GetAuxf },
     { "getsteppernames",        Action::GetStepperNames },
+    { "getprogramstring",        Action::GetProgramString },
 }; 
 
 
@@ -147,9 +149,6 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         
         //string identifier for stepper
         std::string stepper = mxArrayToString(prhs[2]);
-        //correct integer must be supplied from MatLab
-		// int stepint=(int) mxGetScalar(prhs[2]);
-        // StepperType steppertype=(StepperType) stepint;
         
 		bool clSinglePrecision=(bool) mxGetScalar(prhs[3]);
         
@@ -189,12 +188,9 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         break;
 	}
     case Action::SetStepper:
-	{ //inputs: steppertype int
+	{ //inputs: stepper name
         std::string stepper = mxArrayToString(prhs[2]);
         instance->setStepper(stepper);
-		// int stepint=(int) mxGetScalar(prhs[2]);
-        // StepperType steppertype=(StepperType) stepint;
-        // instance->setStepper(steppertype);
         break;
 	}
     case Action::SetPrecision:
@@ -311,6 +307,12 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 		plhs[0]=mxCreateCellMatrix(names.size(), 1);    
         for (mwIndex i=0; i<names.size(); i++)
             mxSetCell(plhs[0], i, mxCreateString(names[i].c_str()));
+        break;
+    }
+    case Action::GetProgramString:
+    {
+		plhs[0]=mxCreateCellMatrix(1, 1);    
+        mxSetCell(plhs[0], 0, mxCreateString(instance->getProgramString().c_str()));
         break;
     }
     default:

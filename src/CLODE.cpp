@@ -114,8 +114,10 @@ void CLODE::buildProgram(std::string extraBuildOpts)
 	else
 		buildOptions += " -DCLODE_DOUBLE_PRECISION";
 
+	// printf("%s\n",stepperDefineMap.at(stepper));
+
 	//specify stepper
-	buildOptions += stepperDefineMap.at(stepper);
+	buildOptions += " -D" + stepperDefineMap.at(stepper);
 	// buildOptions += getStepperDefine();
 
 	//specify problem dimensions
@@ -131,13 +133,14 @@ void CLODE::buildProgram(std::string extraBuildOpts)
 
 	//ODEsystem source is delayed to here, in case we change it
 	ODEsystemsource = read_file(clRHSfilename);
+	clprogramstring += ODEsystemsource;
 
 	// printf("%s", clprogramstring.c_str());
 	// printf("%s", ODEsystemsource.c_str());
 	// printf("%s", buildOptions.c_str());
 
 	//now build
-	opencl.buildProgramFromString(clprogramstring + ODEsystemsource, buildOptions);
+	opencl.buildProgramFromString(clprogramstring, buildOptions);
 
 	printStatus();
 }

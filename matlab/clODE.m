@@ -246,6 +246,10 @@ classdef clODE < cppclass & matlab.mixin.SetGet
         function stepperNames=getAvailableSteppers(obj)
             stepperNames=obj.cppmethod('getsteppernames');
         end
+        function programString=getProgramString(obj)
+            prog=obj.cppmethod('getprogramstring');
+            programString=sprintf('%s',prog{1});
+        end
     end
     
     
