@@ -88,28 +88,39 @@ stepperDefineMap["explicitTrapezoidal"]="EXPLICIT_TRAPEZOIDAL";
 //Wrapper to handle step-size adaptation.  note: wi should be zeros
 int stepper(realtype *ti, realtype xi[], realtype k1[], realtype pars[], __constant struct SolverParams *sp, realtype *dt, __constant realtype *tspan, realtype aux[], realtype wi[])
 {
-    realtype err[N_VAR];
-    realtype normErr, newDt = *dt;
-    realtype tNew, newxi[N_VAR], newk1[N_VAR];
+    realtype tNew, normErr, err[N_VAR], newxi[N_VAR], newk1[N_VAR];
 
+    realtype newDt = *dt;
     realtype threshold = sp->abstol / sp->reltol;
-    realtype expon = RCONST(1.0) / ORDERPLUSONE;
+    // realtype expon = RCONST(1.0) / LOCAL_ERROR_ORDER; //controls error per step -> local error only; err~tol
+    realtype expon = RCONST(1.0) / (LOCAL_ERROR_ORDER + RCONST(1.0)); //controls error per unit step (err/dt~tol) -> global error proportional to tol (tolerance proportional) 
     realtype hmin = RCONST(16.0) * fabs(fabs(nextafter(*ti, RCONST(1.1)*tspan[1])) - *ti); //matches Matlab: hmin=16*eps(t)
 
-    //estimate first step size from derivative at initial condition
-    if (*ti == tspan[0])
-    {
-        //newDt=RCONST(10.0)*hmin;
-        //newDt=fmin(sp->dtmax, fabs(tspan[1]-tspan[0]));
-        for (int j = 0; j < N_VAR; ++j)
-            err[j] = k1[j] / fmax(fabs(xi[j]), threshold);
+    //convolution digital filter version
+    // expon = RCONST(1.0) / RCONST(3.0) * expon; 
+
+    //for controller with one step history, PI3333
+    // realtype expon1 = RCONST(2.0) / RCONST(3.0) * expon; 
+    // realtype expon2 = - RCONST(1.0) / RCONST(3.0) * expon; 
+
+    //for controller with one step history, PI3333
+    // realtype expon1 = RCONST(2.0) / RCONST(3.0) * expon; 
+    // realtype expon2 = - RCONST(1.0) / RCONST(3.0) * expon; 
+
+    // //estimate first step size from derivative at initial condition
+    // if (*ti == tspan[0])
+    // {
+    //     //newDt=RCONST(10.0)*hmin;
+    //     //newDt=fmin(sp->dtmax, fabs(tspan[1]-tspan[0]));
+    //     for (int j = 0; j < N_VAR; ++j)
+    //         err[j] = k1[j] / fmax(fabs(xi[j]), threshold);
         
-        realtype rh = norm_inf(err, N_VAR) / (RCONST(0.8) * pow(sp->reltol, expon));
-        if (newDt * rh > RCONST(1.0))
-            newDt = RCONST(1.0) / rh;
+    //     realtype rh = norm_inf(err, N_VAR) / (RCONST(0.8) * pow(sp->reltol, expon));
+    //     if (newDt * rh > RCONST(1.0))
+    //         newDt = RCONST(1.0) / rh;
             
-        newDt=clamp(newDt, hmin, sp->dtmax);
-    }
+    //     newDt=clamp(newDt, hmin, sp->dtmax);
+    // }
 
     bool noFailedSteps = true;
     while (true)
@@ -150,7 +161,9 @@ int stepper(realtype *ti, realtype xi[], realtype k1[], realtype pars[], __const
             if (noFailedSteps)
             { //first failure: shrink proportional to error
                 noFailedSteps = false;
-                newDt *= fmax(ADAPTIVE_STEP_MAX_SHRINK, RCONST(0.9) * pow(sp->reltol / normErr, expon)); //limited shrink rate
+                newDt *= fmax(ADAPTIVE_STEP_MAX_SHRINK, RCONST(0.9) * pow(sp->reltol / normErr, expon)); //limited, no error memory
+                // newDt *= RCONST(0.9) * pow(sp->reltol / normErr, expon); //no error memory
+                // newDt *= RCONST(0.9) * pow(sp->reltol / normErr, expon1) * pow(sp->reltol / normErrLast, expon2); //with one step error memory
             }
             else
             { //repeated failed step: cut stepsize in half
@@ -165,28 +178,22 @@ int stepper(realtype *ti, realtype xi[], realtype k1[], realtype pars[], __const
         }
     }
 
-    //update the solution
+    //no failure this step => attempt to increase dt for next timestep
+    if (noFailedSteps)
+        newDt *= fmin(ADAPTIVE_STEP_MAX_GROW, RCONST(0.9) * pow(sp->reltol / normErr, expon));
+        // newDt *= RCONST(0.9) * pow(sp->reltol / normErr, expon); //Deadbeat (Integral)
+
+    newDt = fmin(newDt, fabs(tspan[1] - *ti)); //hit the final time exactly
+    newDt = clamp(newDt, hmin, sp->dtmax); //limiters
+    
+    //update the solution and dt
+    *dt = newDt; //new step size to attempt on next step
     *ti = tNew;
     for (int j = 0; j < N_VAR; j++)
     {
         xi[j] = newxi[j];
         k1[j] = newk1[j];
     }
-
-    //no failure this step => attempt to increase dt for next timestep
-    if (noFailedSteps)
-    {
-        realtype temp = RCONST(0.9) / pow(normErr / sp->reltol, expon); //in case normErr=0
-        if (temp < RCONST(5.0))
-            newDt *= temp;
-        else
-            newDt *= RCONST(5.0); //max increase is 5-fold
-    }
-
-    newDt = fmin(newDt, fabs(tspan[1] - *ti)); //hit the final time exactly
-    newDt = clamp(newDt, hmin, sp->dtmax); //limiters
-    
-    *dt = newDt; //new step size to attempt on next step
 
     return 0;
 }
