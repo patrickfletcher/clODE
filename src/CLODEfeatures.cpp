@@ -19,7 +19,7 @@
 #include <stdexcept>
 #include <stdio.h>
 
-CLODEfeatures::CLODEfeatures(ProblemInfo prob, StepperType stepper, ObserverType observer, bool clSinglePrecision, OpenCLResource opencl)
+CLODEfeatures::CLODEfeatures(ProblemInfo prob, std::string stepper, ObserverType observer, bool clSinglePrecision, OpenCLResource opencl)
 	: CLODE(prob, stepper, clSinglePrecision, opencl), observer(observer)
 {
 

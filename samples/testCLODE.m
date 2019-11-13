@@ -4,7 +4,7 @@ clear
 odefile='lactotroph.ode';
 precision='single';
 clo=clODE(odefile,precision);
-% clo.stepper='rk4'; %default='dorpri5'
+% clo.stepper='rk4'; %default='dopri5'
 % clo.selectDevice(); %{'type','gpu'}, {'vendor','nvidia'}, {platID,devID}, 'maxComputeUnits','maxClock' 
 
 %solver parameters

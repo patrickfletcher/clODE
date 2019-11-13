@@ -65,7 +65,7 @@ protected:
     void resizeFeaturesVariables(); //d_odata and d_F depend on nPts. nPts change invalidates d_odata
 
 public:
-    CLODEfeatures(ProblemInfo prob, StepperType stepper, ObserverType observer, bool clSinglePrecision, OpenCLResource opencl);
+    CLODEfeatures(ProblemInfo prob, std::string stepper, ObserverType observer, bool clSinglePrecision, OpenCLResource opencl);
     ~CLODEfeatures();
 
     //build program, set all problem data needed to run

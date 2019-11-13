@@ -4,7 +4,7 @@ clear
 odefile='lactotroph.ode';
 precision='single';
 % precision='double';
-stepper='dorpri5';
+stepper='dopri5';
 % stepper='bs23'; 
 % stepper='rk4';
 

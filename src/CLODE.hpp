@@ -33,6 +33,7 @@
 #include <CL/cl.hpp>
 #endif
 
+#include <map>
 #include <string>
 #include <vector>
 
@@ -46,17 +47,6 @@ struct ProblemInfo
     int nWiener;
 };
 
-//enum for stepper selection
-typedef enum StepperType
-{
-    euler = 0,
-    heun,
-    rungeKutta4,
-    heunEuler,
-    bogackiShampine23,
-    dorpri5,
-} StepperType;
-
 class CLODE
 {
 
@@ -67,8 +57,10 @@ protected:
     cl_int nPts;
 
     //Stepper specification
-    StepperType stepper;
-    std::string stepperName;
+    // StepperType stepper;
+    std::string stepper;
+    std::vector<std::string> availableSteppers;
+    std::map<std::string, std::string> stepperDefineMap;
 
     bool clSinglePrecision;
     size_t realSize;
@@ -107,7 +99,7 @@ protected:
 
 public:
     //for now, require all arguments. TODO: convenience constructors?
-    CLODE(ProblemInfo prob, StepperType stepper, bool clSinglePrecision, OpenCLResource opencl);
+    CLODE(ProblemInfo prob, std::string stepper, bool clSinglePrecision, OpenCLResource opencl);
     //~ CLODE(); //must follow with all set functions to use
     //~ CLODE(ProblemInfo prob); //set stepper, precision, and opencl
     //~ CLODE(ProblemInfo prob, StepperType stepper=rungeKutta4, bool clSinglePrecision=true, OpenCLResource opencl=OpenCLResource()); //alt: use defaults?
@@ -115,7 +107,7 @@ public:
 
     //Set functions: trigger rebuild etc
     void setNewProblem(ProblemInfo prob);               //rebuild: program, kernel, kernel args, device vars. Opencl context OK
-    void setStepper(StepperType newStepper);            //rebuild: program, kernel, kernel args. Host + Device data OK
+    void setStepper(std::string newStepper);            //rebuild: program, kernel, kernel args. Host + Device data OK
     void setPrecision(bool clSinglePrecision);          //rebuild: program, kernel, kernel args, device vars. Opencl context OK
     void setOpenCL(OpenCLResource opencl);              //rebuild: context, program, kernel, kernel args, device vars. Host problem data OK
     void buildProgram(std::string extraBuildOpts = ""); //called by initialize, to all change in prob/stepper/precision/openclResource
@@ -146,7 +138,8 @@ public:
     std::vector<double> getX0();
     std::vector<double> getXf();
     std::vector<double> getAuxf();
-    std::string programString() { return clprogramstring; };
+    std::string getProgramString() { return clprogramstring; };
+    std::vector<std::string> getAvailableSteppers() { return availableSteppers; };
 
     void printStatus();
 };

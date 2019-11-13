@@ -9,36 +9,52 @@
 #ifndef STEPPERS_H_
 #define STEPPERS_H_
 
-#include "clODE_struct_defs.cl" //for SolverParams struct definition
-#include "realtype.cl"
+//available methods "manifest" for C++ use
+#ifdef __cplusplus 
+
+#include <string>
+#include <map>
+#include <vector>
+
+//store name/define pairs of available steppers as a map for access in C++
+void getStepperDefineMap(std::map<std::string, std::string> &stepperDefineMap, std::vector<std::string> &availableStepperNames) 
+{
+std::map<std::string, std::string> newMap;
+newMap["euler"]="EXPLICIT_EULER";
+newMap["heun"]="EXPLICIT_HEUN";
+newMap["rk4"]="EXPLICIT_RK4";
+newMap["bs23"]="EXPLICIT_BS23";
+newMap["dopri5"]="EXPLICIT_DOPRI5";
+
+//export vector of names for access in C++
+std::vector<std::string> newNames;
+for (auto const& element : newMap)
+    newNames.push_back(element.first);
+
+stepperDefineMap=newMap;
+availableStepperNames=newNames;
+}
+
+#else
 
 //forward declaration of the RHS function
 void getRHS(realtype t, realtype x_[], realtype p_[], realtype dx_[], realtype aux_[], realtype w_[]);
 
-//store name/define pairs of available steppers as a map for access in C++
-#ifdef __cplusplus
-#include <unordered_map>
-std::unordered_map<std::string,std::string> stepperDefineMap;
-stepperDefineMap["explicitEuler"]="EXPLICIT_EULER";
-stepperDefineMap["explicitTrapezoidal"]="EXPLICIT_TRAPEZOIDAL";
-#endif
-
 // FIXED STEPSIZE EXPLICIT METHODS
-/* The fixed steppers use stepcount to purify the T values (eliminates roundoff)
- * This means the returned "k1" is dx at the previous step; need one extra DX computation for the final step
- */
-#ifdef FORWARD_EULER
+// The fixed steppers use stepcount to purify the T values (eliminates roundoff)
+
+#ifdef EXPLICIT_EULER
 #include "steppers/fixed_explicitEuler.clh"
 #endif
 
-#ifdef HEUN
+#ifdef EXPLICIT_HEUN
 #include "steppers/fixed_explicitTrapezoidal.clh"
 #endif
 
 //~ #ifdef MIDPOINT
 //~ #endif
 
-#ifdef RUNGE_KUTTA4
+#ifdef EXPLICIT_RK4
 #include "steppers/fixed_explicitRK4.clh"
 #endif
 
@@ -58,14 +74,14 @@ stepperDefineMap["explicitTrapezoidal"]="EXPLICIT_TRAPEZOIDAL";
 #include "steppers/adaptive_he12.clh"
 #endif
 
-#ifdef BOGACKI_SHAMPINE23
+#ifdef EXPLICIT_BS23
 #include "steppers/adaptive_bs23.clh"
 #endif
 
 //~ #ifdef CASH_KARP
 //~ #endif
 
-#ifdef DORPRI5
+#ifdef EXPLICIT_DOPRI5
 #include "steppers/adaptive_dp45.clh"
 #endif
 
@@ -84,119 +100,9 @@ stepperDefineMap["explicitTrapezoidal"]="EXPLICIT_TRAPEZOIDAL";
 
 
 #ifdef ADAPTIVE_STEPSIZE
-
-//Wrapper to handle step-size adaptation.  note: wi should be zeros
-int stepper(realtype *ti, realtype xi[], realtype k1[], realtype pars[], __constant struct SolverParams *sp, realtype *dt, __constant realtype *tspan, realtype aux[], realtype wi[])
-{
-    realtype tNew, normErr, err[N_VAR], newxi[N_VAR], newk1[N_VAR];
-
-    realtype newDt = *dt;
-    realtype threshold = sp->abstol / sp->reltol;
-    // realtype expon = RCONST(1.0) / LOCAL_ERROR_ORDER; //controls error per step -> local error only; err~tol
-    realtype expon = RCONST(1.0) / (LOCAL_ERROR_ORDER + RCONST(1.0)); //controls error per unit step (err/dt~tol) -> global error proportional to tol (tolerance proportional) 
-    realtype hmin = RCONST(16.0) * fabs(fabs(nextafter(*ti, RCONST(1.1)*tspan[1])) - *ti); //matches Matlab: hmin=16*eps(t)
-
-    //convolution digital filter version
-    // expon = RCONST(1.0) / RCONST(3.0) * expon; 
-
-    //for controller with one step history, PI3333
-    // realtype expon1 = RCONST(2.0) / RCONST(3.0) * expon; 
-    // realtype expon2 = - RCONST(1.0) / RCONST(3.0) * expon; 
-
-    //for controller with one step history, PI3333
-    // realtype expon1 = RCONST(2.0) / RCONST(3.0) * expon; 
-    // realtype expon2 = - RCONST(1.0) / RCONST(3.0) * expon; 
-
-    // //estimate first step size from derivative at initial condition
-    // if (*ti == tspan[0])
-    // {
-    //     //newDt=RCONST(10.0)*hmin;
-    //     //newDt=fmin(sp->dtmax, fabs(tspan[1]-tspan[0]));
-    //     for (int j = 0; j < N_VAR; ++j)
-    //         err[j] = k1[j] / fmax(fabs(xi[j]), threshold);
-        
-    //     realtype rh = norm_inf(err, N_VAR) / (RCONST(0.8) * pow(sp->reltol, expon));
-    //     if (newDt * rh > RCONST(1.0))
-    //         newDt = RCONST(1.0) / rh;
-            
-    //     newDt=clamp(newDt, hmin, sp->dtmax);
-    // }
-
-    bool noFailedSteps = true;
-    while (true)
-    {
-        tNew = *ti;
-        for (int j = 0; j < N_VAR; j++)
-        {
-            newxi[j] = xi[j];
-            newk1[j] = k1[j];
-        }
-
-        newDt = adaptiveOneStep(&tNew, newxi, newk1, pars, newDt, aux, err, wi);
-        //returns purified dt: roundoff reduces accuracy of ti+dt, so use the portion of dt that had an effect...
-
-        //Error estimation - elementwise
-        for (int j = 0; j < N_VAR; j++)
-            err[j] /= fmax( fmax( fabs(xi[j]), fabs(newxi[j]) ) , threshold);
-        
-
-        normErr = norm_inf(err, N_VAR); //largest relative error among variables
-        // normErr = norm_2(err, N_VAR);
-        // normErr = norm_1(err, N_VAR);
-
-        //Error estimation - normcontrol
-        //~ realtype nXi=norm_2(xi, N_VAR);
-        //~ realtype nNewXi=norm_2(newxi, N_VAR);
-        //~ normErr = norm_2(err, N_VAR)/fmax(fmax(nXi,nNewXi),threshold);
-
-        //shrink dt if too much error
-        if (normErr > sp->reltol)
-        {
-            if (newDt < hmin)
-            {
-                *dt = hmin;
-                return -1;
-            } //pass error signal back to main loop..
-
-            if (noFailedSteps)
-            { //first failure: shrink proportional to error
-                noFailedSteps = false;
-                newDt *= fmax(ADAPTIVE_STEP_MAX_SHRINK, RCONST(0.9) * pow(sp->reltol / normErr, expon)); //limited, no error memory
-                // newDt *= RCONST(0.9) * pow(sp->reltol / normErr, expon); //no error memory
-                // newDt *= RCONST(0.9) * pow(sp->reltol / normErr, expon1) * pow(sp->reltol / normErrLast, expon2); //with one step error memory
-            }
-            else
-            { //repeated failed step: cut stepsize in half
-                newDt *= RCONST(0.5) ; 
-            }
-            
-            newDt = clamp(newDt, hmin, sp->dtmax); //limiters
-        }
-        else
-        {
-            break;
-        }
-    }
-
-    //no failure this step => attempt to increase dt for next timestep
-    if (noFailedSteps)
-        newDt *= fmin(ADAPTIVE_STEP_MAX_GROW, RCONST(0.9) * pow(sp->reltol / normErr, expon));
-        // newDt *= RCONST(0.9) * pow(sp->reltol / normErr, expon); //Deadbeat (Integral)
-
-    newDt = fmin(newDt, fabs(tspan[1] - *ti)); //hit the final time exactly
-    newDt = clamp(newDt, hmin, sp->dtmax); //limiters
-    
-    //update the solution and dt
-    *dt = newDt; //new step size to attempt on next step
-    *ti = tNew;
-    for (int j = 0; j < N_VAR; j++)
-    {
-        xi[j] = newxi[j];
-        k1[j] = newk1[j];
-    }
-
-    return 0;
-}
+#include "adaptive_explicit_step.clh";
 #endif
 
+
+#endif //__cplusplus
 #endif //STEPPERS_H_

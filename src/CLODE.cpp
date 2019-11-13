@@ -1,6 +1,9 @@
 #include "CLODE.hpp"
-#include "clODE_struct_defs.cl"
 #include "OpenCLResource.hpp"
+
+#define CLODE_HOST_PROGRAM
+#include "clODE_struct_defs.cl"
+#include "steppers.cl"
 
 // #define __CL_ENABLE_EXCEPTIONS
 // #if defined(__APPLE__) || defined(__MACOSX)
@@ -23,12 +26,23 @@
 #include <stdio.h>
 
 //constructor sets problem info and builds the base clprogramstring
-CLODE::CLODE(ProblemInfo prob, StepperType stepper, bool clSinglePrecision, OpenCLResource opencl)
+CLODE::CLODE(ProblemInfo prob, std::string stepper, bool clSinglePrecision, OpenCLResource opencl)
 	: clRHSfilename(prob.clRHSfilename), nVar(prob.nVar), nPar(prob.nPar), nAux(prob.nAux), nWiener(prob.nWiener), nPts(0),
-	  stepper(stepper), clSinglePrecision(clSinglePrecision), realSize(clSinglePrecision ? sizeof(cl_float) : sizeof(cl_double)),
+	  clSinglePrecision(clSinglePrecision), realSize(clSinglePrecision ? sizeof(cl_float) : sizeof(cl_double)),
 	  opencl(opencl), clodeRoot(CLODE_ROOT), nRNGstate(2)
 {
 	//printf("\nCLODE base class constructor\n");
+
+	getStepperDefineMap(stepperDefineMap, availableSteppers); //from steppers.cl
+
+	// for (auto s : availableSteppers)
+	// {
+	// 	printf("%s\n",s);
+	// }
+
+	// printf("%s\n",stepper);
+
+	setStepper(stepper);
 
 	clprogramstring = read_file(clodeRoot + "transient.cl");
 }
@@ -49,13 +63,19 @@ void CLODE::setNewProblem(ProblemInfo newProb)
 	clInitialized = false;
 }
 
-void CLODE::setStepper(StepperType newStepper)
+void CLODE::setStepper(std::string newStepper)
 {
-	if (newStepper != stepper)
+	auto loc = stepperDefineMap.find(newStepper); //from steppers.cl
+	if ( loc != stepperDefineMap.end() )
 	{
 		stepper = newStepper;
 		clInitialized = false;
 	}
+	else
+	{
+		printf("Warning: unknown stepper: %s. Stepper method unchanged\n",newStepper);
+	}
+	
 }
 
 void CLODE::setPrecision(bool newPrecision)
@@ -95,7 +115,8 @@ void CLODE::buildProgram(std::string extraBuildOpts)
 		buildOptions += " -DCLODE_DOUBLE_PRECISION";
 
 	//specify stepper
-	buildOptions += getStepperDefine();
+	buildOptions += stepperDefineMap.at(stepper);
+	// buildOptions += getStepperDefine();
 
 	//specify problem dimensions
 	buildOptions += " -DN_PAR=" + std::to_string((long long)nPar); //for older c++ compilers the to_string(int) overload of the STL isn't present
@@ -119,46 +140,6 @@ void CLODE::buildProgram(std::string extraBuildOpts)
 	opencl.buildProgramFromString(clprogramstring + ODEsystemsource, buildOptions);
 
 	printStatus();
-}
-
-//TODO make stepperDefine a map?
-std::string CLODE::getStepperDefine()
-{
-
-	std::string stepperDefine;
-
-	switch (stepper)
-	{
-	case euler:
-		stepperDefine = " -DFORWARD_EULER";
-		stepperName = "Forward Euler";
-		break;
-	case heun:
-		stepperDefine = " -DHEUN";
-		stepperName = "Heun's method";
-		break;
-	case rungeKutta4:
-		stepperDefine = " -DRUNGE_KUTTA4";
-		stepperName = "Runge-Kutta 4";
-		break;
-	case heunEuler:
-		stepperDefine = " -DHEUN_EULER";
-		stepperName = "Adaptive Heun-Euler";
-		break;
-	case bogackiShampine23:
-		stepperDefine = " -DBOGACKI_SHAMPINE23";
-		stepperName = "Bogacki-Shampine 23";
-		break;
-	case dorpri5:
-		stepperDefine = " -DDORPRI5";
-		stepperName = "Dormand-Prince 45";
-		break;
-	default:
-		stepperDefine = " -DDORPRI5";
-		stepperName = "Dormand-Prince 45";
-	}
-
-	return stepperDefine;
 }
 
 //initialize everything: build the program, create the kernels, and set all needed problem data.
@@ -597,5 +578,5 @@ void CLODE::printStatus()
 	printf("   nAux=%d\n", nAux);
 	printf("   nWiener=%d\n", nWiener);
 	printf("Using %s precision.\n", (clSinglePrecision ? "single" : "double"));
-	printf("Using stepper: %s \n", stepperName.c_str());
+	printf("Using stepper: %s \n", stepper.c_str());
 }

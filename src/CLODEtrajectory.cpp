@@ -19,7 +19,7 @@
 #include <stdexcept>
 #include <stdio.h>
 
-CLODEtrajectory::CLODEtrajectory(ProblemInfo prob, StepperType stepper, bool clSinglePrecision, OpenCLResource opencl)
+CLODEtrajectory::CLODEtrajectory(ProblemInfo prob, std::string stepper, bool clSinglePrecision, OpenCLResource opencl)
 	: CLODE(prob, stepper, clSinglePrecision, opencl), nStoreMax(0)
 {
 

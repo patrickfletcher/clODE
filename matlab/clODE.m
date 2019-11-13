@@ -66,7 +66,7 @@ classdef clODE < cppclass & matlab.mixin.SetGet
             end
             
             if  ~exist('stepper','var')||isempty(stepper)
-                stepper='dorpri5';
+                stepper='dopri5';
             end
             
             devices=queryOpenCL(); %default: first device
@@ -75,7 +75,7 @@ classdef clODE < cppclass & matlab.mixin.SetGet
             end
             
             args{1}=prob;
-            args{2}=clODE.getStepperEnum(stepper);
+            args{2}=stepper;
             args{3}=clSinglePrecision;
             args{4}=devices(selectedDevice).platformID;
             args{5}=devices(selectedDevice).deviceID;
@@ -112,9 +112,10 @@ classdef clODE < cppclass & matlab.mixin.SetGet
         
         %set a new time step method - must initialize again!
         function set.stepper(obj, newStepper)
-            stepperEnum=clODE.getStepperEnum(newStepper);
-            obj.stepper=newStepper;
-            obj.cppmethod('setstepper', stepperEnum);
+            if ~strcmp(newStepper,obj.stepper)
+                obj.stepper=newStepper;
+                obj.cppmethod('setstepper', newStepper);
+            end
         end
         
         %set single precision true/false - must initialize again! 
@@ -242,6 +243,9 @@ classdef clODE < cppclass & matlab.mixin.SetGet
             auxf=reshape(auxf,obj.nPts,obj.prob.nAux);
         end
         
+        function stepperNames=getAvailableSteppers(obj)
+            stepperNames=obj.cppmethod('getsteppernames');
+        end
     end
     
     
@@ -256,26 +260,6 @@ classdef clODE < cppclass & matlab.mixin.SetGet
             sp.max_steps=1000000;
             sp.max_store=10000; %allocated number of timepoints: min( (tf-t0)/(dt*nout)+1 , sp.max_store)
             sp.nout=1;
-        end
-        
-        function stepperInt=getStepperEnum(steppername)
-            switch lower(steppername)
-                case {'euler'}
-                    stepperInt=0;
-                case {'heun','modeuler'}
-                    stepperInt=1;
-                case {'rk4','runge','rungekutta4'}
-                    stepperInt=2;
-                case {'heuneuler'}
-                    stepperInt=3;
-                case {'bs23','bogackishampine'}
-                    stepperInt=4;
-                case {'dorpri5','dorpri'}
-                    stepperInt=5;
-                otherwise
-                    warning('Unrecognized stepper method name. Using default: dorpri5')
-                    stepperInt=5;
-            end
         end
         
         function vendorInt=getVendorEnum(cl_vendor)

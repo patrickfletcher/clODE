@@ -46,7 +46,8 @@ enum class Action
     GetTspan,
     GetX0,
     GetXf,
-    GetAuxf
+    GetAuxf,
+    GetStepperNames
 };
 
 // Map string (first input argument to mexFunction) to an Action
@@ -72,6 +73,7 @@ const std::map<std::string, Action> actionTypeMap =
     { "getx0",          Action::GetX0 },
     { "getxf",          Action::GetXf },
     { "getauxf",        Action::GetAuxf },
+    { "getsteppernames",        Action::GetStepperNames },
 }; 
 
 
@@ -143,9 +145,11 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 		
 		ProblemInfo newProblem=getMatlabProblemStruct(prhs[1]);
         
+        //string identifier for stepper
+        std::string stepper = mxArrayToString(prhs[2]);
         //correct integer must be supplied from MatLab
-		int stepint=(int) mxGetScalar(prhs[2]);
-        StepperType steppertype=(StepperType) stepint;
+		// int stepint=(int) mxGetScalar(prhs[2]);
+        // StepperType steppertype=(StepperType) stepint;
         
 		bool clSinglePrecision=(bool) mxGetScalar(prhs[3]);
         
@@ -159,7 +163,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         unsigned int deviceID = (unsigned int)mxGetScalar(prhs[5]);
 		OpenCLResource opencl(platformID, deviceID);
 
-		insResult = instanceTab.insert(indPtrPair_type(newHandle, std::make_shared<class_type>(newProblem,steppertype,clSinglePrecision, opencl)));
+		insResult = instanceTab.insert(indPtrPair_type(newHandle, std::make_shared<class_type>(newProblem,stepper,clSinglePrecision, opencl)));
 
         if (!insResult.second) // sanity check
             mexPrintf("Oh, bad news.  Tried to add an existing handle."); // shouldn't ever happen
@@ -186,9 +190,11 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 	}
     case Action::SetStepper:
 	{ //inputs: steppertype int
-		int stepint=(int) mxGetScalar(prhs[2]);
-        StepperType steppertype=(StepperType) stepint;
-        instance->setStepper(steppertype);
+        std::string stepper = mxArrayToString(prhs[2]);
+        instance->setStepper(stepper);
+		// int stepint=(int) mxGetScalar(prhs[2]);
+        // StepperType steppertype=(StepperType) stepint;
+        // instance->setStepper(steppertype);
         break;
 	}
     case Action::SetPrecision:
@@ -299,6 +305,14 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         std::copy(auxf.begin(), auxf.end(), (double *)mxGetData(plhs[0]));
         break;
 	}
+    case Action::GetStepperNames:
+    {
+        std::vector<std::string> names=instance->getAvailableSteppers();
+		plhs[0]=mxCreateCellMatrix(names.size(), 1);    
+        for (mwIndex i=0; i<names.size(); i++)
+            mxSetCell(plhs[0], i, mxCreateString(names[i].c_str()));
+        break;
+    }
     default:
         mexErrMsgTxt(("Unhandled action: " + actionStr).c_str());
         break;
