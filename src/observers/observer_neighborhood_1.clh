@@ -236,7 +236,7 @@ bool computeEventFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype 
 // - advance solution/slope buffers
 // - check for any intermediate special points & store their info
 // - reset intermediates upon local max event detection
-void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op, bool eventOccurred)
+void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
 {
 
     // realtype tThisMax, xThisMax;
@@ -308,11 +308,6 @@ void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype au
         // 		od->xLast[j]=xi[j];
         // 		// od->tLastEvent=*ti;
         // 	}
-    }
-
-    //reset intermediate feature storage
-    if (eventOccurred)
-    {
     }
 }
 

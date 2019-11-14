@@ -1,5 +1,3 @@
-//
-
 #ifndef OBSERVER_THRESHOLD_2_H
 #define OBSERVER_THRESHOLD_2_H
 
@@ -9,7 +7,7 @@
 
 #define TWO_PASS_EVENT_DETECTOR
 
-typedef struct ObserverData
+struct ObserverData
 {
     realtype tbuffer[3];
     realtype xbuffer[3];
@@ -48,7 +46,9 @@ typedef struct ObserverData
     int eventcount;
     bool buffer_filled;
     bool inUpstate;
-} ObserverData;
+};
+
+typedef struct ObserverData ObserverData;
 
 //set initial values to relevant fields in ObserverData
 void initializeObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
@@ -186,7 +186,7 @@ bool computeEventFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype 
 }
 
 //full per-timestep update of observer data. If an event occurred this timestep, event-based observer data is reset. Per-timestep features are computed here.
-void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op, bool eventOccurred)
+void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
 {
     //global
     od->xGlobalMax = fmax(od->xGlobalMax, xi[op->fVarIx]);
@@ -251,9 +251,6 @@ void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype au
     od->maxDt = fmax(od->tbuffer[2]-od->tbuffer[1],od->maxDt);
     od->minDt = fmin(od->tbuffer[2]-od->tbuffer[1],od->minDt);
 
-    if (eventOccurred)
-    { //reset event-based quantities
-    }
 }
 
 //Perform and post-integration cleanup and write desired features into the global array F

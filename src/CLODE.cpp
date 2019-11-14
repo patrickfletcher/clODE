@@ -1,8 +1,6 @@
 #include "CLODE.hpp"
-#include "OpenCLResource.hpp"
-
-#define CLODE_HOST_PROGRAM
 #include "clODE_struct_defs.cl"
+#include "OpenCLResource.hpp"
 #include "steppers.cl"
 
 // #define __CL_ENABLE_EXCEPTIONS
@@ -41,7 +39,7 @@ CLODE::CLODE(ProblemInfo prob, std::string stepper, bool clSinglePrecision, Open
 	// }
 
 	// printf("%s\n",stepper);
-
+	prob=prob;
 	setStepper(stepper);
 
 	clprogramstring = read_file(clodeRoot + "transient.cl");

@@ -16,8 +16,8 @@
 #include <map>
 #include <vector>
 
-//store name/define pairs of available steppers as a map for access in C++
-void getStepperDefineMap(std::map<std::string, std::string> &stepperDefineMap, std::vector<std::string> &availableStepperNames) 
+//store name/define pairs of available steppers as a map for access in C++.  Static when defining function in header
+static void getStepperDefineMap(std::map<std::string, std::string> &stepperDefineMap, std::vector<std::string> &availableStepperNames) 
 {
 std::map<std::string, std::string> newMap;
 newMap["euler"]="EXPLICIT_EULER";

@@ -10,7 +10,7 @@
 #define TWO_PASS_EVENT_DETECTOR
 
 //typedef to select the correct observer struct from the header
-typedef struct ObserverData
+struct ObserverData_nhood2
 {
 
     realtype tbuffer[3];
@@ -60,7 +60,9 @@ typedef struct ObserverData
     bool foundX0;
     bool isInNhood;
 
-} ObserverData;
+};
+
+typedef struct ObserverData_nhood2 ObserverData;
 // ObserverData size: 3*int + (4*3 + 7*nVar + 9)*realtype + 3*bool
 
 //set initial values to relevant fields in ObserverData
@@ -266,7 +268,7 @@ bool computeEventFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype 
 // - advance solution/slope buffers
 // - check for any intermediate special points & store their info
 // - reset intermediates upon local max event detection
-void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op, bool eventOccurred)
+void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
 {
 
     // realtype tThisMax, xThisMax;

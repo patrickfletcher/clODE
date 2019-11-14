@@ -52,6 +52,7 @@ class CLODE
 
 protected:
     //Problem details (from ProblemInfo struct)
+    ProblemInfo prob;
     std::string clRHSfilename;
     int nVar, nPar, nAux, nWiener;
     cl_int nPts;

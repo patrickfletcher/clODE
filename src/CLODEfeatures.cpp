@@ -25,6 +25,8 @@ CLODEfeatures::CLODEfeatures(ProblemInfo prob, std::string stepper, ObserverType
 
 	//printf("\nCLODE has been specialized: CLODEfeatures\n");
 
+	getObserverDefineMap(prob, clSinglePrecision, observerDefineMap, availableObserverNames);
+
 	clprogramstring += read_file(clodeRoot + "features.cl");
 }
 
@@ -71,11 +73,15 @@ std::string CLODEfeatures::getObserverBuildOpts()
 	switch (observer)
 	{
 	case basic:
-		observerdefine = " -DOBSERVER_BASIC ";
-		observerName = "OBSERVER_BASIC";
-		nFeatures = 7;
-		observerDataSize = 5 * realSize + 2 * sizeof(cl_int);
-		observerDataSize = observerDataSize + observerDataSize % realSize; //need to align the struct to a multiple of the largest type inside (here, realtype)...
+		observerName = "basic";
+		observerdefine=observerDefineMap.at("basic").define;
+		observerDataSize=observerDefineMap.at("basic").observerDataSize;
+		observerDataSize = observerDataSize + observerDataSize % realSize;
+		nFeatures=(int)observerDefineMap.at("basic").featureNames.size();
+		// observerdefine = " -DOBSERVER_BASIC ";
+		// nFeatures = 7;
+		// observerDataSize = 5 * realSize + 2 * sizeof(cl_int);
+		// observerDataSize = observerDataSize + observerDataSize % realSize; //need to align the struct to a multiple of the largest type inside (here, realtype)...
 		break;
 
 	case basicAllVar:

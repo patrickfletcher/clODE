@@ -48,8 +48,25 @@ void warmupObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype au
 {
 }
 
+//no events
+void initializeEventDetector(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
+{
+}
+
+//no events
+bool eventFunction(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
+{
+    return false;
+}
+
+//no events
+bool computeEventFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
+{
+    return false;
+}
+
 //all features are per-timestep (eventOccurred unused)
-void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op, bool eventOccurred)
+void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
 {
     ++od->stepcount;
     for (int j = 0; j < N_VAR; ++j)
@@ -66,23 +83,6 @@ void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype au
         od->auxTrajectoryMin[j] = fmin(auxi[j], od->auxTrajectoryMin[j]);
         runningMean(&od->auxTrajectoryMean[j], auxi[j], od->stepcount);
     }
-}
-
-//no events
-void initializeEventDetector(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
-{
-}
-
-//no events
-bool eventFunction(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
-{
-    return false;
-}
-
-//no events
-bool computeEventFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
-{
-    return false;
 }
 
 void finalizeFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op, __global realtype *F, int i, int nPts)

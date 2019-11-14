@@ -164,7 +164,7 @@ bool computeEventFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype 
 // - advance solution/slope buffers
 // - check for any intermediate special points & store their info
 // - reset intermediates upon local max event detection
-void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op, bool eventOccurred)
+void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
 {
     // if (od->xRange[op->fVarIx]<op->minXamp) {return;}
 
@@ -203,10 +203,6 @@ void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype au
             od->tLastMin = od->tbuffer[ix];
         }
         // od->xLastMin = fmin(od->xLastMin, xi[op->fVarIx]);
-    }
-    //reset intermediate feature storage. Should this be here, or in "computeEventFeatures"?
-    if (eventOccurred)
-    {
     }
 }
 

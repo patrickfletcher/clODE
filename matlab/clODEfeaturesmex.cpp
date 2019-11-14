@@ -158,10 +158,10 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 		}
 		
         std::string clFilename=getMatlabString( mxGetField(prhs[1],0,"clRHSfilename") );
-        int nVar = mxGetScalar( mxGetField(prhs[1],0,"nVar") );
-        int nPar = mxGetScalar( mxGetField(prhs[1],0,"nPar") );
-        int nAux = mxGetScalar( mxGetField(prhs[1],0,"nAux") );
-        int nWiener = mxGetScalar( mxGetField(prhs[1],0,"nWiener") );
+        int nVar = (int)mxGetScalar( mxGetField(prhs[1],0,"nVar") );
+        int nPar = (int)mxGetScalar( mxGetField(prhs[1],0,"nPar") );
+        int nAux = (int)mxGetScalar( mxGetField(prhs[1],0,"nAux") );
+        int nWiener = (int)mxGetScalar( mxGetField(prhs[1],0,"nWiener") );
         
         ProblemInfo newProblem;
         newProblem.clRHSfilename=clFilename;
@@ -406,14 +406,13 @@ instanceMap_type::const_iterator checkHandle(const instanceMap_type& m, handle_t
 
     return it;
 }
-	
 
-
+//This struct is defined in observers.cl, included via clODEfeatures.hpp  <----maybe needs fixing...
 ObserverParams<double> getMatlabOPstruct(const mxArray *opptr) {
 	ObserverParams<double> op;
-	op.eVarIx=mxGetScalar( mxGetField(opptr,0,"eVarIx") ) -1; //convert matlab 1-based index to C 0-based.
-	op.fVarIx=mxGetScalar( mxGetField(opptr,0,"fVarIx") ) -1;
-	op.maxEventCount=mxGetScalar( mxGetField(opptr,0,"maxEventCount") );
+	op.eVarIx=(int)mxGetScalar( mxGetField(opptr,0,"eVarIx") ) -1; //convert matlab 1-based index to C 0-based.
+	op.fVarIx=(int)mxGetScalar( mxGetField(opptr,0,"fVarIx") ) -1;
+	op.maxEventCount=(int)mxGetScalar( mxGetField(opptr,0,"maxEventCount") );
 	op.minXamp=mxGetScalar( mxGetField(opptr,0,"minXamp") );
 	op.minIMI=mxGetScalar( mxGetField(opptr,0,"minIMI") );
 	op.nHoodRadius=mxGetScalar( mxGetField(opptr,0,"nHoodRadius") );

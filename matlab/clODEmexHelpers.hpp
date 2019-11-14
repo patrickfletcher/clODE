@@ -1,5 +1,8 @@
 //helper functions for MEX interface to clODE
 
+#ifndef CLODE_MEX_HELPERS_H
+#define CLODE_MEX_HELPERS_H
+
 std::string getMatlabString(const mxArray *strData) {
     int strLength = (int)mxGetN(strData) + 1;
     std::vector<char> buf( strLength, 0 );
@@ -43,9 +46,11 @@ SolverParams<double> getMatlabSPstruct(const mxArray *spptr) {
 ProblemInfo getMatlabProblemStruct(const mxArray *probptr) {
 	ProblemInfo newProblem;
 	newProblem.clRHSfilename=getMatlabString( mxGetField(probptr,0,"clRHSfilename") );
-	newProblem.nVar=mxGetScalar( mxGetField(probptr,0,"nVar") );
-	newProblem.nPar=mxGetScalar( mxGetField(probptr,0,"nPar") );
-	newProblem.nAux=mxGetScalar( mxGetField(probptr,0,"nAux") );
-	newProblem.nWiener=mxGetScalar( mxGetField(probptr,0,"nWiener") );
+	newProblem.nVar=(int)mxGetScalar( mxGetField(probptr,0,"nVar") );
+	newProblem.nPar=(int)mxGetScalar( mxGetField(probptr,0,"nPar") );
+	newProblem.nAux=(int)mxGetScalar( mxGetField(probptr,0,"nAux") );
+	newProblem.nWiener=(int)mxGetScalar( mxGetField(probptr,0,"nWiener") );
 	return newProblem;
 }
+
+#endif // CLODE_MEX_HELPERS_H

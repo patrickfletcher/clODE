@@ -162,10 +162,10 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 		}
 		
         std::string clFilename=getMatlabString( mxGetField(prhs[1],0,"clRHSfilename") );
-        int nVar = mxGetScalar( mxGetField(prhs[1],0,"nVar") );
-        int nPar = mxGetScalar( mxGetField(prhs[1],0,"nPar") );
-        int nAux = mxGetScalar( mxGetField(prhs[1],0,"nAux") );
-        int nWiener = mxGetScalar( mxGetField(prhs[1],0,"nWiener") );
+        int nVar = (int)mxGetScalar( mxGetField(prhs[1],0,"nVar") );
+        int nPar = (int)mxGetScalar( mxGetField(prhs[1],0,"nPar") );
+        int nAux = (int)mxGetScalar( mxGetField(prhs[1],0,"nAux") );
+        int nWiener = (int)mxGetScalar( mxGetField(prhs[1],0,"nWiener") );
         
         ProblemInfo newProblem;
         newProblem.clRHSfilename=clFilename;

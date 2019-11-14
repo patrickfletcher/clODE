@@ -23,6 +23,7 @@
 #include <CL/cl.hpp>
 #endif
 
+#include <map>
 #include <string>
 #include <vector>
 
@@ -44,6 +45,9 @@ class CLODEfeatures : public CLODE
 protected:
     ObserverType observer;
     size_t ObserverParamsSize;
+
+    std::map<std::string, ObserverInfo> observerDefineMap;
+    std::vector<std::string> availableObserverNames;
 
     int nFeatures;
     size_t observerDataSize;

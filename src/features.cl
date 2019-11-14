@@ -152,7 +152,7 @@ __kernel void features(
 			};
 		}
 
-		updateObserverData(&ti, xi, dxi, auxi, &odata, opars, eventOccurred); //TODO: if not FSAL, dxi buffer is delayed by one. (dxi is slope at LAST timestep)
+		updateObserverData(&ti, xi, dxi, auxi, &odata, opars); //TODO: if not FSAL, dxi buffer is delayed by one. (dxi is slope at LAST timestep)
 	}
 
 	//readout features of interest and write to global F:
