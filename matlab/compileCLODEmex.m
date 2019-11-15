@@ -15,8 +15,8 @@ if ismac % Code to run on Mac plaform
     ldflags='LDFLAGS="$LDFLAGS -framework OpenCL"';
     
 elseif isunix % Code to run on Linux plaform
-    opencl_include_dir = '~/src/'; %cl.hpp
-    opencl_lib_dir = '/usr/lib/'; %libOpenCL.so
+    opencl_include_dir = '/usr/include'; %cl.hpp
+    opencl_lib_dir = '/usr/local/lib'; %libOpenCL.so
     libopencl='-lOpenCL';
     compflags='COMPFLAGS="$COMPFLAGS -std=c++11"';
 %     compflags='COMPFLAGS="$COMPFLAGS -W -Wall -Werror -ansi -pedantic"';
