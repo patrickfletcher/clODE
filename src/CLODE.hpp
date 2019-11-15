@@ -45,6 +45,9 @@ struct ProblemInfo
     int nPar;
     int nAux;
     int nWiener;
+    std::vector<std::string> varNames;
+    std::vector<std::string> parNames;
+    std::vector<std::string> auxNames;
 };
 
 class CLODE

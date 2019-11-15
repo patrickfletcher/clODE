@@ -3,24 +3,70 @@
 #ifndef OBSERVER_BASIC_ALLVAR_H
 #define OBSERVER_BASIC_ALLVAR_H
 
-#include "clODE_utilities.cl"
-#include "observers.cl"
+#ifdef __cplusplus
+//Collect all the info for this observer. Must be a static function when defining function in header, otherwise defined for each time included.
+static ObserverInfo getObserverInfo_basicAll(const ProblemInfo pi, const bool clSinglePrecision, const int fVarIx, const int eVarIx)
+{
+    ObserverInfo oi;
+    oi.define="USE_OBSERVER_BASIC_ALLVAR";
+    size_t realsize = clSinglePrecision?sizeof(cl_float):sizeof(cl_double);
+    oi.observerDataSize=(pi.nVar*5+pi.nAux*3)*realsize + 2*sizeof(cl_long); //hard coded, because C++ code can't see the N_VAR, N_AUX etc... 
+    // oi.featureNames={}; //TODO: update with true varNames
+    for (int j = 0; j < pi.nVar; ++j)
+    {
+        oi.featureNames.push_back("max " + pi.varNames[j]);
+        oi.featureNames.push_back("min " + pi.varNames[j]);
+        oi.featureNames.push_back("mean " + pi.varNames[j]);
+        oi.featureNames.push_back("max d" + pi.varNames[j] + "/dt");
+        oi.featureNames.push_back("min d" + pi.varNames[j] + "/dt");
+    }
+    for (int j = 0; j < pi.nAux; ++j)
+    {
+        oi.featureNames.push_back("max " + pi.auxNames[j]);
+        oi.featureNames.push_back("min " + pi.auxNames[j]);
+        oi.featureNames.push_back("mean " + pi.auxNames[j]);
+    }
+    oi.featureNames.push_back("stepcount");
+    return oi;
+}
+#endif
 
-typedef struct ObserverData
+
+#ifdef USE_OBSERVER_BASIC_ALLVAR
+
+typedef struct ObserverData_basicAll
 {
     realtype xTrajectoryMax[N_VAR];
     realtype xTrajectoryMin[N_VAR];
     realtype xTrajectoryMean[N_VAR];
     realtype dxTrajectoryMax[N_VAR];
     realtype dxTrajectoryMin[N_VAR];
-
     realtype auxTrajectoryMax[N_AUX];
     realtype auxTrajectoryMin[N_AUX];
     realtype auxTrajectoryMean[N_AUX];
-
-    int eventcount;
-    int stepcount;
+    long eventcount;
+    long stepcount;
 } ObserverData;
+
+void finalizeFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op, __global realtype *F, int i, int nPts)
+{
+    int ix = 0;
+    for (int j = 0; j < N_VAR; ++j)
+    {
+        F[ix++ * nPts + i] = od->xTrajectoryMax[j];
+        F[ix++ * nPts + i] = od->xTrajectoryMin[j];
+        F[ix++ * nPts + i] = od->xTrajectoryMean[j];
+        F[ix++ * nPts + i] = od->dxTrajectoryMax[j];
+        F[ix++ * nPts + i] = od->dxTrajectoryMin[j];
+    }
+    for (int j = 0; j < N_AUX; ++j)
+    {
+        F[ix++ * nPts + i] = od->auxTrajectoryMax[j];
+        F[ix++ * nPts + i] = od->auxTrajectoryMin[j];
+        F[ix++ * nPts + i] = od->auxTrajectoryMean[j];
+    }
+    F[ix++ * nPts + i] = od->stepcount;
+}
 
 void initializeObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
 {
@@ -85,39 +131,12 @@ void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype au
     }
 }
 
-void finalizeFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op, __global realtype *F, int i, int nPts)
-{
-    //N_FEATS=5*N_VAR + 3*N_AUX + 1
-    int ix = 0;
-    for (int j = 0; j < N_VAR; ++j)
-    {
-        F[ix++ * nPts + i] = od->xTrajectoryMax[j]-od->xTrajectoryMin[j];
-    }
-    for (int j = 0; j < N_AUX; ++j)
-    {
-        F[ix++ * nPts + i] = od->auxTrajectoryMax[j]-od->auxTrajectoryMin[j];
-    }
-    
-    for (int j = 0; j < N_VAR; ++j)
-    {
-        F[ix++ * nPts + i] = od->xTrajectoryMax[j];
-        F[ix++ * nPts + i] = od->xTrajectoryMin[j];
-        F[ix++ * nPts + i] = od->xTrajectoryMean[j];
-        F[ix++ * nPts + i] = od->dxTrajectoryMax[j];
-        F[ix++ * nPts + i] = od->dxTrajectoryMin[j];
-    }
-    for (int j = 0; j < N_AUX; ++j)
-    {
-        F[ix++ * nPts + i] = od->auxTrajectoryMax[j];
-        F[ix++ * nPts + i] = od->auxTrajectoryMin[j];
-        F[ix++ * nPts + i] = od->auxTrajectoryMean[j];
-    }
-    F[ix++ * nPts + i] = od->stepcount;
-}
 //Perform and post-integration cleanup of observer data to ensure it is ready for continuation if needed
 void finalizeObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op, __constant realtype *tspan)
 {
     //nothing to do
 }
 
-#endif // OBSERVER_BASIC_H
+#endif // USE_OBSERVER_BASIC_ALLVAR
+
+#endif // OBSERVER_BASIC_ALLVAR_H

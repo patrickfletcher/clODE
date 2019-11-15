@@ -1,14 +1,7 @@
 #include "CLODEtrajectory.hpp"
 
-// #define __CL_ENABLE_EXCEPTIONS
-// #if defined(__APPLE__) || defined(__MACOSX)
-//     #include "OpenCL/cl.hpp"
-// #else
-//     #include <CL/cl.hpp>
-// #endif
-
-#define dbg_printf printf
-//~ #define dbg_printf
+// #define dbg_printf printf
+#define dbg_printf
 #ifdef MATLAB_MEX_FILE
 #include "mex.h"
 #define printf mexPrintf
@@ -26,6 +19,7 @@ CLODEtrajectory::CLODEtrajectory(ProblemInfo prob, std::string stepper, bool clS
 	//printf("\nCLODE has been specialized: CLODEtrajectory\n");
 
 	clprogramstring += read_file(clodeRoot + "trajectory.cl");
+	dbg_printf("constructor clODEtrajectory\n");
 }
 
 CLODEtrajectory::~CLODEtrajectory() {}
@@ -51,6 +45,7 @@ void CLODEtrajectory::initialize(std::vector<double> newTspan, std::vector<doubl
 	resizeTrajectoryVariables(); //set up output variables too, which depend on nPts and nStoreMax=(tspan[1]-tspan[0])/(sp.dt*sp.nout)+1
 
 	clInitialized = true;
+	dbg_printf("initialize clODEfeatures\n");
 }
 
 void CLODEtrajectory::initializeTrajectoryKernel()
@@ -71,6 +66,7 @@ void CLODEtrajectory::initializeTrajectoryKernel()
 		printf("ERROR: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
 		throw er;
 	}
+	dbg_printf("initialize trajectory kernel\n");
 }
 
 void CLODEtrajectory::resizeTrajectoryVariables()
@@ -127,6 +123,7 @@ void CLODEtrajectory::resizeTrajectoryVariables()
 			printf("ERROR: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
 			throw er;
 		}
+		dbg_printf("resize d_t, d_x, d_dx, d_aux, d_nStored\n");
 	}
 }
 
@@ -164,6 +161,7 @@ void CLODEtrajectory::trajectory()
 			printf("ERROR: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
 			throw er;
 		}
+		dbg_printf("run trajectory\n");
 	}
 	else
 	{

@@ -1,10 +1,11 @@
-//
+//Threshold-based event detection with absolute thresholds in a specified variable xi. Three flavors:
+// 1) xup = value of xi. (simple threshold)
+// 2) xup = value of xi, xdown = value of xi < xup (Shmitt trigger)
+// 3) xup, xdown, dxup, dxdown. (Shmitt with slope thresholds)
 
 #ifndef OBSERVER_THRESHOLD_1_H
 #define OBSERVER_THRESHOLD_1_H
 
-#include "clODE_utilities.cl"
-#include "observers.cl"
 
 struct ObserverData
 {

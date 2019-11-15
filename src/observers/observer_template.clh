@@ -4,20 +4,6 @@
 #define OBSERVER_TEMPLATE_H
 
 
-#ifdef __cplusplus
-ObserverInfo getFeatureInfo_template(ProblemInfo pi, bool clSinglePrecision)
-{
-    ObserverInfo oi;
-    oi.define="OBSERVER_TEMPLATE";
-    oi.observerDataSize=clSinglePrecision?sizeof(ObserverData_template<float>):sizeof(ObserverData_template<double>);
-
-    //feature names. Could depend on problem info; nVar, varNames, etc. make sure this matches number of features actually returned
-    oi.featureNames={}; 
-
-    return oi;
-}
-#endif
-
 //typedef to select the correct observer struct from the header
 #ifdef __cplusplus
 template <typename realtype>
@@ -28,10 +14,29 @@ struct ObserverData_template
     int stepcount;
 }
 
-#ifdef OBSERVER_TEMPLATE //should only be defined for OpenCL preprocessor, thus not included by C++ clODE codes
+#ifdef __cplusplus
+ObserverInfo getFeatureInfo_template(ProblemInfo pi, bool clSinglePrecision)
+{
+    ObserverInfo oi;
+    oi.define="USE_OBSERVER_TEMPLATE";
+    oi.observerDataSize=clSinglePrecision?sizeof(ObserverData_template<float>):sizeof(ObserverData_template<double>);
+
+    //feature names. Could depend on problem info; nVar, varNames, etc. make sure this matches number of features actually returned
+    oi.featureNames={}; 
+
+    return oi;
+}
+#endif
+
+#ifdef USE_OBSERVER_TEMPLATE //should only be defined for OpenCL preprocessor, thus not included by C++ clODE codes
 
 #include "clODE_utilities.cl" //common math functions
 typedef struct ObserverData_template ObserverData;
+
+//Perform and post-integration cleanup and write desired features into the global array F
+void finalizeFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op, __global realtype *F, int i, int nPts)
+{ 
+}
 
 //set initial values to relevant fields in ObserverData
 void initializeObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
@@ -61,20 +66,9 @@ bool computeEventFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype 
 }
 
 //full per-timestep update of observer data. If an event occurred this timestep, event-based observer data is reset. Per-timestep features are computed here.
-void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op, bool eventOccurred)
+void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
 {
 }
-
-//Perform and post-integration cleanup and write desired features into the global array F
-void finalizeFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op, __global realtype *F, int i, int nPts)
-{
-    //Number of features is determined by this function. Must hardcode that number into the host program in order to allocate memory for F...
-}
-
-//prepare observer data to ensure it is ready for continuation if needed
-//void prepareObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op) {
-//eg. times of last events need to be shifted left of t0. If last run had t0=0, then will be negative. However might continue from t0!=0, then need to add new t0.
-//}
 
 //Perform and post-integration cleanup of observer data to ensure it is ready for continuation if needed
 void finalizeObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op, __constant realtype *tspan)

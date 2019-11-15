@@ -55,31 +55,16 @@ typedef struct ObserverInfo
 // one-pass detectors
 ////////////////////////////////////////////////
 
-//basic detector: no events. All features are computed per step (max/min/mean vars/aux)
-#include "observers/observer_basic.clh"
-
-#ifdef OBSERVER_BASIC_ALLVAR
+//basic detectors: no events. Measure extent of state space explored, max/min/mean x and aux, max/min dx
+#include "observers/observer_basic.clh" //one variable, specified by fVarIx
 #include "observers/observer_basic_allVar.clh"
-#endif
-
-//Event is the detection of local extremum (max and/or min) in a specified variable xi
-#ifdef OBSERVER_LOCAL_MAX
 #include "observers/observer_local_maximum.clh"
-#endif
 
-//Threshold-based event detection with absolute thresholds in a specified variable xi. Three flavors:
-// 1) xup = value of xi. (simple threshold)
-// 2) xup = value of xi, xdown = value of xi < xup (Shmitt trigger)
-// 3) xup, xdown, dxup, dxdown. (Shmitt with slope thresholds)
-#ifdef OBSERVER_THRESHOLD_1
-#include "observers/observer_threshold_1.clh"
-#endif
+// #include "observers/observer_threshold_1.clh" //not implemented
 
 //Event is the return of trajectory to small neighborhood of Xstart (specified state, eg. x0)
-// can use transient to approach periodic solution, then use x0
-#ifdef OBSERVER_NEIGHBORHOOD_1
+// to select Xstart: local min (e.g. of user-selected slow variable) 
 #include "observers/observer_neighborhood_1.clh"
-#endif
 
 ////////////////////////////////////////////////
 // two-pass detectors
@@ -88,24 +73,24 @@ typedef struct ObserverInfo
 //TODO: make a separate kernel to use for warmup (to break the computation into parts so host doesn't freeze)
 
 //Threshold-based event detection with relative thresholds in a specified variable xi.
-// Need to measure the extent of state-space trajectory visits, then compute thresholds as fractions of range
-#ifdef OBSERVER_THRESHOLD_2
+// FIrst pass to measure the extent of state-space trajectory visits, then compute thresholds as fractions of range
 #include "observers/observer_threshold_2.clh"
-#endif
 
-//Use a first pass to find a good Xstart (e.g. absolute min of slowest variable)
-#ifdef OBSERVER_NEIGHBORHOOD_2
+//Use a first pass to find a good Xstart (e.g. absolute drop below 0.5*range of slowest variable)
 #include "observers/observer_neighborhood_2.clh"
-#endif
 
 
 
 // collect available methods into "name"-ObserverInfo map, for C++ side access. Must come after including all the getObserverInfo_functions.
 #ifdef __cplusplus
-static void getObserverDefineMap(ProblemInfo pi, bool clSinglPrecision, std::map<std::string, ObserverInfo> &observerDefineMap, std::vector<std::string> &availableObserverNames) 
+static void getObserverDefineMap(const ProblemInfo pi, const bool clSinglPrecision, const int fVarIx, const int eVarIx, std::map<std::string, ObserverInfo> &observerDefineMap, std::vector<std::string> &availableObserverNames) 
 {
 std::map<std::string, ObserverInfo> newMap;
-newMap["basic"]=getObserverInfo_basic(pi, clSinglPrecision);
+newMap["basic"]=getObserverInfo_basic(pi, clSinglPrecision, fVarIx, eVarIx);
+newMap["basicall"]=getObserverInfo_basicAll(pi, clSinglPrecision, fVarIx, eVarIx);
+newMap["localmax"]=getObserverInfo_localmax(pi, clSinglPrecision, fVarIx, eVarIx);
+newMap["nhood2"]=getObserverInfo_nhood2(pi, clSinglPrecision, fVarIx, eVarIx);
+newMap["thresh2"]=getObserverInfo_thresh2(pi, clSinglPrecision, fVarIx, eVarIx);
 
 //export vector of names for access in C++
 std::vector<std::string> newNames;

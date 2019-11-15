@@ -3,10 +3,48 @@
 #ifndef OBSERVER_NEIGHBORHOOD_2_H
 #define OBSERVER_NEIGHBORHOOD_2_H
 
-#include "clODE_utilities.cl"
-#include "observers.cl"
-#include "realtype.cl"
 
+#ifdef __cplusplus
+//Collect all the info for this observer. Must be a static function when defining function in header, otherwise defined for each time included.
+static ObserverInfo getObserverInfo_nhood2(const ProblemInfo pi, const bool clSinglePrecision, const int fVarIx, const int eVarIx)
+{
+    ObserverInfo oi;
+    oi.define="USE_OBSERVER_NEIGHBORHOOD_2";
+    size_t realsize = clSinglePrecision?sizeof(cl_float):sizeof(cl_double);
+    oi.observerDataSize=(pi.nVar*10+19+pi.nAux*3)*realsize + 3*sizeof(cl_long)+3*sizeof(cl_bool); //hard coded, because C++ code can't see the N_VAR, N_AUX etc... 
+    
+    oi.featureNames.push_back("max period");
+    oi.featureNames.push_back("min period");
+    oi.featureNames.push_back("mean period");
+    oi.featureNames.push_back("max peaks");
+    oi.featureNames.push_back("min peaks");
+    oi.featureNames.push_back("mean peaks");
+    for (int j = 0; j < pi.nVar; ++j)
+    {
+        oi.featureNames.push_back("max " + pi.varNames[j]);
+        oi.featureNames.push_back("min " + pi.varNames[j]);
+        oi.featureNames.push_back("mean " + pi.varNames[j]);
+        oi.featureNames.push_back("max d" + pi.varNames[j] + "/dt");
+        oi.featureNames.push_back("min d" + pi.varNames[j] + "/dt");
+    }
+    for (int j = 0; j < pi.nAux; ++j)
+    {
+        oi.featureNames.push_back("max " + pi.auxNames[j]);
+        oi.featureNames.push_back("min " + pi.auxNames[j]);
+        oi.featureNames.push_back("mean " + pi.auxNames[j]);
+    }
+    oi.featureNames.push_back("eventcount");
+    oi.featureNames.push_back("stepcount");
+    oi.featureNames.push_back("max dt");
+    oi.featureNames.push_back("min dt");
+    oi.featureNames.push_back("mean dt");
+    return oi;
+}
+#endif
+
+
+
+#ifdef USE_OBSERVER_NEIGHBORHOOD_2
 #define TWO_PASS_EVENT_DETECTOR
 
 //typedef to select the correct observer struct from the header
@@ -53,9 +91,9 @@ struct ObserverData_nhood2
     // realtype xLastMin;
     // realtype tLastMin;
 
-    int thisNMaxima;
-    int eventcount;
-    int stepcount;
+    long thisNMaxima;
+    long eventcount;
+    long stepcount;
     bool buffer_filled;
     bool foundX0;
     bool isInNhood;
@@ -420,4 +458,5 @@ void finalizeObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype 
     }
 }
 
+#endif //USE_OBSERVER_NEIGHBORHOOD_2
 #endif // OBSERVER_NEIGHBORHOOD_2_H

@@ -20,24 +20,24 @@ struct ObserverData_basic
 
 #ifdef __cplusplus
 //Collect all the info for this observer. Must be a static function when defining function in header, otherwise defined for each time included.
-static ObserverInfo getObserverInfo_basic(ProblemInfo pi, bool clSinglePrecision)
+static ObserverInfo getObserverInfo_basic(ProblemInfo pi, bool clSinglePrecision, int fVarIx, int eVarIx)
 {
     ObserverInfo oi;
-    oi.define="OBSERVER_BASIC";
+    oi.define="USE_OBSERVER_BASIC";
     oi.observerDataSize=clSinglePrecision?sizeof(ObserverData_basic<float>):sizeof(ObserverData_basic<double>);
-    oi.featureNames={"amp","max x","min x","mean x","max dx","min dx","stepcount"}; //TODO: update with true varName[fVarIx]
+    std::string varName=pi.varNames[fVarIx];
+    oi.featureNames={"max "+varName,"min "+varName,"mean "+varName,"max d"+varName+"/dt","min d"+varName+"/dt","stepcount"};
     return oi;
 }
 #endif
 
-#ifdef OBSERVER_BASIC
+#ifdef USE_OBSERVER_BASIC
 
-typedef struct ObserverData ObserverData;
+typedef struct ObserverData_basic ObserverData;
 
 void finalizeFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op, __global realtype *F, const int i, const int nPts)
 {
     int ix = 0;
-    F[ix++ * nPts + i] = od->xTrajectoryMax-od->xTrajectoryMin;
     F[ix++ * nPts + i] = od->xTrajectoryMax;
     F[ix++ * nPts + i] = od->xTrajectoryMin;
     F[ix++ * nPts + i] = od->xTrajectoryMean;
@@ -79,7 +79,7 @@ bool computeEventFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype 
 }
 
 //all features are per-timestep (eventOccurred unused)
-void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op, bool eventOccurred)
+void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
 {
     ++od->stepcount;
     od->xTrajectoryMax = fmax(xi[op->fVarIx], od->xTrajectoryMax);
@@ -95,6 +95,6 @@ void finalizeObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype 
     //nothing to do
 }
 
-#endif // OBSERVER_BASIC
+#endif // USE_OBSERVER_BASIC
 
 #endif // OBSERVER_BASIC_H

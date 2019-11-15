@@ -50,6 +50,28 @@ ProblemInfo getMatlabProblemStruct(const mxArray *probptr) {
 	newProblem.nPar=(int)mxGetScalar( mxGetField(probptr,0,"nPar") );
 	newProblem.nAux=(int)mxGetScalar( mxGetField(probptr,0,"nAux") );
 	newProblem.nWiener=(int)mxGetScalar( mxGetField(probptr,0,"nWiener") );
+
+	const mxArray *namesPtr;
+	mwSize nNames;
+	namesPtr = mxGetField(probptr,0,"varNames");
+	nNames = mxGetNumberOfElements(namesPtr); 
+	for (mwIndex i=0; i<nNames; i++)
+		newProblem.varNames.push_back(mxArrayToString(mxGetCell(namesPtr, i)));
+
+	namesPtr = mxGetField(probptr,0,"parNames");
+	nNames = mxGetNumberOfElements(namesPtr); 
+	for (mwIndex i=0; i<nNames; i++)
+		newProblem.parNames.push_back(mxArrayToString(mxGetCell(namesPtr, i)));
+
+	namesPtr = mxGetField(probptr,0,"auxNames");
+	nNames = mxGetNumberOfElements(namesPtr); 
+	for (mwIndex i=0; i<nNames; i++)
+		newProblem.auxNames.push_back(mxArrayToString(mxGetCell(namesPtr, i)));
+
+	// for (auto n : newProblem.varNames)
+	// 	printf("%s\n",n);
+
+
 	return newProblem;
 }
 

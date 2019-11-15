@@ -52,7 +52,9 @@ enum class Action
     SetObserver,
     Features,
     GetNFeatures,
-    GetF
+    GetF,
+    GetFeatureNames,
+    GetObserverNames,
 };
 
 // Map string (first input argument to mexFunction) to an Action
@@ -85,7 +87,9 @@ const std::map<std::string, Action> actionTypeMap =
     { "setobserver",    Action::SetObserver },
     { "features",       Action::Features },
     { "getnfeatures",   Action::GetNFeatures },
-    { "getf",        	Action::GetF }
+    { "getf",        	Action::GetF },
+    { "getfeaturenames",        Action::GetFeatureNames },
+    { "getobservernames",        Action::GetObserverNames },
 }; 
 
 //custom helper prototype
@@ -157,22 +161,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 			mexErrMsgTxt("Incorrect number of input arguments for clODEobjective object constructor");
 		}
 		
-        std::string clFilename=getMatlabString( mxGetField(prhs[1],0,"clRHSfilename") );
-        int nVar = (int)mxGetScalar( mxGetField(prhs[1],0,"nVar") );
-        int nPar = (int)mxGetScalar( mxGetField(prhs[1],0,"nPar") );
-        int nAux = (int)mxGetScalar( mxGetField(prhs[1],0,"nAux") );
-        int nWiener = (int)mxGetScalar( mxGetField(prhs[1],0,"nWiener") );
-        
-        ProblemInfo newProblem;
-        newProblem.clRHSfilename=clFilename;
-        newProblem.nVar=nVar;
-        newProblem.nPar=nPar;
-        newProblem.nAux=nAux;
-        newProblem.nWiener=nWiener;
-        
-        //correct integer must be supplied from MatLab
+		ProblemInfo newProblem=getMatlabProblemStruct(prhs[1]);
         std::string stepper = mxArrayToString(prhs[2]);
-        
 		bool clSinglePrecision=(bool) mxGetScalar(prhs[3]);
         
         //opencl device selection: force matlab user to use "vendor" and/or "devicetype", always pass in args for this
@@ -185,12 +175,10 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         unsigned int deviceID = (unsigned int)mxGetScalar(prhs[5]);
 		OpenCLResource opencl(platformID, deviceID);
 		
-        //correct integer must be supplied from MatLab
-		int obsint=(int) mxGetScalar(prhs[6]);
-        ObserverType observertype=(ObserverType) obsint;
+        std::string observer = mxArrayToString(prhs[6]);
         
 			
-		insResult = instanceTab.insert(indPtrPair_type(newHandle, std::make_shared<class_type>(newProblem,stepper,observertype,clSinglePrecision, opencl)));
+		insResult = instanceTab.insert(indPtrPair_type(newHandle, std::make_shared<class_type>(newProblem,stepper,observer,clSinglePrecision, opencl)));
 
         if (!insResult.second) // sanity check
             mexPrintf("Oh, bad news.  Tried to add an existing handle."); // shouldn't ever happen
@@ -352,10 +340,9 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         break;
 	}
     case Action::SetObserver:
-    {   //input int corresponding to an observer type
-		int obsint=(int) mxGetScalar(prhs[2]);
-        ObserverType observertype=(ObserverType) obsint;
-        instance->setObserver(observertype);
+    {   //input string with observer name
+        std::string observer = mxArrayToString(prhs[2]);
+        instance->setObserver(observer);
         break;
 	}
     case Action::Features:
@@ -381,6 +368,22 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         std::copy(F.begin(), F.end(), (double *)mxGetData(plhs[0]));
         break;
 	}
+    case Action::GetFeatureNames:
+    {
+        std::vector<std::string> names=instance->getFeatureNames();
+		plhs[0]=mxCreateCellMatrix(names.size(), 1);    
+        for (mwIndex i=0; i<names.size(); i++)
+            mxSetCell(plhs[0], i, mxCreateString(names[i].c_str()));
+        break;
+    }
+    case Action::GetObserverNames:
+    {
+        std::vector<std::string> names=instance->getAvailableObservers();
+		plhs[0]=mxCreateCellMatrix(names.size(), 1);    
+        for (mwIndex i=0; i<names.size(); i++)
+            mxSetCell(plhs[0], i, mxCreateString(names[i].c_str()));
+        break;
+    }
     default:
         mexErrMsgTxt(("Unhandled action: " + actionStr).c_str());
         break;

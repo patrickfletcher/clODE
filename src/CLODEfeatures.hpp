@@ -27,26 +27,15 @@
 #include <string>
 #include <vector>
 
-//enum for observer type
-typedef enum ObserverType
-{
-    basic = 0,
-    basicAllVar,
-    localmax,
-    threshold1,
-    neighborhood1,
-    threshold2,
-    neighborhood2
-} ObserverType;
-
 class CLODEfeatures : public CLODE
 {
 
 protected:
-    ObserverType observer;
+    std::string observer;
     size_t ObserverParamsSize;
 
     std::map<std::string, ObserverInfo> observerDefineMap;
+    std::vector<std::string> featureNames;
     std::vector<std::string> availableObserverNames;
 
     int nFeatures;
@@ -69,14 +58,14 @@ protected:
     void resizeFeaturesVariables(); //d_odata and d_F depend on nPts. nPts change invalidates d_odata
 
 public:
-    CLODEfeatures(ProblemInfo prob, std::string stepper, ObserverType observer, bool clSinglePrecision, OpenCLResource opencl);
+    CLODEfeatures(ProblemInfo prob, std::string stepper, std::string observer, bool clSinglePrecision, OpenCLResource opencl);
     ~CLODEfeatures();
 
     //build program, set all problem data needed to run
     virtual void initialize(std::vector<cl_double> newTspan, std::vector<cl_double> newX0, std::vector<cl_double> newPars, SolverParams<cl_double> newSp, ObserverParams<cl_double> newOp);
 
     void setObserverParams(ObserverParams<cl_double> newOp);
-    void setObserver(ObserverType newObserver); //rebuild: program, kernel, kernel args. Host + Device data OK
+    void setObserver(std::string newObserver); //rebuild: program, kernel, kernel args. Host + Device data OK
 
     //simulation routines.
     //TODO: overload transient so that it sets doObserverInitialization=1
@@ -88,6 +77,8 @@ public:
     //Get functions
     int getNFeatures() { return nFeatures; };
     std::vector<double> getF();
+    std::vector<std::string> getFeatureNames(){return featureNames;};
+    std::vector<std::string> getAvailableObservers(){return availableObserverNames;};
 };
 
 #endif //CLODE_FEATURES_HPP_
