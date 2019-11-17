@@ -89,6 +89,7 @@ std::map<std::string, ObserverInfo> newMap;
 newMap["basic"]=getObserverInfo_basic(pi, clSinglPrecision, fVarIx, eVarIx);
 newMap["basicall"]=getObserverInfo_basicAll(pi, clSinglPrecision, fVarIx, eVarIx);
 newMap["localmax"]=getObserverInfo_localmax(pi, clSinglPrecision, fVarIx, eVarIx);
+newMap["nhood1"]=getObserverInfo_nhood1(pi, clSinglPrecision, fVarIx, eVarIx);
 newMap["nhood2"]=getObserverInfo_nhood2(pi, clSinglPrecision, fVarIx, eVarIx);
 newMap["thresh2"]=getObserverInfo_thresh2(pi, clSinglPrecision, fVarIx, eVarIx);
 
