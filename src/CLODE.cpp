@@ -1,8 +1,6 @@
 #include "CLODE.hpp"
-#include "OpenCLResource.hpp"
-
-#define CLODE_HOST_PROGRAM
 #include "clODE_struct_defs.cl"
+#include "OpenCLResource.hpp"
 #include "steppers.cl"
 
 // #define __CL_ENABLE_EXCEPTIONS
@@ -12,8 +10,8 @@
 //     #include <CL/cl.hpp>
 // #endif
 
-#define dbg_printf printf
-//~ #define dbg_printf
+// #define dbg_printf printf
+#define dbg_printf
 #ifdef MATLAB_MEX_FILE
 #include "mex.h"
 #define printf mexPrintf
@@ -27,9 +25,7 @@
 
 //constructor sets problem info and builds the base clprogramstring
 CLODE::CLODE(ProblemInfo prob, std::string stepper, bool clSinglePrecision, OpenCLResource opencl)
-	: clRHSfilename(prob.clRHSfilename), nVar(prob.nVar), nPar(prob.nPar), nAux(prob.nAux), nWiener(prob.nWiener), nPts(0),
-	  clSinglePrecision(clSinglePrecision), realSize(clSinglePrecision ? sizeof(cl_float) : sizeof(cl_double)),
-	  opencl(opencl), clodeRoot(CLODE_ROOT), nRNGstate(2)
+	: nPts(0), clodeRoot(CLODE_ROOT), nRNGstate(2)
 {
 	//printf("\nCLODE base class constructor\n");
 
@@ -40,11 +36,13 @@ CLODE::CLODE(ProblemInfo prob, std::string stepper, bool clSinglePrecision, Open
 	// 	printf("%s\n",s);
 	// }
 
-	// printf("%s\n",stepper);
-
+	setNewProblem(prob);
 	setStepper(stepper);
+	setPrecision(clSinglePrecision);
+	setOpenCL(opencl);
 
 	clprogramstring = read_file(clodeRoot + "transient.cl");
+	dbg_printf("constructor clODE\n");
 }
 
 CLODE::~CLODE()
@@ -52,8 +50,8 @@ CLODE::~CLODE()
 }
 
 void CLODE::setNewProblem(ProblemInfo newProb)
-{
-
+{ //TODO: not equality check for ProblemInfo struct
+	prob=newProb;
 	clRHSfilename = newProb.clRHSfilename;
 	nVar = newProb.nVar;
 	nPar = newProb.nPar;
@@ -61,21 +59,25 @@ void CLODE::setNewProblem(ProblemInfo newProb)
 	nWiener = newProb.nWiener;
 
 	clInitialized = false;
+	dbg_printf("set new problem\n");
 }
 
 void CLODE::setStepper(std::string newStepper)
 {
-	auto loc = stepperDefineMap.find(newStepper); //from steppers.cl
-	if ( loc != stepperDefineMap.end() )
+	if (newStepper!=stepper)
 	{
-		stepper = newStepper;
-		clInitialized = false;
+		auto loc = stepperDefineMap.find(newStepper); //from steppers.cl
+		if ( loc != stepperDefineMap.end() )
+		{
+			stepper = newStepper;
+			clInitialized = false;
+		}
+		else
+		{
+			printf("Warning: unknown stepper: %s. Stepper method unchanged\n",newStepper);
+		}
+		dbg_printf("set stepper\n");	
 	}
-	else
-	{
-		printf("Warning: unknown stepper: %s. Stepper method unchanged\n",newStepper);
-	}
-	
 }
 
 void CLODE::setPrecision(bool newPrecision)
@@ -85,15 +87,17 @@ void CLODE::setPrecision(bool newPrecision)
 		clSinglePrecision = newPrecision;
 		realSize = newPrecision ? sizeof(cl_float) : sizeof(cl_double);
 		clInitialized = false;
+		dbg_printf("set precision\n");
 	}
 }
 
 void CLODE::setOpenCL(OpenCLResource newOpencl)
-{
+{//TODO: not equality check for OpenCLResource class
 	//~ if (newOpencl!=opencl) {
 	opencl = newOpencl;
 	clInitialized = false;
 	//~ }
+	dbg_printf("set OpenCL\n");
 }
 
 //build creates build option defined constants based on selected options, adds the ODEsystem source to clprogramstring then builds for selected OpenCL resource
@@ -101,7 +105,7 @@ void CLODE::buildProgram(std::string extraBuildOpts)
 {
 
 	if (!clSinglePrecision && !opencl.getDoubleSupport())
-	{
+	{ //TODO: running with double-precision clRHSfile probably will crash. gen both double/single with ode2cl always?
 		clSinglePrecision = true;
 		printf("Warning: device selected does not support double precision. Using single precision\n");
 	}
@@ -143,6 +147,7 @@ void CLODE::buildProgram(std::string extraBuildOpts)
 	opencl.buildProgramFromString(clprogramstring, buildOptions);
 
 	printStatus();
+	dbg_printf("build clODE\n");
 }
 
 //initialize everything: build the program, create the kernels, and set all needed problem data.
@@ -160,6 +165,7 @@ void CLODE::initialize(std::vector<double> newTspan, std::vector<double> newX0, 
 	setProblemData(newX0, newPars); //will call setNpts
 
 	clInitialized = true;
+	dbg_printf("initialize clODE\n");
 }
 
 void CLODE::initializeTransientKernel()
@@ -189,6 +195,7 @@ void CLODE::initializeTransientKernel()
 		printf("ERROR: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
 		throw er;
 	}
+	dbg_printf("initialize transient kernel\n");
 }
 
 //initialize new set of trajectories (nPts may change)
@@ -224,19 +231,16 @@ void CLODE::setProblemData(std::vector<double> newX0, std::vector<double> newPar
 
 	//set nPts
 	setNpts(nPtsX0);
-	// printf("set nPts\n");
 
 	//set things that depend on nPts
 	setX0(newX0);
-	// printf("set X0\n");
 	setPars(newPars);
-	// printf("set P\n");
+	dbg_printf("set problem data\n");
 }
 
 //resize all the nPts dependent variables, only if nPts changed
 void CLODE::setNpts(int newNpts)
 {
-
 	//unlikely that any of these should ever exceed memory limits...
 	size_t largestAlloc = std::max(nVar, std::max(nPar, nAux)) * nPts * realSize;
 	// printf("Computed largestAlloc: %d\n", largestAlloc);
@@ -284,31 +288,34 @@ void CLODE::setNpts(int newNpts)
 
 		//seed RNG must occur after device variable d_RNGstate is resized
 		seedRNG();
+		dbg_printf("set nPts\n");
 	}
 }
 
 void CLODE::setTspan(std::vector<double> newTspan)
 {
-
-	tspan = newTspan;
-
-	//sync to device
-	try
+	if (newTspan!=tspan)
 	{
-		if (clSinglePrecision)
-		{ //downcast to float if desired
-			std::vector<float> tspanF(tspan.begin(), tspan.end());
-			opencl.error = copy(opencl.getQueue(), tspanF.begin(), tspanF.end(), d_tspan);
-		}
-		else
+		tspan = newTspan;
+		//sync to device
+		try
 		{
-			opencl.error = copy(opencl.getQueue(), tspan.begin(), tspan.end(), d_tspan);
+			if (clSinglePrecision)
+			{ //downcast to float if desired
+				std::vector<float> tspanF(tspan.begin(), tspan.end());
+				opencl.error = copy(opencl.getQueue(), tspanF.begin(), tspanF.end(), d_tspan);
+			}
+			else
+			{
+				opencl.error = copy(opencl.getQueue(), tspan.begin(), tspan.end(), d_tspan);
+			}
 		}
-	}
-	catch (cl::Error &er)
-	{
-		printf("ERROR: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
-		throw er;
+		catch (cl::Error &er)
+		{
+			printf("ERROR: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
+			throw er;
+		}
+		dbg_printf("set tspan\n");
 	}
 }
 
@@ -316,12 +323,12 @@ void CLODE::shiftTspan()
 {
 	std::vector<double> newTspan({tspan[1], tspan[1] + (tspan[1] - tspan[0])});
 	setTspan(newTspan);
+	dbg_printf("shift tspan\n");
 }
 
 //set new x0. Cannot update nPts
 void CLODE::setX0(std::vector<double> newX0)
 {
-
 	if (newX0.size() == (size_t)nPts * nVar)
 	{
 		x0 = newX0;
@@ -344,6 +351,7 @@ void CLODE::setX0(std::vector<double> newX0)
 			printf("ERROR: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
 			throw er;
 		}
+		dbg_printf("set X0\n");
 	}
 	else
 	{
@@ -365,12 +373,12 @@ void CLODE::shiftX0()
 		printf("ERROR: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
 		throw er;
 	}
+	dbg_printf("shift X0\n");
 }
 
 //set new Pars. Cannot update nPts
 void CLODE::setPars(std::vector<double> newPars)
 {
-
 	if (newPars.size() == (size_t)nPts * nPar)
 	{
 		pars = newPars;
@@ -393,6 +401,7 @@ void CLODE::setPars(std::vector<double> newPars)
 			printf("ERROR: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
 			throw er;
 		}
+		dbg_printf("set P\n");
 	}
 	else
 	{
@@ -403,8 +412,7 @@ void CLODE::setPars(std::vector<double> newPars)
 }
 
 void CLODE::setSolverParams(SolverParams<double> newSp)
-{
-
+{//TODO: equality operator for SolverParams struct
 	sp = newSp;
 	try
 	{
@@ -423,6 +431,7 @@ void CLODE::setSolverParams(SolverParams<double> newSp)
 		printf("ERROR: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
 		throw er;
 	}
+	dbg_printf("set SolverParams\n");
 }
 
 //TODO: define an assignment/type cast operator in the struct?
@@ -464,6 +473,7 @@ void CLODE::seedRNG()
 		printf("ERROR: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
 		throw er;
 	}
+	dbg_printf("set random RNG seed\n");
 }
 
 //populate the RNGstate vector on the device. nPts must be set
@@ -484,6 +494,7 @@ void CLODE::seedRNG(int mySeed)
 		printf("ERROR: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
 		throw er;
 	}
+	dbg_printf("set fixed RNG seed\n");
 }
 
 //Simulation routine
@@ -512,6 +523,7 @@ void CLODE::transient()
 			printf("ERROR: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
 			throw er;
 		}
+		dbg_printf("run transient\n");
 	}
 	else
 	{

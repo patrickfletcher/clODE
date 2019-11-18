@@ -1,7 +1,8 @@
 classdef clODE < cppclass & matlab.mixin.SetGet
     % clODE(prob, stepper=rk4, clSinglePrecision=true, cl_vendor=any, cl_deviceType=default)
     
-    %TODO: this should have a method for default solverparams
+    %TODO: Using set/get mixin causes setters to be called during
+    %constructor; unnecessary duplicate calls to C++ functions. 
     
     properties
         
@@ -106,8 +107,10 @@ classdef clODE < cppclass & matlab.mixin.SetGet
         
         %set a new problem - must initialize again!
         function set.prob(obj, prob)
-            obj.prob=prob;
-            obj.cppmethod('setnewproblem', prob);
+            if ~strcmp(prob,obj.prob)
+                obj.prob=prob;
+                obj.cppmethod('setnewproblem', prob);
+            end
         end
         
         %set a new time step method - must initialize again!
@@ -119,28 +122,30 @@ classdef clODE < cppclass & matlab.mixin.SetGet
         end
         
         %set single precision true/false - must initialize again! 
-        %TODO::: Need to run ode2cl again!!!
+        %TODO: Need to run ode2cl again!!! Alt: just generate both and swap filenames...
         function set.precision(obj, newPrecision)
-            clSinglePrecision=true; %default to single
-            obj.precision='single';
-            switch lower(newPrecision)
-                case {'single',1}
-                case {'double',2}
-                    obj.precision='double';
-                    clSinglePrecision=false;
-                otherwise
-                    warning('Precision must be set to ''single'' or ''double''. Using single precision.')
+            if ~strcmp(newPrecision,obj.precision)
+                switch lower(newPrecision)
+                    case {'single'}
+                        obj.precision='single';
+                        clSinglePrecision=true;
+                    case {'double'}
+                        obj.precision='double';
+                        clSinglePrecision=false;
+                    otherwise
+                        error('Precision must be set to ''single'' or ''double''')
+                end
+%                 [~,obj.prob]=ode2cl(obj.prob.file,[],clSinglePrecision);
+                obj.cppmethod('setprecision', clSinglePrecision);
             end
-            obj.cppmethod('setprecision', clSinglePrecision);
         end
         
         %set a new OpenCL context - must initialize again!
-        function setOpenCL(obj, newVendor, newDeviceType)
-            obj.cl_vendor=newVendor;
-            obj.cl_deviceType=newDeviceType;
-            vendorInt=clODE.getVendorEnum(newVendor);
-            deviceTypeInt=clODE.getDeviceTypeEnum(newDeviceType);
-            obj.cppmethod('setopencl', vendorInt, deviceTypeInt);
+        function setOpenCL(obj, newDevice)
+            if newDevice~=obj.selectedDevice && newDevice<=length(obj.devices)
+                obj.selectedDevice=newDevice;
+                obj.cppmethod('setopencl', obj.devices(newDevice).platformID, obj.devices(newDevice).deviceID);
+            end
         end
         
         %initialize builds the program and sets data needed to run

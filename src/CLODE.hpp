@@ -45,6 +45,9 @@ struct ProblemInfo
     int nPar;
     int nAux;
     int nWiener;
+    std::vector<std::string> varNames;
+    std::vector<std::string> parNames;
+    std::vector<std::string> auxNames;
 };
 
 class CLODE
@@ -52,6 +55,7 @@ class CLODE
 
 protected:
     //Problem details (from ProblemInfo struct)
+    ProblemInfo prob;
     std::string clRHSfilename;
     int nVar, nPar, nAux, nWiener;
     cl_int nPts;

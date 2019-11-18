@@ -146,7 +146,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 		}
 		
 		ProblemInfo newProblem=getMatlabProblemStruct(prhs[1]);
-        
+
         //string identifier for stepper
         std::string stepper = mxArrayToString(prhs[2]);
         

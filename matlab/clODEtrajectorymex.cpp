@@ -161,22 +161,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 			mexErrMsgTxt("Incorrect number of input arguments for clODEobjective object constructor");
 		}
 		
-        std::string clFilename=getMatlabString( mxGetField(prhs[1],0,"clRHSfilename") );
-        int nVar = mxGetScalar( mxGetField(prhs[1],0,"nVar") );
-        int nPar = mxGetScalar( mxGetField(prhs[1],0,"nPar") );
-        int nAux = mxGetScalar( mxGetField(prhs[1],0,"nAux") );
-        int nWiener = mxGetScalar( mxGetField(prhs[1],0,"nWiener") );
-        
-        ProblemInfo newProblem;
-        newProblem.clRHSfilename=clFilename;
-        newProblem.nVar=nVar;
-        newProblem.nPar=nPar;
-        newProblem.nAux=nAux;
-        newProblem.nWiener=nWiener;
-        
-        //correct integer must be supplied from MatLab
+		ProblemInfo newProblem=getMatlabProblemStruct(prhs[1]);
         std::string stepper = mxArrayToString(prhs[2]);
-        
 		bool clSinglePrecision=(bool) mxGetScalar(prhs[3]);
         
         //opencl device selection: force matlab user to use "vendor" and/or "devicetype", always pass in args for this

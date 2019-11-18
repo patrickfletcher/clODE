@@ -1,21 +1,53 @@
-//
+#ifndef OBSERVER_NEIGHBORHOOD_1_H
+#define OBSERVER_NEIGHBORHOOD_1_H
 
-#ifndef OBSERVER_NEIGHBORHOOD_2_H
-#define OBSERVER_NEIGHBORHOOD_2_H
+#ifdef __cplusplus
+//Collect all the info for this observer. Must be a static function when defining function in header, otherwise defined for each time included.
+static ObserverInfo getObserverInfo_nhood1(const ProblemInfo pi, const bool clSinglePrecision, const int fVarIx, const int eVarIx)
+{
+    ObserverInfo oi;
+    oi.define="USE_OBSERVER_NEIGHBORHOOD_1";
+    size_t realsize = clSinglePrecision?sizeof(cl_float):sizeof(cl_double);
+    oi.observerDataSize=(pi.nVar*12+15+pi.nAux*3)*realsize + 3*sizeof(cl_long)+3*sizeof(cl_bool); //hard coded, because C++ code can't see the N_VAR, N_AUX etc... 
+    
+    oi.featureNames.push_back("max period");
+    oi.featureNames.push_back("min period");
+    oi.featureNames.push_back("mean period");
+    oi.featureNames.push_back("max peaks");
+    oi.featureNames.push_back("min peaks");
+    oi.featureNames.push_back("mean peaks");
+    for (int j = 0; j < pi.nVar; ++j)
+    {
+        oi.featureNames.push_back("max " + pi.varNames[j]);
+        oi.featureNames.push_back("min " + pi.varNames[j]);
+        oi.featureNames.push_back("mean " + pi.varNames[j]);
+        oi.featureNames.push_back("max d" + pi.varNames[j] + "/dt");
+        oi.featureNames.push_back("min d" + pi.varNames[j] + "/dt");
+    }
+    for (int j = 0; j < pi.nAux; ++j)
+    {
+        oi.featureNames.push_back("max " + pi.auxNames[j]);
+        oi.featureNames.push_back("min " + pi.auxNames[j]);
+        oi.featureNames.push_back("mean " + pi.auxNames[j]);
+    }
+    oi.featureNames.push_back("eventcount");
+    oi.featureNames.push_back("stepcount");
+    oi.featureNames.push_back("max dt");
+    oi.featureNames.push_back("min dt");
+    oi.featureNames.push_back("mean dt");
+    return oi;
+}
+#endif
 
-#include "clODE_utilities.cl"
-#include "observers.cl"
-#include "realtype.cl"
 
-#define TWO_PASS_EVENT_DETECTOR
+#ifdef USE_OBSERVER_NEIGHBORHOOD_1
 
-//typedef to select the correct observer struct from the header
-typedef struct ObserverData
+struct ObserverData_nhood1
 {
 
     realtype tbuffer[3];
     realtype xbuffer[3 * N_VAR];
-    realtype dxbuffer[3];
+    realtype dxbuffer[3 * N_VAR];
 
     realtype x0[N_VAR]; //point for neighborhood return
     // realtype xLast[N_VAR];
@@ -26,7 +58,7 @@ typedef struct ObserverData
     realtype xTrajectoryMean[N_VAR];
     realtype dxTrajectoryMax[N_VAR];
     realtype dxTrajectoryMin[N_VAR];
-    realtype xRange[N_VAR]; //to store warmup
+    // realtype xRange[N_VAR]; //to store warmup
     // realtype dxRange[N_VAR];
 
     realtype auxTrajectoryMax[N_AUX];
@@ -43,7 +75,6 @@ typedef struct ObserverData
     realtype stepDt[3]; //max/min/mean
 
     realtype tLastEvent;
-    realtype xThreshold;
     realtype thisNormXdiff;
     realtype lastNormXdiff;
 
@@ -53,15 +84,15 @@ typedef struct ObserverData
     // realtype xLastMin;
     // realtype tLastMin;
 
-    int thisNMaxima;
-    int eventcount;
-    int stepcount;
+    long thisNMaxima;
+    long eventcount;
+    long stepcount;
     bool buffer_filled;
     bool foundX0;
     bool isInNhood;
 
-} ObserverData;
-// ObserverData size: 3*int + (4*3 + 7*nVar + 9)*realtype + 3*bool
+};
+typedef struct ObserverData_nhood1 ObserverData;
 
 //set initial values to relevant fields in ObserverData
 void initializeObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
@@ -77,8 +108,8 @@ void initializeObserverData(realtype *ti, realtype xi[], realtype dxi[], realtyp
     for (int j = 0; j < N_VAR; ++j)
     {
         od->xbuffer[j * 3 + 2] = xi[j];
+        od->dxbuffer[j * 3 + 2] = dxi[j];
     }
-    od->dxbuffer[2] = dxi[op->fVarIx];
 
     for (int j = 0; j < N_VAR; ++j)
     {
@@ -145,65 +176,18 @@ void initializeObserverData(realtype *ti, realtype xi[], realtype dxi[], realtyp
 // - get extent of trajectory in state space, and max/min slopes
 void warmupObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
 {
-    for (int j = 0; j < N_VAR; ++j)
-    {
-        // od->xMaxDelta[j]=fmax( fabs( xi[j] - od->xLast[j] ), od->xMaxDelta[j] );
-        // od->xLast[j]=xi[j];
-
-        od->xTrajectoryMax[j] = fmax(xi[j], od->xTrajectoryMax[j]);
-        od->xTrajectoryMin[j] = fmin(xi[j], od->xTrajectoryMin[j]);
-        // od->dxTrajectoryMax[j]=fmax(dxi[j], od->dxTrajectoryMax[j]);
-        // od->dxTrajectoryMin[j]=fmin(dxi[j], od->dxTrajectoryMin[j]);
-    }
-
-    // //find abs min as x0
-    // if (xi[op->eVarIx] < od->x0[op->eVarIx]) {
-    // 	for (int j=0; j<N_VAR;++j) {
-    // 		od->x0[j]=xi[j];
-    // 	}
-    // 	od->tLastEvent=*ti;
-    // }
 }
 
 //process warmup data to compute relevant event detector quantities (e.g. thresholds)
 void initializeEventDetector(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
 {
-
-    for (int j = 0; j < N_VAR; ++j)
-    {
-        // od->xMaxDelta[j]=RCONST(0.0); //maximum magnitude of step taken by solver in each state variable direction
-        // od->x0[j]=xi[j];
-        // od->xLast[j]=xi[j];
-        od->xRange[j] = od->xTrajectoryMax[j] - od->xTrajectoryMin[j];
-        // od->dxRange[j]=od->dxTrajectoryMax[j]-od->dxTrajectoryMin[j];
-    }
-
-    od->xThreshold = od->xTrajectoryMin[op->eVarIx] + op->xDownThresh * od->xRange[op->eVarIx]; 
-    //TODO: add downward threshold too, for "up" and "down" state durations
-    // od->xThreshold=od->xTrajectoryMin[op->eVarIx] + op->xUpThresh*od->xRange[op->eVarIx];
-
-    // od->isInNhood = true; //we are at the center of the neighborhood, x0.
-    // od->tLastEvent=*ti;
-
-    for (int j = 0; j < N_VAR; ++j)
-    {
-        od->xTrajectoryMax[j] = -BIG_REAL;
-        od->xTrajectoryMin[j] = BIG_REAL;
-        // od->dxTrajectoryMax[j] = -BIG_REAL;
-        // od->dxTrajectoryMin[j] = BIG_REAL;
-    }
-    // for (int j = 0; j < N_AUX; ++j)
-    // {
-    //     od->auxTrajectoryMax[j] = -BIG_REAL;
-    //     od->auxTrajectoryMin[j] = BIG_REAL;
-    // }
 }
 
 //check for entry into "epsilon ball" surrounding od->x0
 bool eventFunction(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
 {
     //minimum amplitude check in variable: fVarIx 
-    if (od->buffer_filled == 1 && od->xRange[op->fVarIx] > op->minXamp)
+    if (od->buffer_filled == 1 && od->xTrajectoryMax[op->fVarIx] - od->xTrajectoryMin[op->fVarIx] > op->minXamp)
     {
         if (od->foundX0)
         {
@@ -213,7 +197,7 @@ bool eventFunction(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[],
 
             realtype thisXdiff[N_VAR];
             for (int j = 0; j < N_VAR; ++j)
-                thisXdiff[j] = fabs(xi[j] - od->x0[j]) / od->xRange[j];
+                thisXdiff[j] = fabs(xi[j] - od->x0[j]) / (od->xTrajectoryMax[j] - od->xTrajectoryMin[j]);
 
             // od->thisNormXdiff=norm_1(thisXdiff, N_VAR);
             od->thisNormXdiff = norm_2(thisXdiff, N_VAR);
@@ -266,7 +250,7 @@ bool computeEventFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype 
 // - advance solution/slope buffers
 // - check for any intermediate special points & store their info
 // - reset intermediates upon local max event detection
-void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op, bool eventOccurred)
+void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
 {
 
     // realtype tThisMax, xThisMax;
@@ -299,16 +283,23 @@ void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype au
     {
         //check for x0
         if (!od->foundX0)
-        {   //x0 is first time dropping below threshold in x[eVarIx] - xbuffer holds previous xi
-            float lastX=od->xbuffer[op->eVarIx * 3 + 2], thisX=xi[op->eVarIx];
-            if (lastX > od->xThreshold && thisX < od->xThreshold)
-            {
+        {   
+            // Use first local min - need it to be in eVarIx, not fVarIx. 
+            if (od->dxbuffer[op->eVarIx * 3 + 1] <= op->eps_dx && od->dxbuffer[op->eVarIx * 3 + 2] > op->eps_dx ) {
+            	int ix;
+                realtype xThisMin;
+                realtype thisXbuffer[N_VAR];
+                for (int j = 0; j < 3; ++j)
+                    thisXbuffer[j] = od->xbuffer[op->fVarIx * 3 + j];
+            	minOfArray(thisXbuffer, 3, &xThisMin, &ix);
+            	od->tLastEvent=od->tbuffer[ix];
+
                 od->foundX0 = true;
                 od->isInNhood = true;
 
                 //record x0
                 for (int j = 0; j < N_VAR; ++j)
-                    od->x0[j] = xi[j];
+                    od->x0[j] = od->xbuffer[j*3+ix];
 
                 //get plane equation with point X0=Xi and normal vector (X0 - Xi-1)
             }
@@ -360,10 +351,10 @@ void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype au
         od->xbuffer[j * 3 + 0] = od->xbuffer[j * 3 + 1];
         od->xbuffer[j * 3 + 1] = od->xbuffer[j * 3 + 2];
         od->xbuffer[j * 3 + 2] = xi[j];
+        od->dxbuffer[j * 3 + 0] = od->dxbuffer[j * 3 + 1];
+        od->dxbuffer[j * 3 + 1] = od->dxbuffer[j * 3 + 2];
+        od->dxbuffer[j * 3 + 2] = dxi[j];
     }
-    od->dxbuffer[0] = od->dxbuffer[1];
-    od->dxbuffer[1] = od->dxbuffer[2];
-    od->dxbuffer[2] = dxi[op->fVarIx];
 
     //record actual dt
     realtype thisDt = od->tbuffer[2] - od->tbuffer[1];
@@ -418,4 +409,5 @@ void finalizeObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype 
     }
 }
 
-#endif // OBSERVER_NEIGHBORHOOD_2_H
+#endif // USE_OBSERVER_NEIGHBORHOOD_1
+#endif // OBSERVER_NEIGHBORHOOD_1_H

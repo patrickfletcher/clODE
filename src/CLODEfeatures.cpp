@@ -1,14 +1,7 @@
 #include "CLODEfeatures.hpp"
 
-// #define __CL_ENABLE_EXCEPTIONS
-// #if defined(__APPLE__) || defined(__MACOSX)
-//     #include "OpenCL/cl.hpp"
-// #else
-//     #include <CL/cl.hpp>
-// #endif
-
-#define dbg_printf printf
-//~ #define dbg_printf
+// #define dbg_printf printf
+#define dbg_printf
 #ifdef MATLAB_MEX_FILE
 #include "mex.h"
 #define printf mexPrintf
@@ -19,13 +12,17 @@
 #include <stdexcept>
 #include <stdio.h>
 
-CLODEfeatures::CLODEfeatures(ProblemInfo prob, std::string stepper, ObserverType observer, bool clSinglePrecision, OpenCLResource opencl)
-	: CLODE(prob, stepper, clSinglePrecision, opencl), observer(observer)
+CLODEfeatures::CLODEfeatures(ProblemInfo prob, std::string stepper, std::string observer, bool clSinglePrecision, OpenCLResource opencl)
+	: CLODE(prob, stepper, clSinglePrecision, opencl)
 {
 
 	//printf("\nCLODE has been specialized: CLODEfeatures\n");
 
+	getObserverDefineMap(prob, clSinglePrecision, 0, 0, observerDefineMap, availableObserverNames);
+	setObserver(observer);
+
 	clprogramstring += read_file(clodeRoot + "features.cl");
+	dbg_printf("constructor clODEfeatures\n");
 }
 
 CLODEfeatures::~CLODEfeatures() {}
@@ -35,116 +32,51 @@ void CLODEfeatures::initialize(std::vector<cl_double> newTspan, std::vector<cl_d
 {
 
 	clInitialized = false;
-	observerBuildOpts = getObserverBuildOpts();
+	// observerBuildOpts = getObserverBuildOpts();
+	getObserverDefineMap(prob, clSinglePrecision, newOp.fVarIx, newOp.eVarIx, observerDefineMap, availableObserverNames);
+	setObserver(observer);
 
 	//(re)build the program
 	buildProgram(observerBuildOpts);
-	// printf("Using observer: %s\n",observerName.c_str());
 
 	//Base class initialize kernel:
 	initializeTransientKernel();
-	// printf("Transient kernel initialized.\n");
 
 	//initialize the trajectory kernel
 	initializeFeaturesKernel();
-	// printf("Features kernel initialized.\n");
-
 	setSolverParams(newSp);
-	// printf("Solver parameters set.\n");
 	setObserverParams(newOp);
-	// printf("Observer parameters set.\n");
 	setTspan(newTspan);
-	// printf("Integration time span set.\n");
-
 	setProblemData(newX0, newPars); //will set nPts
-	// printf("Problem data set.\n");
-
 	resizeFeaturesVariables(); //set up d_F and d_odata too, which depend on nPts
 
 	clInitialized = true;
-	// printf("Initialization complete.\n");
+	dbg_printf("initialize clODEfeatures.\n");
 }
 
-std::string CLODEfeatures::getObserverBuildOpts()
+void CLODEfeatures::setObserver(std::string newObserver)
 {
-	std::string observerdefine = "";
-	switch (observer)
+	if (newObserver!=observer)
 	{
-	case basic:
-		observerdefine = " -DOBSERVER_BASIC ";
-		observerName = "OBSERVER_BASIC";
-		nFeatures = 7;
-		observerDataSize = 5 * realSize + 2 * sizeof(cl_int);
-		observerDataSize = observerDataSize + observerDataSize % realSize; //need to align the struct to a multiple of the largest type inside (here, realtype)...
-		break;
-
-	case basicAllVar:
-		observerdefine = " -DOBSERVER_BASIC_ALLVAR ";
-		observerName = "OBSERVER_BASIC_ALLVAR";
-		nFeatures = 6 * nVar + 4 * nAux + 1;
-		observerDataSize = 5 * realSize * nVar + 3 * realSize * nAux + 2 * sizeof(cl_int);
-		observerDataSize = observerDataSize + observerDataSize % realSize;
-		break;
-
-	case localmax:
-		observerdefine = " -DOBSERVER_LOCAL_MAX ";
-		observerName = "OBSERVER_LOCAL_MAX";
-		nFeatures = 18;
-		observerDataSize = 29 * realSize + 3 * sizeof(cl_int);
-		observerDataSize = observerDataSize + observerDataSize % realSize;
-		break;
-
-	case threshold1:
-		observerdefine = " -DOBSERVER_THRESHOLD_1 ";
-		observerName = "OBSERVER_THRESHOLD_1";
-		nFeatures = 30;
-		observerDataSize = 2 * sizeof(cl_int);
-		observerDataSize = observerDataSize + observerDataSize % realSize;
-		break;
-
-	case neighborhood1:
-		observerdefine = " -DOBSERVER_NEIGHBORHOOD_1 ";
-		observerName = "OBSERVER_NEIGHBORHOOD_1";
-		nFeatures = 12;
-		observerDataSize = (23 + 7 * nVar) * realSize + 3 * sizeof(cl_int) + 3 * sizeof(cl_bool);
-		observerDataSize = observerDataSize + observerDataSize % realSize;
-		break;
-
-	case threshold2:
-		observerdefine = " -DOBSERVER_THRESHOLD_2 ";
-		observerName = "OBSERVER_THRESHOLD_2";
-		nFeatures = 20;
-		observerDataSize = (7 * 3 + 13) * realSize + 3 * sizeof(cl_int) + 2 * sizeof(cl_bool);
-		observerDataSize = observerDataSize + observerDataSize % realSize;
-		break;
-
-	case neighborhood2:
-		observerdefine = " -DOBSERVER_NEIGHBORHOOD_2 ";
-		observerName = "OBSERVER_NEIGHBORHOOD_2";
-		nFeatures = 11 + 5 * nVar + 3 * nAux;
-		observerDataSize = (19 + 13*nVar) * realSize + 3*nAux * realSize + 3 * sizeof(cl_int) + 3 * sizeof(cl_bool);
-		observerDataSize = observerDataSize + observerDataSize % realSize;
-		break;
-
-	default:
-		observerdefine = " -DOBSERVER_BASIC ";
-		observerName = "OBSERVER_BASIC";
-		nFeatures = 6;
-		observerDataSize = 5 * realSize + 2 * sizeof(cl_int);
-		observerDataSize = observerDataSize + observerDataSize % realSize;
-		break;
+		auto loc = observerDefineMap.find(newObserver); //from steppers.cl
+		if ( loc != observerDefineMap.end() )
+		{
+			observer = newObserver;
+			observerBuildOpts=" -D" + observerDefineMap.at(observer).define;
+			observerDataSize=observerDefineMap.at(observer).observerDataSize;
+			dbg_printf("observerDataSize = %d\n",observerDataSize);
+			observerDataSize = observerDataSize + observerDataSize % realSize;
+			nFeatures=(int)observerDefineMap.at(observer).featureNames.size();
+			featureNames=observerDefineMap.at(observer).featureNames;
+			clInitialized = false;
+		}
+		else
+		{
+			printf("Warning: unknown observer: %s. Observer method unchanged\n",newObserver);
+		}
+		dbg_printf("set observer\n");
 	}
-	// printf("observerDataSize = %d", observerDataSize);
-	return observerdefine;
-}
-
-void CLODEfeatures::setObserver(ObserverType newObserver)
-{
-	if (newObserver != observer)
-	{
-		observer = newObserver;
-		clInitialized = false;
-	}
+	
 }
 
 void CLODEfeatures::initializeFeaturesKernel()
@@ -173,6 +105,7 @@ void CLODEfeatures::initializeFeaturesKernel()
 		printf("ERROR: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
 		throw er;
 	}
+	dbg_printf("initialize features kernel\n");
 }
 
 void CLODEfeatures::setObserverParams(ObserverParams<cl_double> newOp)
@@ -196,6 +129,7 @@ void CLODEfeatures::setObserverParams(ObserverParams<cl_double> newOp)
 		printf("ERROR: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
 		throw er;
 	}
+	dbg_printf("set observer params\n");
 }
 
 //TODO: define an assignment/type cast operator in the struct?
@@ -219,9 +153,7 @@ ObserverParams<cl_float> CLODEfeatures::observerParamsToFloat(ObserverParams<cl_
 
 void CLODEfeatures::resizeFeaturesVariables()
 {
-
 	size_t currentFelements = nFeatures * nPts;
-
 	size_t largestAlloc = std::max(nFeatures * realSize, observerDataSize) * nPts;
 
 	if (largestAlloc > opencl.getMaxMemAllocSize())
@@ -249,7 +181,9 @@ void CLODEfeatures::resizeFeaturesVariables()
 			printf("ERROR: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
 			throw er;
 		}
+		dbg_printf("resize F, d_F, d_odata\n");
 	}
+	
 }
 
 //Simulation routines
@@ -299,6 +233,7 @@ void CLODEfeatures::features()
 			printf("ERROR: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
 			throw er;
 		}
+		dbg_printf("run features\n");
 	}
 	else
 	{

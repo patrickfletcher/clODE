@@ -1,15 +1,12 @@
-//use local maxima as events
+//Event is the detection of local max in specified variable fVarIx
 
-#ifndef OBSERVER_LOCAL_EXTREMUM_H
-#define OBSERVER_LOCAL_EXTREMUM_H
+#ifndef OBSERVER_LOCAL_MAX_H
+#define OBSERVER_LOCAL_MAX_H
 
-#include "clODE_utilities.cl"
-#include "observers.cl"
-#include "realtype.cl"
-
-//events are triggered at local maxima in the variable specified by op.fVarIx
-
-typedef struct ObserverData
+#ifdef __cplusplus
+template <typename realtype>
+#endif
+struct ObserverData_localmax
 {
     //~ realtype nDistinctEvents[N_DISTINCT_MAX];
 
@@ -19,9 +16,9 @@ typedef struct ObserverData
 
     realtype IMI[3]; //max/min/mean
     realtype amp[3]; //max/min/mean
-    //realtype tMaxMin[3]; //max/min/mean
-    realtype xMax[3]; //max/min/mean
-    realtype xMin[3]; //max/min/mean
+    // realtype tMaxMin[3]; //max/min/mean
+    // realtype xMax[3]; //max/min/mean
+    // realtype xMin[3]; //max/min/mean
 
     realtype tLastMax;
     realtype tLastMin;
@@ -37,8 +34,71 @@ typedef struct ObserverData
     int stepcount;
     int buffer_filled; //something fails with bool
 
-} ObserverData;
-//size: (7*3 + 8)*realtype + 3 int
+};
+
+#ifdef __cplusplus
+//Collect all the info for this observer. Must be a static function when defining function in header, otherwise defined for each time included.
+static ObserverInfo getObserverInfo_localmax(const ProblemInfo pi, const bool clSinglePrecision, const int fVarIx, const int eVarIx)
+{
+    ObserverInfo oi;
+    oi.define="USE_OBSERVER_LOCAL_MAX";
+    oi.observerDataSize=clSinglePrecision?sizeof(ObserverData_localmax<float>):sizeof(ObserverData_localmax<double>); //works because no dependence on N_VAR etc
+    std::string varName=pi.varNames[fVarIx];
+    oi.featureNames={
+        "max "+varName+" - min "+varName,
+        "max IMI",
+        "min IMI",
+        "mean IMI",
+        "range IMI",
+        "max event amp",
+        "min event amp",
+        "mean event amp",
+        "range event amp",
+        "max "+varName,
+        "min "+varName,
+        "mean "+varName,
+        "max d"+varName,
+        "min d"+varName,
+        "eventcount",
+        "stepcount",
+    };
+    return oi;
+}
+#endif
+
+
+#ifdef USE_OBSERVER_LOCAL_MAX
+//events are triggered at local maxima in the variable specified by op.fVarIx
+
+typedef struct ObserverData_localmax ObserverData;
+
+//Perform and post-integration cleanup and write desired features into the global array F
+void finalizeFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op, __global realtype *F, int i, int nPts)
+{
+    int ix = 0;
+    F[ix++ * nPts + i] = od->xGlobalMax-od->xGlobalMin;
+    F[ix++ * nPts + i] = od->eventcount > 1 ? od->IMI[0] : 0;
+    F[ix++ * nPts + i] = od->eventcount > 1 ? od->IMI[1] : 0;
+    F[ix++ * nPts + i] = od->eventcount > 1 ? od->IMI[2] : 0;
+    F[ix++ * nPts + i] = od->eventcount > 1 ? od->IMI[0]-od->IMI[1]  : 0;
+    F[ix++ * nPts + i] = od->eventcount > 1 ? od->amp[0] : 0;
+    F[ix++ * nPts + i] = od->eventcount > 1 ? od->amp[1] : 0;
+    F[ix++ * nPts + i] = od->eventcount > 1 ? od->amp[2] : 0;
+    F[ix++ * nPts + i] = od->eventcount > 1 ? od->amp[0]-od->amp[1] : 0;
+    // F[ix++ * nPts + i] = od->eventcount > 0 ? od->xMax[0] : xi[op->fVarIx];
+    // F[ix++ * nPts + i] = od->eventcount > 0 ? od->xMax[1] : xi[op->fVarIx];
+    // F[ix++ * nPts + i] = od->eventcount > 0 ? od->xMax[2] : xi[op->fVarIx];
+    // F[ix++ * nPts + i] = od->eventcount > 0 ? od->xMin[0] : xi[op->fVarIx];
+    // F[ix++ * nPts + i] = od->eventcount > 0 ? od->xMin[1] : xi[op->fVarIx];
+    // F[ix++ * nPts + i] = od->eventcount > 0 ? od->xMin[2] : xi[op->fVarIx];
+    F[ix++ * nPts + i] = od->xGlobalMax;
+    F[ix++ * nPts + i] = od->xGlobalMin;
+    F[ix++ * nPts + i] = od->xTrajectoryMean;
+    F[ix++ * nPts + i] = od->dxGlobalMax;
+    F[ix++ * nPts + i] = od->dxGlobalMin;
+    F[ix++ * nPts + i] = od->eventcount;
+    F[ix++ * nPts + i] = od->stepcount;
+}
 
 //set initial values to relevant fields in ObserverData
 void initializeObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
@@ -60,13 +120,13 @@ void initializeObserverData(realtype *ti, realtype xi[], realtype dxi[], realtyp
     //od->tMaxMin[1]= BIG_REAL;
     //od->tMaxMin[2]= RCONST(0.0);
 
-    od->xMax[0] = -BIG_REAL;
-    od->xMax[1] = BIG_REAL;
-    od->xMax[2] = RCONST(0.0);
+    // od->xMax[0] = -BIG_REAL;
+    // od->xMax[1] = BIG_REAL;
+    // od->xMax[2] = RCONST(0.0);
 
-    od->xMin[0] = -BIG_REAL;
-    od->xMin[1] = BIG_REAL;
-    od->xMin[2] = RCONST(0.0);
+    // od->xMin[0] = -BIG_REAL;
+    // od->xMin[1] = BIG_REAL;
+    // od->xMin[2] = RCONST(0.0);
 
     od->tLastMax = RCONST(0.0);
     od->xLastMin = BIG_REAL;
@@ -97,7 +157,7 @@ void initializeEventDetector(realtype *ti, realtype xi[], realtype dxi[], realty
 //check buffer of slopes for local max
 bool eventFunction(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
 {
-    if (od->buffer_filled == 1)
+    if (od->buffer_filled == 1 && od->xGlobalMax-od->xGlobalMin > op->minXamp)
     {
         return (od->dxbuffer[1] >= -op->eps_dx && od->dxbuffer[2] <= -op->eps_dx);
     }
@@ -121,16 +181,16 @@ bool computeEventFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype 
     //Quadratic interpolation for improved accuracy BROKEN??
     //quadraticInterpVertex(od->tbuffer, od->xbuffer, &tThisMax, &xThisMax);
 
-    od->xMax[0] = fmax(xThisMax, od->xMax[0]);
-    od->xMax[1] = fmin(xThisMax, od->xMax[1]);
-    runningMean(&od->xMax[2], xThisMax, od->eventcount - 1);
+    // od->xMax[0] = fmax(xThisMax, od->xMax[0]);
+    // od->xMax[1] = fmin(xThisMax, od->xMax[1]);
+    // runningMean(&od->xMax[2], xThisMax, od->eventcount - 1);
 
     if (od->eventcount > 1)
     { //implies tLastMax, tLastMin and xLastMin are set
 
-        od->xMin[0] = fmax(od->xLastMin, od->xMin[0]); //must have had two maxima to have found one minimum
-        od->xMin[1] = fmin(od->xLastMin, od->xMin[1]);
-        runningMean(&od->xMin[2], od->xLastMin, od->eventcount - 1);
+        // od->xMin[0] = fmax(od->xLastMin, od->xMin[0]); //must have had two maxima to have found one minimum
+        // od->xMin[1] = fmin(od->xLastMin, od->xMin[1]);
+        // runningMean(&od->xMin[2], od->xLastMin, od->eventcount - 1);
 
         //max/min/mean IMI
         thisIMI = tThisMax - od->tLastMax;
@@ -164,7 +224,7 @@ bool computeEventFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype 
 // - advance solution/slope buffers
 // - check for any intermediate special points & store their info
 // - reset intermediates upon local max event detection
-void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op, bool eventOccurred)
+void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
 {
     // if (od->xRange[op->fVarIx]<op->minXamp) {return;}
 
@@ -204,40 +264,8 @@ void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype au
         }
         // od->xLastMin = fmin(od->xLastMin, xi[op->fVarIx]);
     }
-    //reset intermediate feature storage. Should this be here, or in "computeEventFeatures"?
-    if (eventOccurred)
-    {
-    }
 }
 
-//Perform and post-integration cleanup and write desired features into the global array F
-void finalizeFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op, __global realtype *F, int i, int nPts)
-{
-    int ix = 0;
-    F[ix++ * nPts + i] = od->xGlobalMax - od->xGlobalMin;
-
-    F[ix++ * nPts + i] = od->eventcount > 1 ? od->IMI[0] : 0;
-    F[ix++ * nPts + i] = od->eventcount > 1 ? od->IMI[1] : 0;
-    F[ix++ * nPts + i] = od->eventcount > 1 ? od->IMI[2] : 0;
-
-    F[ix++ * nPts + i] = od->eventcount > 1 ? od->amp[0] : 0;
-    F[ix++ * nPts + i] = od->eventcount > 1 ? od->amp[1] : 0;
-    F[ix++ * nPts + i] = od->eventcount > 1 ? od->amp[2] : 0;
-
-    F[ix++ * nPts + i] = od->eventcount > 0 ? od->xMax[0] : xi[op->fVarIx];
-    F[ix++ * nPts + i] = od->eventcount > 0 ? od->xMax[1] : xi[op->fVarIx];
-    F[ix++ * nPts + i] = od->eventcount > 0 ? od->xMax[2] : xi[op->fVarIx];
-
-    F[ix++ * nPts + i] = od->eventcount > 0 ? od->xMin[0] : xi[op->fVarIx];
-    F[ix++ * nPts + i] = od->eventcount > 0 ? od->xMin[1] : xi[op->fVarIx];
-    F[ix++ * nPts + i] = od->eventcount > 0 ? od->xMin[2] : xi[op->fVarIx];
-
-    F[ix++ * nPts + i] = od->dxGlobalMax;
-    F[ix++ * nPts + i] = od->dxGlobalMin;
-    F[ix++ * nPts + i] = od->xTrajectoryMean;
-    F[ix++ * nPts + i] = od->eventcount;
-    F[ix++ * nPts + i] = od->stepcount;
-}
 
 //Perform and post-integration cleanup of observer data to ensure it is ready for continuation if needed
 void finalizeObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op, __constant realtype *tspan)
@@ -252,4 +280,6 @@ void finalizeObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype 
     }
 }
 
-#endif //OBSERVER_LOCAL_EXTREMUM_H
+#endif //USE_OBSERVER_LOCAL_MAX
+
+#endif //OBSERVER_LOCAL_MAX_H

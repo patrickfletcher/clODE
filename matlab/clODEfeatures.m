@@ -7,11 +7,12 @@ classdef clODEfeatures<clODE & matlab.mixin.SetGet
     %      [newF, newNames]=processFeatures(F, fNames);
     
     properties
-        fNames
         F
-        observer
+        observer='basic'
         op
         nFeatures
+        oNames
+        fNames
         
     %inherits from clODE:
 %     prob
@@ -51,16 +52,17 @@ classdef clODEfeatures<clODE & matlab.mixin.SetGet
             end
             
             if ~exist('observer','var')
-                observer='localmax';
+                observer='basic';
             end
-            observerInt=clODEfeatures.getObserverEnum(observer);
+%             observerInt=clODEfeatures.getObserverEnum(observer);
             
             if ~exist('mexFilename','var')
                 mexFilename='clODEfeaturesmex';
             end
-            obj@clODE(arg1, precision, selectedDevice, stepper, mexFilename, observerInt);
+            obj@clODE(arg1, precision, selectedDevice, stepper, mexFilename, observer);
             
             obj.op=clODEfeatures.observerParams();
+            obj.observerNames;
             obj.observer=observer;
         end
         
@@ -74,31 +76,37 @@ classdef clODEfeatures<clODE & matlab.mixin.SetGet
             obj.nPts=numel(X0)/obj.prob.nVar; 
             obj.op=op;
             obj.getNFeatures();
-            obj.getFeatureNames();
+            obj.featureNames();
         end
         
         function setObserverPars(obj, op)
-            obj.op=op;
-            obj.cppmethod('setobserverpars', op);
+            if ~isequal(op,obj.op)
+                obj.op=op;
+                obj.cppmethod('setobserverpars', op);
+            end
         end
         
         function set.observer(obj, newObserver)
-            observerint=clODEfeatures.getObserverEnum(newObserver);
-            obj.cppmethod('setobserver', observerint);
-            
-            obj.observer=newObserver;
-            obj.getFeatureNames();
+            if ~strcmp(newObserver,obj.observer)
+                if ismember(newObserver,obj.observerNames)
+                    obj.observer=newObserver;
+                    obj.cppmethod('setobserver', newObserver);
+                    obj.featureNames();
+                else
+                    error(['undefined observer: ' newObserver]);
+                end
+            end
         end
         
         %overloads to fetch data if desired
         function features(obj, doInit)
-            
             if ~exist('doInit','var')
                 obj.cppmethod('features');
             else
                 obj.cppmethod('features',doInit);
             end
         end
+        
         
         function nf=getNFeatures(obj)
             obj.nFeatures=obj.cppmethod('getnfeatures');
@@ -115,155 +123,19 @@ classdef clODEfeatures<clODE & matlab.mixin.SetGet
             end
         end
         
-        
-        
-        function fNames=getFeatureNames(obj)
-            fNames={};
-            switch lower(obj.observer)
-                case {'basic'}
-                    fNames{end+1}=[obj.prob.varNames{obj.op.fVarIx} ' amplitude'];
-                    fNames{end+1}=['max ' obj.prob.varNames{obj.op.fVarIx}];
-                    fNames{end+1}=['min ' obj.prob.varNames{obj.op.fVarIx}];
-                    fNames{end+1}=['mean ' obj.prob.varNames{obj.op.fVarIx}];
-                    fNames{end+1}=['max d' obj.prob.varNames{obj.op.fVarIx} '/dt'];
-                    fNames{end+1}=['min d' obj.prob.varNames{obj.op.fVarIx} '/dt'];
-                    fNames{end+1}='step count';
-                    
-                case {'basicallvar','basicall'}
-                    for i=1:obj.prob.nVar
-                        fNames{end+1}=[obj.prob.varNames{i} ' amplitude'];
-                    end
-                    for i=1:obj.prob.nAux
-                        fNames{end+1}=[obj.prob.auxNames{i} ' amplitude'];
-                    end
-                    for i=1:obj.prob.nVar
-                        fNames{end+1}=['max ' obj.prob.varNames{i}];
-                        fNames{end+1}=['min ' obj.prob.varNames{i}];
-                        fNames{end+1}=['mean ' obj.prob.varNames{i}];
-                        fNames{end+1}=['max d' obj.prob.varNames{i} '/dt'];
-                        fNames{end+1}=['min d' obj.prob.varNames{i} '/dt'];
-                    end
-                    
-                    for i=1:obj.prob.nAux
-                        fNames{end+1}=['max ' obj.prob.auxNames{i}];
-                        fNames{end+1}=['min ' obj.prob.auxNames{i}];
-                        fNames{end+1}=['mean ' obj.prob.auxNames{i}];
-                    end
-                    fNames{end+1}='step count';
-                    
-                case {'localmax'}
-                    fNames={...
-                        'amplitude',...
-                        'max IMI',...
-                        'min IMI',...
-                        'mean IMI',...
-                        'max local amp',...
-                        'min local amp',...
-                        'mean local amp',...
-                        ['max ' obj.prob.varNames{obj.op.fVarIx} '_{max}'],...
-                        ['min ' obj.prob.varNames{obj.op.fVarIx} '_{max}'],...
-                        ['mean ' obj.prob.varNames{obj.op.fVarIx} '_{max}'],...
-                        ['max ' obj.prob.varNames{obj.op.fVarIx} '_{min}'],...
-                        ['min ' obj.prob.varNames{obj.op.fVarIx} '_{min}'],...
-                        ['mean ' obj.prob.varNames{obj.op.fVarIx} '_{min}'],...
-                        'dx max',...
-                        'dx min',...
-                        ['mean ' obj.prob.varNames{obj.op.fVarIx}],...
-                        'event count',...
-                        'step count',...
-                        };
-%                         'max tMaxMin',...
-%                         'min tMaxMin',...
-%                         'mean tMaxMin',...
-
-                case {'threshold1','thresh1'}
-                    
-                case {'neighborhood1','nhood1'}
-                    fNames={...
-                        'amplitude',...
-                        'max period',...
-                        'min period',...
-                        'mean period',...
-                        'max nMaxima',...
-                        'min nMaxima',...
-                        'mean nMaxima',...
-                        'dx max',...
-                        'dx min',...
-                        ['mean ' obj.prob.varNames{obj.op.fVarIx}],...
-                        'event count',...
-                        'step count',...
-                        };
-                    
-                case {'threshold2','thresh2'}
-                    fNames={...
-                        'amplitude',...
-                        'max period',...
-                        'min period',...
-                        'mean period',...
-                        'max nMaxima',...
-                        'min nMaxima',...
-                        'mean nMaxima',...
-                        'max upDuration',...
-                        'min upDuration',...
-                        'mean upDuration',...
-                        'max downDuration',...
-                        'min downDuration',...
-                        'mean downDuration',...
-                        'dx max',...
-                        'dx min',...
-                        ['mean ' obj.prob.varNames{obj.op.fVarIx}],...
-                        'event count',...
-                        'step count',...
-                        'max dt',...
-                        'min dt',...
-                        };
-                    
-                case {'neighborhood2','nhood2'}
-                    fNames={...
-                        'max period',...
-                        'min period',...
-                        'mean period',...
-                        'max nMaxima',...
-                        'min nMaxima',...
-                        'mean nMaxima',...
-                        };
-                    for i=1:obj.prob.nVar
-                        fNames{end+1}=['max ' obj.prob.varNames{i}];
-                        fNames{end+1}=['min ' obj.prob.varNames{i}];
-                        fNames{end+1}=['mean ' obj.prob.varNames{i}];
-                        fNames{end+1}=['max d' obj.prob.varNames{i} '/dt'];
-                        fNames{end+1}=['min d' obj.prob.varNames{i} '/dt'];
-                    end
-
-                    for i=1:obj.prob.nAux
-                        fNames{end+1}=['max ' obj.prob.auxNames{i}];
-                        fNames{end+1}=['min ' obj.prob.auxNames{i}];
-                        fNames{end+1}=['mean ' obj.prob.auxNames{i}];
-                    end
-                    fNames=[fNames, {
-                        'event count',...
-                        'step count',...
-                        'max dt',...
-                        'min dt',...
-                        'mean dt',...
-                        }];
-                    
-                otherwise %'basic'
-                    fNames{end+1}=['max ' obj.prob.varNames{obj.op.fVarIx}];
-                    fNames{end+1}=['min ' obj.prob.varNames{obj.op.fVarIx}];
-                    fNames{end+1}=['mean ' obj.prob.varNames{obj.op.fVarIx}];
-                    fNames{end+1}=['max d' obj.prob.varNames{obj.op.fVarIx} '/dt'];
-                    fNames{end+1}=['min d' obj.prob.varNames{obj.op.fVarIx} '/dt'];
-                    fNames{end+1}='nSteps';
-                    
-            end
+        function fNames=featureNames(obj)
+            fNames=obj.cppmethod('getfeaturenames');
             obj.fNames=fNames;
+        end
+        
+        function oNames=observerNames(obj)
+            oNames=obj.cppmethod('getobservernames');
+            obj.oNames=oNames;
         end
         
     end
     
-    
-    
+     
     %static helper methods
     methods (Static=true)
         
@@ -282,27 +154,6 @@ classdef clODEfeatures<clODE & matlab.mixin.SetGet
             op.eps_dx=1e-6; %for checking for min/max
         end
         
-        function observerint=getObserverEnum(observername)
-            switch lower(observername)
-                case {'basic'}
-                    observerint=0;
-                case {'basicallvar','basicall'}
-                    observerint=1;
-                case {'localmax'}
-                    observerint=2;
-                case {'threshold1','thresh1'}
-                    observerint=3;
-                case {'neighborhood1','nhood1'}
-                    observerint=4;
-                case {'threshold2','thresh2'}
-                    observerint=5;
-                case {'neighborhood2','nhood2'}
-                    observerint=6;
-                otherwise
-                    warning('Unrecognized observer method name. Using default: basic')
-                    observerint=0;
-            end
-        end
         
     end
     

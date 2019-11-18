@@ -1,6 +1,6 @@
 % Script to compile clODE mex interface, so it can be used from Matlab.
 % Make sure to set the correct paths to files in the Configuration block!
-
+close all
 clear
 
 %TODO: auto detect paths for some common setups? e.g. CUDA
