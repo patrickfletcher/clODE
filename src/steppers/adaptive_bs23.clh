@@ -22,7 +22,7 @@
 #define E4 RCONST(-1.0)/RCONST(8.0)
 
 //this is ode23 in matlab
-realtype adaptiveOneStep(realtype *ti, realtype xi[], realtype k1[], realtype pars[], const realtype dt, realtype aux[], realtype err[], realtype wi[])
+inline realtype adaptiveOneStep(realtype *ti, realtype xi[], realtype k1[], realtype pars[], const realtype dt, realtype aux[], realtype err[], realtype wi[])
 {
     realtype tNew = *ti + dt;
     realtype newDt = tNew - *ti;

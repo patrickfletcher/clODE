@@ -1,5 +1,5 @@
 //Explicit (Forward) Euler
-void stepper(realtype *ti, realtype xi[], realtype k1[], realtype pars[], const realtype dt, realtype aux[], realtype wi[])
+inline void stepper(realtype *ti, realtype xi[], realtype k1[], realtype pars[], const realtype dt, realtype aux[], realtype wi[])
 {    
     getRHS(*ti, xi, pars, k1, aux, wi); //compute k1
 
