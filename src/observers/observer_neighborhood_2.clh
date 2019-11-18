@@ -104,7 +104,7 @@ typedef struct ObserverData_nhood2 ObserverData;
 // ObserverData size: 3*int + (4*3 + 7*nVar + 9)*realtype + 3*bool
 
 //set initial values to relevant fields in ObserverData
-void initializeObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
+inline oid initializeObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
 {
     od->eventcount = 0;
     od->stepcount = 0;
@@ -183,7 +183,7 @@ void initializeObserverData(realtype *ti, realtype xi[], realtype dxi[], realtyp
 
 //restricted per-timestep update of observer data for initializing event detector
 // - get extent of trajectory in state space, and max/min slopes
-void warmupObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
+inline void warmupObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
 {
     for (int j = 0; j < N_VAR; ++j)
     {
@@ -206,7 +206,7 @@ void warmupObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype au
 }
 
 //process warmup data to compute relevant event detector quantities (e.g. thresholds)
-void initializeEventDetector(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
+inline void initializeEventDetector(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
 {
 
     for (int j = 0; j < N_VAR; ++j)
@@ -240,7 +240,7 @@ void initializeEventDetector(realtype *ti, realtype xi[], realtype dxi[], realty
 }
 
 //check for entry into "epsilon ball" surrounding od->x0
-bool eventFunction(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
+inline bool eventFunction(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
 {
     //minimum amplitude check in variable: fVarIx 
     if (od->buffer_filled == 1 && od->xRange[op->fVarIx] > op->minXamp)
@@ -266,7 +266,7 @@ bool eventFunction(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[],
 
 //When an event is detected, computes desired event-based features. returns true if a terminal event was reached
 // - get (t,x) at local max, compute: IMI, tMaxMin, amp
-bool computeEventFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
+inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
 {
     realtype tThisEvent;
 
@@ -306,7 +306,7 @@ bool computeEventFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype 
 // - advance solution/slope buffers
 // - check for any intermediate special points & store their info
 // - reset intermediates upon local max event detection
-void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
+inline void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
 {
 
     // realtype tThisMax, xThisMax;
@@ -414,7 +414,7 @@ void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype au
 }
 
 //Perform and post-integration cleanup and write desired features into the global array F
-void finalizeFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op, __global realtype *F, int i, int nPts)
+inline void finalizeFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op, __global realtype *F, int i, int nPts)
 {
     int ix = 0;
     F[ix++ * nPts + i] = od->eventcount > 1 ? od->period[0] : RCONST(0.0);
@@ -445,7 +445,7 @@ void finalizeFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi
 }
 
 //Perform and post-integration cleanup of observer data to ensure it is ready for continuation if needed
-void finalizeObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op, __constant realtype *tspan)
+inline void finalizeObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op, __constant realtype *tspan)
 {
     //shift all time-based observer members left by [tf-t0]
     realtype T = *ti - tspan[0];

@@ -72,36 +72,8 @@ static ObserverInfo getObserverInfo_localmax(const ProblemInfo pi, const bool cl
 
 typedef struct ObserverData_localmax ObserverData;
 
-//Perform and post-integration cleanup and write desired features into the global array F
-void finalizeFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op, __global realtype *F, int i, int nPts)
-{
-    int ix = 0;
-    F[ix++ * nPts + i] = od->xGlobalMax-od->xGlobalMin;
-    F[ix++ * nPts + i] = od->eventcount > 1 ? od->IMI[0] : 0;
-    F[ix++ * nPts + i] = od->eventcount > 1 ? od->IMI[1] : 0;
-    F[ix++ * nPts + i] = od->eventcount > 1 ? od->IMI[2] : 0;
-    F[ix++ * nPts + i] = od->eventcount > 1 ? od->IMI[0]-od->IMI[1]  : 0;
-    F[ix++ * nPts + i] = od->eventcount > 1 ? od->amp[0] : 0;
-    F[ix++ * nPts + i] = od->eventcount > 1 ? od->amp[1] : 0;
-    F[ix++ * nPts + i] = od->eventcount > 1 ? od->amp[2] : 0;
-    F[ix++ * nPts + i] = od->eventcount > 1 ? od->amp[0]-od->amp[1] : 0;
-    // F[ix++ * nPts + i] = od->eventcount > 0 ? od->xMax[0] : xi[op->fVarIx];
-    // F[ix++ * nPts + i] = od->eventcount > 0 ? od->xMax[1] : xi[op->fVarIx];
-    // F[ix++ * nPts + i] = od->eventcount > 0 ? od->xMax[2] : xi[op->fVarIx];
-    // F[ix++ * nPts + i] = od->eventcount > 0 ? od->xMin[0] : xi[op->fVarIx];
-    // F[ix++ * nPts + i] = od->eventcount > 0 ? od->xMin[1] : xi[op->fVarIx];
-    // F[ix++ * nPts + i] = od->eventcount > 0 ? od->xMin[2] : xi[op->fVarIx];
-    F[ix++ * nPts + i] = od->xGlobalMax;
-    F[ix++ * nPts + i] = od->xGlobalMin;
-    F[ix++ * nPts + i] = od->xTrajectoryMean;
-    F[ix++ * nPts + i] = od->dxGlobalMax;
-    F[ix++ * nPts + i] = od->dxGlobalMin;
-    F[ix++ * nPts + i] = od->eventcount;
-    F[ix++ * nPts + i] = od->stepcount;
-}
-
 //set initial values to relevant fields in ObserverData
-void initializeObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
+inline void initializeObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
 {
 
     od->tbuffer[2] = *ti;
@@ -144,18 +116,18 @@ void initializeObserverData(realtype *ti, realtype xi[], realtype dxi[], realtyp
 }
 
 //no warmup needed
-void warmupObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
+inline void warmupObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
 {
 }
 
 //process warmup data to compute relevant event detector quantities (e.g. thresholds)
-void initializeEventDetector(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
+inline void initializeEventDetector(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
 {
     //nothing to do
 }
 
 //check buffer of slopes for local max
-bool eventFunction(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
+inline bool eventFunction(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
 {
     if (od->buffer_filled == 1 && od->xGlobalMax-od->xGlobalMin > op->minXamp)
     {
@@ -166,7 +138,7 @@ bool eventFunction(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[],
 
 //When an event is detected, computes desired event-based features. returns true if a terminal event was reached
 // - get (t,x) at local max, compute: IMI, tMaxMin, amp
-bool computeEventFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
+inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
 {
     realtype tThisMax, xThisMax;
     realtype thisIMI, thisTMaxMin, thisAmp;
@@ -224,7 +196,7 @@ bool computeEventFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype 
 // - advance solution/slope buffers
 // - check for any intermediate special points & store their info
 // - reset intermediates upon local max event detection
-void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
+inline void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
 {
     // if (od->xRange[op->fVarIx]<op->minXamp) {return;}
 
@@ -267,8 +239,37 @@ void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype au
 }
 
 
+
+//Perform and post-integration cleanup and write desired features into the global array F
+inline void finalizeFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op, __global realtype *F, int i, int nPts)
+{
+    int ix = 0;
+    F[ix++ * nPts + i] = od->xGlobalMax-od->xGlobalMin;
+    F[ix++ * nPts + i] = od->eventcount > 1 ? od->IMI[0] : 0;
+    F[ix++ * nPts + i] = od->eventcount > 1 ? od->IMI[1] : 0;
+    F[ix++ * nPts + i] = od->eventcount > 1 ? od->IMI[2] : 0;
+    F[ix++ * nPts + i] = od->eventcount > 1 ? od->IMI[0]-od->IMI[1]  : 0;
+    F[ix++ * nPts + i] = od->eventcount > 1 ? od->amp[0] : 0;
+    F[ix++ * nPts + i] = od->eventcount > 1 ? od->amp[1] : 0;
+    F[ix++ * nPts + i] = od->eventcount > 1 ? od->amp[2] : 0;
+    F[ix++ * nPts + i] = od->eventcount > 1 ? od->amp[0]-od->amp[1] : 0;
+    // F[ix++ * nPts + i] = od->eventcount > 0 ? od->xMax[0] : xi[op->fVarIx];
+    // F[ix++ * nPts + i] = od->eventcount > 0 ? od->xMax[1] : xi[op->fVarIx];
+    // F[ix++ * nPts + i] = od->eventcount > 0 ? od->xMax[2] : xi[op->fVarIx];
+    // F[ix++ * nPts + i] = od->eventcount > 0 ? od->xMin[0] : xi[op->fVarIx];
+    // F[ix++ * nPts + i] = od->eventcount > 0 ? od->xMin[1] : xi[op->fVarIx];
+    // F[ix++ * nPts + i] = od->eventcount > 0 ? od->xMin[2] : xi[op->fVarIx];
+    F[ix++ * nPts + i] = od->xGlobalMax;
+    F[ix++ * nPts + i] = od->xGlobalMin;
+    F[ix++ * nPts + i] = od->xTrajectoryMean;
+    F[ix++ * nPts + i] = od->dxGlobalMax;
+    F[ix++ * nPts + i] = od->dxGlobalMin;
+    F[ix++ * nPts + i] = od->eventcount;
+    F[ix++ * nPts + i] = od->stepcount;
+}
+
 //Perform and post-integration cleanup of observer data to ensure it is ready for continuation if needed
-void finalizeObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op, __constant realtype *tspan)
+inline void finalizeObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op, __constant realtype *tspan)
 {
     //shift all time-based observer members left by [tf-t0]
     realtype T = *ti - tspan[0];
