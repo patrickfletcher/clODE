@@ -137,14 +137,14 @@ void CLODE::buildProgram(std::string extraBuildOpts)
 
 	//ODEsystem source is delayed to here, in case we change it
 	ODEsystemsource = read_file(clRHSfilename);
-	clprogramstring += ODEsystemsource;
+	// clprogramstring += ODEsystemsource;
 
 	// printf("%s", clprogramstring.c_str());
 	// printf("%s", ODEsystemsource.c_str());
 	// printf("%s", buildOptions.c_str());
 
 	//now build
-	opencl.buildProgramFromString(clprogramstring, buildOptions);
+	opencl.buildProgramFromString(clprogramstring + ODEsystemsource, buildOptions);
 
 	printStatus();
 	dbg_printf("build clODE\n");
