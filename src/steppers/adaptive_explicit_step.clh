@@ -1,61 +1,60 @@
 #include "clODE_struct_defs.cl" //for SolverParams struct definition
 #include "realtype.cl"
 
+#define SAFETY_FACTOR RCONST(0.8)
+// #define EXPON RCONST(1.0)/LOCAL_ERROR_ORDER  //controls error per step -> local error only; err~tol
+#define EXPON RCONST(1.0)/(LOCAL_ERROR_ORDER+RCONST(1.0))  //controls error per unit step (err/dt~tol) -> global error proportional to tol (tolerance proportional) 
+   
+//elementary controllor (as in ode45)
+// #define EXPON1 = RCONST(1.0); 
+// #define EXPON2 = RCONST(0.0); 
+// #define EXPON3 = RCONST(0.0);
+
+//convolution digital filter version
+// #define EXPON1 = RCONST(1.0) / RCONST(3.0); 
+// #define EXPON2 = RCONST(0.0); 
+// #define EXPON3 = RCONST(0.0);
+
+//for controller with one step history, PI3333
+// #define EXPON1 = RCONST(2.0) / RCONST(3.0); 
+// #define EXPON2 = RCONST(-1.0) / RCONST(3.0); 
+// #define EXPON3 = RCONST(0.0);
+
+//for controller with one step history, PI42
+// #define EXPON1 = RCONST(3.0) / RCONST(5.0); 
+// #define EXPON2 = RCONST(-1.0) / RCONST(5.0); 
+// #define EXPON3 = RCONST(0.0);
+
+//for controller with one step history, PI34
+// #define EXPON1 = RCONST(7.0) / RCONST(10.0); 
+// #define EXPON2 = RCONST(-2.0) / RCONST(5.0); 
+// #define EXPON3 = RCONST(0.0);
+
+// //for controller with one step history, H211pi
+// #define EXPON1 = RCONST(1.0) / RCONST(6.0) ; 
+// #define EXPON2 = RCONST(1.0) / RCONST(6.0) ;  //broken
+// #define EXPON3 = RCONST(0.0);
+
+//for controller with one step history, FIR211
+// #define EXPON1 = RCONST(1.0) / RCONST(2.0) ; 
+// #define EXPON2 = RCONST(1.0) / RCONST(2.0) ; 
+// #define EXPON3 = RCONST(1.0) / RCONST(2.0) ;  //broken
+
+//for controller with one step history, H211b
+// #define EXPON1 = RCONST(1.0) / RCONST(4.0) ; 
+// #define EXPON2 = RCONST(1.0) / RCONST(4.0) ; 
+// #define EXPON3 = RCONST(1.0) / RCONST(4.0) ; //broken
+
 //Wrapper to handle step-size adaptation.  note: wi should be zeros
-inline int stepper(realtype *ti, realtype xi[], realtype k1[], realtype pars[], __constant struct SolverParams *sp, realtype *dt, __constant realtype *tspan, realtype aux[], realtype wi[], realtype *lastControlErr, realtype *lastDtRatio)
+inline int stepper(realtype *ti, realtype xi[], realtype k1[], realtype pars[], __constant struct SolverParams *sp, realtype *dt, __constant realtype *tspan, realtype aux[], realtype wi[], realtype *lastRelErr, realtype *lastDtRatio)
 {
-    realtype tNew, normErr, controlErr, err[N_VAR], newxi[N_VAR], newk1[N_VAR];
+    realtype tNew, normErr, relErr, err[N_VAR], newxi[N_VAR], newk1[N_VAR];
 
-    realtype oldDt = *dt, newDt = *dt, ratio= *lastDtRatio;
+    realtype newDt = *dt;
+    // realtype oldDt = *dt;
+    // realtype dtRatio= *lastDtRatio;
     realtype threshold = sp->abstol / sp->reltol;
-    // realtype expon = RCONST(1.0) / LOCAL_ERROR_ORDER; //controls error per step -> local error only; err~tol
-    realtype expon = RCONST(1.0) / (LOCAL_ERROR_ORDER + RCONST(1.0)); //controls error per unit step (err/dt~tol) -> global error proportional to tol (tolerance proportional) 
     realtype hmin = RCONST(16.0) * fabs(fabs(nextafter(*ti, RCONST(1.1)*tspan[1])) - *ti); //matches Matlab: hmin=16*eps(t)
-
-    //elementary controllor (as in ode45)
-    realtype expon1 = RCONST(1.0); 
-    realtype expon2 = RCONST(0.0); 
-    realtype expon3 = RCONST(0.0);
-
-    //convolution digital filter version
-    // realtype expon1 = RCONST(1.0) / RCONST(3.0); 
-    // realtype expon2 = RCONST(0.0); 
-    // realtype expon3 = RCONST(0.0);
-
-    //for controller with one step history, PI3333
-    // realtype expon1 = RCONST(2.0) / RCONST(3.0); 
-    // realtype expon2 = - RCONST(1.0) / RCONST(3.0); 
-    // realtype expon3 = RCONST(0.0);
-    
-    //for controller with one step history, PI42
-    // realtype expon1 = RCONST(3.0) / RCONST(5.0); 
-    // realtype expon2 = - RCONST(1.0) / RCONST(5.0); 
-    // realtype expon3 = RCONST(0.0);
-
-    //for controller with one step history, H211b
-    // realtype expon1 = RCONST(1.0) / RCONST(4.0) ; 
-    // realtype expon2 = RCONST(1.0) / RCONST(4.0) ; 
-    // realtype expon3 = RCONST(1.0) / RCONST(4.0) ; 
-
-    //estimate first step size from derivative at initial condition
-    // if (*ti == tspan[0])
-    // {
-    //     ratio=RCONST(1.0);
-    //     //newDt=RCONST(10.0)*hmin;
-    //     //newDt=fmin(sp->dtmax, fabs(tspan[1]-tspan[0]));
-    //     for (int j = 0; j < N_VAR; ++j)
-    //         err[j] = k1[j] / fmax(fabs(xi[j]), threshold);
-        
-    //     normErr = norm_inf(err, N_VAR); //error estimate at first step
-    //     *lastControlErr/= pow( RCONST(0.9)*sp->reltol, expon);
-    //     *lastControlErr  = clamp(*lastControlErr , RCONST(0.1), RCONST(4.0)); 
-
-    //     // realtype rh = normErr / (RCONST(0.8) * pow(sp->reltol, expon));
-    //     // if (newDt * rh > RCONST(1.0))
-    //     //     newDt = RCONST(1.0) / rh;
-            
-    //     // newDt=clamp(newDt, hmin, sp->dtmax);
-    // }
 
     bool noFailedSteps = true;
     while (true)
@@ -67,53 +66,47 @@ inline int stepper(realtype *ti, realtype xi[], realtype k1[], realtype pars[], 
             newk1[j] = k1[j];
         }
 
-        newDt = adaptiveOneStep(&tNew, newxi, newk1, pars, newDt, aux, err, wi);
-        //returns purified dt: roundoff reduces accuracy of ti+dt, so use the portion of dt that had an effect...
+        newDt = clamp(newDt, hmin, sp->dtmax); //limiters
+        newDt = adaptiveOneStep(&tNew, newxi, newk1, pars, newDt, aux, err, wi); //returns purified dt: roundoff reduces accuracy of ti+dt, so use the portion of dt that had an effect...
 
         //Error estimation - elementwise
         for (int j = 0; j < N_VAR; j++)
             err[j] /= fmax( fmax( fabs(xi[j]), fabs(newxi[j]) ) , threshold);
         
-        normErr = norm_inf(err, N_VAR); //largest relative error among variables
-        controlErr = pow( RCONST(0.9)*sp->reltol / normErr, expon);
-        controlErr  = clamp(controlErr , RCONST(0.1), RCONST(4.0)); 
-
-        // normErr = norm_2(err, N_VAR);
-        // normErr = norm_1(err, N_VAR);
-
-        //Error estimation - normcontrol
-        //~ realtype nXi=norm_2(xi, N_VAR);
-        //~ realtype nNewXi=norm_2(newxi, N_VAR);
-        //~ normErr = norm_2(err, N_VAR)/fmax(fmax(nXi,nNewXi),threshold);
+        normErr = norm_inf(err, N_VAR); //largest relative error among variables (most conservative)
+        
+        //Söderlind
+        // relErr = pow( SAFETY_FACTOR*sp->reltol / normErr, EXPON);
+        // relErr = SAFETY_FACTOR*pow( sp->reltol / normErr, EXPON);
+        // relErr  = clamp(relErr , RCONST(0.1), RCONST(4.0)); 
 
         //shrink dt if too much error
         if (normErr > sp->reltol)
         {
-            if (newDt < hmin)
+            if (newDt <= hmin)
             {
                 *dt = hmin;
                 return -1;
             } //pass error signal back to main loop..
 
+            //matches matlab (double precision):
             if (noFailedSteps)
             { //first failure: shrink proportional to error
                 noFailedSteps = false;
-                // newDt *= fmax(ADAPTIVE_STEP_MAX_SHRINK, pow(RCONST(0.9)*sp->reltol / normErr, expon)); //limited, no error memory
-                // newDt *= RCONST(0.9) * pow(sp->reltol / normErr, expon); //no error memory
-                // newDt *= pow( RCONST(0.9)*sp->reltol / normErr, expon1) * pow(RCONST(0.9)*sp->reltol / *lastControlErr, expon2); //with one step error memory
-                // newDt *= pow( RCONST(0.9)*sp->reltol / normErr, expon1) * pow(RCONST(0.9)*sp->reltol / *lastControlErr, expon2)* pow(newDt / oldDt, expon3); 
-                // realtype ratio=pow(controlErr, expon1) * pow(*lastControlErr, expon2) * pow(oldDt / newDt, expon3);
-                // newDt *= clamp(ratio, RCONST(0.5), RCONST(1.0)); //must shrink, but not too much
+                newDt *= fmax(ADAPTIVE_STEP_MAX_SHRINK, SAFETY_FACTOR*pow(sp->reltol / normErr, EXPON)); 
             }
-            // else
-            // { //repeated failed step: cut stepsize in half
-            //     newDt *= RCONST(0.5) ; 
-            // }
-            // realtype ratio=pow( RCONST(0.9)*sp->reltol / normErr, expon1) * pow(RCONST(0.9)*sp->reltol / *lastControlErr, expon2) * pow(oldDt / newDt, expon3);
-            ratio=pow(controlErr, expon1) * pow(*lastControlErr, expon2) * pow(RCONST(1.0)/ratio, expon3);
-            newDt *= clamp(ratio, ADAPTIVE_STEP_MAX_SHRINK, RCONST(1.0)); //must shrink, but not too much
-            
-            newDt = clamp(newDt, hmin, sp->dtmax); //limiters
+            else
+            { //repeated failed step: cut stepsize in half
+                newDt *= RCONST(0.5) ; 
+            }
+
+            //Söderlind - seems to make many more failed steps, but takes fewer steps and smoother changes in dt
+            // if (noFailedSteps)
+            //     noFailedSteps = false;
+            // dtRatio=pow(relErr, EXPON1) * pow(*lastRelErr, EXPON2);// * pow(RCONST(1.0)/dtRatio, EXPON2);
+            // // dtRatio=pow(sp->reltol/relErr, EXPON1) * pow(relErr/ *lastRelErr, EXPON2);// * pow(RCONST(1.0)/dtRatio, EXPON3);
+            // dtRatio=fmax(dtRatio, ADAPTIVE_STEP_MAX_SHRINK); //shrink, but not too much
+            // newDt *= dtRatio;
         }
         else
         {
@@ -124,18 +117,17 @@ inline int stepper(realtype *ti, realtype xi[], realtype k1[], realtype pars[], 
     //no failure this step => attempt to increase dt for next timestep
     if (noFailedSteps)
     {
-        // newDt *= fmin(ADAPTIVE_STEP_MAX_GROW, RCONST(0.9) * pow(sp->reltol / normErr, expon));
-        // newDt *= RCONST(0.9) * pow(sp->reltol / normErr, expon); //Deadbeat (Integral)
-        // newDt *= pow( RCONST(0.9)*sp->reltol / normErr, expon1) * pow(RCONST(0.9)*sp->reltol / *lastControlErr, expon2); //with one step error memory
-        // realtype ratio=pow( RCONST(0.9)*sp->reltol / normErr, expon1) * pow(RCONST(0.9)*sp->reltol / *lastControlErr, expon2)* pow(newDt / oldDt, expon3);
-        ratio=pow(controlErr, expon1) * pow(*lastControlErr, expon2) * pow(RCONST(1.0)/ratio, expon3);
-        newDt *= clamp(ratio, RCONST(1.0), ADAPTIVE_STEP_MAX_GROW); //grow, but not too much
+        newDt *= fmin(ADAPTIVE_STEP_MAX_GROW,  SAFETY_FACTOR*pow(sp->reltol / normErr, EXPON)); //matches matlab (double precision)
+        
+        //Söderlind
+        // dtRatio=pow(sp->reltol/relErr, EXPON1) * pow(relErr/ *lastRelErr, EXPON2);// * pow(RCONST(1.0)/dtRatio, EXPON3);
+        // // dtRatio=pow(relErr, EXPON1) * pow(*lastRelErr, EXPON2);// * pow(RCONST(1.0)/dtRatio, EXPON3);
+        // dtRatio = fmin(dtRatio, ADAPTIVE_STEP_MAX_GROW); //grow, but not too much
+        // newDt *= dtRatio;
     }
 
     newDt = fmin(newDt, fabs(tspan[1] - *ti)); //hit the final time exactly
     newDt = clamp(newDt, hmin, sp->dtmax); //limiters
-    
-    //TODO: consider smooth limiters: eg smoothstep, atan, ...
 
     //update the solution and dt
     *dt = newDt; //new step size to attempt on next step
@@ -145,8 +137,19 @@ inline int stepper(realtype *ti, realtype xi[], realtype k1[], realtype pars[], 
         xi[j] = newxi[j];
         k1[j] = newk1[j];
     }
-    *lastControlErr=controlErr;
-    *lastDtRatio=ratio;
+    // *lastRelErr=relErr;
+    // *lastDtRatio=dtRatio;
 
     return 0;
 }
+
+//TODO: consider smooth limiters: eg smoothstep, atan, ...
+
+
+// normErr = norm_2(err, N_VAR);
+// normErr = norm_1(err, N_VAR);
+
+//Error estimation - normcontrol
+//~ realtype nXi=norm_2(xi, N_VAR);
+//~ realtype nNewXi=norm_2(newxi, N_VAR);
+//~ normErr = norm_2(err, N_VAR)/fmax(fmax(nXi,nNewXi),threshold);

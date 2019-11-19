@@ -18,11 +18,9 @@ tspan=[0,3000];
 
 %set up parameters and initial conditions
 nPts=32;
-p=clo.prob.p0;
-x0=[0,0,0,0];
 
-X0=repmat(x0,nPts,1);
-P=repmat(p,nPts,1);
+X0=repmat(clo.prob.x0,nPts,1);
+P=repmat(clo.prob.p0,nPts,1);
 
 
 clo.initialize(tspan, X0, P, sp);
