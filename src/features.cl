@@ -45,6 +45,8 @@ __kernel void features(
 	rd.randnUselast = 0;
 
 #ifdef ADAPTIVE_STEPSIZE
+	realtype lastErr=RCONST(1.0);
+	realtype lastDtRatio=RCONST(1.0);
 	for (int j = 0; j < N_WIENER; ++j)
 		wi[j] = RCONST(0.0);
 #else
@@ -71,7 +73,7 @@ __kernel void features(
 			++step;
 	#ifdef ADAPTIVE_STEPSIZE
 			//leave the wi=0 for adaptive steppers
-			stepflag = stepper(&ti, xi, dxi, p, sp, &dt, tspanPtr, auxi, wi);
+			stepflag = stepper(&ti, xi, dxi, p, sp, &dt, tspanPtr, auxi, wi, &lastErr, &lastDtRatio);
 			if (stepflag!=0)
 				break;
 	#else
@@ -101,6 +103,8 @@ __kernel void features(
 		rd.randnUselast = 0;
 
 	#ifdef ADAPTIVE_STEPSIZE
+		lastErr=RCONST(1.0);
+		lastDtRatio=RCONST(1.0);
 		for (int j = 0; j < N_WIENER; ++j)
 			wi[j] = RCONST(0.0);
 	#else
@@ -127,7 +131,7 @@ __kernel void features(
 
 #ifdef ADAPTIVE_STEPSIZE
 		//leave the wi=0 for adaptive steppers
-		stepflag = stepper(&ti, xi, dxi, p, sp, &dt, tspanPtr, auxi, wi);
+		stepflag = stepper(&ti, xi, dxi, p, sp, &dt, tspanPtr, auxi, wi, &lastErr, &lastDtRatio);
         if (stepflag!=0)
             break;
 #else
