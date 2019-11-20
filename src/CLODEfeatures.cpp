@@ -201,7 +201,7 @@ void CLODEfeatures::features()
 
 	if (clInitialized)
 	{
-
+		// printf("do init=%s\n",doObserverInitialization?"true":"false");
 		//resize output variables - will only occur if nPts has changed
 		resizeFeaturesVariables();
 

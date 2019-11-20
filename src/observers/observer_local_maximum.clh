@@ -8,7 +8,7 @@ template <typename realtype>
 #endif
 struct ObserverData_localmax
 {
-    //~ realtype nDistinctEvents[N_DISTINCT_MAX];
+    // realtype nDistinctEvents[N_DISTINCT_MAX];
 
     realtype tbuffer[3];
     realtype xbuffer[3];
@@ -112,7 +112,7 @@ inline void initializeObserverData(realtype *ti, realtype xi[], realtype dxi[], 
 
     od->eventcount = 0;
     od->stepcount = 0;
-    od->buffer_filled = false;
+    od->buffer_filled = 0;
 }
 
 //no warmup needed
@@ -129,9 +129,11 @@ inline void initializeEventDetector(realtype *ti, realtype xi[], realtype dxi[],
 //check buffer of slopes for local max
 inline bool eventFunction(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
 {
-    if (od->buffer_filled == 1 && od->xGlobalMax-od->xGlobalMin > op->minXamp)
+    if (od->buffer_filled)
     {
-        return (od->dxbuffer[1] >= -op->eps_dx && od->dxbuffer[2] <= -op->eps_dx);
+        bool doCheckEvent=od->xGlobalMax-od->xGlobalMin > op->minXamp;
+        if (doCheckEvent)
+            return (od->dxbuffer[1] >= -op->eps_dx && od->dxbuffer[2] <= -op->eps_dx);
     }
     return false;
 }
@@ -200,12 +202,6 @@ inline void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], real
 {
     // if (od->xRange[op->fVarIx]<op->minXamp) {return;}
 
-    // ++od->stepcount;
-    if (od->stepcount > 2 && od->buffer_filled == 0)
-    {
-        od->buffer_filled = 1;
-    }
-
     //advance solution buffer
     for (int i = 0; i < 2; ++i)
     {
@@ -224,7 +220,13 @@ inline void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], real
     od->dxGlobalMin = fmin(od->dxGlobalMin, dxi[op->fVarIx]);
     runningMean(&od->xTrajectoryMean, xi[op->fVarIx], od->stepcount);
 
-    if (od->buffer_filled == 1)
+    // ++od->stepcount;
+    if (!od->buffer_filled)
+    {
+        if (od->stepcount > 2)
+            od->buffer_filled=1;
+    }
+    else
     {
 
         //local min check - one between each max - simply overwrite tLastMin, xLastMin

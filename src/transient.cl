@@ -66,7 +66,6 @@ __kernel void transient(
 
         stepper(&ti, xi, dxi, p, dt, auxi, wi);
         ti = tspan[0] + step * dt; //purify ti - Gets nSteps correct, but incompatible with shrinking final step without conditional to check if doing the last step
-                                   //FSAL: dxi is at new ti, Not FSAL: dxi is at old ti
 #endif
     }
 
