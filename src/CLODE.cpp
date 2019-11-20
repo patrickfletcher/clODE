@@ -33,7 +33,7 @@ CLODE::CLODE(ProblemInfo prob, std::string stepper, bool clSinglePrecision, Open
 
 	// for (auto s : availableSteppers)
 	// {
-	// 	printf("%s\n",s);
+	// 	printf("%s\n",s.c_str());
 	// }
 
 	setNewProblem(prob);
@@ -74,7 +74,7 @@ void CLODE::setStepper(std::string newStepper)
 		}
 		else
 		{
-			printf("Warning: unknown stepper: %s. Stepper method unchanged\n",newStepper);
+			printf("Warning: unknown stepper: %s. Stepper method unchanged\n",newStepper.c_str());
 		}
 		dbg_printf("set stepper\n");	
 	}
@@ -118,7 +118,7 @@ void CLODE::buildProgram(std::string extraBuildOpts)
 	else
 		buildOptions += " -DCLODE_DOUBLE_PRECISION";
 
-	// printf("%s\n",stepperDefineMap.at(stepper));
+	// printf("%s\n",stepperDefineMap.at(stepper).c_str());
 
 	//specify stepper
 	buildOptions += " -D" + stepperDefineMap.at(stepper);

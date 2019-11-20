@@ -72,7 +72,7 @@ void CLODEfeatures::setObserver(std::string newObserver)
 		}
 		else
 		{
-			printf("Warning: unknown observer: %s. Observer method unchanged\n",newObserver);
+			printf("Warning: unknown observer: %s. Observer method unchanged\n",newObserver.c_str());
 		}
 		dbg_printf("set observer\n");
 	}
