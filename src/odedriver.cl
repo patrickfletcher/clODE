@@ -1,5 +1,3 @@
-//TODO: investigate sources of roundoff error in long "continues" - running means?
-
 #include "clODE_random.cl"
 #include "clODE_struct_defs.cl"
 #include "clODE_utilities.cl"
@@ -13,7 +11,7 @@ __kernel void features(
     __constant realtype *pars,          //parameter values				[nPts*nPar]
     __constant struct SolverParams *sp, //dtmin/max, tols, etc
     __global ulong *RNGstate,           //enables host seeding/continued streams	    [nPts*nRNGstate]
-    __global ObserverData *OData,       //for continued feature detection
+    __global ObserverData *OData,        //Observer data. Assume it is initialized externally by initialize observer kernel!
     __constant struct ObserverParams *opars,
     int doInitialization,  //reset observerdata?
     __global realtype *xf, //final state 				[nPts*nVar]
@@ -73,68 +71,7 @@ __kernel void features(
     for (int j = 0; j < N_AUX; ++j)
         aux[storeix * nPts * N_AUX + j * nPts + i] = auxi[j];
 
-    ObserverData odata = OData[i]; //private copy of observer data
-
-    if (doInitialization == 1)
-    {
-
-        initializeObserverData(&ti, xi, dxi, auxi, &odata, opars);
-
-#ifdef TWO_PASS_EVENT_DETECTOR
-
-        step = 0;
-        stepflag = 0;
-        while (ti < tspan[1] && step < sp->max_steps && stepflag == 0)
-        {
-
-            ++step;
-#ifdef ADAPTIVE_STEPSIZE
-            //leave the wi=0 for adaptive steppers
-            stepflag = stepper(&ti, xi, dxi, p, sp, &dt, tspan, auxi, wi);
-#else
-            //update Wiener variables - fixed size steppers can scale by dt here
-            for (int j = 0; j < N_WIENER; ++j)
-                wi[j] = randn(&rd) / sqrt(dt); //NOTE: divide by sqrt(dt) because Euler will multiply this by dt in the stepper.
-
-            stepper(&ti, xi, dxi, p, dt, auxi, wi);
-            ti = tspan[0] + step * dt; //purify ti - Gets nSteps correct, but incompatible with shrinking final step without conditional to check if doing the last step
-#endif
-
-            //FSAL: dxi is at new ti, Not FSAL: dxi is at old ti
-            warmupObserverData(&ti, xi, dxi, auxi, &odata, opars);
-        }
-
-        //rewind state to t0, x0, RNG0
-        //or just reset ti->t0?
-        ti = tspan[0];
-
-        // dt=sp->dt;
-
-        // for (int j=0; j<N_VAR;++j)
-        // 	xi[j] = x0[j*nPts + i];
-
-        // for (int j=0; j<N_RNGSTATE; ++j)
-        // 	rd.state[j]=RNGstate[j*nPts+i];
-
-        // rd.randnUselast=0;
-
-        // #ifdef ADAPTIVE_STEPSIZE
-        // for (int j=0; j<N_WIENER; ++j)
-        // 	wi[j]=RCONST(0.0);
-        // #else
-        // for (int j=0; j<N_WIENER; ++j)
-        // 	wi[j]=randn(&rd)/sqrt(dt);
-        // #endif
-
-        // getRHS(ti, xi, p, dxi, auxi, wi);
-
-#endif //TWO_PASS_EVENT_DETECTOR
-
-        initializeEventDetector(&ti, xi, dxi, auxi, &odata, opars);
-    }
-    //else { //no initialization: prepare observer data for continuation if needed
-    //prepareObserverData(&ti, xi, dxi, auxi, &odata, opars);
-    //}
+    ObserverData odata = OData[i]; //private copy of observer data. Assume it is initialized externally by initialize observer kernel
 
     //time-stepping loop, main time interval
     step = 0;
