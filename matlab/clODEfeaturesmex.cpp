@@ -351,7 +351,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 			instance->features(); }
 		else if (nrhs==3) {
 			int doInit=(int)mxGetScalar(prhs[2]);
-			if (doInit<0 || doInit>1) {mexErrMsgTxt("Argument must be 0 or 1 for features with observer data initialization control");}
+			if (doInit!=0 && doInit!=1) {mexErrMsgTxt("Argument must be 0 or 1 for features with observer data initialization control");}
 			instance->features(doInit);
 		}
         break;

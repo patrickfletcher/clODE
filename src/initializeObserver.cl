@@ -14,6 +14,7 @@ __kernel void initializeObserver(
 	__global ObserverData *OData,		//for continue
 	__constant struct ObserverParams *opars)
 {
+
 	int i = get_global_id(0);
 	int nPts = get_global_size(0);
 
@@ -21,6 +22,8 @@ __kernel void initializeObserver(
 	realtype xi[N_VAR], dxi[N_VAR], auxi[N_AUX];
 	realtype p[N_PAR], wi[N_WIENER];
 	rngData rd;
+	int step, stepflag;
+	__constant realtype *tspanPtr = tspan;
 
 	//get private copy of ODE parameters, initial data, and compute slope at initial state
 	ti = tspan[0];
@@ -37,42 +40,48 @@ __kernel void initializeObserver(
 
 	rd.randnUselast = 0;
 
+#ifdef ADAPTIVE_STEPSIZE
+	realtype lastErr=RCONST(1.0);
+	realtype lastDtRatio=RCONST(1.0);
+	for (int j = 0; j < N_WIENER; ++j)
+		wi[j] = RCONST(0.0);
+#else
 	for (int j = 0; j < N_WIENER; ++j)
 		wi[j] = randn(&rd) / sqrt(dt);
+#endif
 
 	getRHS(ti, xi, p, dxi, auxi, wi); //slope at initial point, needed for FSAL steppers (bs23, dorpri5)
 
-	ObserverData odata = OData[i]; //private copy of event data
-
-	initializeObserverData(&ti, xi, dxi, auxi, &odata, opars);
+	ObserverData odata = OData[i]; //private copy of observer data
 
 #ifdef TWO_PASS_EVENT_DETECTOR
 
-	int step = 0;
-	bool eventOccurred = false;
+	initializeObserverData(&ti, xi, dxi, auxi, &odata, opars);
+
+	step = 0;
+	stepflag = 0;
 	while (ti < tspan[1] && step < sp->max_steps)
 	{
-
 		++step;
-#ifdef ADAPTIVE_STEPSIZE
-		//update Wiener variables - scale by dt inside the stepper
-		for (int j = 0; j < N_WIENER; ++j)
-			wi[j] = randn(&rd);
-
-		stepper(&ti, xi, dxi, p, sp, &dt, tspan[1], auxi, wi);
-#else
+# ifdef ADAPTIVE_STEPSIZE
+		//leave the wi=0 for adaptive steppers
+		stepflag = stepper(&ti, xi, dxi, p, sp, &dt, tspanPtr, auxi, wi, &lastErr, &lastDtRatio);
+		if (stepflag!=0)
+			break;
+# else
 		//update Wiener variables - fixed size steppers can scale by dt here
 		for (int j = 0; j < N_WIENER; ++j)
 			wi[j] = randn(&rd) / sqrt(dt); //NOTE: divide by sqrt(dt) because Euler will multiply this by dt in the stepper.
 
-		stepper(&ti, xi, dxi, p, &dt, auxi, wi);
+		stepper(&ti, xi, dxi, p, dt, auxi, wi);
 		ti = tspan[0] + step * dt; //purify ti - Gets nSteps correct, but incompatible with shrinking final step without conditional to check if doing the last step
-#endif
+# endif
 
+		//FSAL: dxi is at new ti, Not FSAL: dxi is at old ti
 		warmupObserverData(&ti, xi, dxi, auxi, &odata, opars);
 	}
 
-#endif
+#endif //TWO_PASS_EVENT_DETECTOR
 
 	initializeEventDetector(&ti, xi, dxi, auxi, &odata, opars);
 

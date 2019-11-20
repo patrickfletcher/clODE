@@ -13,7 +13,6 @@ __kernel void features(
     __global ulong *RNGstate,           //enables host seeding/continued streams	    [nPts*nRNGstate]
     __global ObserverData *OData,        //Observer data. Assume it is initialized externally by initialize observer kernel!
     __constant struct ObserverParams *opars,
-    int doInitialization,  //reset observerdata?
     __global realtype *xf, //final state 				[nPts*nVar]
     __global realtype *F,  //feature results
     __global realtype *t,  // trajectory storage: t, x, dx, aux
@@ -87,7 +86,7 @@ __kernel void features(
         //leave the wi=0 for adaptive steppers
         stepflag = stepper(&ti, xi, dxi, p, sp, &dt, tspan, auxi, wi);
 #else
-        //update Wiener variables - fixed size steppers scale by dt here
+        //update Wiener variables - fixed size steppers scale by dt here //MAYBE ONLY IF EULER
         for (int j = 0; j < N_WIENER; ++j)
             wi[j] = randn(&rd) / sqrt(dt); //NOTE: divide by sqrt(dt) because Euler will multiply this by dt in the stepper.
 
@@ -108,7 +107,7 @@ __kernel void features(
             };
         }
 
-        updateObserverData(&ti, xi, dxi, auxi, &odata, opars, eventOccurred); //TODO: if not FSAL, dxi buffer is delayed by one. (dxi is slope at LAST timestep)
+        updateObserverData(&ti, xi, dxi, auxi, &odata, opars); //TODO: if not FSAL, dxi buffer is delayed by one. (dxi is slope at LAST timestep)
 
         //store every sp.nout'th step after the initial point
         if (step % sp->nout == 0)

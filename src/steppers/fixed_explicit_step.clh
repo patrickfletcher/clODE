@@ -1,0 +1,22 @@
+#include "clODE_struct_defs.cl" //for SolverParams struct definition
+#include "realtype.cl"
+
+//Wrapper to handle step-size adaptation.  note: wi should be zeros
+inline int stepper(realtype *ti, realtype xi[], realtype k1[], realtype pars[], 
+__constant struct SolverParams *sp, realtype *dt, __constant realtype *tspan, 
+realtype aux[], realtype wi[], int step)
+{
+    fixedOneStep();
+
+    //update the solution and dt
+    *ti = tNew;
+    for (int j = 0; j < N_VAR; j++)
+    {
+        xi[j] = newxi[j];
+        k1[j] = newk1[j];
+    }
+    // *lastRelErr=relErr;
+    // *lastDtRatio=dtRatio;
+
+    return 0;
+}
