@@ -104,11 +104,21 @@ clo.transient();
 toc
 
 %%
+tic
 clo.shiftX0(); %sets X0 to continue from the end of the transient
+toc
+
+tic
+clo.initObserver();
+toc
 
 tic
 clo.features();
 toc
+
+% tic
+% clo.features(1);
+% toc
 
 %% plot
 %display list of features recorded:

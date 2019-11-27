@@ -19,7 +19,6 @@ __kernel void features(
     __global realtype *x,
     __global realtype *dx,
     __global realtype *aux,
-    int nStoreMax,
     __global int *nStored)
 {
 
