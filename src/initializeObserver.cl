@@ -1,13 +1,13 @@
-#include "realtype.cl"
-#include "cl_utilities.cl"
 #include "clODE_random.cl"
 #include "clODE_struct_defs.cl"
-#include "steppers.cl"
+#include "clODE_utilities.cl"
 #include "observers.cl"
+#include "steppers.cl"
+#include "realtype.cl"
 
 __kernel void initializeObserver(
 	__constant realtype *tspan,			//time vector [t0,tf] - adds (tf-t0) to these at the end
-	__global realtype *x0,				//initial state 				[nPts*nVar] -- overwrites this with xf=x(tf) at the end
+	__global realtype *x0,				//initial state 				[nPts*nVar]
 	__constant realtype *pars,			//parameter values				[nPts*nPar]
 	__constant struct SolverParams *sp, //dtmin/max, tols, etc
 	__global ulong *RNGstate,			//enables host seeding/continued streams	    [nPts*nRNGstate]
@@ -54,9 +54,10 @@ __kernel void initializeObserver(
 
 	ObserverData odata = OData[i]; //private copy of observer data
 
-#ifdef TWO_PASS_EVENT_DETECTOR
 
 	initializeObserverData(&ti, xi, dxi, auxi, &odata, opars);
+
+#ifdef TWO_PASS_EVENT_DETECTOR
 
 	step = 0;
 	stepflag = 0;

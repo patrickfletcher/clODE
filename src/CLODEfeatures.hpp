@@ -46,6 +46,7 @@ protected:
     int doObserverInitialization = 1;
 
     cl::Buffer d_odata, d_op, d_F;
+    cl::Kernel cl_initializeObserver;
     cl::Kernel cl_features;
 
     std::string observerBuildOpts;
@@ -71,6 +72,7 @@ public:
     //TODO: overload transient so that it sets doObserverInitialization=1
     //TODO: overload with newX0, newPars; all four?
     //TODO: pre-features? update edata basics (min/max x dx) but no event function
+    void initializeObserver();                           //integrate forward an interval of duration (tf-t0)
     void features(bool newDoObserverInitFlag); //allow manually forcing re-init of observer data
     void features();                           //integrate forward an interval of duration (tf-t0)
 

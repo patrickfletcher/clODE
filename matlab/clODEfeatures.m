@@ -98,6 +98,10 @@ classdef clODEfeatures<clODE & matlab.mixin.SetGet
             end
         end
         
+        function initObserver(obj)
+            obj.cppmethod('initobserver');
+        end
+        
         %overloads to fetch data if desired
         function features(obj, doInit)
             if ~exist('doInit','var')

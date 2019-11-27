@@ -175,9 +175,7 @@ void CLODE::initializeTransientKernel()
 	{ //declare device arrays that won't change size: tspan, SolverParams
 		d_tspan = cl::Buffer(opencl.getContext(), CL_MEM_READ_ONLY, realSize * 2, NULL, &opencl.error);
 		if (clSinglePrecision)
-		{
 			d_sp = cl::Buffer(opencl.getContext(), CL_MEM_READ_ONLY, sizeof(SolverParams<cl_float>), NULL, &opencl.error);
-		}
 		else
 			d_sp = cl::Buffer(opencl.getContext(), CL_MEM_READ_ONLY, sizeof(SolverParams<cl_double>), NULL, &opencl.error);
 

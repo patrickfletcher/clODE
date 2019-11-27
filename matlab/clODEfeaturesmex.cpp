@@ -50,6 +50,7 @@ enum class Action
 //from here are clODEfeatures derived actions
     SetObserverPars,
     SetObserver,
+    InitializeObserver,
     Features,
     GetNFeatures,
     GetF,
@@ -85,6 +86,7 @@ const std::map<std::string, Action> actionTypeMap =
 //from here are clODEfeatures derived actions
     { "setobserverpars", Action::SetObserverPars },
     { "setobserver",    Action::SetObserver },
+    { "initobserver",    Action::InitializeObserver },
     { "features",       Action::Features },
     { "getnfeatures",   Action::GetNFeatures },
     { "getf",        	Action::GetF },
@@ -343,6 +345,11 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     {   //input string with observer name
         std::string observer = mxArrayToString(prhs[2]);
         instance->setObserver(observer);
+        break;
+	}
+    case Action::InitializeObserver:
+    {   //no inputs
+        instance->initializeObserver();
         break;
 	}
     case Action::Features:

@@ -15,8 +15,7 @@ __kernel void features(
 	__global ulong *RNGstate,			//enables host seeding/continued streams	    [nPts*nRNGstate]
 	__global ObserverData *OData,		//for continue
 	__constant struct ObserverParams *opars,
-	__global realtype *F,
-	int doInitialization)
+	__global realtype *F)
 {
 	int i = get_global_id(0);
 	int nPts = get_global_size(0);
@@ -57,72 +56,72 @@ __kernel void features(
 
 	ObserverData odata = OData[i]; //private copy of observer data
 
-#ifdef TWO_PASS_EVENT_DETECTOR
+// #ifdef TWO_PASS_EVENT_DETECTOR
 
-	if (doInitialization == 1)
-	{
-		initializeObserverData(&ti, xi, dxi, auxi, &odata, opars);
+// 	if (doInitialization == 1)
+// 	{
+// 		initializeObserverData(&ti, xi, dxi, auxi, &odata, opars);
 
-		step = 0;
-		stepflag = 0;
-		while (ti < tspan[1] && step < sp->max_steps)
-		{
-			++step;
-# ifdef ADAPTIVE_STEPSIZE
-			//leave the wi=0 for adaptive steppers
-			stepflag = stepper(&ti, xi, dxi, p, sp, &dt, tspanPtr, auxi, wi, &lastErr, &lastDtRatio);
-			if (stepflag!=0)
-				break;
-# else
-			//update Wiener variables - fixed size steppers can scale by dt here
-			for (int j = 0; j < N_WIENER; ++j)
-				wi[j] = randn(&rd) / sqrt(dt); //NOTE: divide by sqrt(dt) because Euler will multiply this by dt in the stepper.
+// 		step = 0;
+// 		stepflag = 0;
+// 		while (ti < tspan[1] && step < sp->max_steps)
+// 		{
+// 			++step;
+// # ifdef ADAPTIVE_STEPSIZE
+// 			//leave the wi=0 for adaptive steppers
+// 			stepflag = stepper(&ti, xi, dxi, p, sp, &dt, tspanPtr, auxi, wi, &lastErr, &lastDtRatio);
+// 			if (stepflag!=0)
+// 				break;
+// # else
+// 			//update Wiener variables - fixed size steppers can scale by dt here
+// 			for (int j = 0; j < N_WIENER; ++j)
+// 				wi[j] = randn(&rd) / sqrt(dt); //NOTE: divide by sqrt(dt) because Euler will multiply this by dt in the stepper.
 
-			stepper(&ti, xi, dxi, p, dt, auxi, wi);
-			ti = tspan[0] + step * dt; //purify ti - Gets nSteps correct, but incompatible with shrinking final step without conditional to check if doing the last step
-# endif
+// 			stepper(&ti, xi, dxi, p, dt, auxi, wi);
+// 			ti = tspan[0] + step * dt; //purify ti - Gets nSteps correct, but incompatible with shrinking final step without conditional to check if doing the last step
+// # endif
 
-			//FSAL: dxi is at new ti, Not FSAL: dxi is at old ti
-			warmupObserverData(&ti, xi, dxi, auxi, &odata, opars);
-		}
+// 			//FSAL: dxi is at new ti, Not FSAL: dxi is at old ti
+// 			warmupObserverData(&ti, xi, dxi, auxi, &odata, opars);
+// 		}
 
-		//rewind state to t0, x0, RNG0
-		ti = tspan[0];
+// 		//rewind state to t0, x0, RNG0
+// 		ti = tspan[0];
 
-		dt = sp->dt;
+// 		dt = sp->dt;
 
-		for (int j = 0; j < N_VAR; ++j)
-			xi[j] = x0[j * nPts + i];
+// 		for (int j = 0; j < N_VAR; ++j)
+// 			xi[j] = x0[j * nPts + i];
 
-		for (int j = 0; j < N_RNGSTATE; ++j)
-			rd.state[j] = RNGstate[j * nPts + i];
+// 		for (int j = 0; j < N_RNGSTATE; ++j)
+// 			rd.state[j] = RNGstate[j * nPts + i];
 
-		rd.randnUselast = 0;
+// 		rd.randnUselast = 0;
 
-# ifdef ADAPTIVE_STEPSIZE
-		lastErr=RCONST(1.0);
-		lastDtRatio=RCONST(1.0);
-		for (int j = 0; j < N_WIENER; ++j)
-			wi[j] = RCONST(0.0);
-# else
-		for (int j = 0; j < N_WIENER; ++j)
-			wi[j] = randn(&rd) / sqrt(dt);
-# endif
+// # ifdef ADAPTIVE_STEPSIZE
+// 		lastErr=RCONST(1.0);
+// 		lastDtRatio=RCONST(1.0);
+// 		for (int j = 0; j < N_WIENER; ++j)
+// 			wi[j] = RCONST(0.0);
+// # else
+// 		for (int j = 0; j < N_WIENER; ++j)
+// 			wi[j] = randn(&rd) / sqrt(dt);
+// # endif
 
-		getRHS(ti, xi, p, dxi, auxi, wi);
+// 		getRHS(ti, xi, p, dxi, auxi, wi);
 
-		initializeEventDetector(&ti, xi, dxi, auxi, &odata, opars);
-	}
+// 		initializeEventDetector(&ti, xi, dxi, auxi, &odata, opars);
+// 	}
 
-#else
+// #else
 
-	if (doInitialization == 1)
-	{
-		initializeObserverData(&ti, xi, dxi, auxi, &odata, opars);
-		initializeEventDetector(&ti, xi, dxi, auxi, &odata, opars);
-	}
+// 	if (doInitialization == 1)
+// 	{
+// 		initializeObserverData(&ti, xi, dxi, auxi, &odata, opars);
+// 		initializeEventDetector(&ti, xi, dxi, auxi, &odata, opars);
+// 	}
 
-#endif //TWO_PASS_EVENT_DETECTOR
+// #endif //TWO_PASS_EVENT_DETECTOR
 
 	//time-stepping loop, main time interval
 	step = 0;

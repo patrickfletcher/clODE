@@ -21,6 +21,7 @@ CLODEfeatures::CLODEfeatures(ProblemInfo prob, std::string stepper, std::string 
 	getObserverDefineMap(prob, clSinglePrecision, 0, 0, observerDefineMap, availableObserverNames);
 	setObserver(observer);
 
+	clprogramstring += read_file(clodeRoot + "initializeObserver.cl");
 	clprogramstring += read_file(clodeRoot + "features.cl");
 	dbg_printf("constructor clODEfeatures\n");
 }
@@ -85,13 +86,11 @@ void CLODEfeatures::initializeFeaturesKernel()
 	try
 	{
 		if (clSinglePrecision)
-		{ //downcast to float if desired
 			d_op = cl::Buffer(opencl.getContext(), CL_MEM_READ_ONLY, sizeof(ObserverParams<cl_float>), NULL, &opencl.error);
-		}
 		else
-		{
 			d_op = cl::Buffer(opencl.getContext(), CL_MEM_READ_ONLY, sizeof(ObserverParams<cl_double>), NULL, &opencl.error);
-		}
+
+		cl_initializeObserver = cl::Kernel(opencl.getProgram(), "initializeObserver", &opencl.error);
 		cl_features = cl::Kernel(opencl.getProgram(), "features", &opencl.error);
 
 		// size_t preferred_multiple;
@@ -181,7 +180,7 @@ void CLODEfeatures::resizeFeaturesVariables()
 			printf("ERROR: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
 			throw er;
 		}
-		dbg_printf("resize F, d_F, d_odata\n");
+		dbg_printf("resize F, d_F, d_odata with: nPts=%d, nF=%d\n",nPts,nFeatures);
 	}
 	
 }
@@ -192,10 +191,51 @@ void CLODEfeatures::resizeFeaturesVariables()
 void CLODEfeatures::features(bool newDoObserverInitFlag)
 {
 	doObserverInitialization = newDoObserverInitFlag;
+
 	features();
 }
 
 //
+void CLODEfeatures::initializeObserver()
+{
+
+	if (clInitialized)
+	{
+		// printf("do init=%s\n",doObserverInitialization?"true":"false");
+		//resize output variables - will only occur if nPts has changed
+		resizeFeaturesVariables();
+
+		try
+		{
+			//kernel arguments
+			cl_initializeObserver.setArg(0, d_tspan);
+			cl_initializeObserver.setArg(1, d_x0);
+			cl_initializeObserver.setArg(2, d_pars);
+			cl_initializeObserver.setArg(3, d_sp);
+			cl_initializeObserver.setArg(4, d_RNGstate);
+			cl_initializeObserver.setArg(5, d_odata);
+			cl_initializeObserver.setArg(6, d_op);
+
+			//execute the kernel
+			opencl.error = opencl.getQueue().enqueueNDRangeKernel(cl_initializeObserver, cl::NullRange, cl::NDRange(nPts));
+			// printf("Enqueue error code: %s\n",CLErrorString(opencl.error).c_str());
+			opencl.error = opencl.getQueue().finish();
+			// printf("Finish Queue error code: %s\n",CLErrorString(opencl.error).c_str());
+			doObserverInitialization = 0;
+		}
+		catch (cl::Error &er)
+		{
+			printf("ERROR: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
+			throw er;
+		}
+		dbg_printf("run initializeObserver\n");
+	}
+	else
+	{
+		printf("CLODE has not been initialized\n");
+	}
+}
+
 void CLODEfeatures::features()
 {
 
@@ -204,6 +244,9 @@ void CLODEfeatures::features()
 		// printf("do init=%s\n",doObserverInitialization?"true":"false");
 		//resize output variables - will only occur if nPts has changed
 		resizeFeaturesVariables();
+
+		if (doObserverInitialization)
+			initializeObserver();
 
 		try
 		{
@@ -218,15 +261,13 @@ void CLODEfeatures::features()
 			cl_features.setArg(7, d_odata);
 			cl_features.setArg(8, d_op);
 			cl_features.setArg(9, d_F);
-			cl_features.setArg(10, doObserverInitialization);
+			// cl_features.setArg(10, doObserverInitialization);
 
 			//execute the kernel
 			opencl.error = opencl.getQueue().enqueueNDRangeKernel(cl_features, cl::NullRange, cl::NDRange(nPts));
 			// printf("Enqueue error code: %s\n",CLErrorString(opencl.error).c_str());
 			opencl.error = opencl.getQueue().finish();
 			// printf("Finish Queue error code: %s\n",CLErrorString(opencl.error).c_str());
-
-			doObserverInitialization = 0;
 		}
 		catch (cl::Error &er)
 		{

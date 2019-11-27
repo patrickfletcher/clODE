@@ -23,7 +23,6 @@ __kernel void trajectory(
     __global realtype *x,               //
     __global realtype *dx,              //
     __global realtype *aux,             //
-    int nStoreMax,
     __global int *nStored)
 {
     int i = get_global_id(0);
@@ -77,7 +76,7 @@ __kernel void trajectory(
     //time-stepping loop, main time interval
     int step = 0;
     int stepflag = 0;
-    while (ti < tspan[1] && step < sp->max_steps && storeix < nStoreMax)
+    while (ti < tspan[1] && step < sp->max_steps && storeix < sp->max_store)
     {
 
         ++step;
