@@ -92,11 +92,15 @@ classdef clODEtrajectory<clODE & matlab.mixin.SetGet
         end
         
         function aux=getAux(obj)
+            aux=nan(obj.nSteps,obj.prob.nAux,obj.nPts);
+            obj.aux=aux;
+            if obj.prob.nAux>0
             aux=obj.cppmethod('getaux');
             aux=reshape(aux,obj.nPts,obj.prob.nAux,obj.nSteps);
             aux=permute(aux,[3,2,1]);
 %             aux=squeeze(aux);
             obj.aux=aux;
+            end
         end
 
         function nStored=getNstored(obj)
