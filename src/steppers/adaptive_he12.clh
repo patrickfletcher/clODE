@@ -4,7 +4,7 @@
 #define ADAPTIVE_STEP_MAX_SHRINK RCONST(0.5)
 #define ADAPTIVE_STEP_MAX_GROW RCONST(5.0)
 
-inline realtype adaptiveOneStep(realtype *ti, realtype xi[], realtype k1[], realtype pars[], const realtype dt, realtype aux[], realtype err[], realtype wi[])
+inline realtype adaptiveOneStep(realtype *ti, realtype xi[], realtype k1[], const realtype pars[], const realtype dt, realtype aux[], realtype err[], const realtype wi[])
 {
     realtype tNew = *ti + dt;
     realtype newDt = tNew - *ti;

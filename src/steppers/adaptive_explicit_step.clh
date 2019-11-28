@@ -46,7 +46,7 @@
 // #define EXPON3 = RCONST(1.0) / RCONST(4.0) ; //broken
 
 //Wrapper to handle step-size adaptation.  note: wi should be zeros
-inline int stepper(realtype *ti, realtype xi[], realtype k1[], realtype pars[], __constant struct SolverParams *sp, realtype *dt, __constant realtype *tspan, realtype aux[], realtype wi[], realtype *lastRelErr, realtype *lastDtRatio)
+inline int stepper(realtype *ti, realtype xi[], realtype k1[], const realtype pars[], __constant struct SolverParams *sp, realtype *dt, __constant realtype *tspan, realtype aux[], realtype wi[], realtype *lastRelErr, realtype *lastDtRatio)
 {
     realtype tNew, normErr, relErr, err[N_VAR], newxi[N_VAR], newk1[N_VAR];
 

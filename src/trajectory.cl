@@ -2,7 +2,7 @@
 
 //TODO: optionally store only a subset of variables (allow bigger nPts): sp.varIx vector of indices? already in observerpars...???
 //TODO: alternate storage at specified time points only - host sets t vector, interp and store x/dx/aux whenever ti passes t[nextstoreix]
-//TODO: support dense output (refine option) for solvers like Dopri45
+//TODO: support dense output (refine option) for solvers like Dopri45 (or all if we force FSAL; use interpolant of same order as solver)
 //TODO: is there any way to avoid writing to global at each store step? shared mem?
 
 #include "clODE_random.cl"

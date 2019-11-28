@@ -30,12 +30,12 @@ clo.initialize(tspan, X0, P, sp);
 clo.seedRNG(42)
 clo.transient(); %warm up the GPU for timing
 
-%run the simulation
+%% run the simulation
 tic
 clo.transient();
 toc
 
-%read data back from the GPU
+%% read data back from the GPU
 tic
 nextTspan=clo.getTspan;
 xf=clo.getXf;

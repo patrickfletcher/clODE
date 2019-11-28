@@ -2,11 +2,11 @@
 #include "realtype.cl"
 
 //Wrapper to handle step-size adaptation.  note: wi should be zeros
-inline int stepper(realtype *ti, realtype xi[], realtype k1[], realtype pars[], 
+inline int stepper(realtype *ti, realtype xi[], realtype k1[], const realtype pars[], 
 __constant struct SolverParams *sp, realtype *dt, __constant realtype *tspan, 
-realtype aux[], realtype wi[], int step)
+realtype aux[], realtype wi[], const int step)
 {
-    fixedOneStep();
+    do_step();
 
     //update the solution and dt
     *ti = tNew;

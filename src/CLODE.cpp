@@ -264,19 +264,14 @@ void CLODE::setNpts(int newNpts)
 		auxf.resize(auxfelements);
 		RNGstate.resize(RNGelements);
 
-		//resize device variables
+		//new device variables
 		try
 		{
 			d_x0 = cl::Buffer(opencl.getContext(), CL_MEM_READ_WRITE, realSize * x0elements, NULL, &opencl.error);
-			// printf("1\n");
 			d_pars = cl::Buffer(opencl.getContext(), CL_MEM_READ_ONLY, realSize * parselements, NULL, &opencl.error);
-			// printf("2\n");
 			d_xf = cl::Buffer(opencl.getContext(), CL_MEM_READ_WRITE, realSize * x0elements, NULL, &opencl.error);
-			// printf("1\n");
 			d_auxf = cl::Buffer(opencl.getContext(), CL_MEM_WRITE_ONLY, realSize * auxfelements, NULL, &opencl.error);
-			// printf("3\n");
 			d_RNGstate = cl::Buffer(opencl.getContext(), CL_MEM_READ_WRITE, sizeof(cl_ulong) * RNGelements, NULL, &opencl.error);
-			// printf("4\n");
 		}
 		catch (cl::Error &er)
 		{
