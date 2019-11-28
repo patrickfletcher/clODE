@@ -46,7 +46,6 @@ enum class Action
     GetTspan,
     GetX0,
     GetXf,
-    GetAuxf,
     GetStepperNames,
     GetProgramString,
 };
@@ -73,7 +72,6 @@ const std::map<std::string, Action> actionTypeMap =
     { "gettspan",       Action::GetTspan },
     { "getx0",          Action::GetX0 },
     { "getxf",          Action::GetXf },
-    { "getauxf",        Action::GetAuxf },
     { "getsteppernames",        Action::GetStepperNames },
     { "getprogramstring",        Action::GetProgramString },
 }; 
@@ -292,13 +290,6 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         std::vector<double> xf=instance->getXf();
 		plhs[0]=mxCreateDoubleMatrix(1, xf.size(), mxREAL);
         std::copy(xf.begin(), xf.end(), (double *)mxGetData(plhs[0]));
-        break;
-	}
-    case Action::GetAuxf:
-    {
-        std::vector<double> auxf=instance->getAuxf();
-		plhs[0]=mxCreateDoubleMatrix(1, auxf.size(), mxREAL);
-        std::copy(auxf.begin(), auxf.end(), (double *)mxGetData(plhs[0]));
         break;
 	}
     case Action::GetStepperNames:

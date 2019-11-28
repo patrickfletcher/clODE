@@ -243,11 +243,6 @@ classdef clODE < cppclass & matlab.mixin.SetGet
             obj.Xf=Xf;
         end
         
-        function auxf=getAuxf(obj)
-            auxf=obj.cppmethod('getauxf');
-            auxf=reshape(auxf,obj.nPts,obj.prob.nAux);
-        end
-        
         function stepperNames=getAvailableSteppers(obj)
             stepperNames=obj.cppmethod('getsteppernames');
         end
@@ -262,7 +257,7 @@ classdef clODE < cppclass & matlab.mixin.SetGet
     methods (Static=true)
         
         function sp=solverParams()
-            sp.dt=10;
+            sp.dt=.1;
             sp.dtmax=100.00;
             sp.abstol=1e-6;
             sp.reltol=1e-3;

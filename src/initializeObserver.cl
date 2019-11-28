@@ -41,17 +41,11 @@ __kernel void initializeObserver(
 
 	rd.randnUselast = 0;
 
-#ifdef ADAPTIVE_STEPSIZE
-	realtype lastErr=RCONST(1.0);
-	realtype lastDtRatio=RCONST(1.0);
-	for (int j = 0; j < N_WIENER; ++j)
-		wi[j] = RCONST(0.0);
-#else
-	for (int j = 0; j < N_WIENER; ++j)
-		wi[j] = randn(&rd) / sqrt(dt);
+#ifdef STOCHASTIC_STEPPER
+    for (int j = 0; j < N_WIENER; ++j)
+        wi[j] = randn(&rd) / sqrt(dt);
 #endif
-
-	getRHS(ti, xi, p, dxi, auxi, wi); //slope at initial point, needed for FSAL steppers (bs23, dorpri5)
+	getRHS(ti, xi, p, dxi, auxi, wi); //slope at initial point, needed for FSAL
 
 	ObserverData odata = OData[i]; //private copy of observer data
 
@@ -64,21 +58,10 @@ __kernel void initializeObserver(
 	while (ti < tspan[1] && step < sp->max_steps)
 	{
 		++step;
-# ifdef ADAPTIVE_STEPSIZE
-		//leave the wi=0 for adaptive steppers
-		stepflag = stepper(&ti, xi, dxi, p, sp, &dt, tspanPtr, auxi, wi, &lastErr, &lastDtRatio);
-		if (stepflag!=0)
-			break;
-# else
-		//update Wiener variables - fixed size steppers can scale by dt here
-		for (int j = 0; j < N_WIENER; ++j)
-			wi[j] = randn(&rd) / sqrt(dt); //NOTE: divide by sqrt(dt) because Euler will multiply this by dt in the stepper.
+        stepflag = stepper(&ti, xi, dxi, p, sp, &dt, tspanPtr, auxi, wi, step, &rd);
+        if (stepflag!=0)
+            break;
 
-		stepper(&ti, xi, dxi, p, dt, auxi, wi);
-		ti = tspan[0] + step * dt; //purify ti - Gets nSteps correct, but incompatible with shrinking final step without conditional to check if doing the last step
-# endif
-
-		//FSAL: dxi is at new ti, Not FSAL: dxi is at old ti
 		warmupObserverData(&ti, xi, dxi, auxi, &odata, opars);
 	}
 

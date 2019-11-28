@@ -17,7 +17,6 @@ __kernel void trajectory(
     __constant realtype *pars,          //parameter values				[nPts*nPar]
     __constant struct SolverParams *sp, //dtmin/max, tols, etc
     __global realtype *xf,              //final state 				[nPts*nVar]
-    __global realtype *auxf,            //final value of aux variables 	[nPts*nAux]
     __global ulong *RNGstate,           //state for RNG				[nPts*nRNGstate]
     __global realtype *t,               //
     __global realtype *x,               //
@@ -48,16 +47,10 @@ __kernel void trajectory(
 
     rd.randnUselast = 0;
 
-#ifdef ADAPTIVE_STEPSIZE
-	realtype lastErr=RCONST(1.0);
-	realtype lastDtRatio=RCONST(1.0);
-    for (int j = 0; j < N_WIENER; ++j)
-        wi[j] = RCONST(0.0);
-#else
+#ifdef STOCHASTIC_STEPPER
     for (int j = 0; j < N_WIENER; ++j)
         wi[j] = randn(&rd) / sqrt(dt);
 #endif
-
     getRHS(ti, xi, p, dxi, auxi, wi); //slope at initial point, needed for FSAL steppers (bs23, dorpri5) and for DX output
 
     //store the initial point
@@ -78,22 +71,10 @@ __kernel void trajectory(
     int stepflag = 0;
     while (ti < tspan[1] && step < sp->max_steps && storeix < sp->max_store)
     {
-
         ++step;
-#ifdef ADAPTIVE_STEPSIZE
-        //leave the wi=0 for adaptive steppers
-        stepflag = stepper(&ti, xi, dxi, p, sp, &dt, tspanPtr, auxi, wi, &lastErr, &lastDtRatio);
+        stepflag = stepper(&ti, xi, dxi, p, sp, &dt, tspanPtr, auxi, wi, step, &rd);
         if (stepflag!=0)
             break;
-#else
-        //update Wiener variables - fixed size steppers can scale by dt here
-        for (int j = 0; j < N_WIENER; ++j)
-            wi[j] = randn(&rd) / sqrt(dt); //NOTE: divide by sqrt(dt) because Euler will multiply this by dt in the stepper.
-
-        stepper(&ti, xi, dxi, p, dt, auxi, wi);
-        ti = tspan[0] + step * dt;                                        //purify ti - Gets nSteps correct, but incompatible with shrinking final step without conditional to check if doing the last step
-                                                                          //FSAL: dxi is at new ti, Not FSAL: dxi is at old ti
-#endif
 
         //store every sp.nout'th step after the initial point
         if (step % sp->nout == 0)
@@ -106,40 +87,16 @@ __kernel void trajectory(
                 x[storeix * nPts * N_VAR + j * nPts + i] = xi[j];
 
             for (int j = 0; j < N_VAR; ++j)
-#ifdef FSAL_STEP_PROPERTY
                 dx[storeix * nPts * N_VAR + j * nPts + i] = dxi[j];
-#else
-                dx[(storeix - 1) * nPts * N_VAR + j * nPts + i] = dxi[j]; //without FSAL, dxi returned by stepper is evaluated at beginning of timestep
-#endif
 
             for (int j = 0; j < N_AUX; ++j)
                 aux[storeix * nPts * N_AUX + j * nPts + i] = auxi[j];
         }
     }
-    //~ aux[i]=0;
-
-#if !defined(FSAL_STEP_PROPERTY)
-    //get the slope at the last point
-    #ifdef ADAPTIVE_STEPSIZE
-        // for (int j = 0; j < N_WIENER; ++j)
-        //     wi[j] = RCONST(0.0);
-    #else
-        for (int j = 0; j < N_WIENER; ++j)
-            wi[j] = randn(&rd) / sqrt(dt);
-    #endif
-
-    getRHS(ti, xi, p, dxi, auxi, wi);
-
-    for (int j = 0; j < N_VAR; ++j)
-        dx[storeix * nPts * N_VAR + j * nPts + i] = dxi[j];
-#endif
 
     //get device arrays ready to continue
     for (int j = 0; j < N_VAR; ++j)
         xf[j * nPts + i] = xi[j];
-
-    for (int j = 0; j < N_AUX; ++j)
-        auxf[j * nPts + i] = auxi[j];
 
     for (int j = 0; j < N_RNGSTATE; ++j)
         RNGstate[j * nPts + i] = rd.state[j];

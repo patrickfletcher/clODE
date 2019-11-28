@@ -4,19 +4,18 @@
 //Wrapper to handle step-size adaptation.  note: wi should be zeros
 inline int stepper(realtype *ti, realtype xi[], realtype k1[], const realtype pars[], 
 __constant struct SolverParams *sp, realtype *dt, __constant realtype *tspan, 
-realtype aux[], realtype wi[], const int step)
+realtype aux[], realtype wi[], const int step, rngData *rd)
 {
-    do_step();
+    do_step(ti, xi, k1, pars, *dt, aux, wi);
 
     //update the solution and dt
-    *ti = tNew;
-    for (int j = 0; j < N_VAR; j++)
-    {
-        xi[j] = newxi[j];
-        k1[j] = newk1[j];
-    }
-    // *lastRelErr=relErr;
-    // *lastDtRatio=dtRatio;
+    *ti = tspan[0] + *dt * step;
+    
+#ifdef STOCHASTIC_STEPPER //get the new random variables for the next time step
+    for (int j = 0; j < N_WIENER; ++j)
+        wi[j] = randn(rd) / sqrt(*dt);
+#endif
+    getRHS(*ti, xi, pars, k1, aux, wi); //compute k1 at new (purified) time. only really matters for non-autonomous case
 
     return 0;
 }

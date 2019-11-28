@@ -256,12 +256,10 @@ void CLODEfeatures::features()
 			cl_features.setArg(2, d_pars);
 			cl_features.setArg(3, d_sp);
 			cl_features.setArg(4, d_xf);
-			cl_features.setArg(5, d_auxf);
-			cl_features.setArg(6, d_RNGstate);
-			cl_features.setArg(7, d_odata);
-			cl_features.setArg(8, d_op);
-			cl_features.setArg(9, d_F);
-			// cl_features.setArg(10, doObserverInitialization);
+			cl_features.setArg(5, d_RNGstate);
+			cl_features.setArg(6, d_odata);
+			cl_features.setArg(7, d_op);
+			cl_features.setArg(8, d_F);
 
 			//execute the kernel
 			opencl.error = opencl.getQueue().enqueueNDRangeKernel(cl_features, cl::NullRange, cl::NDRange(nPts));

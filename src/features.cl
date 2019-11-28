@@ -12,7 +12,6 @@ __kernel void features(
 	__constant realtype *pars,			//parameter values				[nPts*nPar]
 	__constant struct SolverParams *sp, //dtmin/max, tols, etc
 	__global realtype *xf,				//final state 				[nPts*nVar]
-	__global realtype *auxf,			//final value of aux variables 	[nPts*nAux]
 	__global ulong *RNGstate,			//enables host seeding/continued streams	    [nPts*nRNGstate]
 	__global ObserverData *OData,		//for continue
 	__constant struct ObserverParams *opars,
@@ -43,14 +42,9 @@ __kernel void features(
 
 	rd.randnUselast = 0;
 
-#ifdef ADAPTIVE_STEPSIZE
-	realtype lastErr=RCONST(1.0);
-	realtype lastDtRatio=RCONST(1.0);
-	for (int j = 0; j < N_WIENER; ++j)
-		wi[j] = RCONST(0.0);
-#else
-	for (int j = 0; j < N_WIENER; ++j)
-		wi[j] = randn(&rd) / sqrt(dt);
+#ifdef STOCHASTIC_STEPPER
+    for (int j = 0; j < N_WIENER; ++j)
+        wi[j] = randn(&rd) / sqrt(dt);
 #endif
 
 	getRHS(ti, xi, p, dxi, auxi, wi); //slope at initial point, needed for FSAL steppers (bs23, dorpri5)
@@ -64,26 +58,12 @@ __kernel void features(
 	bool terminalEvent;
 	while (ti < tspan[1] && step < sp->max_steps)
 	{
-
 		++step;
-
-#ifdef ADAPTIVE_STEPSIZE
-		//leave the wi=0 for adaptive steppers
-		stepflag = stepper(&ti, xi, dxi, p, sp, &dt, tspanPtr, auxi, wi, &lastErr, &lastDtRatio);
+		++odata.stepcount;
+        stepflag = stepper(&ti, xi, dxi, p, sp, &dt, tspanPtr, auxi, wi, step, &rd);
         if (stepflag!=0)
             break;
-#else
-		//update Wiener variables - fixed size steppers scale by dt here
-		for (int j = 0; j < N_WIENER; ++j)
-			wi[j] = randn(&rd) / sqrt(dt); //NOTE: divide by sqrt(dt) because Euler will multiply this by dt in the stepper.
 
-		stepper(&ti, xi, dxi, p, dt, auxi, wi);
-		ti = tspan[0] + step * dt; //purify ti - Gets nSteps correct
-#endif
-
-		++odata.stepcount;
-
-		//FSAL: dxi is at new ti, Not FSAL: dxi is at old ti
 		eventOccurred = eventFunction(&ti, xi, dxi, auxi, &odata, opars);
 		if (eventOccurred)
 		{
@@ -94,7 +74,7 @@ __kernel void features(
 			};
 		}
 
-		updateObserverData(&ti, xi, dxi, auxi, &odata, opars); //TODO: if not FSAL, dxi buffer is delayed by one. (dxi is slope at LAST timestep)
+		updateObserverData(&ti, xi, dxi, auxi, &odata, opars); 
 	}
 
 	//readout features of interest and write to global F:
@@ -104,16 +84,11 @@ __kernel void features(
 	finalizeObserverData(&ti, xi, dxi, auxi, &odata, opars, tspanPtr);
 
 	//set global variables to be ready to continue
-	//TODO: auxf??
 	for (int j = 0; j < N_VAR; ++j)
 		xf[j * nPts + i] = xi[j];
-
-	for (int j = 0; j < N_AUX; ++j)
-		auxf[j * nPts + i] = auxi[j];
 
 	for (int j = 0; j < N_RNGSTATE; ++j)
 		RNGstate[j * nPts + i] = rd.state[j];
 
-	//TODO: odataf - store separate observerdata final state to match xf shift model???
 	OData[i] = odata;
 }

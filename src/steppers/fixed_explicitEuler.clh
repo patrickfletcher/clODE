@@ -1,9 +1,0 @@
-//Explicit (Forward) Euler
-inline void stepper(realtype *ti, realtype xi[], realtype k1[], const realtype pars[], const realtype dt, realtype aux[], const realtype wi[])
-{    
-    getRHS(*ti, xi, pars, k1, aux, wi); //compute k1
-
-    //update to new ti, xi, k1
-    for (int k = 0; k < N_VAR; k++)
-        xi[k] = fma(dt, k1[k], xi[k]);
-}

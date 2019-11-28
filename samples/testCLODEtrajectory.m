@@ -4,7 +4,7 @@ clear
 odefile='lactotroph.ode';
 precision='single';
 clo=clODEtrajectory(odefile,precision);
-% clo.stepper='rk4'; %default='dopri5'
+% clo.stepper='seuler'; %default='dopri5'
 
 %solver parameters
 sp=clODE.solverParams();%create required ODE solver parameter struct

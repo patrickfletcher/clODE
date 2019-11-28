@@ -76,13 +76,13 @@ protected:
     int nRNGstate; //TODO: different RNGs could be selected like steppers...?
 
     SolverParams<double> sp;
-    std::vector<double> tspan, x0, pars, xf, auxf;
-    size_t x0elements, parselements, auxfelements, RNGelements;
+    std::vector<double> tspan, x0, pars, xf;
+    size_t x0elements, parselements, RNGelements;
 
     std::vector<cl_ulong> RNGstate;
 
     //Device variables
-    cl::Buffer d_tspan, d_x0, d_pars, d_sp, d_xf, d_auxf, d_RNGstate;
+    cl::Buffer d_tspan, d_x0, d_pars, d_sp, d_xf, d_RNGstate;
 
     //kernel object
     std::string clprogramstring, buildOptions, ODEsystemsource;
@@ -141,7 +141,6 @@ public:
     std::vector<double> getTspan() { return tspan; };
     std::vector<double> getX0();
     std::vector<double> getXf();
-    std::vector<double> getAuxf();
     std::string getProgramString() { return buildOptions+clprogramstring+ODEsystemsource; };
     std::vector<std::string> getAvailableSteppers() { return availableSteppers; };
 

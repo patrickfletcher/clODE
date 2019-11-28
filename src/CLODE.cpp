@@ -254,14 +254,12 @@ void CLODE::setNpts(int newNpts)
 
 		x0elements = nVar * nPts;
 		parselements = nPar * nPts;
-		auxfelements = nAux * nPts; //TODO: handle nAux=0 case
 		RNGelements = nRNGstate * nPts;
 
 		//resize host variables
 		x0.resize(x0elements);
 		pars.resize(parselements);
 		xf.resize(x0elements);
-		auxf.resize(auxfelements);
 		RNGstate.resize(RNGelements);
 
 		//new device variables
@@ -270,7 +268,6 @@ void CLODE::setNpts(int newNpts)
 			d_x0 = cl::Buffer(opencl.getContext(), CL_MEM_READ_WRITE, realSize * x0elements, NULL, &opencl.error);
 			d_pars = cl::Buffer(opencl.getContext(), CL_MEM_READ_ONLY, realSize * parselements, NULL, &opencl.error);
 			d_xf = cl::Buffer(opencl.getContext(), CL_MEM_READ_WRITE, realSize * x0elements, NULL, &opencl.error);
-			d_auxf = cl::Buffer(opencl.getContext(), CL_MEM_WRITE_ONLY, realSize * auxfelements, NULL, &opencl.error);
 			d_RNGstate = cl::Buffer(opencl.getContext(), CL_MEM_READ_WRITE, sizeof(cl_ulong) * RNGelements, NULL, &opencl.error);
 		}
 		catch (cl::Error &er)
@@ -504,8 +501,7 @@ void CLODE::transient()
 			cl_transient.setArg(2, d_pars);
 			cl_transient.setArg(3, d_sp);
 			cl_transient.setArg(4, d_xf);
-			cl_transient.setArg(5, d_auxf);
-			cl_transient.setArg(6, d_RNGstate);
+			cl_transient.setArg(5, d_RNGstate);
 
 			//execute the kernel
 			opencl.error = opencl.getQueue().enqueueNDRangeKernel(cl_transient, cl::NullRange, cl::NDRange(nPts));
@@ -556,23 +552,6 @@ std::vector<double> CLODE::getXf()
 	}
 
 	return xf;
-}
-
-std::vector<double> CLODE::getAuxf()
-{ //cast back to double
-
-	if (clSinglePrecision)
-	{
-		std::vector<float> auxfF(auxfelements);
-		opencl.error = copy(opencl.getQueue(), d_auxf, auxfF.begin(), auxfF.end());
-		auxf.assign(auxfF.begin(), auxfF.end());
-	}
-	else
-	{
-		opencl.error = copy(opencl.getQueue(), d_auxf, auxf.begin(), auxf.end());
-	}
-
-	return auxf;
 }
 
 void CLODE::printStatus()

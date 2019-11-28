@@ -4,7 +4,7 @@ clear
 odefile='lactotroph.ode';
 precision='single';
 clo=clODE(odefile,precision);
-% clo.stepper='rk4'; %default='dopri5'
+% clo.stepper='seuler'; %default='dopri5'
 % clo.selectDevice(); %{'type','gpu'}, {'vendor','nvidia'}, {platID,devID}, 'maxComputeUnits','maxClock' 
 
 %solver parameters
@@ -30,14 +30,13 @@ clo.initialize(tspan, X0, P, sp);
 clo.seedRNG(42)
 clo.transient(); %warm up the GPU for timing
 
-%% run the simulation
+%run the simulation
 tic
 clo.transient();
 toc
 
-%% read data back from the GPU
+%read data back from the GPU
 tic
 nextTspan=clo.getTspan;
 xf=clo.getXf;
-auxf=clo.getAuxf;
 toc

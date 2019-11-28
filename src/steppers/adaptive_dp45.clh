@@ -1,5 +1,5 @@
 //this is ode45 in matlab
-#define ADAPTIVE_STEPSIZE
+#define ADAPTIVE_STEPSIZE_EXPLICIT
 #define FSAL_STEP_PROPERTY
 #define LOCAL_ERROR_ORDER RCONST(4.0)
 #define ADAPTIVE_STEP_MAX_SHRINK RCONST(0.1)
@@ -53,7 +53,7 @@
 #define E6 RCONST(22.0)/RCONST(525.0)
 #define E7 RCONST(-1.0)/RCONST(40.0)
 
-inline realtype adaptiveOneStep(realtype *ti, realtype xi[], realtype k1[], const realtype pars[], const realtype dt, realtype aux[], realtype err[], const realtype wi[])
+inline realtype do_step(realtype *ti, realtype xi[], realtype k1[], const realtype pars[], const realtype dt, realtype aux[], realtype err[], const realtype wi[])
 {
     realtype tNew = *ti + dt;
     realtype newDt = tNew - *ti;

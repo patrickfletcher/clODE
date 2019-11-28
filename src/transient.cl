@@ -11,7 +11,6 @@ __kernel void transient(
     __constant realtype *pars,          //parameter values				[nPts*nPar]
     __constant struct SolverParams *sp, //dtmin/max, tols, etc
     __global realtype *xf,              //final state 				[nPts*nVar]
-    __global realtype *auxf,            //final value of aux variables 	[nPts*nAux]
     __global ulong *RNGstate            //state for RNG					[nPts*nRNGstate]
 )
 {
@@ -37,16 +36,10 @@ __kernel void transient(
 
     rd.randnUselast = 0;
 
-#ifdef ADAPTIVE_STEPSIZE
-	realtype lastErr=RCONST(1.0);
-	realtype lastDtRatio=RCONST(1.0);
-    for (int j = 0; j < N_WIENER; ++j)
-        wi[j] = RCONST(0.0);
-#else
+#ifdef STOCHASTIC_STEPPER
     for (int j = 0; j < N_WIENER; ++j)
         wi[j] = randn(&rd) / sqrt(dt);
 #endif
-
     getRHS(ti, xi, p, dxi, auxi, wi); //slope at initial point
 
     //time-stepping loop, main time interval
@@ -55,27 +48,14 @@ __kernel void transient(
     while (ti < tspan[1] && step < sp->max_steps)
     {
         ++step;
-#ifdef ADAPTIVE_STEPSIZE
-        //leave the wi=0 for adaptive steppers
-        stepflag = stepper(&ti, xi, dxi, p, sp, &dt, tspanPtr, auxi, wi, &lastErr, &lastDtRatio);
+        stepflag = stepper(&ti, xi, dxi, p, sp, &dt, tspanPtr, auxi, wi, step, &rd);
         if (stepflag!=0)
             break;
-#else
-        //update Wiener variables - fixed size steppers can scale by dt here
-        for (int j = 0; j < N_WIENER; ++j)
-            wi[j] = randn(&rd) / sqrt(dt); //NOTE: divide by sqrt(dt) because Euler will multiply this by dt in the stepper.
-
-        stepper(&ti, xi, dxi, p, dt, auxi, wi);
-        ti = tspan[0] + step * dt; //purify ti - Gets nSteps correct, but incompatible with shrinking final step without conditional to check if doing the last step
-#endif
     }
 
     //write the final solution values to global memory.
     for (int j = 0; j < N_VAR; ++j)
         xf[j * nPts + i] = xi[j];
-
-    for (int j = 0; j < N_AUX; ++j)
-        auxf[j * nPts + i] = auxi[j];
 
     // To get same RNG on repeat (non-continued) run, need to set the seed to same value
     for (int j = 0; j < N_RNGSTATE; ++j)

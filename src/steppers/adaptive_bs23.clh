@@ -1,4 +1,4 @@
-#define ADAPTIVE_STEPSIZE
+#define ADAPTIVE_STEPSIZE_EXPLICIT
 #define FSAL_STEP_PROPERTY
 #define LOCAL_ERROR_ORDER RCONST(2.0)
 #define ADAPTIVE_STEP_MAX_SHRINK RCONST(0.5)
@@ -22,7 +22,7 @@
 #define E4 RCONST(-1.0)/RCONST(8.0)
 
 //this is ode23 in matlab
-inline realtype adaptiveOneStep(realtype *ti, realtype xi[], realtype k1[], const realtype pars[], const realtype dt, realtype aux[], realtype err[], const realtype wi[])
+inline realtype do_step(realtype *ti, realtype xi[], realtype k1[], const realtype pars[], const realtype dt, realtype aux[], realtype err[], const realtype wi[])
 {
     realtype tNew = *ti + dt;
     realtype newDt = tNew - *ti;

@@ -46,18 +46,13 @@ __kernel void features(
 
     rd.randnUselast = 0;
 
-#ifdef ADAPTIVE_STEPSIZE
-    for (int j = 0; j < N_WIENER; ++j)
-        wi[j] = RCONST(0.0);
-#else
+#ifdef STOCHASTIC_STEPPER
     for (int j = 0; j < N_WIENER; ++j)
         wi[j] = randn(&rd) / sqrt(dt);
 #endif
-
-    getRHS(ti, xi, p, dxi, auxi, wi); //slope at initial point, needed for FSAL steppers (bs23, dorpri5)
+	getRHS(ti, xi, p, dxi, auxi, wi); //slope at initial point, needed for FSAL
 
     //store the initial point
-
     int storeix = 0;
     t[storeix + i] = tspan[0];
     for (int j = 0; j < N_VAR; ++j)
@@ -80,22 +75,11 @@ __kernel void features(
     {
 
         ++step;
-
-#ifdef ADAPTIVE_STEPSIZE
-        //leave the wi=0 for adaptive steppers
-        stepflag = stepper(&ti, xi, dxi, p, sp, &dt, tspan, auxi, wi);
-#else
-        //update Wiener variables - fixed size steppers scale by dt here //MAYBE ONLY IF EULER
-        for (int j = 0; j < N_WIENER; ++j)
-            wi[j] = randn(&rd) / sqrt(dt); //NOTE: divide by sqrt(dt) because Euler will multiply this by dt in the stepper.
-
-        stepper(&ti, xi, dxi, p, dt, auxi, wi);
-        ti = tspan[0] + step * dt;                                        //purify ti - Gets nSteps correct
-#endif
-
         ++odata.stepcount;
+        stepflag = stepper(&ti, xi, dxi, p, sp, &dt, tspanPtr, auxi, wi, step, &rd);
+        if (stepflag!=0)
+            break;
 
-        //FSAL: dxi is at new ti, Not FSAL: dxi is at old ti
         eventOccurred = eventFunction(&ti, xi, dxi, auxi, &odata, opars);
         if (eventOccurred)
         {
@@ -119,11 +103,7 @@ __kernel void features(
                 x[storeix * nPts * N_VAR + j * nPts + i] = xi[j];
 
             for (int j = 0; j < N_VAR; ++j)
-#ifdef FSAL_STEP_PROPERTY
                 dx[storeix * nPts * N_VAR + j * nPts + i] = dxi[j];
-#else
-                dx[(storeix - 1) * nPts * N_VAR + j * nPts + i] = dxi[j]; //without FSAL, dxi returned by stepper is evaluated at beginning of timestep
-#endif
 
             for (int j = 0; j < N_AUX; ++j)
                 aux[storeix * nPts * N_AUX + j * nPts + i] = auxi[j];
@@ -136,18 +116,6 @@ __kernel void features(
     //finalize observerdata for possible continuation
     finalizeObserverData(&ti, xi, dxi, auxi, &odata, opars, tspan);
 
-#if !defined(FSAL_STEP_PROPERTY)
-    //get the slope at the last point
-    for (int j = 0; j < N_WIENER; ++j)
-        wi[j] = randn(&rd) / sqrt(dt);
-
-    getRHS(ti, xi, p, dxi, auxi, wi);
-
-    for (int j = 0; j < N_VAR; ++j)
-        dx[storeix * nPts * N_VAR + j * nPts + i] = dxi[j];
-#endif
-
-    nStored[i] = storeix; //storeix ranged from 0 to nStored-1
 
     //set global variables to be ready to continue
     for (int j = 0; j < N_VAR; ++j)
@@ -156,6 +124,7 @@ __kernel void features(
     for (int j = 0; j < N_RNGSTATE; ++j)
         RNGstate[j * nPts + i] = rd.state[j];
 
-    //TODO: odataf - store separate observerdata final state to match xf shift model???
     OData[i] = odata;
+    
+    nStored[i] = storeix; //storeix ranged from 0 to nStored-1
 }
