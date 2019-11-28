@@ -1,3 +1,4 @@
+
 #include "clODE_random.cl"
 #include "clODE_struct_defs.cl"
 #include "clODE_utilities.cl"
@@ -53,7 +54,6 @@ __kernel void initializeObserver(
 	getRHS(ti, xi, p, dxi, auxi, wi); //slope at initial point, needed for FSAL steppers (bs23, dorpri5)
 
 	ObserverData odata = OData[i]; //private copy of observer data
-
 
 	initializeObserverData(&ti, xi, dxi, auxi, &odata, opars);
 

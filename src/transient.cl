@@ -1,3 +1,4 @@
+
 #include "clODE_random.cl"
 #include "clODE_struct_defs.cl"
 #include "clODE_utilities.cl"
@@ -19,7 +20,7 @@ __kernel void transient(
 
     realtype p[N_PAR], xi[N_VAR], dxi[N_VAR], auxi[N_AUX], wi[N_WIENER];
     rngData rd;
-    __constant realtype *tspanPtr = tspan;
+    __constant realtype * const tspanPtr = tspan;
 
     //get private copy of ODE parameters, initial data, and compute slope at initial state
     realtype ti = tspan[0];

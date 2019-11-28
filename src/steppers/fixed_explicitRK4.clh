@@ -1,5 +1,5 @@
 //Explicit Runge-Kutta 4 time step
-inline void stepper(realtype *ti, realtype xi[], realtype k1[], realtype pars[], const realtype dt, realtype aux[], realtype wi[])
+inline void stepper(realtype *ti, realtype xi[], realtype k1[], const realtype pars[], const realtype dt, realtype aux[], const realtype wi[])
 {
     realtype h2 = dt * RCONST(0.5), th2 = *ti + h2, th = *ti + dt;
     realtype tmp[N_VAR], k2[N_VAR], k3[N_VAR], k4[N_VAR];

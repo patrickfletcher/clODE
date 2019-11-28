@@ -142,7 +142,7 @@ public:
     std::vector<double> getX0();
     std::vector<double> getXf();
     std::vector<double> getAuxf();
-    std::string getProgramString() { return clprogramstring; };
+    std::string getProgramString() { return buildOptions+clprogramstring+ODEsystemsource; };
     std::vector<std::string> getAvailableSteppers() { return availableSteppers; };
 
     void printStatus();
