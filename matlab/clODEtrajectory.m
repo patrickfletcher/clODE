@@ -58,17 +58,11 @@ classdef clODEtrajectory<clODE & matlab.mixin.SetGet
         %overloads to fetch data if desired
         function trajectory(obj)
             obj.cppmethod('trajectory');
-            obj.getNsteps();
             if any(obj.nStored==obj.sp.max_store)
                 warning('Maximum storage reached')
             end
         end
         
-            
-        function nSteps=getNsteps(obj)
-            nSteps=obj.cppmethod('getsteps');
-            obj.nSteps=nSteps;
-        end
         function t=getT(obj)
             t=obj.cppmethod('gett'); t=t(:); %force column
             t=reshape(t,obj.nPts,obj.nSteps)';
@@ -104,7 +98,7 @@ classdef clODEtrajectory<clODE & matlab.mixin.SetGet
         end
 
         function nStored=getNstored(obj)
-            nStored=obj.cppmethod('getstored');
+            nStored=obj.cppmethod('getnstored');
             obj.nStored=nStored;
         end
         

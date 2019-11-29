@@ -18,7 +18,7 @@ CLODEfeatures::CLODEfeatures(ProblemInfo prob, std::string stepper, std::string 
 
 	//printf("\nCLODE has been specialized: CLODEfeatures\n");
 
-	getObserverDefineMap(prob, clSinglePrecision, 0, 0, observerDefineMap, availableObserverNames);
+	getObserverDefineMap(prob, clSinglePrecision, 2, 0, observerDefineMap, availableObserverNames);
 	setObserver(observer);
 
 	clprogramstring += read_file(clodeRoot + "initializeObserver.cl");
@@ -31,7 +31,6 @@ CLODEfeatures::~CLODEfeatures() {}
 //initialize everything
 void CLODEfeatures::initialize(std::vector<cl_double> newTspan, std::vector<cl_double> newX0, std::vector<cl_double> newPars, SolverParams<cl_double> newSp, ObserverParams<cl_double> newOp)
 {
-
 	clInitialized = false;
 	// observerBuildOpts = getObserverBuildOpts();
 	getObserverDefineMap(prob, clSinglePrecision, newOp.fVarIx, newOp.eVarIx, observerDefineMap, availableObserverNames);
@@ -50,6 +49,8 @@ void CLODEfeatures::initialize(std::vector<cl_double> newTspan, std::vector<cl_d
 	setTspan(newTspan);
 	setProblemData(newX0, newPars); //will set nPts
 	resizeFeaturesVariables(); //set up d_F and d_odata too, which depend on nPts
+
+	printf("Using observer: %s\n",observer);
 
 	clInitialized = true;
 	dbg_printf("initialize clODEfeatures.\n");

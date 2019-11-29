@@ -55,8 +55,7 @@ enum class Action
     GetX,
     GetDx,
     GetAux,
-    GetSteps,
-    GetStored
+    GetNStored
 };
 
 // Map string (first input argument to mexFunction) to an Action
@@ -89,8 +88,7 @@ const std::map<std::string, Action> actionTypeMap =
     { "getx",           Action::GetX },
     { "getdx",          Action::GetDx },
     { "getaux",         Action::GetAux },
-    { "getsteps",       Action::GetSteps },
-    { "getstored",      Action::GetStored }
+    { "getnstored",      Action::GetNStored }
 }; 
 
 
@@ -353,12 +351,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         std::copy(aux.begin(), aux.end(), (double *)mxGetData(plhs[0]));
         break;
 	}
-    case Action::GetSteps:
-    {
-		plhs[0]=mxCreateDoubleScalar(instance->getNStoreMax());
-        break;
-	}
-    case Action::GetStored:
+    case Action::GetNStored:
     {
         std::vector<int> nStored=instance->getNstored();
 		plhs[0]=mxCreateDoubleMatrix(nStored.size(), 1, mxREAL);

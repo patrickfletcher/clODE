@@ -61,7 +61,7 @@ classdef clODEfeatures<clODE & matlab.mixin.SetGet
             end
             obj@clODE(arg1, precision, selectedDevice, stepper, mexFilename, observer);
             
-            obj.op=clODEfeatures.observerParams();
+            obj.op=clODEfeatures.defaultObserverParams();
             obj.observerNames;
             obj.observer=observer;
         end
@@ -143,7 +143,7 @@ classdef clODEfeatures<clODE & matlab.mixin.SetGet
     %static helper methods
     methods (Static=true)
         
-        function op = observerParams()
+        function op = defaultObserverParams()
 
             op.eVarIx=1; %not implemented
             op.fVarIx=1; %feature detection variable

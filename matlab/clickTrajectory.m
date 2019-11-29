@@ -23,7 +23,7 @@ for v=1:length(vars)
     if isempty(tmpIx)
         tmpIx=find(clo.prob.auxNames==string(vars{v}));
         if isempty(tmpIx)
-            error(['unknown variable: ' vars(v)]);
+            error(['unknown variable: ' vars{v}]);
         else
             varIsAux(v)=true;
             varIx(v)=tmpIx;
