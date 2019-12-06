@@ -58,8 +58,8 @@ void CLODEfeatures::initialize(std::vector<cl_double> newTspan, std::vector<cl_d
 
 void CLODEfeatures::setObserver(std::string newObserver)
 {
-	if (newObserver!=observer)
-	{
+	// if (newObserver!=observer)
+	// {
 		auto loc = observerDefineMap.find(newObserver); //from steppers.cl
 		if ( loc != observerDefineMap.end() )
 		{
@@ -77,7 +77,7 @@ void CLODEfeatures::setObserver(std::string newObserver)
 			printf("Warning: unknown observer: %s. Observer method unchanged\n",newObserver.c_str());
 		}
 		dbg_printf("set observer\n");
-	}
+	// }
 	
 }
 

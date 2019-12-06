@@ -4,7 +4,6 @@ classdef clODEtrajectory<clODE & matlab.mixin.SetGet
     %TODO: return only valid time points for each trajectory - cell array??
     
     properties
-        nSteps
         nStored
         
         t
@@ -65,30 +64,31 @@ classdef clODEtrajectory<clODE & matlab.mixin.SetGet
         
         function t=getT(obj)
             t=obj.cppmethod('gett'); t=t(:); %force column
-            t=reshape(t,obj.nPts,obj.nSteps)';
+            t=reshape(t,obj.nPts,obj.sp.max_store)';
             obj.t=t;
         end
         
         function x=getX(obj)
             x=obj.cppmethod('getx');
-            x=reshape(x,obj.nPts,obj.prob.nVar,obj.nSteps);
+            x=reshape(x,obj.nPts,obj.prob.nVar,obj.sp.max_store);
             x=permute(x,[3,2,1]);
             obj.x=x;
         end
         
         function dx=getDx(obj)
             dx=obj.cppmethod('getdx');
-            dx=reshape(dx,obj.nPts,obj.prob.nVar,obj.nSteps);
+            dx=reshape(dx,obj.nPts,obj.prob.nVar,obj.sp.max_store);
             dx=permute(dx,[3,2,1]);
             obj.dx=dx;
         end
         
         function aux=getAux(obj)
-            aux=nan(obj.nSteps,obj.prob.nAux,obj.nPts);
+            nAux=max(obj.prob.nAux,1); %make a dummy aux trajectory if nAux=0
+            aux=nan(obj.sp.max_store,nAux,obj.nPts);
             obj.aux=aux;
             if obj.prob.nAux>0
             aux=obj.cppmethod('getaux');
-            aux=reshape(aux,obj.nPts,obj.prob.nAux,obj.nSteps);
+            aux=reshape(aux,obj.nPts,obj.prob.nAux,obj.sp.max_store);
             aux=permute(aux,[3,2,1]);
             obj.aux=aux;
             end
