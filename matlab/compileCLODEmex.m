@@ -43,7 +43,7 @@ cd ../matlab/
 clode_path=strrep(clode_path,'\','/'); %stupid windows backslash filesep
 
 debugchar='';
-% debugchar='-g';
+debugchar='-g';
 
 verbosechar='';
 % verbosechar='-v';

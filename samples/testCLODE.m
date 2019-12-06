@@ -8,7 +8,7 @@ clo=clODE(odefile,precision);
 % clo.selectDevice(); %{'type','gpu'}, {'vendor','nvidia'}, {platID,devID}, 'maxComputeUnits','maxClock' 
 
 %solver parameters
-sp=clODE.solverParams();%create required ODE solver parameter struct
+sp=clODE.defaultSolverParams();%create required ODE solver parameter struct
 % sp.dt=0.1;
 % sp.dtmax=100.00;
 % sp.abstol=1e-6;

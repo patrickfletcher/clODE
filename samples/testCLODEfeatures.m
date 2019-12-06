@@ -24,14 +24,14 @@ clo=clODEfeatures(odefile,precision,selectedDevice,stepper);
 % clo.stepper='rk4'; %default='dorpri5'
 
 %solver parameters`
-sp=clODE.solverParams();%create required ODE solver parameter struct
+sp=clODE.defaultSolverParams();%create required ODE solver parameter struct
 sp.dt=1;
 sp.dtmax=100;
 sp.abstol=1e-6;
 sp.reltol=1e-3; %nhood2 may require fairly strict reltol
 % sp.max_steps=2000;
 
-op=clODEfeatures.observerParams(); %create required observer parameter struct
+op=clODEfeatures.defaultObserverParams(); %create required observer parameter struct
 op.maxEventCount=10000; %stops if this many events found {localmax, nhood2}
 op.eps_dx=1e-7; %for checking for min/max
 op.minXamp=0.1; %don't count event if global (max x - min x) is too small

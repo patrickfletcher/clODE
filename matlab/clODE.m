@@ -100,7 +100,7 @@ classdef clODE < cppclass & matlab.mixin.SetGet
             obj.precision=precision;
             obj.devices=devices;
             obj.selectedDevice=selectedDevice;
-            obj.sp=clODE.solverParams(); %default solver params
+            obj.sp=clODE.defaultSolverParams(); %default solver params
         end
         
         % new and delete are inherited
@@ -256,7 +256,7 @@ classdef clODE < cppclass & matlab.mixin.SetGet
     %static helper methods
     methods (Static=true)
         
-        function sp=solverParams()
+        function sp=defaultSolverParams()
             sp.dt=.1;
             sp.dtmax=100.00;
             sp.abstol=1e-6;

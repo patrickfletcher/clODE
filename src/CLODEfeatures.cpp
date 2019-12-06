@@ -18,7 +18,7 @@ CLODEfeatures::CLODEfeatures(ProblemInfo prob, std::string stepper, std::string 
 
 	//printf("\nCLODE has been specialized: CLODEfeatures\n");
 
-	getObserverDefineMap(prob, clSinglePrecision, 2, 0, observerDefineMap, availableObserverNames);
+	getObserverDefineMap(prob, clSinglePrecision, 0, 0, observerDefineMap, availableObserverNames);
 	setObserver(observer);
 
 	clprogramstring += read_file(clodeRoot + "initializeObserver.cl");

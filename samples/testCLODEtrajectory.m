@@ -7,7 +7,7 @@ clo=clODEtrajectory(odefile,precision);
 % clo.stepper='seuler'; %default='dopri5'
 
 %solver parameters
-sp=clODE.solverParams();%create required ODE solver parameter struct
+sp=clODE.defaultSolverParams();%create required ODE solver parameter struct
 % sp.dt=0.1;
 % sp.dtmax=100.00;
 % sp.abstol=1e-6;
@@ -36,7 +36,6 @@ t=clo.getT();
 x=clo.getX();
 dx=clo.getDx();
 aux=clo.getAux();
-nSteps=clo.getNsteps();
 nStored=clo.getNstored();
 toc
 
