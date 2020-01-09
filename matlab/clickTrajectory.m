@@ -187,7 +187,7 @@ plotTrajectories(X,T,AUX);
             XLIM=xlim();
             
             line((XLIM(1)+XLIM(end))*0.02,YLIM(2)*0.9,'marker',markers(i),'linestyle','none','color',markerColor,'linewidth',1,'tag','marks');
-            title([clo.prob.parNames{parIx(1)} '=' num2str(p(i,parIx(1)), '%.1f') ', ' clo.prob.parNames{parIx(2)} '=' num2str(p(i,parIx(2)),'%.1f')]);
+            title([clo.prob.parNames{parIx(1)} '=' num2str(p(i,parIx(1)), '%.2g') ', ' clo.prob.parNames{parIx(2)} '=' num2str(p(i,parIx(2)),'%.2g')]);
         end
     end
 end
