@@ -1,4 +1,4 @@
-function clickTrajectory(clickAxis,~,clo,pin,x0in,tspan,parIx,vars,tracjectoryFigID,nClick,markerColor)
+function clickTrajectory(clickAxis,~,clo,Grid,vars,tracjectoryFigID,nClick,markerColor)
 %A mouse click inside the axes will trigger a parameter
 %selection crosshair. A second click selects a parameter
 %combination to simulate, and resulting simulation is displayed
@@ -14,8 +14,9 @@ if nClick>6, error('I refuse to do more than 6 clicks'); end
 
 if ~exist('markerColor','var'), markerColor='k';end
 
-x0=repmat(x0in(:)',nClick,1);
-p=repmat(pin(:)',nClick,1);
+tspan=clo.tspan;
+x0=repmat(clo.prob.x0(:)',nClick,1);
+p=repmat(clo.prob.p0(:)',nClick,1);
 
 varIsAux=false(size(vars));
 for v=1:length(vars) 
@@ -42,8 +43,8 @@ end
 
 for n=1:nClick
     [px,py]=ginput(1);
-    p(n,parIx(1))=px;
-    p(n,parIx(2))=py;
+    p(n,Grid.xix)=px;
+    p(n,Grid.yix)=py;
     h(n)=line(px,py,'marker',markers(n),'linestyle','none','color',markerColor,'linewidth',1,'tag','marks');
 end
 
@@ -51,7 +52,7 @@ clo.setProblemData(x0(:),p(:));
 clo.settspan(tspan);
 % clo.transient();
 
-if ~exist('tracjectoryFigID','var'), tracjectoryFigID=figure();end
+if ~exist('tracjectoryFigID','var')||isempty(tracjectoryFigID), tracjectoryFigID=figure();end
 hf=figure(tracjectoryFigID);
 
 hf.KeyPressFcn=@keypress;
@@ -186,8 +187,10 @@ plotTrajectories(X,T,AUX);
             
             XLIM=xlim();
             
-            line((XLIM(1)+XLIM(end))*0.02,YLIM(2)*0.9,'marker',markers(i),'linestyle','none','color',markerColor,'linewidth',1,'tag','marks');
-            title([clo.prob.parNames{parIx(1)} '=' num2str(p(i,parIx(1)), '%.2g') ', ' clo.prob.parNames{parIx(2)} '=' num2str(p(i,parIx(2)),'%.2g')]);
+            line((XLIM(1)+XLIM(end))*0.02,YLIM(2)*0.9,'marker',markers(i),...
+                'linestyle','none','color',markerColor,'linewidth',1,'tag','marks');
+            title([clo.prob.parNames{Grid.xix} '=' num2str(p(i,Grid.xix), '%.2g') ', '...
+                   clo.prob.parNames{Grid.yix} '=' num2str(p(i,Grid.yix),'%.2g')]);
         end
     end
 end
