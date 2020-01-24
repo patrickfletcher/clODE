@@ -1,4 +1,4 @@
-function clickTrajectory(clickAxis,~,clo,Grid,vars,tracjectoryFigID,nClick,markerColor)
+function clickTrajectory(src,evnt,clo,Grid,vars,trajFigID,nClick,markerColor)
 %A mouse click inside the axes will trigger a parameter
 %selection crosshair. A second click selects a parameter
 %combination to simulate, and resulting simulation is displayed
@@ -52,8 +52,10 @@ clo.setProblemData(x0(:),p(:));
 clo.settspan(tspan);
 % clo.transient();
 
-if ~exist('tracjectoryFigID','var')||isempty(tracjectoryFigID), tracjectoryFigID=figure();end
-hf=figure(tracjectoryFigID);
+if ~exist('trajFigID','var')||isempty(trajFigID)
+    trajFigID=figure();
+end
+hf=figure(trajFigID);
 
 hf.KeyPressFcn=@keypress;
 
