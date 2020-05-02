@@ -188,14 +188,6 @@ void CLODEfeatures::resizeFeaturesVariables()
 
 //Simulation routines
 
-//overload to allow manual re-initialization of observer data at any time.
-void CLODEfeatures::features(bool newDoObserverInitFlag)
-{
-	doObserverInitialization = newDoObserverInitFlag;
-
-	features();
-}
-
 //
 void CLODEfeatures::initializeObserver()
 {
@@ -235,6 +227,14 @@ void CLODEfeatures::initializeObserver()
 	{
 		printf("CLODE has not been initialized\n");
 	}
+}
+
+//overload to allow manual re-initialization of observer data at any time.
+void CLODEfeatures::features(bool newDoObserverInitFlag)
+{
+	doObserverInitialization = newDoObserverInitFlag;
+
+	features();
 }
 
 void CLODEfeatures::features()

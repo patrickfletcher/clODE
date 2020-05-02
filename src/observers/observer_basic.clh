@@ -70,7 +70,6 @@ inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dxi[], re
 //all features are per-timestep (eventOccurred unused)
 inline void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
 {
-    ++od->stepcount;
     od->xTrajectoryMax = fmax(xi[op->fVarIx], od->xTrajectoryMax);
     od->xTrajectoryMin = fmin(xi[op->fVarIx], od->xTrajectoryMin);
     runningMean(&od->xTrajectoryMean, xi[op->fVarIx], od->stepcount);

@@ -90,6 +90,7 @@ plotTrajectories(X,T,AUX);
                 plotTrajectories(X,T,AUX);
                 
             case 'g' %go
+                clo.settspan(tspan);
                 [X,T,AUX]=integrate();
                 plotTrajectories(X,T,AUX);
                 
@@ -100,10 +101,10 @@ plotTrajectories(X,T,AUX);
                 plotTrajectories(X,T,AUX);
                 
             case 'r' %randomize ICs
-                clo.settspan(tspan);
                 x0lb=[clo.prob.var.lb];
                 x0ub=[clo.prob.var.ub];
                 x0=x0lb+rand(nClick,length(x0lb)).*(x0ub-x0lb);
+                clo.settspan(tspan);
                 clo.setX0(x0(:));
                 [X,T,AUX]=integrate();
                 plotTrajectories(X,T,AUX);

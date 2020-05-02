@@ -31,8 +31,8 @@ switch(evt.Key)
         clo.shiftX0();
         clo.transient();
         toc
-        X0=clo.getX0();
-        hi.CData=reshape(X0(:,clo.op.fVarIx),Grid.dim);
+        Xf=clo.getXf();
+        hi.CData=reshape(Xf(:,clo.op.fVarIx),Grid.dim);
         hcb=colorbar('northoutside');
         title(hcb,clo.prob.varNames(clo.op.fVarIx))
 %         axis tight
@@ -62,8 +62,8 @@ switch(evt.Key)
         tic
         clo.transient();
         toc
-        X0=clo.getX0();
-        hi.CData=reshape(X0(:,clo.op.fVarIx),Grid.dim);
+        Xf=clo.getXf();
+        hi.CData=reshape(Xf(:,clo.op.fVarIx),Grid.dim);
         hcb=colorbar('northoutside');
         title(hcb,clo.prob.varNames(clo.op.fVarIx))
 %         axis tight

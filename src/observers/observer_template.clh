@@ -33,11 +33,6 @@ ObserverInfo getFeatureInfo_template(ProblemInfo pi, bool clSinglePrecision)
 #include "clODE_utilities.cl" //common math functions
 typedef struct ObserverData_template ObserverData;
 
-//Perform and post-integration cleanup and write desired features into the global array F
-inline void finalizeFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op, __global realtype *F, int i, int nPts)
-{ 
-}
-
 //set initial values to relevant fields in ObserverData
 inline void initializeObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
 {
@@ -70,10 +65,14 @@ inline void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], real
 {
 }
 
+//Perform and post-integration cleanup and write desired features into the global array F
+inline void finalizeFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op, __global realtype *F, int i, int nPts)
+{ 
+}
+
 //Perform and post-integration cleanup of observer data to ensure it is ready for continuation if needed
 inline void finalizeObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op, __constant realtype *tspan)
-{
-    //eg. times of last events need to be shifted left of t0
+{//eg. times of last events need to be shifted left of t0
 }
 
 #endif

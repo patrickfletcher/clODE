@@ -44,8 +44,8 @@ typedef struct ObserverData_basicAll
     realtype auxTrajectoryMax[N_AUX];
     realtype auxTrajectoryMin[N_AUX];
     realtype auxTrajectoryMean[N_AUX];
-    long eventcount;
-    long stepcount;
+    int eventcount;
+    int stepcount;
 } ObserverData;
 
 inline void initializeObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
@@ -94,7 +94,6 @@ inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dxi[], re
 //all features are per-timestep (eventOccurred unused)
 inline void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
 {
-    ++od->stepcount;
     for (int j = 0; j < N_VAR; ++j)
     {
         od->xTrajectoryMax[j] = fmax(xi[j], od->xTrajectoryMax[j]);
