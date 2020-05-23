@@ -154,6 +154,7 @@ void CLODE::buildProgram(std::string extraBuildOpts)
 void CLODE::initialize(std::vector<double> newTspan, std::vector<double> newX0, std::vector<double> newPars, SolverParams<double> newSp)
 {
 
+	clInitialized = false;
 	//(re)build the program
 	buildProgram();
 

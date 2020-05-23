@@ -28,6 +28,7 @@ CLODEtrajectory::~CLODEtrajectory() {}
 void CLODEtrajectory::initialize(std::vector<double> newTspan, std::vector<double> newX0, std::vector<double> newPars, SolverParams<double> newSp)
 {
 
+	clInitialized = false;
 	//(re)build the program
 	buildProgram("");
 
