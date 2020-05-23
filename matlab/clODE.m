@@ -70,9 +70,16 @@ classdef clODE < cppclass & matlab.mixin.SetGet
                 stepper='dopri5';
             end
             
-            devices=queryOpenCL(); %default: first device
-            if  ~exist('selectedDevice','var')||isempty(selectedDevice)
-                selectedDevice=1;
+            devices=queryOpenCL(); %throws error if no opencl 
+            %device selection: parse inputs
+            if  ~exist('selectedDevice','var')
+                selectedDevice=[];
+            elseif selectedDevice>length(devices)
+                error('Device index specifed is greater than the number of OpenCL devices present')
+            end
+            %auto-selection of devices: gpu>cpu
+            if isempty(selectedDevice)
+                selectedDevice=clODE.autoselectDevice(devices);
             end
             
             args{1}=prob;
@@ -264,6 +271,19 @@ classdef clODE < cppclass & matlab.mixin.SetGet
             sp.max_steps=1000000;
             sp.max_store=10000; %allocated number of timepoints: min( (tf-t0)/(dt*nout)+1 , sp.max_store)
             sp.nout=1;
+        end
+        
+        function selectedDevice=autoselectDevice(devices)
+            selectedDevice=[];
+%             if  isempty(selectedDevice)
+%                 selectedDevice=find({devices(:).type}=="accel");
+%             end
+            if  isempty(selectedDevice)
+                selectedDevice=find({devices(:).type}=="GPU");
+            end
+            if  isempty(selectedDevice)
+                selectedDevice=find({devices(:).type}=="CPU");
+            end
         end
         
         function vendorInt=getVendorEnum(cl_vendor)
