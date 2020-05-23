@@ -14,13 +14,20 @@ sp=clODE.defaultSolverParams();%create required ODE solver parameter struct
 % sp.reltol=1e-3;
 % sp.max_steps=10000000;
 
-tspan=[0,3000];
+tspan=[0,30000];
 
 %set up parameters and initial conditions
 nPts=32;
 
 X0=repmat(clo.prob.x0,nPts,1);
+
+plb=[clo.prob.par.lb];
+pub=[clo.prob.par.ub];
+p1ix=find(clo.prob.parNames=="gbk");
+p1=linspace(plb(p1ix),pub(p1ix),nPts);
+
 P=repmat(clo.prob.p0,nPts,1);
+P(:,p1ix)=p1(:);
 
 
 clo.initialize(tspan, X0, P, sp);
@@ -42,9 +49,9 @@ toc
 
 %%
 figure(1)
-tix=32;
+tix=1;
 vix=1;
-thisNstore=nStored(tix)
+thisNstore=nStored(tix);
 tt=t(1:thisNstore,tix);
 xx=x(1:thisNstore,vix,tix);
 auxx=aux(1:thisNstore,tix);
