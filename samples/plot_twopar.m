@@ -42,9 +42,9 @@ if exist('click_pars','var')
     cloTraj.tscale=clo.tscale;
     cloTraj.tunits=clo.tunits;
 
-    X0t=repmat(clo.prob.x0,1,1);
-    Pt=repmat(clo.prob.p0,1,1);
-    cloTraj.initialize(tspanT, X0t(:), Pt(:), spt);
+    X0t=repmat(clo.prob.x0,nClick,1);
+    Pt=repmat(clo.prob.p0,nClick,1);
+    cloTraj.initialize(tspanT, X0t, Pt, spt);
 
     %attach the "clicker" to the imagesc object in Figure 1. 
     ax2par.ButtonDownFcn={@clickTrajectory,cloTraj,Grid,vars,trajFig,nClick};
