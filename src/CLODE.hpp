@@ -76,13 +76,13 @@ protected:
     int nRNGstate; //TODO: different RNGs could be selected like steppers...?
 
     SolverParams<double> sp;
-    std::vector<double> tspan, x0, pars, xf;
+    std::vector<double> tspan, x0, pars, xf, dt;
     size_t x0elements, parselements, RNGelements;
 
     std::vector<cl_ulong> RNGstate;
 
     //Device variables
-    cl::Buffer d_tspan, d_x0, d_pars, d_sp, d_xf, d_RNGstate;
+    cl::Buffer d_tspan, d_x0, d_pars, d_sp, d_xf, d_RNGstate, d_dt;
 
     //kernel object
     std::string clprogramstring, buildOptions, ODEsystemsource;

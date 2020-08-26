@@ -12,7 +12,8 @@ __kernel void transient(
     __constant realtype *pars,          //parameter values				[nPts*nPar]
     __constant struct SolverParams *sp, //dtmin/max, tols, etc
     __global realtype *xf,              //final state 				[nPts*nVar]
-    __global ulong *RNGstate            //state for RNG					[nPts*nRNGstate]
+    __global ulong *RNGstate,           //state for RNG					[nPts*nRNGstate]
+    __global realtype *d_dt             //array of dt values, one per solver
 )
 {
     int i = get_global_id(0);
@@ -25,7 +26,7 @@ __kernel void transient(
 
     //get private copy of ODE parameters, initial data, and compute slope at initial state
     ti = tspan[0];
-    dt = sp->dt;
+    dt = d_dt[i];
 
     for (int j = 0; j < N_PAR; ++j)
         p[j] = pars[j * nPts + i];
@@ -50,7 +51,7 @@ __kernel void transient(
     while (ti < tspan[1] && step < sp->max_steps)
     {
         ++step;
-        stepflag = stepper(&ti, xi, dxi, p, sp, &dt, tspanPtr, auxi, wi, step, &rd);
+        stepflag = stepper(&ti, xi, dxi, p, sp, &dt, tspanPtr, auxi, wi, &rd);
         if (stepflag!=0)
             break;
     }
@@ -62,4 +63,7 @@ __kernel void transient(
     // To get same RNG on repeat (non-continued) run, need to set the seed to same value
     for (int j = 0; j < N_RNGSTATE; ++j)
         RNGstate[j * nPts + i] = rd.state[j];
+
+    // update dt to its final value (for adaptive stepper continue)
+    // d_dt[i] = dt;
 }

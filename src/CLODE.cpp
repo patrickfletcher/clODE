@@ -161,9 +161,9 @@ void CLODE::initialize(std::vector<double> newTspan, std::vector<double> newX0, 
 	//set up the kernel
 	initializeTransientKernel();
 
-	setSolverParams(newSp);
-	setTspan(newTspan);
 	setProblemData(newX0, newPars); //will call setNpts
+	setTspan(newTspan);
+	setSolverParams(newSp);
 
 	clInitialized = true;
 	dbg_printf("initialize clODE\n");
@@ -262,6 +262,7 @@ void CLODE::setNpts(int newNpts)
 		pars.resize(parselements);
 		xf.resize(x0elements);
 		RNGstate.resize(RNGelements);
+		dt.resize(nPts);
 
 		//new device variables
 		try
@@ -270,6 +271,7 @@ void CLODE::setNpts(int newNpts)
 			d_pars = cl::Buffer(opencl.getContext(), CL_MEM_READ_ONLY, realSize * parselements, NULL, &opencl.error);
 			d_xf = cl::Buffer(opencl.getContext(), CL_MEM_READ_WRITE, realSize * x0elements, NULL, &opencl.error);
 			d_RNGstate = cl::Buffer(opencl.getContext(), CL_MEM_READ_WRITE, sizeof(cl_ulong) * RNGelements, NULL, &opencl.error);
+			d_dt = cl::Buffer(opencl.getContext(), CL_MEM_READ_WRITE, realSize * nPts, NULL, &opencl.error);
 		}
 		catch (cl::Error &er)
 		{
@@ -407,14 +409,21 @@ void CLODE::setSolverParams(SolverParams<double> newSp)
 	sp = newSp;
 	try
 	{
+		std::fill(dt.begin(), dt.end(), sp.dt);
+		
 		if (clSinglePrecision)
 		{ //downcast to float if desired
 			SolverParams<float> spF = solverParamsToFloat(sp);
 			opencl.error = opencl.getQueue().enqueueWriteBuffer(d_sp, CL_TRUE, 0, sizeof(spF), &spF);
+			std::vector<float> dtF(dt.begin(), dt.end());
+			opencl.error = copy(opencl.getQueue(), dtF.begin(), dtF.end(), d_dt);
+			// opencl.error = opencl.getQueue().enqueueFillBuffer(d_dt, spF.dt, 0, sizeof(spF.dt));
 		}
 		else
 		{
 			opencl.error = opencl.getQueue().enqueueWriteBuffer(d_sp, CL_TRUE, 0, sizeof(sp), &sp);
+			opencl.error = copy(opencl.getQueue(), dt.begin(), dt.end(), d_dt);
+			// opencl.error = opencl.getQueue().enqueueFillBuffer(d_dt, sp.dt, 0, sizeof(sp.dt));
 		}
 	}
 	catch (cl::Error &er)
@@ -497,12 +506,14 @@ void CLODE::transient()
 		try
 		{
 			//kernel args
-			cl_transient.setArg(0, d_tspan);
-			cl_transient.setArg(1, d_x0);
-			cl_transient.setArg(2, d_pars);
-			cl_transient.setArg(3, d_sp);
-			cl_transient.setArg(4, d_xf);
-			cl_transient.setArg(5, d_RNGstate);
+			int ix=0;
+			cl_transient.setArg(ix++, d_tspan);
+			cl_transient.setArg(ix++, d_x0);
+			cl_transient.setArg(ix++, d_pars);
+			cl_transient.setArg(ix++, d_sp);
+			cl_transient.setArg(ix++, d_xf);
+			cl_transient.setArg(ix++, d_RNGstate);
+			cl_transient.setArg(ix++, d_dt);
 
 			//execute the kernel
 			opencl.error = opencl.getQueue().enqueueNDRangeKernel(cl_transient, cl::NullRange, cl::NDRange(nPts));

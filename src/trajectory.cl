@@ -18,6 +18,7 @@ __kernel void trajectory(
     __constant struct SolverParams *sp, //dtmin/max, tols, etc
     __global realtype *xf,              //final state 				[nPts*nVar]
     __global ulong *RNGstate,           //state for RNG				[nPts*nRNGstate]
+    __global realtype *d_dt,            //array of dt values, one per solver
     __global realtype *t,               //
     __global realtype *x,               //
     __global realtype *dx,              //
@@ -34,7 +35,7 @@ __kernel void trajectory(
 
     //get private copy of ODE parameters, initial data, and compute slope at initial state
     ti = tspan[0];
-    dt = sp->dt;
+    dt = d_dt[i];
 
     for (int j = 0; j < N_PAR; ++j)
         p[j] = pars[j * nPts + i];
@@ -74,7 +75,7 @@ __kernel void trajectory(
     while (ti < tspan[1] && step < sp->max_steps && storeix < sp->max_store)
     {
         ++step;
-        stepflag = stepper(&ti, xi, dxi, p, sp, &dt, tspanPtr, auxi, wi, step, &rd);
+        stepflag = stepper(&ti, xi, dxi, p, sp, &dt, tspanPtr, auxi, wi, &rd);
         if (stepflag!=0)
             break;
 
@@ -96,6 +97,8 @@ __kernel void trajectory(
         }
     }
 
+    nStored[i] = storeix; //storeix ranged from 0 to nStored-1
+
     //write the final solution values to global memory.
     for (int j = 0; j < N_VAR; ++j)
         xf[j * nPts + i] = xi[j];
@@ -104,5 +107,6 @@ __kernel void trajectory(
     for (int j = 0; j < N_RNGSTATE; ++j)
         RNGstate[j * nPts + i] = rd.state[j];
 
-    nStored[i] = storeix; //storeix ranged from 0 to nStored-1
+    // update dt to its final value (for adaptive stepper continue)
+    // d_dt[i] = dt;
 }

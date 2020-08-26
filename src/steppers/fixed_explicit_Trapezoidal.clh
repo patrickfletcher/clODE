@@ -16,4 +16,6 @@ inline void do_step(realtype *ti, realtype xi[], realtype k1[], const realtype p
     //update to new ti, xi, k1
     for (int k = 0; k < N_VAR; k++)
         xi[k] += dt * RCONST(0.5) * (k1[k] + k2[k]);
+
+    *ti = th;
 }

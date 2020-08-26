@@ -1,15 +1,18 @@
 #include "clODE_struct_defs.cl" //for SolverParams struct definition
 #include "realtype.cl"
 
+//TODO: seems like there's no need for this if we use naive time update, except to allow Wiener vars in any solver without cluttering the steppers
+
 //Wrapper to handle step-size adaptation.  note: wi should be zeros
 inline int stepper(realtype *ti, realtype xi[], realtype k1[], const realtype pars[], 
 __constant struct SolverParams *sp, realtype *dt, __constant realtype *tspan, 
-realtype aux[], realtype wi[], const int step, rngData *rd)
+realtype aux[], realtype wi[], rngData *rd)
 {
+    // xi and ti are updated inside do_step. 
     do_step(ti, xi, k1, pars, *dt, aux, wi);
 
     // naive time update - this is the one consistent with what's in each stepper...
-    *ti += *dt;
+    // *ti += *dt;
 
     // // update time using Kahan summation
     // realtype y = *dt - *terr;
@@ -20,7 +23,9 @@ realtype aux[], realtype wi[], const int step, rngData *rd)
     //update the solution and dt - fma(step, *dt, tspan[0]) doesn't seem to change anything (compiler does it?)
     // *ti = tspan[0] + *dt * step;
     
-#ifdef STOCHASTIC_STEPPER //get the new random variables for the next time step
+    //NOTE: XPP doesn't care, it lets you have Wiener vars for any solver. Assumes noise value is constant across whole step
+#ifdef STOCHASTIC_STEPPER 
+    //get the new random variables for the next time step
     for (int j = 0; j < N_WIENER; ++j)
         wi[j] = randn(rd) / sqrt(*dt);
 #endif

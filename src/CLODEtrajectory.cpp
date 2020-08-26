@@ -38,10 +38,9 @@ void CLODEtrajectory::initialize(std::vector<double> newTspan, std::vector<doubl
 	//initialize the trajectory kernel
 	initializeTrajectoryKernel();
 
-	setSolverParams(newSp);
-	setTspan(newTspan);
-
 	setProblemData(newX0, newPars); //will set nPts
+	setTspan(newTspan);
+	setSolverParams(newSp);
 
 	resizeTrajectoryVariables(); //set up output variables too, which depend on nPts and nStoreMax=(tspan[1]-tspan[0])/(sp.dt*sp.nout)+1
 
@@ -139,17 +138,19 @@ void CLODEtrajectory::trajectory()
 		try
 		{
 			//kernel arguments
-			cl_trajectory.setArg(0, d_tspan);
-			cl_trajectory.setArg(1, d_x0);
-			cl_trajectory.setArg(2, d_pars);
-			cl_trajectory.setArg(3, d_sp);
-			cl_trajectory.setArg(4, d_xf);
-			cl_trajectory.setArg(5, d_RNGstate);
-			cl_trajectory.setArg(6, d_t);
-			cl_trajectory.setArg(7, d_x);
-			cl_trajectory.setArg(8, d_dx);
-			cl_trajectory.setArg(9, d_aux);
-			cl_trajectory.setArg(10, d_nStored);
+			int ix = 0;
+			cl_trajectory.setArg(ix++, d_tspan);
+			cl_trajectory.setArg(ix++, d_x0);
+			cl_trajectory.setArg(ix++, d_pars);
+			cl_trajectory.setArg(ix++, d_sp);
+			cl_trajectory.setArg(ix++, d_xf);
+			cl_trajectory.setArg(ix++, d_RNGstate);
+			cl_trajectory.setArg(ix++, d_dt);
+			cl_trajectory.setArg(ix++, d_t);
+			cl_trajectory.setArg(ix++, d_x);
+			cl_trajectory.setArg(ix++, d_dx);
+			cl_trajectory.setArg(ix++, d_aux);
+			cl_trajectory.setArg(ix++, d_nStored);
 
 			//execute the kernel
 			opencl.error = opencl.getQueue().enqueueNDRangeKernel(cl_trajectory, cl::NullRange, cl::NDRange(nPts));

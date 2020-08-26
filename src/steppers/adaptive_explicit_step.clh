@@ -8,7 +8,7 @@
 //Wrapper to handle step-size adaptation.  note: wi should be zeros
 inline int stepper(realtype *ti, realtype xi[], realtype k1[], const realtype pars[], 
 __constant struct SolverParams *sp, realtype *dt, __constant realtype *tspan, 
-realtype aux[], realtype wi[], const int step, rngData *rd)
+realtype aux[], realtype wi[], rngData *rd)
 {
     realtype tNew, normErr, relErr, err[N_VAR], newxi[N_VAR], newk1[N_VAR];
 

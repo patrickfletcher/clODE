@@ -7,7 +7,7 @@
 inline realtype do_step(realtype *ti, realtype xi[], realtype k1[], const realtype pars[], const realtype dt, realtype aux[], realtype err[], const realtype wi[])
 {
     realtype tNew = *ti + dt;
-    realtype newDt = tNew - *ti;
+    realtype newDt = tNew - *ti; //use the effective part of dt
     realtype xtmp[N_VAR], k2[N_VAR];
 
     //compute k1

@@ -44,11 +44,12 @@ void CLODEfeatures::initialize(std::vector<cl_double> newTspan, std::vector<cl_d
 
 	//initialize the trajectory kernel
 	initializeFeaturesKernel();
-	setSolverParams(newSp);
-	setObserverParams(newOp);
-	setTspan(newTspan);
 	setProblemData(newX0, newPars); //will set nPts
 	resizeFeaturesVariables(); //set up d_F and d_odata too, which depend on nPts
+
+	setTspan(newTspan);
+	setSolverParams(newSp);
+	setObserverParams(newOp);
 
 	printf("Using observer: %s\n",observer);
 
@@ -201,13 +202,15 @@ void CLODEfeatures::initializeObserver()
 		try
 		{
 			//kernel arguments
-			cl_initializeObserver.setArg(0, d_tspan);
-			cl_initializeObserver.setArg(1, d_x0);
-			cl_initializeObserver.setArg(2, d_pars);
-			cl_initializeObserver.setArg(3, d_sp);
-			cl_initializeObserver.setArg(4, d_RNGstate);
-			cl_initializeObserver.setArg(5, d_odata);
-			cl_initializeObserver.setArg(6, d_op);
+			int ix = 0;
+			cl_initializeObserver.setArg(ix++, d_tspan);
+			cl_initializeObserver.setArg(ix++, d_x0);
+			cl_initializeObserver.setArg(ix++, d_pars);
+			cl_initializeObserver.setArg(ix++, d_sp);
+			cl_initializeObserver.setArg(ix++, d_RNGstate);
+			cl_initializeObserver.setArg(ix++, d_dt);
+			cl_initializeObserver.setArg(ix++, d_odata);
+			cl_initializeObserver.setArg(ix++, d_op);
 
 			//execute the kernel
 			opencl.error = opencl.getQueue().enqueueNDRangeKernel(cl_initializeObserver, cl::NullRange, cl::NDRange(nPts));
@@ -252,15 +255,17 @@ void CLODEfeatures::features()
 		try
 		{
 			//kernel arguments
-			cl_features.setArg(0, d_tspan);
-			cl_features.setArg(1, d_x0);
-			cl_features.setArg(2, d_pars);
-			cl_features.setArg(3, d_sp);
-			cl_features.setArg(4, d_xf);
-			cl_features.setArg(5, d_RNGstate);
-			cl_features.setArg(6, d_odata);
-			cl_features.setArg(7, d_op);
-			cl_features.setArg(8, d_F);
+			int ix = 0;
+			cl_features.setArg(ix++, d_tspan);
+			cl_features.setArg(ix++, d_x0);
+			cl_features.setArg(ix++, d_pars);
+			cl_features.setArg(ix++, d_sp);
+			cl_features.setArg(ix++, d_xf);
+			cl_features.setArg(ix++, d_RNGstate);
+			cl_features.setArg(ix++, d_dt);
+			cl_features.setArg(ix++, d_odata);
+			cl_features.setArg(ix++, d_op);
+			cl_features.setArg(ix++, d_F);
 
 			//execute the kernel
 			opencl.error = opencl.getQueue().enqueueNDRangeKernel(cl_features, cl::NullRange, cl::NDRange(nPts));
