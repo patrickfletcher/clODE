@@ -8,8 +8,17 @@ realtype aux[], realtype wi[], const int step, rngData *rd)
 {
     do_step(ti, xi, k1, pars, *dt, aux, wi);
 
-    //update the solution and dt
-    *ti = tspan[0] + *dt * step;
+    // naive time update - this is the one consistent with what's in each stepper...
+    *ti += *dt;
+
+    // // update time using Kahan summation
+    // realtype y = *dt - *terr;
+    // realtype tmp = *ti + y;
+    // *terr = (tmp - *ti) - *dt;
+    // *ti = tmp;
+
+    //update the solution and dt - fma(step, *dt, tspan[0]) doesn't seem to change anything (compiler does it?)
+    // *ti = tspan[0] + *dt * step;
     
 #ifdef STOCHASTIC_STEPPER //get the new random variables for the next time step
     for (int j = 0; j < N_WIENER; ++j)

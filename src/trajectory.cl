@@ -30,7 +30,7 @@ __kernel void trajectory(
     realtype ti, dt;
     realtype p[N_PAR], xi[N_VAR], dxi[N_VAR], auxi[N_AUX], wi[N_WIENER];
     rngData rd;
-    __constant realtype *tspanPtr = tspan;
+    __constant realtype * const tspanPtr = tspan;
 
     //get private copy of ODE parameters, initial data, and compute slope at initial state
     ti = tspan[0];
@@ -47,16 +47,18 @@ __kernel void trajectory(
 
     rd.randnUselast = 0;
 
-#ifdef STOCHASTIC_STEPPER
     for (int j = 0; j < N_WIENER; ++j)
+#ifdef STOCHASTIC_STEPPER
         wi[j] = randn(&rd) / sqrt(dt);
+#else
+        wi[j] = RCONST(0.0);
 #endif
     getRHS(ti, xi, p, dxi, auxi, wi); //slope at initial point, needed for FSAL steppers (bs23, dorpri5) and for DX output
 
     //store the initial point
 
     int storeix = 0;
-    t[storeix + i] = tspan[0];
+    t[storeix * nPts + i] = ti;
     for (int j = 0; j < N_VAR; ++j)
         x[storeix * nPts * N_VAR + j * nPts + i] = xi[j];
 
@@ -94,10 +96,11 @@ __kernel void trajectory(
         }
     }
 
-    //get device arrays ready to continue
+    //write the final solution values to global memory.
     for (int j = 0; j < N_VAR; ++j)
         xf[j * nPts + i] = xi[j];
 
+    // To get same RNG on repeat (non-continued) run, need to set the seed to same value
     for (int j = 0; j < N_RNGSTATE; ++j)
         RNGstate[j * nPts + i] = rd.state[j];
 

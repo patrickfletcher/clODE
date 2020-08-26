@@ -1,3 +1,4 @@
+// the most basic trajectory solver that stores nothing but the final variable values (and RNG state)
 
 #include "clODE_random.cl"
 #include "clODE_struct_defs.cl"
@@ -7,7 +8,7 @@
 
 __kernel void transient(
     __constant realtype *tspan,         //time vector [t0,tf] - adds (tf-t0) to these at the end
-    __global realtype *x0,              //initial state 				[nPts*nVar] -- overwrites this with xf=x(tf) at the end
+    __global realtype *x0,              //initial state 				[nPts*nVar]
     __constant realtype *pars,          //parameter values				[nPts*nPar]
     __constant struct SolverParams *sp, //dtmin/max, tols, etc
     __global realtype *xf,              //final state 				[nPts*nVar]
@@ -17,13 +18,14 @@ __kernel void transient(
     int i = get_global_id(0);
     int nPts = get_global_size(0);
 
+    realtype ti, dt;
     realtype p[N_PAR], xi[N_VAR], dxi[N_VAR], auxi[N_AUX], wi[N_WIENER];
     rngData rd;
     __constant realtype * const tspanPtr = tspan;
 
     //get private copy of ODE parameters, initial data, and compute slope at initial state
-    realtype ti = tspan[0];
-    realtype dt = sp->dt;
+    ti = tspan[0];
+    dt = sp->dt;
 
     for (int j = 0; j < N_PAR; ++j)
         p[j] = pars[j * nPts + i];
@@ -40,7 +42,7 @@ __kernel void transient(
     for (int j = 0; j < N_WIENER; ++j)
         wi[j] = randn(&rd) / sqrt(dt);
 #endif
-    getRHS(ti, xi, p, dxi, auxi, wi); //slope at initial point
+    getRHS(ti, xi, p, dxi, auxi, wi); //slope at initial point, needed for FSAL steppers (bs23, dorpri5)
 
     //time-stepping loop, main time interval
     int step = 0;
