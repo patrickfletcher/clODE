@@ -46,6 +46,7 @@ enum class Action
     GetXf,
     GetStepperNames,
     GetProgramString,
+    PrintStatus,
 //from here are clODEfeatures derived actions
     SetObserverPars,
     SetObserver,
@@ -81,6 +82,7 @@ const std::map<std::string, Action> actionTypeMap =
     { "getxf",          Action::GetXf },
     { "getsteppernames",        Action::GetStepperNames },
     { "getprogramstring",        Action::GetProgramString },
+    { "printstatus",        Action::PrintStatus },
 //from here are clODEfeatures derived actions
     { "setobserverpars", Action::SetObserverPars },
     { "setobserver",    Action::SetObserver },
@@ -313,6 +315,11 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     {
 		plhs[0]=mxCreateCellMatrix(1, 1);    
         mxSetCell(plhs[0], 0, mxCreateString(instance->getProgramString().c_str()));
+        break;
+    }
+    case Action::PrintStatus:
+    {   
+        instance->printStatus();
         break;
     }
 	//CLODEfeatures methods:

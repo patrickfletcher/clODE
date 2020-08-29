@@ -257,6 +257,9 @@ classdef clODE < cppclass & matlab.mixin.SetGet
             prog=obj.cppmethod('getprogramstring');
             programString=sprintf('%s',prog{1});
         end
+        function printStatus(obj)
+            obj.cppmethod('printstatus');
+        end
     end
     
     

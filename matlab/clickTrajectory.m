@@ -48,7 +48,7 @@ for n=1:nClick
     h(n)=line(px,py,'marker',markers(n),'linestyle','none','color',markerColor,'linewidth',1,'tag','marks');
 end
 
-clo.setProblemData(x0(:),p(:));
+clo.setProblemData(x0,p);
 clo.settspan(tspan);
 % clo.transient();
 
@@ -65,6 +65,7 @@ plotTrajectories(X,T,AUX);
 
     function [X,T,AUX]=integrate()
         clo.trajectory();
+        clo.getXf();
         xx=clo.getX();
         aux=clo.getAux();
         tt=clo.getT()*clo.tscale;

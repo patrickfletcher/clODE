@@ -146,7 +146,7 @@ void CLODE::buildProgram(std::string extraBuildOpts)
 	//now build
 	opencl.buildProgramFromString(clprogramstring + ODEsystemsource, buildOptions);
 
-	printStatus();
+	// printStatus();
 	dbg_printf("build clODE\n");
 }
 
