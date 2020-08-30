@@ -1,4 +1,8 @@
-function gridKeyPress(src,evt, clo, hi, Ffun, ftitle, nGrid, pix,initBounds)
+function gridKeyPress(src, evt, clo, hi, Grid, feature)
+
+plb=[clo.prob.par.lb];
+pub=[clo.prob.par.ub];
+initBounds = [plb(Grid.xix),pub(Grid.xix),plb(Grid.yix),pub(Grid.yix)];
 
 switch(evt.Key)
     case 'c' %'continue' - features without initialization
@@ -7,9 +11,9 @@ switch(evt.Key)
         clo.features();
         toc
         F=clo.getF();
-        hi.CData=reshape(Ffun(F),nGrid);
+        hi.CData=reshape(feature.fun(F),Grid.dim);
         hcb=colorbar('northoutside');
-        title(hcb,ftitle)
+        title(hcb,feature.name)
 %         axis tight
         
     case 'g' %'go' - features with initialization
@@ -17,9 +21,9 @@ switch(evt.Key)
         clo.features(1);
         toc
         F=clo.getF();
-        hi.CData=reshape(Ffun(F),nGrid);
+        hi.CData=reshape(feature.fun(F),Grid.dim);
         hcb=colorbar('northoutside');
-        title(hcb,ftitle)
+        title(hcb,feature.name)
 %         axis tight
         
     case 't' %'transient'
@@ -27,17 +31,17 @@ switch(evt.Key)
         clo.shiftX0();
         clo.transient();
         toc
-        X0=clo.getX0();
-        hi.CData=reshape(X0(:,clo.op.fVarIx),nGrid);
+        Xf=clo.getXf();
+        hi.CData=reshape(Xf(:,clo.op.fVarIx),Grid.dim);
         hcb=colorbar('northoutside');
         title(hcb,clo.prob.varNames(clo.op.fVarIx))
 %         axis tight
         
     case 'f' %select feature to plot %%%TODO: add computed features
-%         featureSelectDialog(Ffun,ftitle)
-%         hi.CData=reshape(Ffun(F),nGrid);
+%         featureSelectDialog(feature.fun,feature.name)
+%         hi.CData=reshape(feature.fun(F),grid.dim);
 %         hcb=colorbar('northoutside');
-%         title(hcb,ftitle)
+%         title(hcb,feature.name)
         
     case 'p' %change parameter values
         %select p1, p2?
@@ -58,8 +62,8 @@ switch(evt.Key)
         tic
         clo.transient();
         toc
-        X0=clo.getX0();
-        hi.CData=reshape(X0(:,clo.op.fVarIx),nGrid);
+        Xf=clo.getXf();
+        hi.CData=reshape(Xf(:,clo.op.fVarIx),Grid.dim);
         hcb=colorbar('northoutside');
         title(hcb,clo.prob.varNames(clo.op.fVarIx))
 %         axis tight
@@ -98,27 +102,28 @@ switch(evt.Key)
 end  
 
     function setBounds(lb,ub)
-        p1=linspace(lb(1),ub(1),nGrid(1));
-        p2=linspace(lb(2),ub(2),nGrid(2));
+        p1=linspace(lb(1),ub(1),Grid.dim(1));
+        p2=linspace(lb(2),ub(2),Grid.dim(2));
         [P1,P2]=meshgrid(p1,p2);
         P=clo.P;
-        P(:,pix(1))=P1(:);
-        P(:,pix(2))=P2(:);
+        P(:,Grid.xix)=P1(:);
+        P(:,Grid.yix)=P2(:);
         clo.setP(P);
         axis(gca,[lb(1),ub(1),lb(2),ub(2)]);
         hi.XData=[lb(1),ub(1)];
         hi.YData=[lb(2),ub(2)];
+        hi.CData=nan(size(hi.CData));
     end
 
-    function featureSelectDialog(Ffun,ftitle)
-    %     %changes the Ffun and ftitle
+    function featureSelectDialog(feature)
+    %     %changes the feature.fun and feature.name
     %     hfs=figure('Name','Select Feature to Plot','WindowStyle','modal');
     %     hfl=uicontrol('Style','popupmenu','String',clo.fNames);
     %     hfb=uibutton('Text','OK','ButtonPushedFcn',selectFeature);
     % 
     %     
     %     function selectFeature(src,evt)
-    %         Ffun=@
+    %         feature.fun=@
     %     end
     end
 

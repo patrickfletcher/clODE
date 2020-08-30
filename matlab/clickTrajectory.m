@@ -1,4 +1,4 @@
-function clickTrajectory(clickAxis,~,clo,pin,x0in,tspan,parIx,vars,tracjectoryFigID,nClick,markerColor)
+function clickTrajectory(src,evnt,clo,Grid,vars,trajFigID,nClick,markerColor)
 %A mouse click inside the axes will trigger a parameter
 %selection crosshair. A second click selects a parameter
 %combination to simulate, and resulting simulation is displayed
@@ -14,8 +14,9 @@ if nClick>6, error('I refuse to do more than 6 clicks'); end
 
 if ~exist('markerColor','var'), markerColor='k';end
 
-x0=repmat(x0in(:)',nClick,1);
-p=repmat(pin(:)',nClick,1);
+tspan=clo.tspan;
+x0=repmat(clo.prob.x0(:)',nClick,1);
+p=repmat(clo.prob.p0(:)',nClick,1);
 
 varIsAux=false(size(vars));
 for v=1:length(vars) 
@@ -23,7 +24,7 @@ for v=1:length(vars)
     if isempty(tmpIx)
         tmpIx=find(clo.prob.auxNames==string(vars{v}));
         if isempty(tmpIx)
-            error(['unknown variable: ' vars(v)]);
+            error(['unknown variable: ' vars{v}]);
         else
             varIsAux(v)=true;
             varIx(v)=tmpIx;
@@ -42,17 +43,19 @@ end
 
 for n=1:nClick
     [px,py]=ginput(1);
-    p(n,parIx(1))=px;
-    p(n,parIx(2))=py;
+    p(n,Grid.xix)=px;
+    p(n,Grid.yix)=py;
     h(n)=line(px,py,'marker',markers(n),'linestyle','none','color',markerColor,'linewidth',1,'tag','marks');
 end
 
-clo.setProblemData(x0(:),p(:));
+clo.setProblemData(x0,p);
 clo.settspan(tspan);
 % clo.transient();
 
-if ~exist('tracjectoryFigID','var'), tracjectoryFigID=figure();end
-hf=figure(tracjectoryFigID);
+if ~exist('trajFigID','var')||isempty(trajFigID)
+    trajFigID=figure();
+end
+hf=figure(trajFigID);
 
 hf.KeyPressFcn=@keypress;
 
@@ -62,6 +65,7 @@ plotTrajectories(X,T,AUX);
 
     function [X,T,AUX]=integrate()
         clo.trajectory();
+        clo.getXf();
         xx=clo.getX();
         aux=clo.getAux();
         tt=clo.getT()*clo.tscale;
@@ -87,6 +91,7 @@ plotTrajectories(X,T,AUX);
                 plotTrajectories(X,T,AUX);
                 
             case 'g' %go
+                clo.settspan(tspan);
                 [X,T,AUX]=integrate();
                 plotTrajectories(X,T,AUX);
                 
@@ -97,10 +102,10 @@ plotTrajectories(X,T,AUX);
                 plotTrajectories(X,T,AUX);
                 
             case 'r' %randomize ICs
-                clo.settspan(tspan);
                 x0lb=[clo.prob.var.lb];
                 x0ub=[clo.prob.var.ub];
                 x0=x0lb+rand(nClick,length(x0lb)).*(x0ub-x0lb);
+                clo.settspan(tspan);
                 clo.setX0(x0(:));
                 [X,T,AUX]=integrate();
                 plotTrajectories(X,T,AUX);
@@ -186,8 +191,10 @@ plotTrajectories(X,T,AUX);
             
             XLIM=xlim();
             
-            line((XLIM(1)+XLIM(end))*0.02,YLIM(2)*0.9,'marker',markers(i),'linestyle','none','color',markerColor,'linewidth',1,'tag','marks');
-            title([clo.prob.parNames{parIx(1)} '=' num2str(p(i,parIx(1)), '%.1f') ', ' clo.prob.parNames{parIx(2)} '=' num2str(p(i,parIx(2)),'%.1f')]);
+            line((XLIM(1)+XLIM(end))*0.02,YLIM(2)*0.9,'marker',markers(i),...
+                'linestyle','none','color',markerColor,'linewidth',1,'tag','marks');
+            title([clo.prob.parNames{Grid.xix} '=' num2str(p(i,Grid.xix), '%.2g') ', '...
+                   clo.prob.parNames{Grid.yix} '=' num2str(p(i,Grid.yix),'%.2g')]);
         end
     end
 end

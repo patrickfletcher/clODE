@@ -12,6 +12,7 @@
 // return final state back to a global array to continue stream if desired?
 
 //TODO: not clear how to make host code aware of rngstatetype. Only use 64bit int methods?
+// -> template rngData struct on realtype, rngstatetype. Pass N_RNGSTATE as compiler define to OpenCL? Store array of structs (not just rngData.state)
 
 #define XORSHIRO128_PLUS
 //~ #define XORSHIFT128_PLUS
@@ -80,7 +81,7 @@ typedef struct rngData
 } rngData;
 
 //return uniform pseudorandom number in [0,1)
-realtype rand(rngstatetype *state)
+inline realtype rand(rngstatetype *state)
 {
 	rngstatetype result = next(state);
 	return result * RNGNORM;
@@ -88,7 +89,7 @@ realtype rand(rngstatetype *state)
 
 //return normally distributed pseudorandom number N(0,1)
 //polar method, generates two at a time requiring  external storage of useLast switch and y2.... ugly! but no access to work-item private static vars..
-realtype randn(rngData *rd)
+inline realtype randn(rngData *rd)
 {
 
 	realtype x1, x2, w, y1;

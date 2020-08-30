@@ -18,7 +18,7 @@ n sn=10
 n sm=12
 n sf=2
 p taun=30.0[20,40]
-p taubk=5.0[1,20]
+p taubk=8.0[1,20]
 n ff=0.01
 n alpha=0.0015
 n ks=0.4
@@ -35,12 +35,12 @@ ibk=gbk*f*vkdrive
 ik=gk*n*vkdrive
 il=gl*(v-vl)
 
-#p sig=0
-#wiener w
-#inoise=sig*w
-#itot=ica+ isk + ibk + ik + il +inoise
+p sig=2
+wiener w
+inoise=sig*w
+itot=ica+ isk + ibk + ik + il +inoise
 
-itot=ica+ isk + ibk + ik + il
+#itot=ica+ isk + ibk + ik + il
 
 v'= -itot/Cm
 n'= (ninf - n)/taun

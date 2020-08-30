@@ -56,7 +56,6 @@ public:
     std::vector<double> getX();
     std::vector<double> getDx();
     std::vector<double> getAux();
-    int getNStoreMax() { return nStoreMax; };
     std::vector<int> getNstored();
 };
 

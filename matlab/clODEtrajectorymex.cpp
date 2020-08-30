@@ -47,17 +47,16 @@ enum class Action
     GetTspan,
     GetX0,
     GetXf,
-    GetAuxf,
     GetStepperNames,
     GetProgramString,
+    PrintStatus,
 //from here are clODEtrajectory derived actions
     Trajectory, 
     GetT,
     GetX,
     GetDx,
     GetAux,
-    GetSteps,
-    GetStored
+    GetNStored
 };
 
 // Map string (first input argument to mexFunction) to an Action
@@ -82,17 +81,16 @@ const std::map<std::string, Action> actionTypeMap =
     { "gettspan",       Action::GetTspan },
     { "getx0",          Action::GetX0 },
     { "getxf",          Action::GetXf },
-    { "getauxf",        Action::GetAuxf },
     { "getsteppernames",        Action::GetStepperNames },
     { "getprogramstring",        Action::GetProgramString },
+    { "printstatus",        Action::PrintStatus },
 //from here are clODEtrajectory derived actions
     { "trajectory",     Action::Trajectory }, 
     { "gett",           Action::GetT },
     { "getx",           Action::GetX },
     { "getdx",          Action::GetDx },
     { "getaux",         Action::GetAux },
-    { "getsteps",       Action::GetSteps },
-    { "getstored",      Action::GetStored }
+    { "getnstored",      Action::GetNStored }
 }; 
 
 
@@ -307,13 +305,6 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         std::copy(xf.begin(), xf.end(), (double *)mxGetData(plhs[0]));
         break;
 	}
-    case Action::GetAuxf:
-    {
-        std::vector<double> auxf=instance->getAuxf();
-		plhs[0]=mxCreateDoubleMatrix(auxf.size(), 1, mxREAL);
-        std::copy(auxf.begin(), auxf.end(), (double *)mxGetData(plhs[0]));
-        break;
-	}
     case Action::GetStepperNames:
     {
         std::vector<std::string> names=instance->getAvailableSteppers();
@@ -326,6 +317,11 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     {
 		plhs[0]=mxCreateCellMatrix(1, 1);    
         mxSetCell(plhs[0], 0, mxCreateString(instance->getProgramString().c_str()));
+        break;
+    }
+    case Action::PrintStatus:
+    {   
+        instance->printStatus();
         break;
     }
 	//CLODEtrajectory methods:
@@ -362,12 +358,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         std::copy(aux.begin(), aux.end(), (double *)mxGetData(plhs[0]));
         break;
 	}
-    case Action::GetSteps:
-    {
-		plhs[0]=mxCreateDoubleScalar(instance->getNStoreMax());
-        break;
-	}
-    case Action::GetStored:
+    case Action::GetNStored:
     {
         std::vector<int> nStored=instance->getNstored();
 		plhs[0]=mxCreateDoubleMatrix(nStored.size(), 1, mxREAL);

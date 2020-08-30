@@ -4,11 +4,11 @@ clear
 odefile='lactotroph.ode';
 precision='single';
 clo=clODE(odefile,precision);
-% clo.stepper='rk4'; %default='dopri5'
+% clo.stepper='seuler'; %default='dopri5'
 % clo.selectDevice(); %{'type','gpu'}, {'vendor','nvidia'}, {platID,devID}, 'maxComputeUnits','maxClock' 
 
 %solver parameters
-sp=clODE.solverParams();%create required ODE solver parameter struct
+sp=clODE.defaultSolverParams();%create required ODE solver parameter struct
 % sp.dt=0.1;
 % sp.dtmax=100.00;
 % sp.abstol=1e-6;
@@ -39,5 +39,4 @@ toc
 tic
 nextTspan=clo.getTspan;
 xf=clo.getXf;
-auxf=clo.getAuxf;
 toc

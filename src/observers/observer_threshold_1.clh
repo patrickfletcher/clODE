@@ -23,7 +23,7 @@ struct ObserverData
     realtype xThisEvent[N_VAR];
     realtype dxThisEvent[N_VAR];
     realtype auxThisEvent[N_AUX];
-    //~ realtype nDistinctEvents[N_DISTINCT_MAX];
+    // realtype nDistinctEvents[N_DISTINCT_MAX];
 
     //event data, update after computing event-triggered  features
     realtype tLastEvent;

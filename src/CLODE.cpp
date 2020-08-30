@@ -50,13 +50,13 @@ CLODE::~CLODE()
 }
 
 void CLODE::setNewProblem(ProblemInfo newProb)
-{ //TODO: not equality check for ProblemInfo struct
+{ //TODO: not equality check for ProblemInfo struct, error checking: at least one variable!
 	prob=newProb;
 	clRHSfilename = newProb.clRHSfilename;
 	nVar = newProb.nVar;
-	nPar = newProb.nPar;
-	nAux = newProb.nAux;
-	nWiener = newProb.nWiener;
+	nPar = newProb.nPar>0?newProb.nPar:1; //support zero params
+	nAux = newProb.nAux>0?newProb.nAux:1; //support zero aux
+	nWiener = newProb.nWiener>0?newProb.nWiener:1; //support zero wiener
 
 	clInitialized = false;
 	dbg_printf("set new problem\n");
@@ -146,7 +146,7 @@ void CLODE::buildProgram(std::string extraBuildOpts)
 	//now build
 	opencl.buildProgramFromString(clprogramstring + ODEsystemsource, buildOptions);
 
-	printStatus();
+	// printStatus();
 	dbg_printf("build clODE\n");
 }
 
@@ -154,15 +154,16 @@ void CLODE::buildProgram(std::string extraBuildOpts)
 void CLODE::initialize(std::vector<double> newTspan, std::vector<double> newX0, std::vector<double> newPars, SolverParams<double> newSp)
 {
 
+	clInitialized = false;
 	//(re)build the program
 	buildProgram();
 
 	//set up the kernel
 	initializeTransientKernel();
 
-	setSolverParams(newSp);
-	setTspan(newTspan);
 	setProblemData(newX0, newPars); //will call setNpts
+	setTspan(newTspan);
+	setSolverParams(newSp);
 
 	clInitialized = true;
 	dbg_printf("initialize clODE\n");
@@ -175,9 +176,7 @@ void CLODE::initializeTransientKernel()
 	{ //declare device arrays that won't change size: tspan, SolverParams
 		d_tspan = cl::Buffer(opencl.getContext(), CL_MEM_READ_ONLY, realSize * 2, NULL, &opencl.error);
 		if (clSinglePrecision)
-		{
 			d_sp = cl::Buffer(opencl.getContext(), CL_MEM_READ_ONLY, sizeof(SolverParams<cl_float>), NULL, &opencl.error);
-		}
 		else
 			d_sp = cl::Buffer(opencl.getContext(), CL_MEM_READ_ONLY, sizeof(SolverParams<cl_double>), NULL, &opencl.error);
 
@@ -256,29 +255,23 @@ void CLODE::setNpts(int newNpts)
 
 		x0elements = nVar * nPts;
 		parselements = nPar * nPts;
-		auxfelements = nAux * nPts; //TODO: handle nAux=0 case
 		RNGelements = nRNGstate * nPts;
 
 		//resize host variables
 		x0.resize(x0elements);
 		pars.resize(parselements);
 		xf.resize(x0elements);
-		auxf.resize(auxfelements);
 		RNGstate.resize(RNGelements);
+		dt.resize(nPts);
 
-		//resize device variables
+		//new device variables
 		try
 		{
 			d_x0 = cl::Buffer(opencl.getContext(), CL_MEM_READ_WRITE, realSize * x0elements, NULL, &opencl.error);
-			// printf("1\n");
 			d_pars = cl::Buffer(opencl.getContext(), CL_MEM_READ_ONLY, realSize * parselements, NULL, &opencl.error);
-			// printf("2\n");
 			d_xf = cl::Buffer(opencl.getContext(), CL_MEM_READ_WRITE, realSize * x0elements, NULL, &opencl.error);
-			// printf("1\n");
-			d_auxf = cl::Buffer(opencl.getContext(), CL_MEM_WRITE_ONLY, realSize * auxfelements, NULL, &opencl.error);
-			// printf("3\n");
 			d_RNGstate = cl::Buffer(opencl.getContext(), CL_MEM_READ_WRITE, sizeof(cl_ulong) * RNGelements, NULL, &opencl.error);
-			// printf("4\n");
+			d_dt = cl::Buffer(opencl.getContext(), CL_MEM_READ_WRITE, realSize * nPts, NULL, &opencl.error);
 		}
 		catch (cl::Error &er)
 		{
@@ -416,14 +409,21 @@ void CLODE::setSolverParams(SolverParams<double> newSp)
 	sp = newSp;
 	try
 	{
+		std::fill(dt.begin(), dt.end(), sp.dt);
+		
 		if (clSinglePrecision)
 		{ //downcast to float if desired
 			SolverParams<float> spF = solverParamsToFloat(sp);
 			opencl.error = opencl.getQueue().enqueueWriteBuffer(d_sp, CL_TRUE, 0, sizeof(spF), &spF);
+			std::vector<float> dtF(dt.begin(), dt.end());
+			opencl.error = copy(opencl.getQueue(), dtF.begin(), dtF.end(), d_dt);
+			// opencl.error = opencl.getQueue().enqueueFillBuffer(d_dt, spF.dt, 0, sizeof(spF.dt));
 		}
 		else
 		{
 			opencl.error = opencl.getQueue().enqueueWriteBuffer(d_sp, CL_TRUE, 0, sizeof(sp), &sp);
+			opencl.error = copy(opencl.getQueue(), dt.begin(), dt.end(), d_dt);
+			// opencl.error = opencl.getQueue().enqueueFillBuffer(d_dt, sp.dt, 0, sizeof(sp.dt));
 		}
 	}
 	catch (cl::Error &er)
@@ -506,13 +506,14 @@ void CLODE::transient()
 		try
 		{
 			//kernel args
-			cl_transient.setArg(0, d_tspan);
-			cl_transient.setArg(1, d_x0);
-			cl_transient.setArg(2, d_pars);
-			cl_transient.setArg(3, d_sp);
-			cl_transient.setArg(4, d_xf);
-			cl_transient.setArg(5, d_auxf);
-			cl_transient.setArg(6, d_RNGstate);
+			int ix=0;
+			cl_transient.setArg(ix++, d_tspan);
+			cl_transient.setArg(ix++, d_x0);
+			cl_transient.setArg(ix++, d_pars);
+			cl_transient.setArg(ix++, d_sp);
+			cl_transient.setArg(ix++, d_xf);
+			cl_transient.setArg(ix++, d_RNGstate);
+			cl_transient.setArg(ix++, d_dt);
 
 			//execute the kernel
 			opencl.error = opencl.getQueue().enqueueNDRangeKernel(cl_transient, cl::NullRange, cl::NDRange(nPts));
@@ -563,23 +564,6 @@ std::vector<double> CLODE::getXf()
 	}
 
 	return xf;
-}
-
-std::vector<double> CLODE::getAuxf()
-{ //cast back to double
-
-	if (clSinglePrecision)
-	{
-		std::vector<float> auxfF(auxfelements);
-		opencl.error = copy(opencl.getQueue(), d_auxf, auxfF.begin(), auxfF.end());
-		auxf.assign(auxfF.begin(), auxfF.end());
-	}
-	else
-	{
-		opencl.error = copy(opencl.getQueue(), d_auxf, auxf.begin(), auxf.end());
-	}
-
-	return auxf;
 }
 
 void CLODE::printStatus()

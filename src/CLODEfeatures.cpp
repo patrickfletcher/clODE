@@ -21,6 +21,7 @@ CLODEfeatures::CLODEfeatures(ProblemInfo prob, std::string stepper, std::string 
 	getObserverDefineMap(prob, clSinglePrecision, 0, 0, observerDefineMap, availableObserverNames);
 	setObserver(observer);
 
+	clprogramstring += read_file(clodeRoot + "initializeObserver.cl");
 	clprogramstring += read_file(clodeRoot + "features.cl");
 	dbg_printf("constructor clODEfeatures\n");
 }
@@ -30,7 +31,6 @@ CLODEfeatures::~CLODEfeatures() {}
 //initialize everything
 void CLODEfeatures::initialize(std::vector<cl_double> newTspan, std::vector<cl_double> newX0, std::vector<cl_double> newPars, SolverParams<cl_double> newSp, ObserverParams<cl_double> newOp)
 {
-
 	clInitialized = false;
 	// observerBuildOpts = getObserverBuildOpts();
 	getObserverDefineMap(prob, clSinglePrecision, newOp.fVarIx, newOp.eVarIx, observerDefineMap, availableObserverNames);
@@ -44,11 +44,14 @@ void CLODEfeatures::initialize(std::vector<cl_double> newTspan, std::vector<cl_d
 
 	//initialize the trajectory kernel
 	initializeFeaturesKernel();
-	setSolverParams(newSp);
-	setObserverParams(newOp);
-	setTspan(newTspan);
 	setProblemData(newX0, newPars); //will set nPts
 	resizeFeaturesVariables(); //set up d_F and d_odata too, which depend on nPts
+
+	setTspan(newTspan);
+	setSolverParams(newSp);
+	setObserverParams(newOp);
+
+	printf("Using observer: %s\n",observer);
 
 	clInitialized = true;
 	dbg_printf("initialize clODEfeatures.\n");
@@ -56,8 +59,8 @@ void CLODEfeatures::initialize(std::vector<cl_double> newTspan, std::vector<cl_d
 
 void CLODEfeatures::setObserver(std::string newObserver)
 {
-	if (newObserver!=observer)
-	{
+	// if (newObserver!=observer)
+	// {
 		auto loc = observerDefineMap.find(newObserver); //from steppers.cl
 		if ( loc != observerDefineMap.end() )
 		{
@@ -75,7 +78,7 @@ void CLODEfeatures::setObserver(std::string newObserver)
 			printf("Warning: unknown observer: %s. Observer method unchanged\n",newObserver.c_str());
 		}
 		dbg_printf("set observer\n");
-	}
+	// }
 	
 }
 
@@ -85,13 +88,11 @@ void CLODEfeatures::initializeFeaturesKernel()
 	try
 	{
 		if (clSinglePrecision)
-		{ //downcast to float if desired
 			d_op = cl::Buffer(opencl.getContext(), CL_MEM_READ_ONLY, sizeof(ObserverParams<cl_float>), NULL, &opencl.error);
-		}
 		else
-		{
 			d_op = cl::Buffer(opencl.getContext(), CL_MEM_READ_ONLY, sizeof(ObserverParams<cl_double>), NULL, &opencl.error);
-		}
+
+		cl_initializeObserver = cl::Kernel(opencl.getProgram(), "initializeObserver", &opencl.error);
 		cl_features = cl::Kernel(opencl.getProgram(), "features", &opencl.error);
 
 		// size_t preferred_multiple;
@@ -181,52 +182,96 @@ void CLODEfeatures::resizeFeaturesVariables()
 			printf("ERROR: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
 			throw er;
 		}
-		dbg_printf("resize F, d_F, d_odata\n");
+		dbg_printf("resize F, d_F, d_odata with: nPts=%d, nF=%d\n",nPts,nFeatures);
 	}
 	
 }
 
 //Simulation routines
 
-//overload to allow manual re-initialization of observer data at any time.
-void CLODEfeatures::features(bool newDoObserverInitFlag)
-{
-	doObserverInitialization = newDoObserverInitFlag;
-	features();
-}
-
 //
-void CLODEfeatures::features()
+void CLODEfeatures::initializeObserver()
 {
 
 	if (clInitialized)
 	{
-
+		// printf("do init=%s\n",doObserverInitialization?"true":"false");
 		//resize output variables - will only occur if nPts has changed
 		resizeFeaturesVariables();
 
 		try
 		{
 			//kernel arguments
-			cl_features.setArg(0, d_tspan);
-			cl_features.setArg(1, d_x0);
-			cl_features.setArg(2, d_pars);
-			cl_features.setArg(3, d_sp);
-			cl_features.setArg(4, d_xf);
-			cl_features.setArg(5, d_auxf);
-			cl_features.setArg(6, d_RNGstate);
-			cl_features.setArg(7, d_odata);
-			cl_features.setArg(8, d_op);
-			cl_features.setArg(9, d_F);
-			cl_features.setArg(10, doObserverInitialization);
+			int ix = 0;
+			cl_initializeObserver.setArg(ix++, d_tspan);
+			cl_initializeObserver.setArg(ix++, d_x0);
+			cl_initializeObserver.setArg(ix++, d_pars);
+			cl_initializeObserver.setArg(ix++, d_sp);
+			cl_initializeObserver.setArg(ix++, d_RNGstate);
+			cl_initializeObserver.setArg(ix++, d_dt);
+			cl_initializeObserver.setArg(ix++, d_odata);
+			cl_initializeObserver.setArg(ix++, d_op);
+
+			//execute the kernel
+			opencl.error = opencl.getQueue().enqueueNDRangeKernel(cl_initializeObserver, cl::NullRange, cl::NDRange(nPts));
+			// printf("Enqueue error code: %s\n",CLErrorString(opencl.error).c_str());
+			opencl.error = opencl.getQueue().finish();
+			// printf("Finish Queue error code: %s\n",CLErrorString(opencl.error).c_str());
+			doObserverInitialization = 0;
+		}
+		catch (cl::Error &er)
+		{
+			printf("ERROR: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
+			throw er;
+		}
+		dbg_printf("run initializeObserver\n");
+	}
+	else
+	{
+		printf("CLODE has not been initialized\n");
+	}
+}
+
+//overload to allow manual re-initialization of observer data at any time.
+void CLODEfeatures::features(bool newDoObserverInitFlag)
+{
+	doObserverInitialization = newDoObserverInitFlag;
+
+	features();
+}
+
+void CLODEfeatures::features()
+{
+
+	if (clInitialized)
+	{
+		// printf("do init=%s\n",doObserverInitialization?"true":"false");
+		//resize output variables - will only occur if nPts has changed
+		resizeFeaturesVariables();
+
+		if (doObserverInitialization)
+			initializeObserver();
+
+		try
+		{
+			//kernel arguments
+			int ix = 0;
+			cl_features.setArg(ix++, d_tspan);
+			cl_features.setArg(ix++, d_x0);
+			cl_features.setArg(ix++, d_pars);
+			cl_features.setArg(ix++, d_sp);
+			cl_features.setArg(ix++, d_xf);
+			cl_features.setArg(ix++, d_RNGstate);
+			cl_features.setArg(ix++, d_dt);
+			cl_features.setArg(ix++, d_odata);
+			cl_features.setArg(ix++, d_op);
+			cl_features.setArg(ix++, d_F);
 
 			//execute the kernel
 			opencl.error = opencl.getQueue().enqueueNDRangeKernel(cl_features, cl::NullRange, cl::NDRange(nPts));
 			// printf("Enqueue error code: %s\n",CLErrorString(opencl.error).c_str());
 			opencl.error = opencl.getQueue().finish();
 			// printf("Finish Queue error code: %s\n",CLErrorString(opencl.error).c_str());
-
-			doObserverInitialization = 0;
 		}
 		catch (cl::Error &er)
 		{

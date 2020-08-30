@@ -70,9 +70,16 @@ classdef clODE < cppclass & matlab.mixin.SetGet
                 stepper='dopri5';
             end
             
-            devices=queryOpenCL(); %default: first device
-            if  ~exist('selectedDevice','var')||isempty(selectedDevice)
-                selectedDevice=1;
+            devices=queryOpenCL(); %throws error if no opencl 
+            %device selection: parse inputs
+            if  ~exist('selectedDevice','var')
+                selectedDevice=[];
+            elseif selectedDevice>length(devices)
+                error('Device index specifed is greater than the number of OpenCL devices present')
+            end
+            %auto-selection of devices: gpu>cpu
+            if isempty(selectedDevice)
+                selectedDevice=clODE.autoselectDevice(devices);
             end
             
             args{1}=prob;
@@ -100,7 +107,7 @@ classdef clODE < cppclass & matlab.mixin.SetGet
             obj.precision=precision;
             obj.devices=devices;
             obj.selectedDevice=selectedDevice;
-            obj.sp=clODE.solverParams(); %default solver params
+            obj.sp=clODE.defaultSolverParams(); %default solver params
         end
         
         % new and delete are inherited
@@ -243,11 +250,6 @@ classdef clODE < cppclass & matlab.mixin.SetGet
             obj.Xf=Xf;
         end
         
-        function auxf=getAuxf(obj)
-            auxf=obj.cppmethod('getauxf');
-            auxf=reshape(auxf,obj.nPts,obj.prob.nAux);
-        end
-        
         function stepperNames=getAvailableSteppers(obj)
             stepperNames=obj.cppmethod('getsteppernames');
         end
@@ -255,20 +257,36 @@ classdef clODE < cppclass & matlab.mixin.SetGet
             prog=obj.cppmethod('getprogramstring');
             programString=sprintf('%s',prog{1});
         end
+        function printStatus(obj)
+            obj.cppmethod('printstatus');
+        end
     end
     
     
     %static helper methods
     methods (Static=true)
         
-        function sp=solverParams()
-            sp.dt=10;
+        function sp=defaultSolverParams()
+            sp.dt=.1;
             sp.dtmax=100.00;
             sp.abstol=1e-6;
             sp.reltol=1e-3;
             sp.max_steps=1000000;
             sp.max_store=10000; %allocated number of timepoints: min( (tf-t0)/(dt*nout)+1 , sp.max_store)
             sp.nout=1;
+        end
+        
+        function selectedDevice=autoselectDevice(devices)
+            selectedDevice=[];
+%             if  isempty(selectedDevice)
+%                 selectedDevice=find({devices(:).type}=="accel");
+%             end
+            if  isempty(selectedDevice)
+                selectedDevice=find({devices(:).type}=="GPU");
+            end
+            if  isempty(selectedDevice)
+                selectedDevice=find({devices(:).type}=="CPU");
+            end
         end
         
         function vendorInt=getVendorEnum(cl_vendor)

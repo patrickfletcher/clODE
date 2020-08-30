@@ -46,9 +46,9 @@ enum class Action
     GetTspan,
     GetX0,
     GetXf,
-    GetAuxf,
     GetStepperNames,
     GetProgramString,
+    PrintStatus,
 };
 
 // Map string (first input argument to mexFunction) to an Action
@@ -73,9 +73,9 @@ const std::map<std::string, Action> actionTypeMap =
     { "gettspan",       Action::GetTspan },
     { "getx0",          Action::GetX0 },
     { "getxf",          Action::GetXf },
-    { "getauxf",        Action::GetAuxf },
     { "getsteppernames",        Action::GetStepperNames },
     { "getprogramstring",        Action::GetProgramString },
+    { "printstatus",        Action::PrintStatus },
 }; 
 
 
@@ -294,13 +294,6 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         std::copy(xf.begin(), xf.end(), (double *)mxGetData(plhs[0]));
         break;
 	}
-    case Action::GetAuxf:
-    {
-        std::vector<double> auxf=instance->getAuxf();
-		plhs[0]=mxCreateDoubleMatrix(1, auxf.size(), mxREAL);
-        std::copy(auxf.begin(), auxf.end(), (double *)mxGetData(plhs[0]));
-        break;
-	}
     case Action::GetStepperNames:
     {
         std::vector<std::string> names=instance->getAvailableSteppers();
@@ -313,6 +306,11 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     {
 		plhs[0]=mxCreateCellMatrix(1, 1);    
         mxSetCell(plhs[0], 0, mxCreateString(instance->getProgramString().c_str()));
+        break;
+    }
+    case Action::PrintStatus:
+    {   
+        instance->printStatus();
         break;
     }
     default:

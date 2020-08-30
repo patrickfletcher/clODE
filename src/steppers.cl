@@ -25,6 +25,7 @@ newMap["heun"]="EXPLICIT_HEUN";
 newMap["rk4"]="EXPLICIT_RK4";
 newMap["bs23"]="EXPLICIT_BS23";
 newMap["dopri5"]="EXPLICIT_DOPRI5";
+newMap["seuler"]="STOCHASTIC_EULER";
 
 //export vector of names for access in C++
 std::vector<std::string> newNames;
@@ -38,24 +39,29 @@ availableStepperNames=newNames;
 #else
 
 //forward declaration of the RHS function
-void getRHS(realtype t, realtype x_[], realtype p_[], realtype dx_[], realtype aux_[], realtype w_[]);
+void getRHS(const realtype t, const realtype x_[], const realtype p_[], realtype dx_[], realtype aux_[], const realtype w_[]);
 
 // FIXED STEPSIZE EXPLICIT METHODS
 // The fixed steppers use stepcount to purify the T values (eliminates roundoff)
 
+#ifdef STOCHASTIC_EULER
+#define STOCHASTIC_STEPPER
+#include "steppers/fixed_explicit_Euler.clh"
+#endif
+
 #ifdef EXPLICIT_EULER
-#include "steppers/fixed_explicitEuler.clh"
+#include "steppers/fixed_explicit_Euler.clh"
 #endif
 
 #ifdef EXPLICIT_HEUN
-#include "steppers/fixed_explicitTrapezoidal.clh"
+#include "steppers/fixed_explicit_Trapezoidal.clh"
 #endif
 
 //~ #ifdef MIDPOINT
 //~ #endif
 
 #ifdef EXPLICIT_RK4
-#include "steppers/fixed_explicitRK4.clh"
+#include "steppers/fixed_explicit_RK4.clh"
 #endif
 
 //~ #ifdef RK higher order?
@@ -63,6 +69,10 @@ void getRHS(realtype t, realtype x_[], realtype p_[], realtype dx_[], realtype a
 
 //~ #ifdef SSPRK3
 //~ #endif
+
+#ifdef FIXED_STEPSIZE_EXPLICIT
+#include "steppers/fixed_explicit_step.clh"
+#endif
 
 // TODO: FIXED STEP MULTI STEP METHODS
 // need to fill the first few steps with a single stepper, so if MULTI_STEP is defined also include Euler or RK4 or something
@@ -95,13 +105,15 @@ void getRHS(realtype t, realtype x_[], realtype p_[], realtype dx_[], realtype a
 //~ #ifdef RK549_KENNEDY
 //~ #endif
 
+#ifdef ADAPTIVE_STEPSIZE_EXPLICIT
+#include "steppers/adaptive_explicit_step.clh"
+#endif
+
+
 
 //TODO: implicit fixed/adaptive steppers
 
 
-#ifdef ADAPTIVE_STEPSIZE
-#include "steppers/adaptive_explicit_step.clh"
-#endif
 
 
 #endif //__cplusplus

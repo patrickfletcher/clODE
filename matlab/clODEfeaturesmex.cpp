@@ -44,12 +44,13 @@ enum class Action
     GetTspan,
     GetX0,
     GetXf,
-    GetAuxf,
     GetStepperNames,
     GetProgramString,
+    PrintStatus,
 //from here are clODEfeatures derived actions
     SetObserverPars,
     SetObserver,
+    InitializeObserver,
     Features,
     GetNFeatures,
     GetF,
@@ -79,12 +80,13 @@ const std::map<std::string, Action> actionTypeMap =
     { "gettspan",       Action::GetTspan },
     { "getx0",          Action::GetX0 },
     { "getxf",          Action::GetXf },
-    { "getauxf",        Action::GetAuxf },
     { "getsteppernames",        Action::GetStepperNames },
     { "getprogramstring",        Action::GetProgramString },
+    { "printstatus",        Action::PrintStatus },
 //from here are clODEfeatures derived actions
     { "setobserverpars", Action::SetObserverPars },
     { "setobserver",    Action::SetObserver },
+    { "initobserver",    Action::InitializeObserver },
     { "features",       Action::Features },
     { "getnfeatures",   Action::GetNFeatures },
     { "getf",        	Action::GetF },
@@ -301,13 +303,6 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         std::copy(xf.begin(), xf.end(), (double *)mxGetData(plhs[0]));
         break;
 	}
-    case Action::GetAuxf:
-    {
-        std::vector<double> auxf=instance->getAuxf();
-		plhs[0]=mxCreateDoubleMatrix(auxf.size(), 1, mxREAL);
-        std::copy(auxf.begin(), auxf.end(), (double *)mxGetData(plhs[0]));
-        break;
-	}
     case Action::GetStepperNames:
     {
         std::vector<std::string> names=instance->getAvailableSteppers();
@@ -320,6 +315,11 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     {
 		plhs[0]=mxCreateCellMatrix(1, 1);    
         mxSetCell(plhs[0], 0, mxCreateString(instance->getProgramString().c_str()));
+        break;
+    }
+    case Action::PrintStatus:
+    {   
+        instance->printStatus();
         break;
     }
 	//CLODEfeatures methods:
@@ -345,13 +345,18 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         instance->setObserver(observer);
         break;
 	}
+    case Action::InitializeObserver:
+    {   //no inputs
+        instance->initializeObserver();
+        break;
+	}
     case Action::Features:
     {   //inputs: none, or int - 1=do init, 0=don't init
 		if (nrhs==2) { 
 			instance->features(); }
 		else if (nrhs==3) {
 			int doInit=(int)mxGetScalar(prhs[2]);
-			if (doInit<0 || doInit>1) {mexErrMsgTxt("Argument must be 0 or 1 for features with observer data initialization control");}
+			if (doInit!=0 && doInit!=1) {mexErrMsgTxt("Argument must be 0 or 1 for features with observer data initialization control");}
 			instance->features(doInit);
 		}
         break;
