@@ -10,8 +10,8 @@
 //     #include <CL/cl.hpp>
 // #endif
 
-// #define dbg_printf printf
-#define dbg_printf
+#define dbg_printf printf
+// #define dbg_printf
 #ifdef MATLAB_MEX_FILE
 #include "mex.h"
 #define printf mexPrintf
@@ -191,7 +191,7 @@ void CLODE::initializeTransientKernel()
 	}
 	catch (cl::Error &er)
 	{
-		printf("ERROR: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
+		printf("ERROR in CLODE::initializeTransientKernel(): %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
 		throw er;
 	}
 	dbg_printf("initialize transient kernel\n");
@@ -275,7 +275,7 @@ void CLODE::setNpts(int newNpts)
 		}
 		catch (cl::Error &er)
 		{
-			printf("ERROR: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
+			printf("ERROR in CLODE::setNpts: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
 			throw er;
 		}
 
@@ -305,7 +305,7 @@ void CLODE::setTspan(std::vector<double> newTspan)
 		}
 		catch (cl::Error &er)
 		{
-			printf("ERROR: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
+			printf("ERROR in CLODE::setTspan: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
 			throw er;
 		}
 		dbg_printf("set tspan\n");
@@ -341,7 +341,7 @@ void CLODE::setX0(std::vector<double> newX0)
 		}
 		catch (cl::Error &er)
 		{
-			printf("ERROR: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
+			printf("ERROR in CLODE::setX0: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
 			throw er;
 		}
 		dbg_printf("set X0\n");
@@ -363,7 +363,7 @@ void CLODE::shiftX0()
 	}
 	catch (cl::Error &er)
 	{
-		printf("ERROR: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
+		printf("ERROR in CLODE::shiftX0: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
 		throw er;
 	}
 	dbg_printf("shift X0\n");
@@ -391,7 +391,7 @@ void CLODE::setPars(std::vector<double> newPars)
 		}
 		catch (cl::Error &er)
 		{
-			printf("ERROR: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
+			printf("ERROR in CLODE::setPars: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
 			throw er;
 		}
 		dbg_printf("set P\n");
@@ -428,7 +428,7 @@ void CLODE::setSolverParams(SolverParams<double> newSp)
 	}
 	catch (cl::Error &er)
 	{
-		printf("ERROR: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
+		printf("ERROR in CLODE::setSolverParams: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
 		throw er;
 	}
 	dbg_printf("set SolverParams\n");
@@ -470,7 +470,7 @@ void CLODE::seedRNG()
 	}
 	catch (cl::Error &er)
 	{
-		printf("ERROR: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
+		printf("ERROR in CLODE::seedRNG: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
 		throw er;
 	}
 	dbg_printf("set random RNG seed\n");
@@ -491,7 +491,7 @@ void CLODE::seedRNG(int mySeed)
 	}
 	catch (cl::Error &er)
 	{
-		printf("ERROR: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
+		printf("ERROR in CLODE::seedRNG(int mySeed): %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
 		throw er;
 	}
 	dbg_printf("set fixed RNG seed\n");
@@ -521,7 +521,7 @@ void CLODE::transient()
 		}
 		catch (cl::Error &er)
 		{
-			printf("ERROR: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
+			printf("ERROR in CLODE::transient: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
 			throw er;
 		}
 		dbg_printf("run transient\n");

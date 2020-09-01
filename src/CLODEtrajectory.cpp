@@ -1,7 +1,7 @@
 #include "CLODEtrajectory.hpp"
 
-// #define dbg_printf printf
-#define dbg_printf
+#define dbg_printf printf
+// #define dbg_printf
 #ifdef MATLAB_MEX_FILE
 #include "mex.h"
 #define printf mexPrintf
@@ -63,7 +63,7 @@ void CLODEtrajectory::initializeTrajectoryKernel()
 	}
 	catch (cl::Error &er)
 	{
-		printf("ERROR: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
+		printf("ERROR in CLODEtrajectory::initializeTrajectoryKernel(): %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
 		throw er;
 	}
 	dbg_printf("initialize trajectory kernel\n");
@@ -87,7 +87,7 @@ void CLODEtrajectory::resizeTrajectoryVariables()
 	if (largestAlloc > opencl.getMaxMemAllocSize())
 	{
 		int estimatedMaxStoreAlloc = std::floor(opencl.getMaxMemAllocSize() / (std::max(1, std::max(nVar, nAux)) * nPts * realSize));
-		printf("ERROR: storage requested exceeds device maximum vairable size. Reason: %s. Try reducing storage to <%d time points, or reducing nPts. \n", nAux > nVar ? "aux vars" : "state vars", estimatedMaxStoreAlloc);
+		printf("ERROR: storage requested exceeds device maximum variable size. Reason: %s. Try reducing storage to <%d time points, or reducing nPts. \n", nAux > nVar ? "aux vars" : "state vars", estimatedMaxStoreAlloc);
 		throw std::invalid_argument("nPts*nStoreMax*nVar*realSize or nPts*nStoreMax*nAux*realSize is too big");
 	}
 
@@ -120,7 +120,7 @@ void CLODEtrajectory::resizeTrajectoryVariables()
 		}
 		catch (cl::Error &er)
 		{
-			printf("ERROR: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
+			printf("ERROR in CLODEtrajectory::resizeTrajectoryVariables(): %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
 			throw er;
 		}
 		dbg_printf("resize d_t, d_x, d_dx, d_aux, d_nStored\n");
@@ -158,7 +158,7 @@ void CLODEtrajectory::trajectory()
 		}
 		catch (cl::Error &er)
 		{
-			printf("ERROR: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
+			printf("ERROR CLODEtrajectory::trajectory(): %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
 			throw er;
 		}
 		dbg_printf("run trajectory\n");

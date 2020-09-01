@@ -26,12 +26,17 @@
 #include "clODE_struct_defs.cl"
 #include "OpenCLResource.hpp"
 
-#define __CL_ENABLE_EXCEPTIONS
-#if defined(__APPLE__) || defined(__MACOSX)
-#include "OpenCL/cl.hpp"
-#else
-#include <CL/cl.hpp>
-#endif
+// #define __CL_ENABLE_EXCEPTIONS
+// #if defined(__APPLE__) || defined(__MACOSX)
+// #include "OpenCL/cl.hpp"
+// #else
+// #include <CL/cl.hpp>
+// #endif
+#define CL_HPP_ENABLE_EXCEPTIONS
+#define CL_HPP_MINIMUM_OPENCL_VERSION 120
+#define CL_HPP_TARGET_OPENCL_VERSION 120
+#define CL_HPP_ENABLE_PROGRAM_CONSTRUCTION_FROM_ARRAY_COMPATIBILITY
+#include "OpenCL/cl2.hpp"
 
 #include <map>
 #include <string>

@@ -1,7 +1,7 @@
 #include "CLODEfeatures.hpp"
 
-// #define dbg_printf printf
-#define dbg_printf
+#define dbg_printf printf
+// #define dbg_printf
 #ifdef MATLAB_MEX_FILE
 #include "mex.h"
 #define printf mexPrintf
@@ -103,7 +103,7 @@ void CLODEfeatures::initializeFeaturesKernel()
 	}
 	catch (cl::Error &er)
 	{
-		printf("ERROR: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
+		printf("ERROR in CLODEfeatures::initializeFeaturesKernel: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
 		throw er;
 	}
 	dbg_printf("initialize features kernel\n");
@@ -127,7 +127,7 @@ void CLODEfeatures::setObserverParams(ObserverParams<cl_double> newOp)
 	}
 	catch (cl::Error &er)
 	{
-		printf("ERROR: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
+		printf("ERROR in CLODEfeatures::setObserverParams: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
 		throw er;
 	}
 	dbg_printf("set observer params\n");
@@ -179,7 +179,7 @@ void CLODEfeatures::resizeFeaturesVariables()
 		}
 		catch (cl::Error &er)
 		{
-			printf("ERROR: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
+			printf("ERROR in CLODEfeatures::resizeFeaturesVariables: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
 			throw er;
 		}
 		dbg_printf("resize F, d_F, d_odata with: nPts=%d, nF=%d\n",nPts,nFeatures);
@@ -221,7 +221,7 @@ void CLODEfeatures::initializeObserver()
 		}
 		catch (cl::Error &er)
 		{
-			printf("ERROR: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
+			printf("ERROR in CLODEfeatures::initializeObserver: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
 			throw er;
 		}
 		dbg_printf("run initializeObserver\n");
@@ -275,7 +275,7 @@ void CLODEfeatures::features()
 		}
 		catch (cl::Error &er)
 		{
-			printf("ERROR: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
+			printf("ERROR in CLODEfeatures::features: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
 			throw er;
 		}
 		dbg_printf("run features\n");
