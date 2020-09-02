@@ -3,8 +3,8 @@
 #include "clODE_struct_defs.cl"
 #include "clODE_utilities.cl"
 #include "observers.cl"
-#include "steppers.cl"
 #include "realtype.cl"
+#include "steppers.cl"
 
 __kernel void initializeObserver(
 	__constant realtype *tspan,			//time vector [t0,tf] - adds (tf-t0) to these at the end
@@ -16,15 +16,12 @@ __kernel void initializeObserver(
 	__global ObserverData *OData,		//for continue
 	__constant struct ObserverParams *opars)
 {
-
 	int i = get_global_id(0);
 	int nPts = get_global_size(0);
 
 	realtype ti, dt;
-	realtype xi[N_VAR], dxi[N_VAR], auxi[N_AUX];
-	realtype p[N_PAR], wi[N_WIENER];
+    realtype p[N_PAR], xi[N_VAR], dxi[N_VAR], auxi[N_AUX], wi[N_WIENER];
 	rngData rd;
-	int step, stepflag;
 	__constant realtype *tspanPtr = tspan;
 
 	//get private copy of ODE parameters, initial data, and compute slope at initial state
@@ -54,8 +51,8 @@ __kernel void initializeObserver(
 
 #ifdef TWO_PASS_EVENT_DETECTOR
 
-	step = 0;
-	stepflag = 0;
+    int step = 0;
+    int stepflag = 0;
 	while (ti < tspan[1] && step < sp->max_steps)
 	{
 		++step;
