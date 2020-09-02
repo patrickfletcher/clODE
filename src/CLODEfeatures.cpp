@@ -1,7 +1,7 @@
 #include "CLODEfeatures.hpp"
 
-#define dbg_printf printf
-// #define dbg_printf
+// #define dbg_printf printf
+#define dbg_printf
 #ifdef MATLAB_MEX_FILE
 #include "mex.h"
 #define printf mexPrintf
