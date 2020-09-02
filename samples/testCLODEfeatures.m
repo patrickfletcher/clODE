@@ -17,8 +17,9 @@ openclDevices=queryOpenCL(); %inspect this struct to see properties of OpenCL de
 %Device to use for feature grid computation
 %The following uses the default device: first gpu found. It also parses the
 %ODEfile and writes the OpenCL code for the ODE system. 
-selectedDevice=[]; %autoselect: gpu>cpu
+selectedDevice=1; %autoselect: gpu>cpu
 clo=clODEfeatures(odefile,precision,selectedDevice,stepper);
+clo.printStatus
 
 %set properties 
 % clo.stepper='rk4'; %default='dorpri5'
@@ -28,7 +29,7 @@ sp=clODE.defaultSolverParams();%create required ODE solver parameter struct
 sp.dt=0.5;
 sp.dtmax=100;
 sp.abstol=1e-6;
-sp.reltol=1e-3; %nhood2 may require fairly strict reltol
+sp.reltol=1e-4; %nhood2 may require fairly strict reltol
 sp.max_steps=1e7;
 
 op=clODEfeatures.defaultObserverParams(); %create required observer parameter struct
@@ -121,7 +122,7 @@ end
 
 %% plot
 %display list of features recorded:
-clo.fNames
+% clo.fNames
 
 %build a feature-selection function, Ffun. The following simply extracts
 %feature sixth index:

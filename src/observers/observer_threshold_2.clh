@@ -197,9 +197,9 @@ inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dxi[], re
     if (od->eventcount > 1)
     {
         int nPeriods = od->eventcount - 1;
-        od->nMaxima[0] = fmax(od->thisNMaxima, od->nMaxima[0]); //int to realtype implicit cast is OK
-        od->nMaxima[1] = fmin(od->thisNMaxima, od->nMaxima[1]);
-        runningMean(&od->nMaxima[2], od->thisNMaxima, nPeriods);
+        od->nMaxima[0] = fmax((realtype)od->thisNMaxima, od->nMaxima[0]); //int to realtype implicit cast is OK
+        od->nMaxima[1] = fmin((realtype)od->thisNMaxima, od->nMaxima[1]);
+        runningMean(&od->nMaxima[2], (realtype)od->thisNMaxima, nPeriods);
 
         realtype thisPeriod = tThisEvent - od->tLastEvent;
         od->period[0] = fmax(thisPeriod, od->period[0]);
