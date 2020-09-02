@@ -1,3 +1,5 @@
+#include "realtype.cl"
+
 //Explicit (Forward) Euler
 #define FIXED_STEPSIZE_EXPLICIT
 #define STOCHASTIC_STEPPER

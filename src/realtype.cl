@@ -14,7 +14,8 @@ typedef float realtype;
 #define SMALL_REAL FLT_MIN
 #define UNIT_ROUNDOFF FLT_EPSILON
 
-#elif defined(CLODE_DOUBLE_PRECISION)
+// #elif defined(CLODE_DOUBLE_PRECISION)
+#else
 
 #ifdef cl_khr_fp64
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable

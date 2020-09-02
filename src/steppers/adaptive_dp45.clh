@@ -1,3 +1,5 @@
+#include "realtype.cl"
+
 //this is ode45 in matlab
 #define ADAPTIVE_STEPSIZE_EXPLICIT
 #define FSAL_STEP_PROPERTY

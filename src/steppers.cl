@@ -38,6 +38,8 @@ availableStepperNames=newNames;
 
 #else
 
+#include "realtype.cl"
+
 //forward declaration of the RHS function
 void getRHS(const realtype t, const realtype x_[], const realtype p_[], realtype dx_[], realtype aux_[], const realtype w_[]);
 
