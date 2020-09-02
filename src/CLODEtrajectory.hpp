@@ -35,8 +35,8 @@ class CLODEtrajectory : public CLODE
 
 protected:
     cl_int nStoreMax;
-    std::vector<int> nStored;
-    std::vector<double> t, x, dx, aux; //new result vectors
+    std::vector<cl_int> nStored;
+    std::vector<cl_double> t, x, dx, aux; //new result vectors
     size_t telements, xelements, auxelements;
 
     cl::Buffer d_t, d_x, d_dx, d_aux, d_nStored;
@@ -47,21 +47,22 @@ protected:
 
 public:
     CLODEtrajectory(ProblemInfo prob, std::string stepper, bool clSinglePrecision, OpenCLResource opencl); //will construct the base class with same arguments
+    CLODEtrajectory(ProblemInfo prob, std::string stepper, bool clSinglePrecision, unsigned int platformID, unsigned int deviceID);
     ~CLODEtrajectory();
 
     //build program, set all problem data needed to run
-    virtual void initialize(std::vector<double> newTspan, std::vector<double> newX0, std::vector<double> newPars, SolverParams<double> newSp);
+    virtual void initialize(std::vector<cl_double> newTspan, std::vector<cl_double> newX0, std::vector<cl_double> newPars, SolverParams<cl_double> newSp);
 
     //simulation routines.
     //TODO: overload with newX0, newPars; all four?
     void trajectory(); //integrate forward an interval of duration (tf-t0)
 
     //Get functions
-    std::vector<double> getT();
-    std::vector<double> getX();
-    std::vector<double> getDx();
-    std::vector<double> getAux();
-    std::vector<int> getNstored();
+    std::vector<cl_double> getT();
+    std::vector<cl_double> getX();
+    std::vector<cl_double> getDx();
+    std::vector<cl_double> getAux();
+    std::vector<cl_int> getNstored();
 };
 
 #endif //CLODE_HPP_

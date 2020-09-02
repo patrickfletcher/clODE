@@ -48,7 +48,7 @@ protected:
     std::vector<cl_double> F;
     ObserverParams<cl_double> op;
     size_t Felements;
-    int doObserverInitialization = 1;
+    bool doObserverInitialization = true;
 
     cl::Buffer d_odata, d_op, d_F;
     cl::Kernel cl_initializeObserver;
@@ -57,7 +57,7 @@ protected:
     std::string observerBuildOpts;
     std::string observerName;
 
-    ObserverParams<float> observerParamsToFloat(ObserverParams<double> sp);
+    ObserverParams<cl_float> observerParamsToFloat(ObserverParams<cl_double> op);
 
     std::string getObserverBuildOpts();
     void initializeFeaturesKernel();
@@ -65,6 +65,7 @@ protected:
 
 public:
     CLODEfeatures(ProblemInfo prob, std::string stepper, std::string observer, bool clSinglePrecision, OpenCLResource opencl);
+    CLODEfeatures(ProblemInfo prob, std::string stepper, std::string observer, bool clSinglePrecision, unsigned int platformID, unsigned int deviceID);
     ~CLODEfeatures();
 
     //build program, set all problem data needed to run
@@ -83,7 +84,7 @@ public:
 
     //Get functions
     int getNFeatures() { return nFeatures; };
-    std::vector<double> getF();
+    std::vector<cl_double> getF();
     std::vector<std::string> getFeatureNames(){return featureNames;};
     std::vector<std::string> getAvailableObservers(){return availableObserverNames;};
 };

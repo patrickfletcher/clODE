@@ -171,9 +171,10 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         //opencl device selection: assume the matlab caller selects by plaformID and deviceID, as returned by queryOpenCL 
         unsigned int platformID = (unsigned int)mxGetScalar(prhs[4]); 
         unsigned int deviceID = (unsigned int)mxGetScalar(prhs[5]);
-		OpenCLResource opencl(platformID, deviceID);
-		
-		insResult = instanceTab.insert(indPtrPair_type(newHandle, std::make_shared<class_type>(newProblem,stepper,clSinglePrecision, opencl)));
+
+		// OpenCLResource opencl(platformID, deviceID);
+		// insResult = instanceTab.insert(indPtrPair_type(newHandle, std::make_shared<class_type>(newProblem,stepper,clSinglePrecision, opencl)));
+		insResult = instanceTab.insert(indPtrPair_type(newHandle, std::make_shared<class_type>(newProblem,stepper,clSinglePrecision, platformID, deviceID)));
 
         if (!insResult.second) // sanity check
             mexPrintf("Oh, bad news.  Tried to add an existing handle."); // shouldn't ever happen
@@ -212,49 +213,48 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 	}
     case Action::SetOpenCL:
 	{ //inputs: vendor/devicetype
-		cl_vendor vendor = static_cast<cl_vendor>((int)mxGetScalar(prhs[2]));
-		cl_deviceType devicetype = getDeviceTypeEnum(static_cast<int>(mxGetScalar(prhs[3])) );	
-		OpenCLResource opencl(devicetype,vendor);
-        instance->setOpenCL(opencl);
+		unsigned int platformID = static_cast<unsigned int>(mxGetScalar(prhs[2]));
+		unsigned int deviceID = static_cast<unsigned int>(mxGetScalar(prhs[3]));
+        instance->setOpenCL(platformID, deviceID);
         break;
 	}
     case Action::Initialize:
 	{ //inputs: tspan, x0, pars, sp
-        std::vector<double> tspan ( static_cast<double *>(mxGetData(prhs[2])),  static_cast<double *>(mxGetData(prhs[2])) + mxGetNumberOfElements(prhs[2]) ); 
-        std::vector<double> x0 ( static_cast<double *>(mxGetData(prhs[3])),  static_cast<double *>(mxGetData(prhs[3])) + mxGetNumberOfElements(prhs[3]) ); 
-        std::vector<double> pars (static_cast<double *>(mxGetData(prhs[4])),  static_cast<double *>(mxGetData(prhs[4])) + mxGetNumberOfElements(prhs[4]) );  
-		SolverParams<double> sp = getMatlabSPstruct(prhs[5]);
+        std::vector<cl_double> tspan ( static_cast<cl_double *>(mxGetData(prhs[2])),  static_cast<cl_double *>(mxGetData(prhs[2])) + mxGetNumberOfElements(prhs[2]) ); 
+        std::vector<cl_double> x0 ( static_cast<cl_double *>(mxGetData(prhs[3])),  static_cast<cl_double *>(mxGetData(prhs[3])) + mxGetNumberOfElements(prhs[3]) ); 
+        std::vector<cl_double> pars (static_cast<cl_double *>(mxGetData(prhs[4])),  static_cast<cl_double *>(mxGetData(prhs[4])) + mxGetNumberOfElements(prhs[4]) );  
+		SolverParams<cl_double> sp = getMatlabSPstruct(prhs[5]);
         instance->initialize(tspan, x0, pars, sp);       
         break;
 	}
     case Action::SetProblemData:
 	{ //inputs: x0, pars
-        std::vector<double> x0( static_cast<double *>(mxGetData(prhs[2])),  static_cast<double *>(mxGetData(prhs[2])) + mxGetNumberOfElements(prhs[2]) ); 
-        std::vector<double> pars(static_cast<double *>(mxGetData(prhs[3])),  static_cast<double *>(mxGetData(prhs[3])) + mxGetNumberOfElements(prhs[3]) );  		
+        std::vector<cl_double> x0( static_cast<cl_double *>(mxGetData(prhs[2])),  static_cast<cl_double *>(mxGetData(prhs[2])) + mxGetNumberOfElements(prhs[2]) ); 
+        std::vector<cl_double> pars(static_cast<cl_double *>(mxGetData(prhs[3])),  static_cast<cl_double *>(mxGetData(prhs[3])) + mxGetNumberOfElements(prhs[3]) );  		
         instance->setProblemData(x0, pars);
         break;
 	}
     case Action::SetTspan:
 	{ //inputs: tspan
-        std::vector<double> tspan ( static_cast<double *>(mxGetData(prhs[2])),  static_cast<double *>(mxGetData(prhs[2])) + mxGetNumberOfElements(prhs[2]) ); 
+        std::vector<cl_double> tspan ( static_cast<cl_double *>(mxGetData(prhs[2])),  static_cast<cl_double *>(mxGetData(prhs[2])) + mxGetNumberOfElements(prhs[2]) ); 
         instance->setTspan(tspan);
         break;
 	}
     case Action::SetX0:
 	{ //inputs: x0
-        std::vector<double> x0( static_cast<double *>(mxGetData(prhs[2])),  static_cast<double *>(mxGetData(prhs[2])) + mxGetNumberOfElements(prhs[2]) );  
+        std::vector<cl_double> x0( static_cast<cl_double *>(mxGetData(prhs[2])),  static_cast<cl_double *>(mxGetData(prhs[2])) + mxGetNumberOfElements(prhs[2]) );  
         instance->setX0(x0);
         break;
 	}
     case Action::SetPars:
 	{ //inputs: pars
-        std::vector<double> pars( static_cast<double *>(mxGetData(prhs[2])),  static_cast<double *>(mxGetData(prhs[2])) + mxGetNumberOfElements(prhs[2]) );  
+        std::vector<cl_double> pars( static_cast<cl_double *>(mxGetData(prhs[2])),  static_cast<cl_double *>(mxGetData(prhs[2])) + mxGetNumberOfElements(prhs[2]) );  
         instance->setPars(pars);
         break;
 	}
     case Action::SetSolverPars:
 	{	//inputs: sp 
-		SolverParams<double> sp = getMatlabSPstruct(prhs[2]);
+		SolverParams<cl_double> sp = getMatlabSPstruct(prhs[2]);
         instance->setSolverParams(sp);
         break;
 	}
@@ -263,7 +263,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 		if (nrhs==2) 
 			instance->seedRNG();
 		else if (nrhs==3)
-			instance->seedRNG((int)mxGetScalar(prhs[2]));
+			instance->seedRNG((cl_int)mxGetScalar(prhs[2]));
 			
         break;
 	}
@@ -286,23 +286,23 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 	}
     case Action::GetTspan:
     {
-        std::vector<double> tspan=instance->getTspan();
+        std::vector<cl_double> tspan=instance->getTspan();
 		plhs[0]=mxCreateDoubleMatrix(tspan.size(), 1, mxREAL);
-        std::copy(tspan.begin(), tspan.end(), (double *)mxGetData(plhs[0]));
+        std::copy(tspan.begin(), tspan.end(), (cl_double *)mxGetData(plhs[0]));
         break;
 	}
     case Action::GetX0:
     {
-        std::vector<double> x0=instance->getX0();
+        std::vector<cl_double> x0=instance->getX0();
 		plhs[0]=mxCreateDoubleMatrix(x0.size(), 1, mxREAL);
-        std::copy(x0.begin(), x0.end(), (double *)mxGetData(plhs[0]));
+        std::copy(x0.begin(), x0.end(), (cl_double *)mxGetData(plhs[0]));
         break;
 	}
     case Action::GetXf:
     {
-        std::vector<double> xf=instance->getXf();
+        std::vector<cl_double> xf=instance->getXf();
 		plhs[0]=mxCreateDoubleMatrix(1, xf.size(), mxREAL);
-        std::copy(xf.begin(), xf.end(), (double *)mxGetData(plhs[0]));
+        std::copy(xf.begin(), xf.end(), (cl_double *)mxGetData(plhs[0]));
         break;
 	}
     case Action::GetStepperNames:
@@ -332,37 +332,37 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 	}
     case Action::GetT:
     {
-        std::vector<double> t=instance->getT();
+        std::vector<cl_double> t=instance->getT();
 		plhs[0]=mxCreateDoubleMatrix(t.size(), 1, mxREAL);
-        std::copy(t.begin(), t.end(), (double *)mxGetData(plhs[0]));
+        std::copy(t.begin(), t.end(), (cl_double *)mxGetData(plhs[0]));
         break;
 	}
     case Action::GetX:
     {
-        std::vector<double> x=instance->getX();
+        std::vector<cl_double> x=instance->getX();
 		plhs[0]=mxCreateDoubleMatrix(x.size(), 1, mxREAL);
-        std::copy(x.begin(), x.end(), (double *)mxGetData(plhs[0]));
+        std::copy(x.begin(), x.end(), (cl_double *)mxGetData(plhs[0]));
         break;
 	}
     case Action::GetDx:
     {
-        std::vector<double> dx=instance->getDx();
+        std::vector<cl_double> dx=instance->getDx();
 		plhs[0]=mxCreateDoubleMatrix(dx.size(), 1, mxREAL);
-        std::copy(dx.begin(), dx.end(), (double *)mxGetData(plhs[0]));
+        std::copy(dx.begin(), dx.end(), (cl_double *)mxGetData(plhs[0]));
         break;
 	}
     case Action::GetAux:
     {
-        std::vector<double> aux=instance->getAux();
+        std::vector<cl_double> aux=instance->getAux();
 		plhs[0]=mxCreateDoubleMatrix(aux.size(), 1, mxREAL);
-        std::copy(aux.begin(), aux.end(), (double *)mxGetData(plhs[0]));
+        std::copy(aux.begin(), aux.end(), (cl_double *)mxGetData(plhs[0]));
         break;
 	}
     case Action::GetNStored:
     {
-        std::vector<int> nStored=instance->getNstored();
+        std::vector<cl_int> nStored=instance->getNstored();
 		plhs[0]=mxCreateDoubleMatrix(nStored.size(), 1, mxREAL);
-        std::copy(nStored.begin(), nStored.end(), (double *)mxGetData(plhs[0]));
+        std::copy(nStored.begin(), nStored.end(), (cl_double *)mxGetData(plhs[0]));
         break;
 	}
     default:

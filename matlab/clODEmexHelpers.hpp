@@ -30,15 +30,15 @@ cl_deviceType getDeviceTypeEnum(int deviceInt) {
 }
 
 
-SolverParams<double> getMatlabSPstruct(const mxArray *spptr) {
-	SolverParams<double> sp;
+SolverParams<cl_double> getMatlabSPstruct(const mxArray *spptr) {
+	SolverParams<cl_double> sp;
 	sp.dt=mxGetScalar( mxGetField(spptr,0,"dt") );
 	sp.dtmax=mxGetScalar( mxGetField(spptr,0,"dtmax") );
 	sp.abstol=mxGetScalar( mxGetField(spptr,0,"abstol") );
 	sp.reltol=mxGetScalar( mxGetField(spptr,0,"reltol") );
-	sp.max_steps=(int)mxGetScalar( mxGetField(spptr,0,"max_steps") );
-	sp.max_store=(int)mxGetScalar( mxGetField(spptr,0,"max_store") );
-	sp.nout=(int)mxGetScalar( mxGetField(spptr,0,"nout") );
+	sp.max_steps=(cl_int)mxGetScalar( mxGetField(spptr,0,"max_steps") );
+	sp.max_store=(cl_int)mxGetScalar( mxGetField(spptr,0,"max_store") );
+	sp.nout=(cl_int)mxGetScalar( mxGetField(spptr,0,"nout") );
 	return sp;
 }
 
@@ -46,10 +46,10 @@ SolverParams<double> getMatlabSPstruct(const mxArray *spptr) {
 ProblemInfo getMatlabProblemStruct(const mxArray *probptr) {
 	ProblemInfo newProblem;
 	newProblem.clRHSfilename=getMatlabString( mxGetField(probptr,0,"clRHSfilename") );
-	newProblem.nVar=(int)mxGetScalar( mxGetField(probptr,0,"nVar") );
-	newProblem.nPar=(int)mxGetScalar( mxGetField(probptr,0,"nPar") );
-	newProblem.nAux=(int)mxGetScalar( mxGetField(probptr,0,"nAux") );
-	newProblem.nWiener=(int)mxGetScalar( mxGetField(probptr,0,"nWiener") );
+	newProblem.nVar=(cl_int)mxGetScalar( mxGetField(probptr,0,"nVar") );
+	newProblem.nPar=(cl_int)mxGetScalar( mxGetField(probptr,0,"nPar") );
+	newProblem.nAux=(cl_int)mxGetScalar( mxGetField(probptr,0,"nAux") );
+	newProblem.nWiener=(cl_int)mxGetScalar( mxGetField(probptr,0,"nWiener") );
 
 	const mxArray *namesPtr;
 	mwSize nNames;

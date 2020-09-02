@@ -26,6 +26,20 @@ CLODEfeatures::CLODEfeatures(ProblemInfo prob, std::string stepper, std::string 
 	dbg_printf("constructor clODEfeatures\n");
 }
 
+CLODEfeatures::CLODEfeatures(ProblemInfo prob, std::string stepper, std::string observer, bool clSinglePrecision,  unsigned int platformID, unsigned int deviceID)
+	: CLODE(prob, stepper, clSinglePrecision, platformID, deviceID)
+{
+
+	//printf("\nCLODE has been specialized: CLODEfeatures\n");
+
+	getObserverDefineMap(prob, clSinglePrecision, 0, 0, observerDefineMap, availableObserverNames);
+	setObserver(observer);
+
+	clprogramstring += read_file(clodeRoot + "initializeObserver.cl");
+	clprogramstring += read_file(clodeRoot + "features.cl");
+	dbg_printf("constructor clODEfeatures\n");
+}
+
 CLODEfeatures::~CLODEfeatures() {}
 
 //initialize everything
@@ -53,6 +67,7 @@ void CLODEfeatures::initialize(std::vector<cl_double> newTspan, std::vector<cl_d
 
 	printf("Using observer: %s\n",observer.c_str());
 
+	doObserverInitialization = true;
 	clInitialized = true;
 	dbg_printf("initialize clODEfeatures.\n");
 }
@@ -217,7 +232,7 @@ void CLODEfeatures::initializeObserver()
 			// printf("Enqueue error code: %s\n",CLErrorString(opencl.error).c_str());
 			opencl.error = opencl.getQueue().finish();
 			// printf("Finish Queue error code: %s\n",CLErrorString(opencl.error).c_str());
-			doObserverInitialization = 0;
+			doObserverInitialization = false;
 		}
 		catch (cl::Error &er)
 		{
@@ -286,7 +301,7 @@ void CLODEfeatures::features()
 	}
 }
 
-std::vector<double> CLODEfeatures::getF()
+std::vector<cl_double> CLODEfeatures::getF()
 {
 
 	if (clSinglePrecision)
