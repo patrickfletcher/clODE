@@ -1,3 +1,5 @@
+#include "realtype.cl"
+
 //Explicit Runge-Kutta 4 time step
 #define FIXED_STEPSIZE_EXPLICIT
 inline void do_step(realtype *ti, realtype xi[], realtype k1[], const realtype pars[], const realtype dt, realtype aux[], const realtype wi[])

@@ -13,6 +13,8 @@
  * - finalizeFeatures: post-integration cleanup and write to global feature array
  */
 
+#include "realtype.cl"
+
 #ifdef __cplusplus
 template <typename realtype>
 #endif

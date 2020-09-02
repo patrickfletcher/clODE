@@ -42,9 +42,11 @@ __kernel void features(
 
 	rd.randnUselast = 0;
 
-#ifdef STOCHASTIC_STEPPER
     for (int j = 0; j < N_WIENER; ++j)
+#ifdef STOCHASTIC_STEPPER
         wi[j] = randn(&rd) / sqrt(dt);
+#else
+        wi[j] = RCONST(0.0);
 #endif
 	getRHS(ti, xi, p, dxi, auxi, wi); //slope at initial point, needed for FSAL steppers (bs23, dorpri5)
 

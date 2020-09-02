@@ -42,7 +42,7 @@ op.minIMI=0.00; %don't count event if global (max x - min x) is too small
 % clo.observer='basicall'; %same as above but for all variables
 
 % clo.observer='localmax'; %features derived from local maxima and minima only
-% % fname="max IMI";
+% fname="max IMI";
 
 % clo.observer='nhood1'; %start point is first local min of variable eVarIx
 % op.eVarIx=4; %variable used for deciding centerpoint of neighborhood
@@ -55,14 +55,14 @@ op.minIMI=0.00; %don't count event if global (max x - min x) is too small
 % op.nHoodRadius=.2; %size of neighborhood {nhood2} 
 % op.xDownThresh=0.05; %selecting neighborhood centerpoint: first time eVarIx drops below this fraction of its amplitude 
 
-clo.observer='thresh2'; %event detection and features both measured in variable fVarIx
-op.fVarIx=1;
-%for constructing up/down thresholds:
-op.xUpThresh=0.3; %must provide xUpThresh at least
-op.xDownThresh=0.1; %xDownThresh=0 => use same as xUpThresh
-op.dxUpThresh=0.; %dxUpThresh=0 => don't use
-op.dxDownThresh=0.; %dxUpThresh=0 => use same as dxUpThresh
-% % fname = "mean peaks";
+% clo.observer='thresh2'; %event detection and features both measured in variable fVarIx
+% op.fVarIx=1;
+% %for constructing up/down thresholds:
+% op.xUpThresh=0.3; %must provide xUpThresh at least
+% op.xDownThresh=0.1; %xDownThresh=0 => use same as xUpThresh
+% op.dxUpThresh=0.; %dxUpThresh=0 => don't use
+% op.dxDownThresh=0.; %dxUpThresh=0 => use same as dxUpThresh
+% % % fname = "mean peaks";
 
 %%
 tspan=[0,30000];
@@ -126,7 +126,7 @@ end
 
 %build a feature-selection function, Ffun. The following simply extracts
 %feature sixth index:
-fix=5; 
+fix=1; 
 % fix=find(clo.fNames==fname);
 fscale=1; %in case want to change feature's units
 Ffun=@(F)F(:,fix)*fscale; 

@@ -1,4 +1,6 @@
-//Runge-Cutta Cash-Karp
+#include "realtype.cl"
+
+//Runge-Kutta Cash-Karp
 #define ADAPTIVE_STEPSIZE_EXPLICIT
 #define FSAL_STEP_PROPERTY
 #define LOCAL_ERROR_ORDER RCONST(4.0)

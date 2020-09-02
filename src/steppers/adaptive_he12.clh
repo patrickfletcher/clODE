@@ -1,3 +1,5 @@
+#include "realtype.cl"
+
 #define ADAPTIVE_STEPSIZE_EXPLICIT
 #define FSAL_STEP_PROPERTY
 #define LOCAL_ERROR_ORDER RCONST(1.0)
