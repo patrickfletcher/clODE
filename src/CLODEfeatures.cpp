@@ -51,7 +51,7 @@ void CLODEfeatures::initialize(std::vector<cl_double> newTspan, std::vector<cl_d
 	setSolverParams(newSp);
 	setObserverParams(newOp);
 
-	printf("Using observer: %s\n",observer);
+	printf("Using observer: %s\n",observer.c_str());
 
 	clInitialized = true;
 	dbg_printf("initialize clODEfeatures.\n");
