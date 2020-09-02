@@ -15,8 +15,8 @@
 // #endif
 
 //if compiling from matlab MEX, redefine printf to mexPrintf so it prints to matlab command window.
-#define dbg_printf printf
-//~ #define dbg_printf
+// #define dbg_printf printf
+#define dbg_printf
 #ifdef MATLAB_MEX_FILE
 #include "mex.h"
 #define printf mexPrintf

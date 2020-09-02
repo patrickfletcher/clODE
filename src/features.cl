@@ -63,6 +63,8 @@ __kernel void features(
         if (stepflag!=0)
             break;
 
+		//TODO: Update solution buffers here?
+
 		eventOccurred = eventFunction(&ti, xi, dxi, auxi, &odata, opars);
 		if (eventOccurred)
 		{

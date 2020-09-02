@@ -4,9 +4,9 @@ clear
 odefile='lactotroph.ode';
 precision='single';
 % precision='double';
-% stepper='dopri5';
+stepper='dopri5';
 % stepper='bs23'; 
-stepper='rk4';
+% stepper='rk4';
 
 openclDevices=queryOpenCL(); %inspect this struct to see properties of OpenCL devices found
 
@@ -17,8 +17,9 @@ openclDevices=queryOpenCL(); %inspect this struct to see properties of OpenCL de
 %Device to use for feature grid computation
 %The following uses the default device: first gpu found. It also parses the
 %ODEfile and writes the OpenCL code for the ODE system. 
-selectedDevice=[]; %autoselect: gpu>cpu
+selectedDevice=1; %autoselect: gpu>cpu
 clo=clODEfeatures(odefile,precision,selectedDevice,stepper);
+clo.printStatus
 
 %set properties 
 % clo.stepper='rk4'; %default='dorpri5'
@@ -26,20 +27,22 @@ clo=clODEfeatures(odefile,precision,selectedDevice,stepper);
 %solver parameters`
 sp=clODE.defaultSolverParams();%create required ODE solver parameter struct
 sp.dt=0.5;
-sp.dtmax=1;
+sp.dtmax=100;
 sp.abstol=1e-6;
 sp.reltol=1e-4; %nhood2 may require fairly strict reltol
-% sp.max_steps=2000;
+sp.max_steps=1e7;
 
 op=clODEfeatures.defaultObserverParams(); %create required observer parameter struct
 op.maxEventCount=10000; %stops if this many events found {localmax, nhood2}
-op.eps_dx=1e-7; %for checking for min/max
-op.minXamp=0.01; %don't count event if global (max x - min x) is too small
+op.eps_dx=0e-7; %for checking for min/max
+op.minXamp=0.00; %don't count event if global (max x - min x) is too small
+op.minIMI=0.00; %don't count event if global (max x - min x) is too small
 
 % clo.observer='basic'; %records the extent (max/min) of a variable and its slope
 % clo.observer='basicall'; %same as above but for all variables
 
 % clo.observer='localmax'; %features derived from local maxima and minima only
+% % fname="max IMI";
 
 % clo.observer='nhood1'; %start point is first local min of variable eVarIx
 % op.eVarIx=4; %variable used for deciding centerpoint of neighborhood
@@ -50,16 +53,16 @@ op.minXamp=0.01; %don't count event if global (max x - min x) is too small
 % op.eVarIx=4; %nhood2: variable used for deciding centerpoint of neighborhood
 % op.fVarIx=1; %feature detection variable
 % op.nHoodRadius=.2; %size of neighborhood {nhood2} 
-% op.xDownThresh=0.5; %selecting neighborhood centerpoint: first time eVarIx drops below this fraction of its amplitude 
+% op.xDownThresh=0.05; %selecting neighborhood centerpoint: first time eVarIx drops below this fraction of its amplitude 
 
 clo.observer='thresh2'; %event detection and features both measured in variable fVarIx
 op.fVarIx=1;
 %for constructing up/down thresholds:
-op.xUpThresh=0.1; %must provide xUpThresh at least
-op.xDownThresh=0.05; %xDownThresh=0 => use same as xUpThresh
+op.xUpThresh=0.3; %must provide xUpThresh at least
+op.xDownThresh=0.1; %xDownThresh=0 => use same as xUpThresh
 op.dxUpThresh=0.; %dxUpThresh=0 => don't use
 op.dxDownThresh=0.; %dxUpThresh=0 => use same as dxUpThresh
-
+% % fname = "mean peaks";
 
 %%
 tspan=[0,30000];
@@ -100,7 +103,7 @@ clo.seedRNG(0)
 
 %%
 
-nTrans=3;
+nTrans=1;
 for i=1:nTrans
 tic
 clo.transient();
@@ -108,15 +111,8 @@ clo.shiftX0(); %sets X0 to continue from the end of the transient
 toc
 end
 
-% tic
-% clo.initObserver();
-% clo.features();
-% toc
-
-%% %equivalent to above: 
-clo.features(1);
-
-nCont=3;
+%% 
+nCont=1;
 for i=1:nCont
 tic
 clo.features();
@@ -130,8 +126,8 @@ end
 
 %build a feature-selection function, Ffun. The following simply extracts
 %feature sixth index:
-% fix=6; 
-fix=find(clo.fNames=="mean peaks");
+fix=5; 
+% fix=find(clo.fNames==fname);
 fscale=1; %in case want to change feature's units
 Ffun=@(F)F(:,fix)*fscale; 
 ftitle=clo.fNames{fix}; %grab the feature name from the object

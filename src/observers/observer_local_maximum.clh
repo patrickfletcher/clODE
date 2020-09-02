@@ -129,13 +129,7 @@ inline void initializeEventDetector(realtype *ti, realtype xi[], realtype dxi[],
 //check buffer of slopes for local max
 inline bool eventFunction(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
 {
-    if (od->buffer_filled)
-    {
-        bool doCheckEvent=od->xGlobalMax-od->xGlobalMin > op->minXamp;
-        if (doCheckEvent)
-            return (od->dxbuffer[1] >= -op->eps_dx && od->dxbuffer[2] <= -op->eps_dx);
-    }
-    return false;
+    return (od->buffer_filled && od->dxbuffer[1] >= -op->eps_dx && od->dxbuffer[2] <= -op->eps_dx);
 }
 
 //When an event is detected, computes desired event-based features. returns true if a terminal event was reached
@@ -200,8 +194,6 @@ inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dxi[], re
 // - reset intermediates upon local max event detection
 inline void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
 {
-    // if (od->xRange[op->fVarIx]<op->minXamp) {return;}
-
     //advance solution buffer
     for (int i = 0; i < 2; ++i)
     {

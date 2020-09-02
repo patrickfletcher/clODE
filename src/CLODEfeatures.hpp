@@ -16,12 +16,17 @@
 #include "observers.cl"
 #include "OpenCLResource.hpp"
 
-#define __CL_ENABLE_EXCEPTIONS
-#if defined(__APPLE__) || defined(__MACOSX)
-#include "OpenCL/cl.hpp"
-#else
-#include <CL/cl.hpp>
-#endif
+// #define __CL_ENABLE_EXCEPTIONS
+// #if defined(__APPLE__) || defined(__MACOSX)
+// #include "OpenCL/cl.hpp"
+// #else
+// #include <CL/cl.hpp>
+// #endif
+#define CL_HPP_ENABLE_EXCEPTIONS
+#define CL_HPP_MINIMUM_OPENCL_VERSION 120
+#define CL_HPP_TARGET_OPENCL_VERSION 120
+#define CL_HPP_ENABLE_PROGRAM_CONSTRUCTION_FROM_ARRAY_COMPATIBILITY
+#include "OpenCL/cl2.hpp"
 
 #include <map>
 #include <string>
@@ -43,7 +48,7 @@ protected:
     std::vector<cl_double> F;
     ObserverParams<cl_double> op;
     size_t Felements;
-    int doObserverInitialization = 1;
+    bool doObserverInitialization = true;
 
     cl::Buffer d_odata, d_op, d_F;
     cl::Kernel cl_initializeObserver;
@@ -52,7 +57,7 @@ protected:
     std::string observerBuildOpts;
     std::string observerName;
 
-    ObserverParams<float> observerParamsToFloat(ObserverParams<double> sp);
+    ObserverParams<cl_float> observerParamsToFloat(ObserverParams<cl_double> op);
 
     std::string getObserverBuildOpts();
     void initializeFeaturesKernel();
@@ -60,6 +65,7 @@ protected:
 
 public:
     CLODEfeatures(ProblemInfo prob, std::string stepper, std::string observer, bool clSinglePrecision, OpenCLResource opencl);
+    CLODEfeatures(ProblemInfo prob, std::string stepper, std::string observer, bool clSinglePrecision, unsigned int platformID, unsigned int deviceID);
     ~CLODEfeatures();
 
     //build program, set all problem data needed to run
@@ -78,7 +84,7 @@ public:
 
     //Get functions
     int getNFeatures() { return nFeatures; };
-    std::vector<double> getF();
+    std::vector<cl_double> getF();
     std::vector<std::string> getFeatureNames(){return featureNames;};
     std::vector<std::string> getAvailableObservers(){return availableObserverNames;};
 };

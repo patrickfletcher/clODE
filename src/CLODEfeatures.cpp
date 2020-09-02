@@ -26,6 +26,20 @@ CLODEfeatures::CLODEfeatures(ProblemInfo prob, std::string stepper, std::string 
 	dbg_printf("constructor clODEfeatures\n");
 }
 
+CLODEfeatures::CLODEfeatures(ProblemInfo prob, std::string stepper, std::string observer, bool clSinglePrecision,  unsigned int platformID, unsigned int deviceID)
+	: CLODE(prob, stepper, clSinglePrecision, platformID, deviceID)
+{
+
+	//printf("\nCLODE has been specialized: CLODEfeatures\n");
+
+	getObserverDefineMap(prob, clSinglePrecision, 0, 0, observerDefineMap, availableObserverNames);
+	setObserver(observer);
+
+	clprogramstring += read_file(clodeRoot + "initializeObserver.cl");
+	clprogramstring += read_file(clodeRoot + "features.cl");
+	dbg_printf("constructor clODEfeatures\n");
+}
+
 CLODEfeatures::~CLODEfeatures() {}
 
 //initialize everything
@@ -51,8 +65,9 @@ void CLODEfeatures::initialize(std::vector<cl_double> newTspan, std::vector<cl_d
 	setSolverParams(newSp);
 	setObserverParams(newOp);
 
-	printf("Using observer: %s\n",observer);
+	printf("Using observer: %s\n",observer.c_str());
 
+	doObserverInitialization = true;
 	clInitialized = true;
 	dbg_printf("initialize clODEfeatures.\n");
 }
@@ -103,7 +118,7 @@ void CLODEfeatures::initializeFeaturesKernel()
 	}
 	catch (cl::Error &er)
 	{
-		printf("ERROR: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
+		printf("ERROR in CLODEfeatures::initializeFeaturesKernel: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
 		throw er;
 	}
 	dbg_printf("initialize features kernel\n");
@@ -127,7 +142,7 @@ void CLODEfeatures::setObserverParams(ObserverParams<cl_double> newOp)
 	}
 	catch (cl::Error &er)
 	{
-		printf("ERROR: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
+		printf("ERROR in CLODEfeatures::setObserverParams: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
 		throw er;
 	}
 	dbg_printf("set observer params\n");
@@ -179,7 +194,7 @@ void CLODEfeatures::resizeFeaturesVariables()
 		}
 		catch (cl::Error &er)
 		{
-			printf("ERROR: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
+			printf("ERROR in CLODEfeatures::resizeFeaturesVariables: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
 			throw er;
 		}
 		dbg_printf("resize F, d_F, d_odata with: nPts=%d, nF=%d\n",nPts,nFeatures);
@@ -217,11 +232,11 @@ void CLODEfeatures::initializeObserver()
 			// printf("Enqueue error code: %s\n",CLErrorString(opencl.error).c_str());
 			opencl.error = opencl.getQueue().finish();
 			// printf("Finish Queue error code: %s\n",CLErrorString(opencl.error).c_str());
-			doObserverInitialization = 0;
+			doObserverInitialization = false;
 		}
 		catch (cl::Error &er)
 		{
-			printf("ERROR: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
+			printf("ERROR in CLODEfeatures::initializeObserver: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
 			throw er;
 		}
 		dbg_printf("run initializeObserver\n");
@@ -275,7 +290,7 @@ void CLODEfeatures::features()
 		}
 		catch (cl::Error &er)
 		{
-			printf("ERROR: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
+			printf("ERROR in CLODEfeatures::features: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
 			throw er;
 		}
 		dbg_printf("run features\n");
@@ -286,7 +301,7 @@ void CLODEfeatures::features()
 	}
 }
 
-std::vector<double> CLODEfeatures::getF()
+std::vector<cl_double> CLODEfeatures::getF()
 {
 
 	if (clSinglePrecision)

@@ -45,6 +45,27 @@ CLODE::CLODE(ProblemInfo prob, std::string stepper, bool clSinglePrecision, Open
 	dbg_printf("constructor clODE\n");
 }
 
+CLODE::CLODE(ProblemInfo prob, std::string stepper, bool clSinglePrecision, unsigned int platformID, unsigned int deviceID)
+	: nPts(0), clodeRoot(CLODE_ROOT), nRNGstate(2)
+{
+	//printf("\nCLODE base class constructor\n");
+
+	getStepperDefineMap(stepperDefineMap, availableSteppers); //from steppers.cl
+
+	// for (auto s : availableSteppers)
+	// {
+	// 	printf("%s\n",s.c_str());
+	// }
+
+	setNewProblem(prob);
+	setStepper(stepper);
+	setPrecision(clSinglePrecision);
+	setOpenCL(platformID, deviceID);
+
+	clprogramstring = read_file(clodeRoot + "transient.cl");
+	dbg_printf("constructor clODE\n");
+}
+
 CLODE::~CLODE()
 {
 }
@@ -95,6 +116,15 @@ void CLODE::setOpenCL(OpenCLResource newOpencl)
 {//TODO: not equality check for OpenCLResource class
 	//~ if (newOpencl!=opencl) {
 	opencl = newOpencl;
+	clInitialized = false;
+	//~ }
+	dbg_printf("set OpenCL\n");
+}
+
+void CLODE::setOpenCL(unsigned int platformID, unsigned int deviceID)
+{//TODO: not equality check for OpenCLResource class
+	//~ if (newOpencl!=opencl) {
+	opencl = OpenCLResource(platformID, deviceID);
 	clInitialized = false;
 	//~ }
 	dbg_printf("set OpenCL\n");
@@ -151,7 +181,7 @@ void CLODE::buildProgram(std::string extraBuildOpts)
 }
 
 //initialize everything: build the program, create the kernels, and set all needed problem data.
-void CLODE::initialize(std::vector<double> newTspan, std::vector<double> newX0, std::vector<double> newPars, SolverParams<double> newSp)
+void CLODE::initialize(std::vector<cl_double> newTspan, std::vector<cl_double> newX0, std::vector<cl_double> newPars, SolverParams<cl_double> newSp)
 {
 
 	clInitialized = false;
@@ -191,14 +221,14 @@ void CLODE::initializeTransientKernel()
 	}
 	catch (cl::Error &er)
 	{
-		printf("ERROR: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
+		printf("ERROR in CLODE::initializeTransientKernel(): %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
 		throw er;
 	}
 	dbg_printf("initialize transient kernel\n");
 }
 
 //initialize new set of trajectories (nPts may change)
-void CLODE::setProblemData(std::vector<double> newX0, std::vector<double> newPars)
+void CLODE::setProblemData(std::vector<cl_double> newX0, std::vector<cl_double> newPars)
 {
 
 	//check if newX0 and newPars are valid, and update nPts if needed:
@@ -217,8 +247,8 @@ void CLODE::setProblemData(std::vector<double> newX0, std::vector<double> newPar
 	}
 
 	// now check if newX0 and newPars represent same number of sets
-	int nPtsX0 = newX0.size() / nVar;
-	int nPtsPars = newPars.size() / nPar;
+	cl_int nPtsX0 = newX0.size() / nVar;
+	cl_int nPtsPars = newPars.size() / nPar;
 	// printf("Computed nPts: %d %d\n", nPtsX0, nPtsPars);
 	if (nPtsX0 != nPtsPars)
 	{
@@ -238,7 +268,7 @@ void CLODE::setProblemData(std::vector<double> newX0, std::vector<double> newPar
 }
 
 //resize all the nPts dependent variables, only if nPts changed
-void CLODE::setNpts(int newNpts)
+void CLODE::setNpts(cl_int newNpts)
 {
 	//unlikely that any of these should ever exceed memory limits...
 	size_t largestAlloc = std::max(nVar, std::max(nPar, nAux)) * nPts * realSize;
@@ -275,7 +305,7 @@ void CLODE::setNpts(int newNpts)
 		}
 		catch (cl::Error &er)
 		{
-			printf("ERROR: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
+			printf("ERROR in CLODE::setNpts: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
 			throw er;
 		}
 
@@ -285,7 +315,7 @@ void CLODE::setNpts(int newNpts)
 	}
 }
 
-void CLODE::setTspan(std::vector<double> newTspan)
+void CLODE::setTspan(std::vector<cl_double> newTspan)
 {
 	if (newTspan!=tspan)
 	{
@@ -295,7 +325,7 @@ void CLODE::setTspan(std::vector<double> newTspan)
 		{
 			if (clSinglePrecision)
 			{ //downcast to float if desired
-				std::vector<float> tspanF(tspan.begin(), tspan.end());
+				std::vector<cl_float> tspanF(tspan.begin(), tspan.end());
 				opencl.error = copy(opencl.getQueue(), tspanF.begin(), tspanF.end(), d_tspan);
 			}
 			else
@@ -305,7 +335,7 @@ void CLODE::setTspan(std::vector<double> newTspan)
 		}
 		catch (cl::Error &er)
 		{
-			printf("ERROR: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
+			printf("ERROR in CLODE::setTspan: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
 			throw er;
 		}
 		dbg_printf("set tspan\n");
@@ -314,13 +344,13 @@ void CLODE::setTspan(std::vector<double> newTspan)
 
 void CLODE::shiftTspan()
 {
-	std::vector<double> newTspan({tspan[1], tspan[1] + (tspan[1] - tspan[0])});
+	std::vector<cl_double> newTspan({tspan[1], tspan[1] + (tspan[1] - tspan[0])});
 	setTspan(newTspan);
 	dbg_printf("shift tspan\n");
 }
 
 //set new x0. Cannot update nPts
-void CLODE::setX0(std::vector<double> newX0)
+void CLODE::setX0(std::vector<cl_double> newX0)
 {
 	if (newX0.size() == (size_t)nPts * nVar)
 	{
@@ -331,7 +361,7 @@ void CLODE::setX0(std::vector<double> newX0)
 		{
 			if (clSinglePrecision)
 			{ //downcast to float if desired
-				std::vector<float> x0F(x0.begin(), x0.end());
+				std::vector<cl_float> x0F(x0.begin(), x0.end());
 				opencl.error = copy(opencl.getQueue(), x0F.begin(), x0F.end(), d_x0);
 			}
 			else
@@ -341,7 +371,7 @@ void CLODE::setX0(std::vector<double> newX0)
 		}
 		catch (cl::Error &er)
 		{
-			printf("ERROR: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
+			printf("ERROR in CLODE::setX0: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
 			throw er;
 		}
 		dbg_printf("set X0\n");
@@ -363,14 +393,14 @@ void CLODE::shiftX0()
 	}
 	catch (cl::Error &er)
 	{
-		printf("ERROR: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
+		printf("ERROR in CLODE::shiftX0: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
 		throw er;
 	}
 	dbg_printf("shift X0\n");
 }
 
 //set new Pars. Cannot update nPts
-void CLODE::setPars(std::vector<double> newPars)
+void CLODE::setPars(std::vector<cl_double> newPars)
 {
 	if (newPars.size() == (size_t)nPts * nPar)
 	{
@@ -381,7 +411,7 @@ void CLODE::setPars(std::vector<double> newPars)
 		{
 			if (clSinglePrecision)
 			{ //downcast to float if desired
-				std::vector<float> parsF(pars.begin(), pars.end());
+				std::vector<cl_float> parsF(pars.begin(), pars.end());
 				opencl.error = copy(opencl.getQueue(), parsF.begin(), parsF.end(), d_pars);
 			}
 			else
@@ -391,7 +421,7 @@ void CLODE::setPars(std::vector<double> newPars)
 		}
 		catch (cl::Error &er)
 		{
-			printf("ERROR: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
+			printf("ERROR in CLODE::setPars: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
 			throw er;
 		}
 		dbg_printf("set P\n");
@@ -404,7 +434,7 @@ void CLODE::setPars(std::vector<double> newPars)
 	}
 }
 
-void CLODE::setSolverParams(SolverParams<double> newSp)
+void CLODE::setSolverParams(SolverParams<cl_double> newSp)
 {//TODO: equality operator for SolverParams struct
 	sp = newSp;
 	try
@@ -413,9 +443,9 @@ void CLODE::setSolverParams(SolverParams<double> newSp)
 		
 		if (clSinglePrecision)
 		{ //downcast to float if desired
-			SolverParams<float> spF = solverParamsToFloat(sp);
+			SolverParams<cl_float> spF = solverParamsToFloat(sp);
 			opencl.error = opencl.getQueue().enqueueWriteBuffer(d_sp, CL_TRUE, 0, sizeof(spF), &spF);
-			std::vector<float> dtF(dt.begin(), dt.end());
+			std::vector<cl_float> dtF(dt.begin(), dt.end());
 			opencl.error = copy(opencl.getQueue(), dtF.begin(), dtF.end(), d_dt);
 			// opencl.error = opencl.getQueue().enqueueFillBuffer(d_dt, spF.dt, 0, sizeof(spF.dt));
 		}
@@ -428,16 +458,16 @@ void CLODE::setSolverParams(SolverParams<double> newSp)
 	}
 	catch (cl::Error &er)
 	{
-		printf("ERROR: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
+		printf("ERROR in CLODE::setSolverParams: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
 		throw er;
 	}
 	dbg_printf("set SolverParams\n");
 }
 
 //TODO: define an assignment/type cast operator in the struct?
-SolverParams<float> CLODE::solverParamsToFloat(SolverParams<double> sp)
+SolverParams<cl_float> CLODE::solverParamsToFloat(SolverParams<cl_double> sp)
 {
-	SolverParams<float> spF;
+	SolverParams<cl_float> spF;
 	spF.dt = sp.dt;
 	spF.dtmax = sp.dtmax;
 	spF.abstol = sp.abstol;
@@ -456,7 +486,7 @@ void CLODE::seedRNG()
 
 	std::random_device rd;
 	std::mt19937_64 gen(rd());
-	std::uniform_int_distribution<unsigned long long> dis;
+	std::uniform_int_distribution<cl_ulong> dis;
 
 	for (int i = 0; i < nRNGstate * nPts; ++i)
 	{
@@ -470,14 +500,14 @@ void CLODE::seedRNG()
 	}
 	catch (cl::Error &er)
 	{
-		printf("ERROR: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
+		printf("ERROR in CLODE::seedRNG: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
 		throw er;
 	}
 	dbg_printf("set random RNG seed\n");
 }
 
 //populate the RNGstate vector on the device. nPts must be set
-void CLODE::seedRNG(int mySeed)
+void CLODE::seedRNG(cl_int mySeed)
 {
 
 	for (int i = 0; i < nRNGstate * nPts; ++i)
@@ -491,7 +521,7 @@ void CLODE::seedRNG(int mySeed)
 	}
 	catch (cl::Error &er)
 	{
-		printf("ERROR: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
+		printf("ERROR in CLODE::seedRNG(int mySeed): %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
 		throw er;
 	}
 	dbg_printf("set fixed RNG seed\n");
@@ -521,7 +551,7 @@ void CLODE::transient()
 		}
 		catch (cl::Error &er)
 		{
-			printf("ERROR: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
+			printf("ERROR in CLODE::transient: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
 			throw er;
 		}
 		dbg_printf("run transient\n");
@@ -532,12 +562,12 @@ void CLODE::transient()
 	}
 }
 
-std::vector<double> CLODE::getX0()
+std::vector<cl_double> CLODE::getX0()
 {
 
 	if (clSinglePrecision)
 	{ //cast back to double
-		std::vector<float> x0F(x0elements);
+		std::vector<cl_float> x0F(x0elements);
 		opencl.error = copy(opencl.getQueue(), d_x0, x0F.begin(), x0F.end());
 		x0.assign(x0F.begin(), x0F.end());
 	}
@@ -549,12 +579,12 @@ std::vector<double> CLODE::getX0()
 	return x0;
 }
 
-std::vector<double> CLODE::getXf()
+std::vector<cl_double> CLODE::getXf()
 {
 
 	if (clSinglePrecision)
 	{ //cast back to double
-		std::vector<float> xfF(x0elements);
+		std::vector<cl_float> xfF(x0elements);
 		opencl.error = copy(opencl.getQueue(), d_xf, xfF.begin(), xfF.end());
 		xf.assign(xfF.begin(), xfF.end());
 	}

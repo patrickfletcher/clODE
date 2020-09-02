@@ -25,7 +25,7 @@ typedef float realtype;
 #endif
 
 typedef double realtype;
-#define RCONST(x) x
+#define RCONST(x) (x)
 #define BIG_REAL DBL_MAX
 #define SMALL_REAL DBL_MIN
 #define UNIT_ROUNDOFF DBL_EPSILON

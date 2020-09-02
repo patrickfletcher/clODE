@@ -26,12 +26,17 @@
 #include "clODE_struct_defs.cl"
 #include "OpenCLResource.hpp"
 
-#define __CL_ENABLE_EXCEPTIONS
-#if defined(__APPLE__) || defined(__MACOSX)
-#include "OpenCL/cl.hpp"
-#else
-#include <CL/cl.hpp>
-#endif
+// #define __CL_ENABLE_EXCEPTIONS
+// #if defined(__APPLE__) || defined(__MACOSX)
+// #include "OpenCL/cl.hpp"
+// #else
+// #include <CL/cl.hpp>
+// #endif
+#define CL_HPP_ENABLE_EXCEPTIONS
+#define CL_HPP_MINIMUM_OPENCL_VERSION 120
+#define CL_HPP_TARGET_OPENCL_VERSION 120
+#define CL_HPP_ENABLE_PROGRAM_CONSTRUCTION_FROM_ARRAY_COMPATIBILITY
+#include "OpenCL/cl2.hpp"
 
 #include <map>
 #include <string>
@@ -41,10 +46,10 @@
 struct ProblemInfo
 {
     std::string clRHSfilename;
-    int nVar;
-    int nPar;
-    int nAux;
-    int nWiener;
+    cl_int nVar;
+    cl_int nPar;
+    cl_int nAux;
+    cl_int nWiener;
     std::vector<std::string> varNames;
     std::vector<std::string> parNames;
     std::vector<std::string> auxNames;
@@ -57,7 +62,7 @@ protected:
     //Problem details (from ProblemInfo struct)
     ProblemInfo prob;
     std::string clRHSfilename;
-    int nVar, nPar, nAux, nWiener;
+    cl_int nVar, nPar, nAux, nWiener;
     cl_int nPts;
 
     //Stepper specification
@@ -73,10 +78,10 @@ protected:
     OpenCLResource opencl;
     const std::string clodeRoot;
 
-    int nRNGstate; //TODO: different RNGs could be selected like steppers...?
+    cl_int nRNGstate; //TODO: different RNGs could be selected like steppers...?
 
-    SolverParams<double> sp;
-    std::vector<double> tspan, x0, pars, xf, dt;
+    SolverParams<cl_double> sp;
+    std::vector<cl_double> tspan, x0, pars, xf, dt;
     size_t x0elements, parselements, RNGelements;
 
     std::vector<cl_ulong> RNGstate;
@@ -92,18 +97,19 @@ protected:
     bool clInitialized;
 
     std::string getStepperDefine();
-    SolverParams<float> solverParamsToFloat(SolverParams<double> sp);
+    SolverParams<cl_float> solverParamsToFloat(SolverParams<cl_double> sp);
 
     //~private:
     //~ CLODE( const CLODE& other ); // non construction-copyable
     //~ CLODE& operator=( const CLODE& ); // non copyable
 
     void initializeTransientKernel();
-    void setNpts(int newNpts); //resizes the nPts-dependent input variables
+    void setNpts(cl_int newNpts); //resizes the nPts-dependent input variables
 
 public:
     //for now, require all arguments. TODO: convenience constructors?
     CLODE(ProblemInfo prob, std::string stepper, bool clSinglePrecision, OpenCLResource opencl);
+    CLODE(ProblemInfo prob, std::string stepper, bool clSinglePrecision, unsigned int platformID, unsigned int deviceID);
     //~ CLODE(); //must follow with all set functions to use
     //~ CLODE(ProblemInfo prob); //set stepper, precision, and opencl
     //~ CLODE(ProblemInfo prob, StepperType stepper=rungeKutta4, bool clSinglePrecision=true, OpenCLResource opencl=OpenCLResource()); //alt: use defaults?
@@ -114,19 +120,20 @@ public:
     void setStepper(std::string newStepper);            //rebuild: program, kernel, kernel args. Host + Device data OK
     void setPrecision(bool clSinglePrecision);          //rebuild: program, kernel, kernel args, device vars. Opencl context OK
     void setOpenCL(OpenCLResource opencl);              //rebuild: context, program, kernel, kernel args, device vars. Host problem data OK
+    void setOpenCL(unsigned int platformID, unsigned int deviceID);              //rebuild: context, program, kernel, kernel args, device vars. Host problem data OK
     void buildProgram(std::string extraBuildOpts = ""); //called by initialize, to all change in prob/stepper/precision/openclResource
 
     //build program, set all problem data needed to run
-    virtual void initialize(std::vector<double> newTspan, std::vector<double> newX0, std::vector<double> newPars, SolverParams<double> newSp);
+    virtual void initialize(std::vector<cl_double> newTspan, std::vector<cl_double> newX0, std::vector<cl_double> newPars, SolverParams<cl_double> newSp);
 
-    void setProblemData(std::vector<double> newX0, std::vector<double> newPars); //this routine may change nPts
-    void setTspan(std::vector<double> newTspan);
-    void setX0(std::vector<double> newX0);     //no change in nPts
-    void setPars(std::vector<double> newPars); //no change in nPts
-    void setSolverParams(SolverParams<double> newSp);
+    void setProblemData(std::vector<cl_double> newX0, std::vector<cl_double> newPars); //this routine may change nPts
+    void setTspan(std::vector<cl_double> newTspan);
+    void setX0(std::vector<cl_double> newX0);     //no change in nPts
+    void setPars(std::vector<cl_double> newPars); //no change in nPts
+    void setSolverParams(SolverParams<cl_double> newSp);
 
     void seedRNG();
-    void seedRNG(int mySeed); //overload for setting reproducible seeds
+    void seedRNG(cl_int mySeed); //overload for setting reproducible seeds
 
     //simulation routine
     void transient(); //integrate forward an interval of duration (tf-t0).
@@ -138,9 +145,9 @@ public:
     //shift/continue: transient, updateTspan+updateX0, transient (only for trajectory?)
     //last: transient, updateX0, transient
 
-    std::vector<double> getTspan() { return tspan; };
-    std::vector<double> getX0();
-    std::vector<double> getXf();
+    std::vector<cl_double> getTspan() { return tspan; };
+    std::vector<cl_double> getX0();
+    std::vector<cl_double> getXf();
     std::string getProgramString() { return buildOptions+clprogramstring+ODEsystemsource; };
     std::vector<std::string> getAvailableSteppers() { return availableSteppers; };
 

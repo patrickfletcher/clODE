@@ -113,7 +113,7 @@ classdef clODE < cppclass & matlab.mixin.SetGet
         % new and delete are inherited
         
         %set a new problem - must initialize again!
-        function set.prob(obj, prob)
+        function setNewProblem(obj, prob)
             if ~strcmp(prob,obj.prob)
                 obj.prob=prob;
                 obj.cppmethod('setnewproblem', prob);
