@@ -28,7 +28,7 @@ __kernel void features(
 
 	//get private copy of ODE parameters, initial data, and compute slope at initial state
 	ti = tspan[0];
-	dt = d_dt[i];
+	dt = sp->dt;
 
 	for (int j = 0; j < N_PAR; ++j)
 		p[j] = pars[j * nPts + i];
