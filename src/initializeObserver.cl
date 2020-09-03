@@ -22,7 +22,6 @@ __kernel void initializeObserver(
 	realtype ti, dt;
     realtype p[N_PAR], xi[N_VAR], dxi[N_VAR], auxi[N_AUX], wi[N_WIENER];
 	rngData rd;
-	__constant realtype *tspanPtr = tspan;
 
 	//get private copy of ODE parameters, initial data, and compute slope at initial state
 	ti = tspan[0];
@@ -56,7 +55,7 @@ __kernel void initializeObserver(
 	while (ti < tspan[1] && step < sp->max_steps)
 	{
 		++step;
-        stepflag = stepper(&ti, xi, dxi, p, sp, &dt, tspanPtr, auxi, wi, &rd);
+        stepflag = stepper(&ti, xi, dxi, p, sp, &dt, tspan, auxi, wi, &rd);
         if (stepflag!=0)
             break;
 

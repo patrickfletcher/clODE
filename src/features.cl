@@ -25,7 +25,6 @@ __kernel void features(
 	realtype ti, dt;
     realtype p[N_PAR], xi[N_VAR], dxi[N_VAR], auxi[N_AUX], wi[N_WIENER];
 	rngData rd;
-    __constant realtype * const tspanPtr = tspan;
 
 	//get private copy of ODE parameters, initial data, and compute slope at initial state
 	ti = tspan[0];
@@ -61,7 +60,7 @@ __kernel void features(
 	{
 		++step;
 		++odata.stepcount;
-        stepflag = stepper(&ti, xi, dxi, p, sp, &dt, tspanPtr, auxi, wi, &rd);
+        stepflag = stepper(&ti, xi, dxi, p, sp, &dt, tspan, auxi, wi, &rd);
         if (stepflag!=0)
             break;
 
@@ -84,7 +83,7 @@ __kernel void features(
 	finalizeFeatures(&ti, xi, dxi, auxi, &odata, opars, F, i, nPts);
 
 	//finalize observerdata for possible continuation
-	finalizeObserverData(&ti, xi, dxi, auxi, &odata, opars, tspanPtr);
+	finalizeObserverData(&ti, xi, dxi, auxi, &odata, opars, tspan);
 
 	OData[i] = odata;
 

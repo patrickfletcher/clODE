@@ -183,43 +183,45 @@ inline bool eventFunction(realtype *ti, realtype xi[], realtype dxi[], realtype 
 //When an event is detected, computes desired event-based features. returns true if a terminal event was reached
 inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
 {
-    realtype tThisEvent;
-
-    ++od->eventcount;
-    od->inUpstate = 1;
-
-    //simplest: time and state of trajectory point that landed in the neighborhood.
-    tThisEvent=*ti;
-
-    //alts: linearly interp to get more accurate tThisEvent within the last time step: xi-1, xi, ti-1, ti; get t @ x=xUp
-    // tThisEvent = linearInterp(od->xbuffer[2], xi[op->fVarIx], od->tbuffer[2], *ti, od->xUp);
-
-    if (od->eventcount > 1)
+    if (od->xGlobalMax-od->xGlobalMin > op->minXamp)
     {
-        int nPeriods = od->eventcount - 1;
-        od->nMaxima[0] = fmax((realtype)od->thisNMaxima, od->nMaxima[0]); //int to realtype implicit cast is OK
-        od->nMaxima[1] = fmin((realtype)od->thisNMaxima, od->nMaxima[1]);
-        runningMean(&od->nMaxima[2], (realtype)od->thisNMaxima, nPeriods);
+        realtype tThisEvent;
 
-        realtype thisPeriod = tThisEvent - od->tLastEvent;
-        od->period[0] = fmax(thisPeriod, od->period[0]);
-        od->period[1] = fmin(thisPeriod, od->period[1]);
-        runningMean(&od->period[2], thisPeriod, nPeriods);
-        
-        realtype thisUpDuration = od->tThisDown - od->tLastEvent;
-        od->upDuration[0] = fmax(thisUpDuration, od->upDuration[0]);
-        od->upDuration[1] = fmin(thisUpDuration, od->upDuration[1]);
-        runningMean(&od->upDuration[2], thisUpDuration, nPeriods);
-        
-        realtype thisDownDuration = tThisEvent - od->tThisDown;
-        od->downDuration[0] = fmax(thisDownDuration, od->downDuration[0]);
-        od->downDuration[1] = fmin(thisDownDuration, od->downDuration[1]);
-        runningMean(&od->downDuration[2], thisDownDuration, nPeriods);
+        ++od->eventcount;
+        od->inUpstate = 1;
+
+        //simplest: time and state of trajectory point that landed in the neighborhood.
+        tThisEvent=*ti;
+
+        //alts: linearly interp to get more accurate tThisEvent within the last time step: xi-1, xi, ti-1, ti; get t @ x=xUp
+        // tThisEvent = linearInterp(od->xbuffer[2], xi[op->fVarIx], od->tbuffer[2], *ti, od->xUp);
+
+        if (od->eventcount > 1)
+        {
+            int nPeriods = od->eventcount - 1;
+            od->nMaxima[0] = fmax((realtype)od->thisNMaxima, od->nMaxima[0]); //int to realtype implicit cast is OK
+            od->nMaxima[1] = fmin((realtype)od->thisNMaxima, od->nMaxima[1]);
+            runningMean(&od->nMaxima[2], (realtype)od->thisNMaxima, nPeriods);
+
+            realtype thisPeriod = tThisEvent - od->tLastEvent;
+            od->period[0] = fmax(thisPeriod, od->period[0]);
+            od->period[1] = fmin(thisPeriod, od->period[1]);
+            runningMean(&od->period[2], thisPeriod, nPeriods);
+            
+            realtype thisUpDuration = od->tThisDown - od->tLastEvent;
+            od->upDuration[0] = fmax(thisUpDuration, od->upDuration[0]);
+            od->upDuration[1] = fmin(thisUpDuration, od->upDuration[1]);
+            runningMean(&od->upDuration[2], thisUpDuration, nPeriods);
+            
+            realtype thisDownDuration = tThisEvent - od->tThisDown;
+            od->downDuration[0] = fmax(thisDownDuration, od->downDuration[0]);
+            od->downDuration[1] = fmin(thisDownDuration, od->downDuration[1]);
+            runningMean(&od->downDuration[2], thisDownDuration, nPeriods);
+        }
+
+        od->tLastEvent = tThisEvent;
+        od->thisNMaxima = 0;
     }
-
-    od->tLastEvent = tThisEvent;
-    od->thisNMaxima = 0;
-
     return false;
 }
 
@@ -273,10 +275,11 @@ inline void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], real
             realtype thisAmp = xThisMax - od->xLastMin;
             realtype thisIMI = tThisMax - od->tLastMax;
 
-            if (thisAmp > op->minXamp && thisIMI > op->minIMI)
+            if (od->thisNMaxima==0 || (thisAmp > op->minXamp && thisIMI > op->minIMI) )
+            {
                 od->thisNMaxima++;
-                
-            od->tLastMax = tThisMax; //store this time for next IMI
+                od->tLastMax = tThisMax; //store this time for next IMI
+            }
         }
 
         //local min check in fVarIx - one between each max - simply overwrite tLastMin, xLastMin
