@@ -61,8 +61,8 @@ __kernel void features(
 		++step;
 		++odata.stepcount;
         stepflag = stepper(&ti, xi, dxi, p, sp, &dt, tspan, auxi, wi, &rd);
-        if (stepflag!=0)
-            break;
+        // if (stepflag!=0)
+            // break;
 
 		//TODO: Update solution buffers here?
 

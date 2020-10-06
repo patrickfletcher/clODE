@@ -72,11 +72,12 @@ typedef struct ObserverInfo
 // two-pass detectors
 ////////////////////////////////////////////////
 
-//TODO: make a separate kernel to use for warmup (to break the computation into parts so host doesn't freeze)
-
 //Threshold-based event detection with relative thresholds in a specified variable xi.
-// FIrst pass to measure the extent of state-space trajectory visits, then compute thresholds as fractions of range
+// First pass to measure the extent of state-space trajectory visits, then compute thresholds as fractions of range
 #include "observers/observer_threshold_2.clh"
+
+// // First pass to measure the extent of state-space trajectory visits, decide x0 based on threshold. check each crossing, period when norm(x-x0)<tol
+// #include "observers/observer_poincare_2.clh"
 
 //Use a first pass to find a good Xstart (e.g. absolute drop below 0.5*range of slowest variable)
 #include "observers/observer_neighborhood_2.clh"
