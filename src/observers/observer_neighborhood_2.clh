@@ -9,7 +9,7 @@ static ObserverInfo getObserverInfo_nhood2(const ProblemInfo pi, const bool clSi
     ObserverInfo oi;
     oi.define="USE_OBSERVER_NEIGHBORHOOD_2";
     size_t realsize = clSinglePrecision?sizeof(cl_float):sizeof(cl_double);
-    oi.observerDataSize=(pi.nVar*12+16+pi.nAux*3)*realsize + 6*sizeof(cl_int); //hard coded, because C++ code can't see the N_VAR, N_AUX etc... 
+    oi.observerDataSize=(pi.nVar*12 + 16 + pi.nAux*3)*realsize + 6*sizeof(cl_int); //hard coded, because C++ code can't see the N_VAR, N_AUX etc... 
     
     oi.featureNames.push_back("max period");
     oi.featureNames.push_back("min period");
@@ -31,8 +31,8 @@ static ObserverInfo getObserverInfo_nhood2(const ProblemInfo pi, const bool clSi
         oi.featureNames.push_back("min " + pi.auxNames[j]);
         oi.featureNames.push_back("mean " + pi.auxNames[j]);
     }
-    oi.featureNames.push_back("eventcount");
-    oi.featureNames.push_back("stepcount");
+    oi.featureNames.push_back("period count");
+    oi.featureNames.push_back("step count");
     oi.featureNames.push_back("max dt");
     oi.featureNames.push_back("min dt");
     oi.featureNames.push_back("mean dt");
@@ -293,12 +293,9 @@ inline void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], real
         runningMean(&od->auxTrajectoryMean[j], auxi[j], od->stepcount);
     }
 
-    if (!od->buffer_filled)
-    {
-        if (od->stepcount > 2)
-            od->buffer_filled=1;
-    }
-    else
+    od->buffer_filled = od->stepcount > 2; //no conditional
+
+    if (od->buffer_filled)
     {
         //check for x0
         if (!od->foundX0)
@@ -381,7 +378,7 @@ inline void finalizeFeatures(realtype *ti, realtype xi[], realtype dxi[], realty
         F[ix++ * nPts + i] = od->auxTrajectoryMin[j];
         F[ix++ * nPts + i] = od->auxTrajectoryMean[j];
     }
-    F[ix++ * nPts + i] = od->eventcount;
+    F[ix++ * nPts + i] = od->eventcount > 0 ? od->eventcount - 1 : RCONST(0.0);
     F[ix++ * nPts + i] = od->stepcount;
     F[ix++ * nPts + i] = od->stepDt[0];
     F[ix++ * nPts + i] = od->stepDt[1];
