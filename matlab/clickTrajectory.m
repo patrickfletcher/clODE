@@ -1,4 +1,4 @@
-function clickTrajectory(src,evnt,clo,Grid,vars,trajFigID,nClick,markerColor)
+function clickTrajectory(src,evnt,clo,Grid,vars,trajFigID,nClick,markerColor,X0grid,Pgrid)
 %A mouse click inside the axes will trigger a parameter
 %selection crosshair. A second click selects a parameter
 %combination to simulate, and resulting simulation is displayed
@@ -13,6 +13,8 @@ if ~exist('nClick','var'), nClick=1; end
 if nClick>6, error('I refuse to do more than 6 clicks'); end
 
 if ~exist('markerColor','var'), markerColor='k';end
+doX0search=false;
+if exist('X0grid','var')&&exist('Pgrid','var'), doX0search=true;end
 
 tspan=clo.tspan;
 x0=repmat(clo.prob.x0(:)',nClick,1);
@@ -46,7 +48,13 @@ for n=1:nClick
     p(n,Grid.xix)=px;
     p(n,Grid.yix)=py;
     h(n)=line(px,py,'marker',markers(n),'linestyle','none','color',markerColor,'linewidth',1,'tag','marks');
+    
+    if doX0search
+        pix = knnsearch(Pgrid,[px,py]);
+        x0(n,:)=X0grid(pix,:);
+    end
 end
+
 
 clo.setProblemData(x0,p);
 clo.settspan(tspan);
