@@ -272,20 +272,21 @@ classdef clODE < cppclass & matlab.mixin.SetGet
             sp.abstol=1e-6;
             sp.reltol=1e-3;
             sp.max_steps=1000000;
-            sp.max_store=10000; %allocated number of timepoints: min( (tf-t0)/(dt*nout)+1 , sp.max_store)
+            sp.max_store=100000; %allocated number of timepoints: min( (tf-t0)/(dt*nout)+1 , sp.max_store)
             sp.nout=1;
+%             sp.storevars=[]; %empty => all, otherwise specify list of var indices to store (for trajectories, or max/min/mean for features)
         end
         
         function selectedDevice=autoselectDevice(devices)
             selectedDevice=[];
 %             if  isempty(selectedDevice)
-%                 selectedDevice=find({devices(:).type}=="accel");
+%                 selectedDevice=find({devices(:).type}=="Accelerator",1,'first');
 %             end
             if  isempty(selectedDevice)
-                selectedDevice=find({devices(:).type}=="GPU");
+                selectedDevice=find({devices(:).type}=="GPU",1,'first');
             end
             if  isempty(selectedDevice)
-                selectedDevice=find({devices(:).type}=="CPU");
+                selectedDevice=find({devices(:).type}=="CPU",1,'first');
             end
         end
         
