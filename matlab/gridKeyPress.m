@@ -4,6 +4,7 @@ plb=[clo.prob.par.lb];
 pub=[clo.prob.par.ub];
 initBounds = [plb(Grid.xix),pub(Grid.xix),plb(Grid.yix),pub(Grid.yix)];
 
+disp(evt.Key)
 switch(evt.Key)
     case 'c' %'continue' - features without initialization
         tic
@@ -18,6 +19,7 @@ switch(evt.Key)
         
     case 'g' %'go' - features with initialization
         tic
+        clo.shiftX0();
         clo.features(1);
         toc
         F=clo.getF();
@@ -95,6 +97,12 @@ switch(evt.Key)
         end
         
         set(hi.Parent,'ButtonDownFcn',tmp); %restore clicktrajectory
+    
+    case 'add'
+        disp('+')
+        
+    case 'subtract'
+        disp('+')
         
     case '1'
         setBounds(initBounds([1,3]),initBounds([2,4]));

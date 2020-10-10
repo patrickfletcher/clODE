@@ -195,7 +195,8 @@ inline void initializeEventDetector(realtype *ti, realtype xi[], realtype dxi[],
 		od->dxDown = od->dxGlobalMin;
 
 	//determine if we are up or down.
-	od->inUpstate=(xi[op->fVarIx] > od->xUp) ? 1 : 0;
+	od->inUpstate = xi[op->fVarIx] > od->xUp ? 1 : 0;
+	// od->inUpstate = xi[op->fVarIx] > od->xUp & dxi[op->fVarIx] > 0 ? 1 : 0;
     // od->xGlobalMax = -BIG_REAL;
     // od->xGlobalMin = BIG_REAL;
     // od->dxGlobalMax = -BIG_REAL;
@@ -307,8 +308,8 @@ inline void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], real
     if (od->buffer_filled)
     {
         //local max check in fVarIx
-        if (od->dxbuffer[op->fVarIx * 3 + 1] >= -op->eps_dx && od->dxbuffer[op->fVarIx * 3 + 2] < -op->eps_dx)
         // if (od->xbuffer[op->fVarIx * 3 + 0] < od->xbuffer[op->fVarIx * 3 + 1] && od->xbuffer[op->fVarIx * 3 + 2] < od->xbuffer[op->fVarIx * 3 + 1])
+        if (od->dxbuffer[op->fVarIx * 3 + 1] >= -op->eps_dx && od->dxbuffer[op->fVarIx * 3 + 2] < -op->eps_dx)
         {
             int ix;
             realtype thisXbuffer[N_VAR];

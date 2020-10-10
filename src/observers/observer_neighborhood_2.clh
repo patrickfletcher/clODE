@@ -229,10 +229,10 @@ inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dxi[], re
     else
     {
         //simplest: time and state of trajectory point that landed in the neighborhood.
-        // tThisEvent=*ti;
+        tThisEvent=*ti;
 
         //alts: linearly interp to get tThisEvent using thisNormXDiff/lastNormXDiff; use norm values as x, since we know the interp value of that
-        tThisEvent = linearInterp(od->lastNormXdiff, od->thisNormXdiff, od->tbuffer[2], *ti, op->nHoodRadius);
+        // tThisEvent = linearInterp(od->lastNormXdiff, od->thisNormXdiff, od->tbuffer[2], *ti, op->nHoodRadius);
 
         od->nMaxima[0] = fmax((realtype)od->thisNMaxima, od->nMaxima[0]); //cast to realtype (for mean)
         od->nMaxima[1] = fmin((realtype)od->thisNMaxima, od->nMaxima[1]);
@@ -300,7 +300,8 @@ inline void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], real
         //check for x0
         if (!od->foundX0)
         {   //x0 is first time dropping below threshold in x[eVarIx] - xbuffer holds previous xi
-            float lastX=od->xbuffer[op->eVarIx * 3 + 1], thisX=od->xbuffer[op->eVarIx * 3 + 2];
+            float lastX=od->xbuffer[op->eVarIx * 3 + 1];
+            float thisX=od->xbuffer[op->eVarIx * 3 + 2];
             if (lastX > od->xThreshold && thisX < od->xThreshold)
             {
                 od->foundX0 = 1;
