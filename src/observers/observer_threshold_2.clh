@@ -23,6 +23,9 @@ static ObserverInfo getObserverInfo_thresh2(const ProblemInfo pi, const bool clS
     oi.featureNames.push_back("max downDuration");
     oi.featureNames.push_back("min downDuration");
     oi.featureNames.push_back("mean downDuration");
+    oi.featureNames.push_back("max duty");
+    oi.featureNames.push_back("min duty");
+    oi.featureNames.push_back("mean duty");
     for (int j = 0; j < pi.nVar; ++j)
     {
         oi.featureNames.push_back("max " + pi.varNames[j]);
@@ -71,6 +74,7 @@ struct ObserverData_thresh2
     realtype period[3];  //max/min/mean
     realtype upDuration[3];  //max/min/mean
     realtype downDuration[3];  //max/min/mean
+    realtype duty[3];  //max/min/mean
 
     realtype stepDt[3]; //max/min/mean
 
@@ -140,6 +144,10 @@ inline void initializeObserverData(realtype *ti, realtype xi[], realtype dxi[], 
     od->downDuration[0] = -BIG_REAL;
     od->downDuration[1] = BIG_REAL;
     od->downDuration[2] = RCONST(0.0);
+
+    od->duty[0] = -BIG_REAL;
+    od->duty[1] = BIG_REAL;
+    od->duty[2] = RCONST(0.0);
 
     od->stepDt[0] = -BIG_REAL;
     od->stepDt[1] = BIG_REAL;
@@ -222,18 +230,18 @@ inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dxi[], re
         od->inUpstate = 1;
 
         //simplest: time and state of trajectory point that landed in the neighborhood.
-        // tThisEvent=*ti;
+        tThisEvent=*ti;
 
         //alts: linearly interp to get more accurate tThisEvent within the last time step: xi-1, xi, ti-1, ti; get t @ x=xUp
-        realtype thisXbuffer[N_VAR];
-        thisXbuffer[0] = od->xbuffer[op->fVarIx * 3 + 1];
-        thisXbuffer[1] = od->xbuffer[op->fVarIx * 3 + 2];
-        thisXbuffer[2] = xi[op->fVarIx];
-        realtype thisTbuffer[3];
-        thisTbuffer[0] = od->tbuffer[1];
-        thisTbuffer[1] = od->tbuffer[2];
-        thisTbuffer[2] = *ti;
-        tThisEvent = linearInterpArray(thisXbuffer, thisTbuffer, od->xUp);
+        // realtype thisXbuffer[N_VAR];
+        // thisXbuffer[0] = od->xbuffer[op->fVarIx * 3 + 1];
+        // thisXbuffer[1] = od->xbuffer[op->fVarIx * 3 + 2];
+        // thisXbuffer[2] = xi[op->fVarIx];
+        // realtype thisTbuffer[3];
+        // thisTbuffer[0] = od->tbuffer[1];
+        // thisTbuffer[1] = od->tbuffer[2];
+        // thisTbuffer[2] = *ti;
+        // tThisEvent = linearInterpArray(thisXbuffer, thisTbuffer, od->xUp);
 
         if (od->eventcount > 1)
         {
@@ -256,6 +264,11 @@ inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dxi[], re
             od->downDuration[0] = fmax(thisDownDuration, od->downDuration[0]);
             od->downDuration[1] = fmin(thisDownDuration, od->downDuration[1]);
             runningMean(&od->downDuration[2], thisDownDuration, nPeriods);
+            
+            realtype thisduty = thisUpDuration/thisPeriod;
+            od->duty[0] = fmax(thisduty, od->duty[0]);
+            od->duty[1] = fmin(thisduty, od->duty[1]);
+            runningMean(&od->duty[2], thisduty, nPeriods);
         }
 
         od->tLastEvent = tThisEvent;
@@ -374,6 +387,9 @@ inline void finalizeFeatures(realtype *ti, realtype xi[], realtype dxi[], realty
     F[ix++ * nPts + i] = od->eventcount > 1 ? od->downDuration[0] : RCONST(0.0);
     F[ix++ * nPts + i] = od->eventcount > 1 ? od->downDuration[1] : RCONST(0.0);
     F[ix++ * nPts + i] = od->eventcount > 1 ? od->downDuration[2] : RCONST(0.0);
+    F[ix++ * nPts + i] = od->eventcount > 1 ? od->duty[0] : RCONST(0.0);
+    F[ix++ * nPts + i] = od->eventcount > 1 ? od->duty[1] : RCONST(0.0);
+    F[ix++ * nPts + i] = od->eventcount > 1 ? od->duty[2] : RCONST(0.0);
     for (int j = 0; j < N_VAR; ++j) //5*N_VAR
     {
         F[ix++ * nPts + i] = od->xTrajectoryMax[j];
