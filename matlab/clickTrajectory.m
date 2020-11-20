@@ -12,6 +12,7 @@ if ~exist('click_pars','var') || isempty(click_pars)
     click_pars.vars=clo.prob.varNames(1); 
     click_pars.nClick=1;
     click_pars.fig=[];
+    click_pars.same_ylims=0;
 end
 nClick=click_pars.nClick;
 vars=click_pars.vars;
@@ -83,7 +84,7 @@ clf
 
 %TODO: if this is a chart class, would setup axes/line objects, then just
 %update data+lims
-gap=[0.05,0.03];marg_h=[0.075,0.05]; marg_w=[0.075,0.075];
+gap=[0.05,0.03];marg_h=[0.1,0.05]; marg_w=[0.075,0.075];
 ax=tight_subplot(nClick,1,[],gap,marg_h,marg_w);
 
 plotTrajectories(X,T,AUX);
@@ -111,15 +112,17 @@ plotTrajectories(X,T,AUX);
         %extract data to plot
         lymin=inf; lymax=-inf;
         rymin=inf; rymax=-inf;
-        traj=struct('t',[],'x',[],'xname',[],'tlim',[],'xlo',[],'xhi',[]);
+        traj=struct('t',[],'x',[],'xname',{},'tlim',[],'xlo',[],'xhi',[]);
         for i=1:nClick
             traj(i).t=T{i};
-            if varIsAux
-                traj(i).x=AUX{i}(:,varIx);
-                traj(i).xname=clo.prob.auxNames(varIx);
-            else
-                traj(i).x=X{i}(:,varIx);
-                traj(i).xname=clo.prob.varNames(varIx);
+            for vv=1:length(varIx)
+                if varIsAux(vv)
+                    traj(i).x(:,vv)=AUX{i}(:,varIx(vv));
+                    traj(i).xname(vv)=clo.prob.auxNames(varIx(vv));
+                else
+                    traj(i).x(:,vv)=X{i}(:,varIx(vv));
+                    traj(i).xname(vv)=clo.prob.varNames(varIx(vv));
+                end
             end
             %individual data limits
             traj(i).tlim=[traj(i).t(1), traj(i).t(end)];
