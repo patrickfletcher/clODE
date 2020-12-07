@@ -9,7 +9,7 @@ static ObserverInfo getObserverInfo_thresh2(const ProblemInfo pi, const bool clS
     ObserverInfo oi;
     oi.define="USE_OBSERVER_THRESHOLD_2";
     size_t realsize = clSinglePrecision?sizeof(cl_float):sizeof(cl_double);
-    oi.observerDataSize=(pi.nVar*11 + 6*3 + 13 + pi.nAux*3)*realsize + 5*sizeof(cl_int); //hard coded, because C++ code can't see the N_VAR, N_AUX etc...
+    oi.observerDataSize=(pi.nVar*11 + 7*3 + 13 + pi.nAux*3)*realsize + 5*sizeof(cl_int); //hard coded, because C++ code can't see the N_VAR, N_AUX etc...
 
     oi.featureNames.push_back("max period");
     oi.featureNames.push_back("min period");
