@@ -317,7 +317,7 @@ void CLODE::setNpts(cl_int newNpts)
 
 void CLODE::setTspan(std::vector<cl_double> newTspan)
 {
-	if (newTspan!=tspan)
+	if (!clInitialized)
 	{
 		tspan = newTspan;
 		//sync to device

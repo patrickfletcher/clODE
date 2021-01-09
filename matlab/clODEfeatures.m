@@ -1,14 +1,11 @@
 classdef clODEfeatures<clODE & matlab.mixin.SetGet
-    % clODEfeatures(prob, stepper=rk4, observer=basic, clSinglePrecision=true, cl_vendor=any, cl_deviceType=default)
-   
-    %TODO: this should have a method for default observer params
-    
+ 
     %TODO: support post-processing functions for F - add amplitude etc
     %      [newF, newNames]=processFeatures(F, fNames);
     
     properties
         F
-        observer='basic'
+        observer
         op
         nFeatures
         oNames
@@ -52,9 +49,8 @@ classdef clODEfeatures<clODE & matlab.mixin.SetGet
             end
             
             if ~exist('observer','var')
-                observer='basic';
+                observer='basicall';
             end
-%             observerInt=clODEfeatures.getObserverEnum(observer);
             
             if ~exist('mexFilename','var')
                 mexFilename='clODEfeaturesmex';
@@ -86,7 +82,7 @@ classdef clODEfeatures<clODE & matlab.mixin.SetGet
             end
         end
         
-        function set.observer(obj, newObserver)
+        function setObserver(obj, newObserver)
             if ~strcmp(newObserver,obj.observer)
                 if ismember(newObserver,obj.observerNames)
                     obj.observer=newObserver;
@@ -139,6 +135,34 @@ classdef clODEfeatures<clODE & matlab.mixin.SetGet
         
     end
     
+    %ui public methods
+    methods (Access=public)
+        function hop=uisetOP(obj,parent)
+            if ~exist('parent','var')||isempty(parent)
+                parent=uifigure();
+            end
+            %TODO: convert observer pars to name/value struct..?
+            sptable=table;
+            sptable.name=fieldnames(obj.op);
+            sptable.value=cell2mat(struct2cell(obj.op));
+            hop=uitable(parent,'Data',sptable);
+            hop.ColumnName = sptable.Properties.VariableNames;
+%             hop.ColumnName = {'name'; 'value'};
+            hop.ColumnWidth = {'auto', 'fit'};
+            hop.RowName = {};
+            hop.ColumnSortable = [false false];
+            hop.ColumnEditable = [false true];
+%             hop.Position = position;
+            hop.CellEditCallback=@updateOP;
+            
+            function updateOP(src,event)
+                thisfield=hop.DisplayData.name{event.Indices(1)};
+                if isnumeric(event.NewData) && event.NewData>0
+                    obj.op.(thisfield)=event.NewData;
+                end
+            end
+        end
+    end
      
     %static helper methods
     methods (Static=true)

@@ -15,6 +15,7 @@ if ismac % Code to run on Mac plaform
     ldflags='LDFLAGS="$LDFLAGS -framework OpenCL"';
     
 elseif isunix % Code to run on Linux plaform
+%     opencl_include_dir = pwd; %cl.hpp
     opencl_include_dir = '/usr/include'; %cl.hpp
     opencl_lib_dir = '/usr/local/lib'; %libOpenCL.so
     libopencl='-lOpenCL';
@@ -24,8 +25,9 @@ elseif isunix % Code to run on Linux plaform
     opencl_lib_dir=['-L',opencl_lib_dir];
     
 elseif ispc % Code to run on Windows platform 
-    opencl_include_dir = 'C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v10.1/include'; %cl.hpp
-    opencl_lib_dir = 'C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v10.1/lib/x64';  %OpenCL.lib
+%     opencl_include_dir = pwd; %cl.hpp
+    opencl_include_dir = 'C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v11.2/include'; %cl.hpp
+    opencl_lib_dir = 'C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v11.2/lib/x64';  %OpenCL.lib
     libopencl='-lOpenCL';
     compflags='COMPFLAGS="$COMPFLAGS /std:c++latest"';
 %     compflags='COMPFLAGS="$COMPFLAGS -Wall"';
@@ -42,8 +44,8 @@ clode_path=[pwd filesep];
 cd ../matlab/
 clode_path=strrep(clode_path,'\','/'); %stupid windows backslash filesep
 
-debugchar='';
-% debugchar='-g';
+% debugchar='';
+debugchar='-g';
 
 verbosechar='';
 % verbosechar='-v';
