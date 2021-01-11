@@ -57,9 +57,9 @@ classdef clODEfeatures<clODE & matlab.mixin.SetGet
             end
             obj@clODE(arg1, precision, selectedDevice, stepper, mexFilename, observer);
             
-            obj.op=clODEfeatures.defaultObserverParams();
-            obj.observerNames;
+            obj.observerNames();
             obj.observer=observer;
+            obj.op=clODEfeatures.defaultObserverParams();%default observer params (device transfer during init)
         end
         
         %override initialize to include observerparams arg
@@ -98,12 +98,14 @@ classdef clODEfeatures<clODE & matlab.mixin.SetGet
             obj.cppmethod('initobserver');
         end
         
-        %overloads to fetch data if desired
-        function features(obj, doInit)
+        function F=features(obj, doInit)
             if ~exist('doInit','var')
                 obj.cppmethod('features');
             else
                 obj.cppmethod('features',doInit);
+            end
+            if nargout==1 %overloads to fetch data if desired
+                F=obj.getF();
             end
         end
         
@@ -115,7 +117,7 @@ classdef clODEfeatures<clODE & matlab.mixin.SetGet
         
         function F=getF(obj, fix)
             F=obj.cppmethod('getf'); 
-            F=reshape(F,obj.nPts,obj.nFeatures); %force column
+            F=reshape(F,obj.nPts,obj.nFeatures);
             obj.F=F;
             if nargin==2 
                 %return argument is just the subset fix of features 
@@ -168,7 +170,6 @@ classdef clODEfeatures<clODE & matlab.mixin.SetGet
     methods (Static=true)
         
         function op = defaultObserverParams()
-
             op.eVarIx=1; %not implemented
             op.fVarIx=1; %feature detection variable
             op.maxEventCount=5000; %stops if this many events found

@@ -109,7 +109,7 @@ classdef clODE < cppclass & matlab.mixin.SetGet
             
             obj.stepper=stepper;
             obj.precision=precision;
-            obj.sp=clODE.defaultSolverParams(); %default solver params
+            obj.sp=clODE.defaultSolverParams(); %default solver params (device transfer during init)
         end
         
         % new and delete are inherited
@@ -217,25 +217,27 @@ classdef clODE < cppclass & matlab.mixin.SetGet
             obj.cppmethod('setsolverpars', sp);
         end
         
-        %host arrays become de-synchronized from GPU arrays when calling
-        %simulation routines. User must trigger data fetch from GPU
-        function transient(obj, tspan)
+        % Integration
+        function Xf=transient(obj, tspan)
             if exist('tspan','var')
                 obj.settspan(tspan);
-%                 obj.getTspan();
             end
             obj.cppmethod('transient');
-%             obj.getXf();
+            if nargout==1 %overload to also transfer Xf from device to host
+                Xf=obj.getXf();
+            end
         end
         
         function shiftTspan(obj)
             obj.cppmethod('shifttspan');
-%             obj.getTspan();
+            obj.getTspan();
         end
         
-        function shiftX0(obj)
-            obj.cppmethod('shiftx0');
-%             obj.getX0();
+        function X0=shiftX0(obj)
+            obj.cppmethod('shiftx0'); %device-device transfer Xf to X0
+            if nargout==1 %overload to also transfer X0 from device to host
+                X0=obj.getX0();
+            end
         end
         
         function tspan=getTspan(obj)

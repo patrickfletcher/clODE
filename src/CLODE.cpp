@@ -133,7 +133,6 @@ void CLODE::setOpenCL(unsigned int platformID, unsigned int deviceID)
 //build creates build option defined constants based on selected options, adds the ODEsystem source to clprogramstring then builds for selected OpenCL resource
 void CLODE::buildProgram(std::string extraBuildOpts)
 {
-
 	if (!clSinglePrecision && !opencl.getDoubleSupport())
 	{ //TODO: running with double-precision clRHSfile probably will crash. gen both double/single with ode2cl always?
 		clSinglePrecision = true;
@@ -183,7 +182,6 @@ void CLODE::buildProgram(std::string extraBuildOpts)
 //initialize everything: build the program, create the kernels, and set all needed problem data.
 void CLODE::initialize(std::vector<cl_double> newTspan, std::vector<cl_double> newX0, std::vector<cl_double> newPars, SolverParams<cl_double> newSp)
 {
-
 	clInitialized = false;
 	//(re)build the program
 	buildProgram();
@@ -201,16 +199,8 @@ void CLODE::initialize(std::vector<cl_double> newTspan, std::vector<cl_double> n
 
 void CLODE::initializeTransientKernel()
 {
-
 	try
-	{ //declare device arrays that won't change size: tspan, SolverParams
-		d_tspan = cl::Buffer(opencl.getContext(), CL_MEM_READ_ONLY, realSize * 2, NULL, &opencl.error);
-		if (clSinglePrecision)
-			d_sp = cl::Buffer(opencl.getContext(), CL_MEM_READ_ONLY, sizeof(SolverParams<cl_float>), NULL, &opencl.error);
-		else
-			d_sp = cl::Buffer(opencl.getContext(), CL_MEM_READ_ONLY, sizeof(SolverParams<cl_double>), NULL, &opencl.error);
-
-		//initialize kernel and assign kernel arguments
+	{ 
 		cl_transient = cl::Kernel(opencl.getProgram(), "transient", &opencl.error);
 
 		// size_t preferred_multiple;
@@ -229,9 +219,7 @@ void CLODE::initializeTransientKernel()
 
 //initialize new set of trajectories (nPts may change)
 void CLODE::setProblemData(std::vector<cl_double> newX0, std::vector<cl_double> newPars)
-{
-
-	//check if newX0 and newPars are valid, and update nPts if needed:
+{	//check if newX0 and newPars are valid, and update nPts if needed:
 	if (newX0.size() % nVar != 0)
 	{
 		printf("Invalid initial condition vector: not a multiple of nVar=%d\n", nVar);
@@ -269,8 +257,7 @@ void CLODE::setProblemData(std::vector<cl_double> newX0, std::vector<cl_double> 
 
 //resize all the nPts dependent variables, only if nPts changed
 void CLODE::setNpts(cl_int newNpts)
-{
-	//unlikely that any of these should ever exceed memory limits...
+{	//unlikely that any of these should ever exceed memory limits...
 	size_t largestAlloc = std::max(nVar, std::max(nPar, nAux)) * nPts * realSize;
 	// printf("Computed largestAlloc: %d\n", largestAlloc);
 
@@ -317,29 +304,29 @@ void CLODE::setNpts(cl_int newNpts)
 
 void CLODE::setTspan(std::vector<cl_double> newTspan)
 {
-	if (!clInitialized)
+	try
 	{
+		if (!clInitialized)
+			d_tspan = cl::Buffer(opencl.getContext(), CL_MEM_READ_ONLY, realSize * 2, NULL, &opencl.error);
+
 		tspan = newTspan;
-		//sync to device
-		try
-		{
-			if (clSinglePrecision)
-			{ //downcast to float if desired
-				std::vector<cl_float> tspanF(tspan.begin(), tspan.end());
-				opencl.error = copy(opencl.getQueue(), tspanF.begin(), tspanF.end(), d_tspan);
-			}
-			else
-			{
-				opencl.error = copy(opencl.getQueue(), tspan.begin(), tspan.end(), d_tspan);
-			}
+
+		if (clSinglePrecision)
+		{ //downcast to float if desired
+			std::vector<cl_float> tspanF(tspan.begin(), tspan.end());
+			opencl.error = copy(opencl.getQueue(), tspanF.begin(), tspanF.end(), d_tspan);
 		}
-		catch (cl::Error &er)
+		else
 		{
-			printf("ERROR in CLODE::setTspan: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
-			throw er;
+			opencl.error = copy(opencl.getQueue(), tspan.begin(), tspan.end(), d_tspan);
 		}
-		dbg_printf("set tspan\n");
 	}
+	catch (cl::Error &er)
+	{
+		printf("ERROR in CLODE::setTspan: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
+		throw er;
+	}
+	dbg_printf("set tspan\n");
 }
 
 void CLODE::shiftTspan()
@@ -436,9 +423,17 @@ void CLODE::setPars(std::vector<cl_double> newPars)
 
 void CLODE::setSolverParams(SolverParams<cl_double> newSp)
 {//TODO: equality operator for SolverParams struct
-	sp = newSp;
 	try
 	{
+		if (!clInitialized)
+		{
+			if (clSinglePrecision)
+				d_sp = cl::Buffer(opencl.getContext(), CL_MEM_READ_ONLY, sizeof(SolverParams<cl_float>), NULL, &opencl.error);
+			else
+				d_sp = cl::Buffer(opencl.getContext(), CL_MEM_READ_ONLY, sizeof(SolverParams<cl_double>), NULL, &opencl.error);	
+		}
+	
+		sp = newSp;
 		std::fill(dt.begin(), dt.end(), sp.dt);
 		
 		if (clSinglePrecision)
@@ -455,6 +450,7 @@ void CLODE::setSolverParams(SolverParams<cl_double> newSp)
 			opencl.error = copy(opencl.getQueue(), dt.begin(), dt.end(), d_dt);
 			// opencl.error = opencl.getQueue().enqueueFillBuffer(d_dt, sp.dt, 0, sizeof(sp.dt));
 		}
+		
 	}
 	catch (cl::Error &er)
 	{

@@ -102,11 +102,6 @@ void CLODEfeatures::initializeFeaturesKernel()
 
 	try
 	{
-		if (clSinglePrecision)
-			d_op = cl::Buffer(opencl.getContext(), CL_MEM_READ_ONLY, sizeof(ObserverParams<cl_float>), NULL, &opencl.error);
-		else
-			d_op = cl::Buffer(opencl.getContext(), CL_MEM_READ_ONLY, sizeof(ObserverParams<cl_double>), NULL, &opencl.error);
-
 		cl_initializeObserver = cl::Kernel(opencl.getProgram(), "initializeObserver", &opencl.error);
 		cl_features = cl::Kernel(opencl.getProgram(), "features", &opencl.error);
 
@@ -126,10 +121,16 @@ void CLODEfeatures::initializeFeaturesKernel()
 
 void CLODEfeatures::setObserverParams(ObserverParams<cl_double> newOp)
 {
-
-	op = newOp;
 	try
 	{
+		if (!clInitialized)
+		{
+			if (clSinglePrecision)
+				d_op = cl::Buffer(opencl.getContext(), CL_MEM_READ_ONLY, sizeof(ObserverParams<cl_float>), NULL, &opencl.error);
+			else
+				d_op = cl::Buffer(opencl.getContext(), CL_MEM_READ_ONLY, sizeof(ObserverParams<cl_double>), NULL, &opencl.error);
+		}
+
 		if (clSinglePrecision)
 		{ //downcast to float if desired
 			ObserverParams<cl_float> opF = observerParamsToFloat(op);
@@ -139,6 +140,8 @@ void CLODEfeatures::setObserverParams(ObserverParams<cl_double> newOp)
 		{
 			opencl.error = opencl.getQueue().enqueueWriteBuffer(d_op, CL_TRUE, 0, sizeof(op), &op);
 		}
+
+		op = newOp;
 	}
 	catch (cl::Error &er)
 	{

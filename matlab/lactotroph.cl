@@ -1,21 +1,20 @@
 
-void getRHS(realtype t, realtype x_[], realtype p_[], realtype dx_[], realtype aux_[], realtype w_[]) {
-realtype inoise=p_[2]*w_[0];
+void getRHS(const realtype t, const realtype x_[], const realtype p_[], realtype dx_[], realtype aux_[], const realtype w_[]) {
 realtype c2=x_[3]*x_[3];
-realtype minf=(1.0f)/((1.0f)+exp(((-20.0f)-x_[0])/(12.0f)));
-realtype ninf=(1.0f)/((1.0f)+exp(((-5.0f)-x_[0])/(10.0f)));
-realtype finf=(1.0f)/((1.0f)+exp(((-20.0f)-x_[0])/(2.0f)));
-realtype ica=(1.50f)*minf*(x_[0]-(60.0f));
-realtype vkdrive=x_[0]-(-75.0f);
-realtype isk=(3.0f)*c2/(c2+(0.40f)*(0.40f))*vkdrive;
+realtype minf=RCONST(1.0)/(RCONST(1.0)+exp((RCONST(-20.0)-x_[0])/RCONST(12.0)));
+realtype ninf=RCONST(1.0)/(RCONST(1.0)+exp((RCONST(-5.0)-x_[0])/RCONST(10.0)));
+realtype finf=RCONST(1.0)/(RCONST(1.0)+exp((RCONST(-20.0)-x_[0])/RCONST(2.0)));
+realtype ica=RCONST(1.50)*minf*(x_[0]-RCONST(60.0));
+realtype vkdrive=x_[0]-RCONST(-75.0);
+realtype isk=RCONST(3.0)*c2/(c2+RCONST(0.40)*RCONST(0.40))*vkdrive;
 realtype ibk=p_[0]*x_[2]*vkdrive;
-realtype ik=(2.0f)*x_[1]*vkdrive;
-realtype il=(0.050f)*(x_[0]-(-50.0f));
-realtype itot=ica+isk+ibk+ik+il+inoise;
-dx_[0]=-itot/(10.0f);
-dx_[1]=(ninf-x_[1])/(30.0f);
+realtype ik=RCONST(2.0)*x_[1]*vkdrive;
+realtype il=RCONST(0.050)*(x_[0]-RCONST(-50.0));
+realtype itot=ica+isk+ibk+ik+il;
+dx_[0]=-itot/RCONST(10.0);
+dx_[1]=(ninf-x_[1])/RCONST(30.0);
 dx_[2]=(finf-x_[2])/p_[1];
-dx_[3]=-(0.010f)*((0.00150f)*ica+(0.20f)*x_[3]);
+dx_[3]=-RCONST(0.010)*(RCONST(0.00150)*ica+RCONST(0.20)*x_[3]);
 aux_[0]=ica;
 }
 
