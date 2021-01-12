@@ -34,35 +34,16 @@ CLODEtrajectory::CLODEtrajectory(ProblemInfo prob, std::string stepper, bool clS
 
 CLODEtrajectory::~CLODEtrajectory() {}
 
-//initialize everything
-void CLODEtrajectory::initialize(std::vector<cl_double> newTspan, std::vector<cl_double> newX0, std::vector<cl_double> newPars, SolverParams<cl_double> newSp)
+
+// build program and create kernel objects. requires host variables to be set
+void CLODEtrajectory::buildCL()
 {
+	buildProgram();
 
-	clInitialized = false;
-	//(re)build the program
-	buildProgram("");
-
-	//Base class initialize kernel:
-	initializeTransientKernel();
-
-	//initialize the trajectory kernel
-	initializeTrajectoryKernel();
-
-	setProblemData(newX0, newPars); //will set nPts
-	setTspan(newTspan);
-	setSolverParams(newSp);
-
-	resizeTrajectoryVariables(); //set up output variables too, which depend on nPts and nStoreMax=(tspan[1]-tspan[0])/(sp.dt*sp.nout)+1
-
-	clInitialized = true;
-	dbg_printf("initialize clODEfeatures\n");
-}
-
-void CLODEtrajectory::initializeTrajectoryKernel()
-{
-
+	//set up the kernels
 	try
 	{
+		cl_transient = cl::Kernel(opencl.getProgram(), "transient", &opencl.error);
 		cl_trajectory = cl::Kernel(opencl.getProgram(), "trajectory", &opencl.error);
 
 		// size_t preferred_multiple;
@@ -77,6 +58,24 @@ void CLODEtrajectory::initializeTrajectoryKernel()
 		throw er;
 	}
 	dbg_printf("initialize trajectory kernel\n");
+}
+
+//initialize everything
+void CLODEtrajectory::initialize(std::vector<cl_double> newTspan, std::vector<cl_double> newX0, std::vector<cl_double> newPars, SolverParams<cl_double> newSp)
+{
+
+	clInitialized = false;
+	//(re)build the program
+	buildCL();
+
+	setProblemData(newX0, newPars); //will set nPts
+	setTspan(newTspan);
+	setSolverParams(newSp);
+
+	resizeTrajectoryVariables(); //set up output variables too, which depend on nPts and nStoreMax=(tspan[1]-tspan[0])/(sp.dt*sp.nout)+1
+
+	clInitialized = true;
+	dbg_printf("initialize clODEfeatures\n");
 }
 
 void CLODEtrajectory::resizeTrajectoryVariables()

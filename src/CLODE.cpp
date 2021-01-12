@@ -134,7 +134,7 @@ void CLODE::setOpenCL(unsigned int platformID, unsigned int deviceID)
 void CLODE::buildProgram(std::string extraBuildOpts)
 {
 	if (!clSinglePrecision && !opencl.getDoubleSupport())
-	{ //TODO: running with double-precision clRHSfile probably will crash. gen both double/single with ode2cl always?
+	{ //TODO: make this an error?
 		clSinglePrecision = true;
 		printf("Warning: device selected does not support double precision. Using single precision\n");
 	}
@@ -179,26 +179,12 @@ void CLODE::buildProgram(std::string extraBuildOpts)
 	dbg_printf("build clODE\n");
 }
 
-//initialize everything: build the program, create the kernels, and set all needed problem data.
-void CLODE::initialize(std::vector<cl_double> newTspan, std::vector<cl_double> newX0, std::vector<cl_double> newPars, SolverParams<cl_double> newSp)
+// build program and create kernel objects. requires host variables to be set
+void CLODE::buildCL()
 {
-	clInitialized = false;
-	//(re)build the program
 	buildProgram();
 
 	//set up the kernel
-	initializeTransientKernel();
-
-	setProblemData(newX0, newPars); //will call setNpts
-	setTspan(newTspan);
-	setSolverParams(newSp);
-
-	clInitialized = true;
-	dbg_printf("initialize clODE\n");
-}
-
-void CLODE::initializeTransientKernel()
-{
 	try
 	{ 
 		cl_transient = cl::Kernel(opencl.getProgram(), "transient", &opencl.error);
@@ -214,7 +200,22 @@ void CLODE::initializeTransientKernel()
 		printf("ERROR in CLODE::initializeTransientKernel(): %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
 		throw er;
 	}
-	dbg_printf("initialize transient kernel\n");
+	dbg_printf("buildCL\n");
+}
+
+//initialize everything: build the program, create the kernels, and set all needed problem data.
+void CLODE::initialize(std::vector<cl_double> newTspan, std::vector<cl_double> newX0, std::vector<cl_double> newPars, SolverParams<cl_double> newSp)
+{
+	clInitialized = false;
+	//(re)build the program
+	buildCL();
+
+	setProblemData(newX0, newPars); //will call setNpts
+	setTspan(newTspan);
+	setSolverParams(newSp);
+
+	clInitialized = true;
+	dbg_printf("initialize clODE\n");
 }
 
 //initialize new set of trajectories (nPts may change)

@@ -38,11 +38,12 @@ struct ObserverData_localmax
 
 #ifdef __cplusplus
 //Collect all the info for this observer. Must be a static function when defining function in header, otherwise defined for each time included.
-static ObserverInfo getObserverInfo_localmax(const ProblemInfo pi, const bool clSinglePrecision, const int fVarIx, const int eVarIx)
+static ObserverInfo getObserverInfo_localmax(const ProblemInfo pi, const int fVarIx, const int eVarIx)
 {
     ObserverInfo oi;
     oi.define="USE_OBSERVER_LOCAL_MAX";
-    oi.observerDataSize=clSinglePrecision?sizeof(ObserverData_localmax<float>):sizeof(ObserverData_localmax<double>); //works because no dependence on N_VAR etc
+    oi.observerDataSizeFloat=sizeof(ObserverData_localmax<float>);
+    oi.observerDataSizeDouble=sizeof(ObserverData_localmax<double>);
     std::string varName=pi.varNames[fVarIx];
     oi.featureNames={
         "max "+varName+" - min "+varName,

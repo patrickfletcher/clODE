@@ -46,7 +46,8 @@ struct ObserverParams
 typedef struct ObserverInfo 
 {
 	std::string define;
-	size_t observerDataSize;
+	size_t observerDataSizeFloat;
+	size_t observerDataSizeDouble;
 	std::vector<std::string> featureNames;
 } ObserverInfo;
 
@@ -86,15 +87,15 @@ typedef struct ObserverInfo
 
 // collect available methods into "name"-ObserverInfo map, for C++ side access. Must come after including all the getObserverInfo_functions.
 #ifdef __cplusplus
-static void getObserverDefineMap(const ProblemInfo pi, const bool clSinglPrecision, const int fVarIx, const int eVarIx, std::map<std::string, ObserverInfo> &observerDefineMap, std::vector<std::string> &availableObserverNames) 
+static void getObserverDefineMap(const ProblemInfo pi, const int fVarIx, const int eVarIx, std::map<std::string, ObserverInfo> &observerDefineMap, std::vector<std::string> &availableObserverNames) 
 {
 std::map<std::string, ObserverInfo> newMap;
-newMap["basic"]=getObserverInfo_basic(pi, clSinglPrecision, fVarIx, eVarIx);
-newMap["basicall"]=getObserverInfo_basicAll(pi, clSinglPrecision, fVarIx, eVarIx);
-newMap["localmax"]=getObserverInfo_localmax(pi, clSinglPrecision, fVarIx, eVarIx);
-newMap["nhood1"]=getObserverInfo_nhood1(pi, clSinglPrecision, fVarIx, eVarIx);
-newMap["nhood2"]=getObserverInfo_nhood2(pi, clSinglPrecision, fVarIx, eVarIx);
-newMap["thresh2"]=getObserverInfo_thresh2(pi, clSinglPrecision, fVarIx, eVarIx);
+newMap["basic"]=getObserverInfo_basic(pi, fVarIx, eVarIx);
+newMap["basicall"]=getObserverInfo_basicAll(pi, fVarIx, eVarIx);
+newMap["localmax"]=getObserverInfo_localmax(pi, fVarIx, eVarIx);
+newMap["nhood1"]=getObserverInfo_nhood1(pi, fVarIx, eVarIx);
+newMap["nhood2"]=getObserverInfo_nhood2(pi, fVarIx, eVarIx);
+newMap["thresh2"]=getObserverInfo_thresh2(pi, fVarIx, eVarIx);
 
 //export vector of names for access in C++
 std::vector<std::string> newNames;

@@ -35,6 +35,7 @@ enum class Action
     SetPrecision,
     SetOpenCL,
     Initialize, //overridden for clODEtrajectory
+    BuildCL,
     SetProblemData,
     SetTspan,
     SetX0,
@@ -69,6 +70,7 @@ const std::map<std::string, Action> actionTypeMap =
     { "setprecision",   Action::SetPrecision },
     { "setopencl",      Action::SetOpenCL },
     { "initialize",     Action::Initialize },
+    { "buildcl",        Action::BuildCL},
     { "setproblemdata", Action::SetProblemData },
     { "settspan",       Action::SetTspan },
     { "setx0",          Action::SetX0 },
@@ -139,13 +141,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     switch (actionTypeMap.at(actionStr))
     {
     case Action::New:
-    {
- 	#if defined(WIN32)||defined(_WIN64)
- 		_putenv_s("CUDA_CACHE_DISABLE", "1");
- 	#else
- 		setenv("CUDA_CACHE_DISABLE", "1", 1);
- 	#endif
- 	
+    { 	
 		//sig: clODEobjective(nPar,nVar,nObjTimes,nObjVars,devicetype=all,vendor=any)
 		
         handle_type newHandle = instanceTab.size() ? (instanceTab.rbegin())->first + 1 : 1;
@@ -225,6 +221,16 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         std::vector<cl_double> pars (static_cast<cl_double *>(mxGetData(prhs[4])),  static_cast<cl_double *>(mxGetData(prhs[4])) + mxGetNumberOfElements(prhs[4]) );  
 		SolverParams<cl_double> sp = getMatlabSPstruct(prhs[5]);
         instance->initialize(tspan, x0, pars, sp);       
+        break;
+	}
+    case Action::BuildCL:
+	{ //inputs: none
+        #if defined(WIN32)||defined(_WIN64)
+            _putenv_s("CUDA_CACHE_DISABLE", "1");
+        #else
+            setenv("CUDA_CACHE_DISABLE", "1", 1);
+        #endif
+        instance->buildCL();
         break;
 	}
     case Action::SetProblemData:

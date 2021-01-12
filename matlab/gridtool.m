@@ -12,23 +12,25 @@ classdef gridtool < handle %matlab.mixin.SetGet
         
         odefile %ode system definition (an xpp ODE file)
         
-        prob %read-only copy of the parseODE output (default values)
-        %.par, parNames
-        %.var, varNames
-        parvar %working table of possible grid vars (par+var)
-        %.name, value, lb, ub, type, ix
-        trajvars %working table of possible trajectory varibles to plot
-        %.name, type, ix 
-        
         devices
         grid_device
         clo_g %clODE grid feature solver
         traj_device
         clo_t %clODE trajectory solver
         
-        nGrid=[32;32;10] %nPts in x, y, z dims: x,y is the 2D integration plane
+        prob %read-only copy of the parseODE output (default values)
+        %.par, parNames, var, varNames
+        parvar %working table of possible grid vars (par+var)
+        %.name, value, lb, ub, type, ix
+        trajvars %working table of possible trajectory varibles to plot
+        %.name, type, ix
+        
         grid=table('Size',[3,5],'VariableTypes',{'categorical','double','double','double','double'},...
                 'VariableNames',{'name','lb','ub','N','del'},'RowNames',{'x';'y';'z'}); 
+            
+        nGrid=[32;32;10] %nPts in x, y, z dims: x,y is the 2D integration plane with nPts=nGrid(1)*nGrid(2)
+        P %base parameter matrix with p0 replicated nPts times [nPts, nPar]
+        X0 %base ic matrix with x0 replicated nPts times
         
         nClick=3
         
@@ -46,7 +48,7 @@ classdef gridtool < handle %matlab.mixin.SetGet
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %grid figure
-        figGrid                 matlab.ui.Figure
+        figGrid                 
         axGrid
         imGrid %image handle for feature on grid
         markerP0 %marker (line object) specifying (x,y) for p0
@@ -54,13 +56,13 @@ classdef gridtool < handle %matlab.mixin.SetGet
 
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %figure with p0 trajectory
-        figTrajP0               matlab.ui.Figure
+        figTrajP0               
         axTrajP0
         trajP0=struct('t',[],'x',[],'aux',[]); %trajectory struct for p0
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %click trajectory figure with n trajectories
-        figTrajClick            matlab.ui.Figure
+        figTrajClick            
         axTrajClick
         trajClick=struct('t',[],'x',[],'aux',[]); %array of trajectory struct for pQuery
         
@@ -232,13 +234,13 @@ classdef gridtool < handle %matlab.mixin.SetGet
 
         % Value changed function: featureDropDown
         function featureDropDownValueChanged(app, src, event)
-            value = app.featureDropDown.Value;
+            newFeature = app.featureDropDown.Value;
             
         end
 
         % Value changed function: fscaleEditField
         function fscaleEditFieldValueChanged(app, src, event)
-            value = app.fscaleEditField.Value;
+            newFscale = app.fscaleEditField.Value;
             
         end
 
@@ -305,43 +307,49 @@ classdef gridtool < handle %matlab.mixin.SetGet
 
         % Value changed function: xDropDown
         function xDropDownValueChanged(app, src, event)
-            value = app.xDropDown.Value;
+            newX = app.xDropDown.Value;
             
         end
 
         % Value changed function: yDropDown
         function yDropDownValueChanged(app, src, event)
-            value = app.yDropDown.Value;
+            newY = app.yDropDown.Value;
             
         end
 
         % Value changed function: zDropDown
         function zDropDownValueChanged(app, src, event)
-            value = app.zDropDown.Value;
+            newZ = app.zDropDown.Value;
             
         end
 
         % Value changed function: clicksEditField
         function clicksEditFieldValueChanged(app, src, event)
-            value = app.clicksEditField.Value;
+            newNClick = app.clicksEditField.Value;
+            app.nClick=newNClick;
             
         end
 
         % Value changed function: linkAxesButton
         function linkAxesButtonValueChanged(app, src, event)
-            newNClick = app.linkAxesButton.Value;
-            app.nClick=newNClick;
+            doLinkAxes = app.linkAxesButton.Value;
         end
-% 
-%         % Value changed function: threeDButton
-%         function threeDButtonValueChanged(app, src, event)
-%             do3D = app.threeDButton.Value;
+
+        % Value changed function: threeDButton
+        function threeDButtonValueChanged(app, src, event)
+            do3D = app.threeDButton.Value;
 %             app.threeDButton
-%         end
+        end
     end
     
     % clODE-UI interaction callbacks
     methods (Access = private)
+        
+        function makeGridData()
+        end
+        
+        function makeTrajData()
+        end
         
         function gridKeyPress()
         end
@@ -406,6 +414,14 @@ classdef gridtool < handle %matlab.mixin.SetGet
             app.gridclInitialized=false;
             app.trajclInitialized=false;
             
+            %tspan
+            t0=app.prob.opt.t0;
+            tf=app.prob.opt.total;
+            app.clo_g.settspan([t0,tf]); %device transfer - defer to init
+            app.clo_t.settspan([t0,tf]); %device transfer
+            app.t0EditField.Value=t0;
+            app.tfEditField.Value=tf;
+            
             %valid grid variables
             icNames=strcat(app.prob.varNames(:),'0');
             app.parvar=table;
@@ -421,14 +437,6 @@ classdef gridtool < handle %matlab.mixin.SetGet
             app.trajvars.name=[app.prob.varNames(:);app.prob.auxNames(:)];
             app.trajvars.type=categorical([ones(app.prob.nVar,1);2*ones(app.prob.nAux,1)],[1,2],{'var','aux'});
             app.trajvars.ix=[(1:app.prob.nVar)';(1:app.prob.nAux)'];
-            
-            %tspan
-            t0=app.prob.opt.t0;
-            tf=app.prob.opt.total;
-            app.clo_g.settspan([t0,tf]); %device transfer - defer to init
-            app.clo_t.settspan([t0,tf]); %device transfer
-            app.t0EditField.Value=t0;
-            app.tfEditField.Value=tf;
             
             %set up initial default grid
             app.grid.name=categorical(app.parvar.name(1:3),app.parvar.name);
@@ -509,7 +517,7 @@ classdef gridtool < handle %matlab.mixin.SetGet
         
             % Create figControl and hide until all components are created
             app.figControl = uifigure('Visible', 'off');
-            app.figControl.Position = [50 400 300 600];
+            app.figControl.Position = [50 450 300 600];
             app.figControl.Name = 'gridtool';
             app.figControl.CloseRequestFcn = @app.figControlCloseRequest;
 
@@ -690,8 +698,8 @@ classdef gridtool < handle %matlab.mixin.SetGet
             % Create gridTable
             app.gridTable = uitable(app.GridTab);
             app.gridTable.ColumnName = app.grid.Properties.VariableNames;
-            app.gridTable.ColumnWidth = {'auto', 'fit', 'fit','fit','fit'};
-            app.gridTable.ColumnEditable = [false true true true true];
+            app.gridTable.ColumnWidth = {'fit', 'fit', 'fit','fit','fit'};
+            app.gridTable.ColumnEditable = [true true true true true];
             app.gridTable.CellEditCallback = @app.gridTableCellEdit;
             app.gridTable.Position = [15 430 150 90];
             
@@ -704,7 +712,7 @@ classdef gridtool < handle %matlab.mixin.SetGet
             % Create parTable
             app.parTable = uitable(app.GridTab);
             app.parTable.ColumnName = {'name', 'value', 'lb', 'ub'};
-            app.parTable.ColumnWidth = {'auto', 'fit', 'fit', 'fit'};
+            app.parTable.ColumnWidth = {'fit', 'fit', 'fit', 'fit'};
             app.parTable.RowName = {};
             app.parTable.ColumnSortable = [true false false false];
             app.parTable.ColumnEditable = [true true true true];
@@ -726,7 +734,7 @@ classdef gridtool < handle %matlab.mixin.SetGet
             % Create icTable
             app.icTable = uitable(app.GridTab);
             app.icTable.ColumnName = {'name', 'value', 'lb', 'ub'};
-            app.icTable.ColumnWidth = {'auto', 'fit', 'fit', 'fit'};
+            app.icTable.ColumnWidth = {'fit', 'fit', 'fit', 'fit'};
             app.icTable.RowName = {};
             app.icTable.ColumnSortable = [true false false false];
             app.icTable.ColumnEditable = [true true true true];
@@ -814,7 +822,7 @@ classdef gridtool < handle %matlab.mixin.SetGet
             
         function createGridFig(app)
             % Create figGrid and hide until all components are created
-            app.figGrid = uifigure('Visible', 'off');
+            app.figGrid = figure('Visible', 'off');
             app.figGrid.Position = [375 400 600 600];
             app.figGrid.Name = 'grid';
             
@@ -832,7 +840,7 @@ classdef gridtool < handle %matlab.mixin.SetGet
         
         function createTrajP0Fig(app)
             % Create figTraj and hide until all components are created
-            app.figTrajP0 = uifigure('Visible', 'off');
+            app.figTrajP0 = figure('Visible', 'off');
             app.figTrajP0.Position = [50 50 925 300];
             app.figTrajP0.Name = 'p0';
             
@@ -849,7 +857,7 @@ classdef gridtool < handle %matlab.mixin.SetGet
         
         function createTrajClickFig(app)
             % Create figTraj and hide until all components are created
-            app.figTrajClick = uifigure('Visible', 'off');
+            app.figTrajClick = figure('Visible', 'off');
             app.figTrajClick.Position = [1000 50 900 950];
             app.figTrajClick.Name = 'click trajectories';
 

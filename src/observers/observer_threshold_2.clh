@@ -4,13 +4,15 @@
 
 #ifdef __cplusplus
 //Collect all the info for this observer. Must be a static function when defining function in header, otherwise defined for each time included.
-static ObserverInfo getObserverInfo_thresh2(const ProblemInfo pi, const bool clSinglePrecision, const int fVarIx, const int eVarIx)
+static ObserverInfo getObserverInfo_thresh2(const ProblemInfo pi, const int fVarIx, const int eVarIx)
 {
     ObserverInfo oi;
     oi.define="USE_OBSERVER_THRESHOLD_2";
-    size_t realsize = clSinglePrecision?sizeof(cl_float):sizeof(cl_double);
-    oi.observerDataSize=(pi.nVar*11 + 7*3 + 13 + pi.nAux*3)*realsize + 5*sizeof(cl_int); //hard coded, because C++ code can't see the N_VAR, N_AUX etc...
-
+    size_t n_real=(11*pi.nVar + 7*3 + 13 + 3*pi.nAux); //hard coded, because C++ code can't see the N_VAR, N_AUX etc...
+    size_t n_int=5;
+    oi.observerDataSizeFloat=n_real*sizeof(cl_float) + n_int*sizeof(cl_int);
+    oi.observerDataSizeDouble=n_real*sizeof(cl_double) + n_int*sizeof(cl_int); 
+    
     oi.featureNames.push_back("max period");
     oi.featureNames.push_back("min period");
     oi.featureNames.push_back("mean period");

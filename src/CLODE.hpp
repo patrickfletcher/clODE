@@ -94,7 +94,7 @@ protected:
     cl::Kernel cl_transient;
 
     //flag to ensure kernel can be executed
-    bool clInitialized;
+    bool clInitialized = false;
 
     std::string getStepperDefine();
     SolverParams<cl_float> solverParamsToFloat(SolverParams<cl_double> sp);
@@ -103,7 +103,6 @@ protected:
     //~ CLODE( const CLODE& other ); // non construction-copyable
     //~ CLODE& operator=( const CLODE& ); // non copyable
 
-    void initializeTransientKernel();
     void setNpts(cl_int newNpts); //resizes the nPts-dependent input variables
 
 public:
@@ -116,34 +115,36 @@ public:
     ~CLODE();
 
     //Set functions: trigger rebuild etc
-    void setNewProblem(ProblemInfo prob);               //rebuild: program, kernel, kernel args, device vars. Opencl context OK
-    void setStepper(std::string newStepper);            //rebuild: program, kernel, kernel args. Host + Device data OK
-    void setPrecision(bool clSinglePrecision);          //rebuild: program, kernel, kernel args, device vars. Opencl context OK
-    void setOpenCL(OpenCLResource opencl);              //rebuild: context, program, kernel, kernel args, device vars. Host problem data OK
-    void setOpenCL(unsigned int platformID, unsigned int deviceID);              //rebuild: context, program, kernel, kernel args, device vars. Host problem data OK
-    void buildProgram(std::string extraBuildOpts = ""); //called by initialize, to all change in prob/stepper/precision/openclResource
+    void setNewProblem(ProblemInfo prob);               //buildCL, pars/vars. Opencl context OK
+    void setStepper(std::string newStepper);            //buildCL. Host + Device data OK
+    void setPrecision(bool clSinglePrecision);          //buildCL, all device vars. Opencl context OK
+    void setOpenCL(OpenCLResource opencl);              //buildCL, all device vars. Host problem data OK
+    void setOpenCL(unsigned int platformID, unsigned int deviceID);
+
+    void buildProgram(std::string extraBuildOpts = ""); //build the program object (inherited by subclasses)
+    void buildCL(); // build program and create kernel objects - overloaded by subclasses to include any extra kernels
 
     //build program, set all problem data needed to run
     virtual void initialize(std::vector<cl_double> newTspan, std::vector<cl_double> newX0, std::vector<cl_double> newPars, SolverParams<cl_double> newSp);
 
-    void setProblemData(std::vector<cl_double> newX0, std::vector<cl_double> newPars); //this routine may change nPts
+    void setProblemData(std::vector<cl_double> newX0, std::vector<cl_double> newPars); //set both pars and X0 to change nPts
     void setTspan(std::vector<cl_double> newTspan);
-    void setX0(std::vector<cl_double> newX0);     //no change in nPts
-    void setPars(std::vector<cl_double> newPars); //no change in nPts
+    void setX0(std::vector<cl_double> newX0);     //no change in nPts: newX0 must match nPts
+    void setPars(std::vector<cl_double> newPars); //no change in nPts: newPars must match nPts
     void setSolverParams(SolverParams<cl_double> newSp);
 
     void seedRNG();
     void seedRNG(cl_int mySeed); //overload for setting reproducible seeds
 
-    //simulation routine
-    void transient(); //integrate forward an interval of duration (tf-t0).
+    //simulation routine and overloads
+    void transient(); //integrate forward using stored tspan, x0, pars, and solver pars
+    // void transient(std::vector<cl_double> newTspan); //integrate forward using stored x0, pars, and solver pars
+    // void transient(std::vector<cl_double> newTspan, std::vector<cl_double> newX0); //integrate forward using stored pars, and solver pars
+    // void transient(std::vector<cl_double> newTspan, std::vector<cl_double> newX0, std::vector<cl_double> newPars); //integrate forward using stored solver pars
+    // void transient(std::vector<cl_double> newTspan, std::vector<cl_double> newX0, std::vector<cl_double> newPars, SolverParams<cl_double> newSp);
 
     void shiftTspan(); //t0 <- tf, tf<-(tf + tf-t0)
-    void shiftX0();    //X0 <- Xf (device to device transfer)
-
-    //go: transient repeated does same calculation: t0->tf, x0->xf
-    //shift/continue: transient, updateTspan+updateX0, transient (only for trajectory?)
-    //last: transient, updateX0, transient
+    void shiftX0();    //d_x0 <- d_xf (device to device transfer)
 
     std::vector<cl_double> getTspan() { return tspan; };
     std::vector<cl_double> getX0();

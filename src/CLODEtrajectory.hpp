@@ -42,7 +42,6 @@ protected:
     cl::Buffer d_t, d_x, d_dx, d_aux, d_nStored;
     cl::Kernel cl_trajectory;
 
-    void initializeTrajectoryKernel();
     void resizeTrajectoryVariables(); //creates trajectory output global variables, called just before launching trajectory kernel
 
 public:
@@ -50,12 +49,17 @@ public:
     CLODEtrajectory(ProblemInfo prob, std::string stepper, bool clSinglePrecision, unsigned int platformID, unsigned int deviceID);
     ~CLODEtrajectory();
 
+    void buildCL(); // build program and create kernel objects
+
     //build program, set all problem data needed to run
     virtual void initialize(std::vector<cl_double> newTspan, std::vector<cl_double> newX0, std::vector<cl_double> newPars, SolverParams<cl_double> newSp);
 
-    //simulation routines.
-    //TODO: overload with newX0, newPars; all four?
+    //simulation routine and overloads
     void trajectory(); //integrate forward an interval of duration (tf-t0)
+    // void trajectory(std::vector<cl_double> newTspan);
+    // void trajectory(std::vector<cl_double> newTspan, std::vector<cl_double> newX0);
+    // void trajectory(std::vector<cl_double> newTspan, std::vector<cl_double> newX0, std::vector<cl_double> newPars);
+    // void trajectory(std::vector<cl_double> newTspan, std::vector<cl_double> newX0, std::vector<cl_double> newPars, SolverParams<cl_double> newSp);
 
     //Get functions
     std::vector<cl_double> getT();

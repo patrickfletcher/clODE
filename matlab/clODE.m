@@ -24,12 +24,10 @@ classdef clODE < cppclass & matlab.mixin.SetGet
         sp
         tspan
         
+        clInitialized=false
+        
         tscale=1 %should go in IVP  
         tunits='';
-    end
-    
-    properties (Dependent)
-        %nPts
     end
     
     properties (Access = private)
@@ -119,6 +117,7 @@ classdef clODE < cppclass & matlab.mixin.SetGet
             if ~strcmp(prob,obj.prob)
                 obj.prob=prob;
                 obj.cppmethod('setnewproblem', prob);
+                obj.clInitialized=false;
             end
         end
         
@@ -127,6 +126,7 @@ classdef clODE < cppclass & matlab.mixin.SetGet
             if ~strcmp(newStepper,obj.stepper)
                 obj.stepper=newStepper;
                 obj.cppmethod('setstepper', newStepper);
+                obj.clInitialized=false;
             end
         end
         
@@ -145,6 +145,7 @@ classdef clODE < cppclass & matlab.mixin.SetGet
                         error('Precision must be set to ''single'' or ''double''')
                 end
                 obj.cppmethod('setprecision', clSinglePrecision);
+                obj.clInitialized=false;
             end
         end
         
@@ -153,6 +154,7 @@ classdef clODE < cppclass & matlab.mixin.SetGet
             if newDevice~=obj.selectedDevice && newDevice<=length(obj.devices)
                 obj.selectedDevice=newDevice;
                 obj.cppmethod('setopencl', obj.devices(newDevice).platformID, obj.devices(newDevice).deviceID);
+                obj.clInitialized=false;
             end
         end
         
@@ -165,6 +167,7 @@ classdef clODE < cppclass & matlab.mixin.SetGet
             obj.P=P;
             obj.sp=sp;
             obj.nPts=numel(X0)/obj.prob.nVar;
+            obj.clInitialized=true;
         end
         
         %Set X0 and P together if trying to change nPts

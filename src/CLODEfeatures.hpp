@@ -60,7 +60,7 @@ protected:
     ObserverParams<cl_float> observerParamsToFloat(ObserverParams<cl_double> op);
 
     std::string getObserverBuildOpts();
-    void initializeFeaturesKernel();
+    void updateObserverDefineMap(); // update host variables representing feature detector: nFeatures, featureNames, observerDataSize
     void resizeFeaturesVariables(); //d_odata and d_F depend on nPts. nPts change invalidates d_odata
 
 public:
@@ -73,18 +73,25 @@ public:
 
     void setObserverParams(ObserverParams<cl_double> newOp);
     void setObserver(std::string newObserver); //rebuild: program, kernel, kernel args. Host + Device data OK
+    
+    void buildCL(); // build program and create kernel objects
 
-    //simulation routines.
-    //TODO: overload transient so that it sets doObserverInitialization=1
-    //TODO: overload with newX0, newPars; all four?
-    //TODO: pre-features? update edata basics (min/max x dx) but no event function
+    //simulation routine and overloads
     void initializeObserver();                           //integrate forward an interval of duration (tf-t0)
+    void features();                           //integrate forward an interval of duration (tf-t0)//integrate forward using stored tspan, x0, pars, and solver pars
     void features(bool newDoObserverInitFlag); //allow manually forcing re-init of observer data
-    void features();                           //integrate forward an interval of duration (tf-t0)
+    // void features(std::vector<cl_double> newTspan);
+    // void features(std::vector<cl_double> newTspan, std::vector<cl_double> newX0);
+    // void features(std::vector<cl_double> newTspan, std::vector<cl_double> newX0, std::vector<cl_double> newPars);
+    // void features(std::vector<cl_double> newTspan, std::vector<cl_double> newX0, std::vector<cl_double> newPars, SolverParams<cl_double> newSp);
+    // void features(bool newDoObserverInitFlag, std::vector<cl_double> newTspan);
+    // void features(bool newDoObserverInitFlag, std::vector<cl_double> newTspan, std::vector<cl_double> newX0);
+    // void features(bool newDoObserverInitFlag, std::vector<cl_double> newTspan, std::vector<cl_double> newX0, std::vector<cl_double> newPars);
+    // void features(bool newDoObserverInitFlag, std::vector<cl_double> newTspan, std::vector<cl_double> newX0, std::vector<cl_double> newPars, SolverParams<cl_double> newSp);
 
     //Get functions
-    int getNFeatures() { return nFeatures; };
     std::vector<cl_double> getF();
+    int getNFeatures() { return nFeatures; };
     std::vector<std::string> getFeatureNames(){return featureNames;};
     std::vector<std::string> getAvailableObservers(){return availableObserverNames;};
 };

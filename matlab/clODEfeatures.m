@@ -59,6 +59,8 @@ classdef clODEfeatures<clODE & matlab.mixin.SetGet
             
             obj.observerNames();
             obj.observer=observer;
+            obj.featureNames();
+            obj.getNFeatures();
             obj.op=clODEfeatures.defaultObserverParams();%default observer params (device transfer during init)
         end
         
@@ -71,8 +73,6 @@ classdef clODEfeatures<clODE & matlab.mixin.SetGet
             obj.sp=sp;
             obj.nPts=numel(X0)/obj.prob.nVar; 
             obj.op=op;
-            obj.getNFeatures();
-            obj.featureNames();
         end
         
         function setObserverPars(obj, op)
@@ -88,6 +88,7 @@ classdef clODEfeatures<clODE & matlab.mixin.SetGet
                     obj.observer=newObserver;
                     obj.cppmethod('setobserver', newObserver);
                     obj.featureNames();
+                    obj.getNFeatures();
                 else
                     error(['undefined observer: ' newObserver]);
                 end

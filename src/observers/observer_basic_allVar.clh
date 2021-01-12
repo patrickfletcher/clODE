@@ -5,12 +5,14 @@
 
 #ifdef __cplusplus
 //Collect all the info for this observer. Must be a static function when defining function in header, otherwise defined for each time included.
-static ObserverInfo getObserverInfo_basicAll(const ProblemInfo pi, const bool clSinglePrecision, const int fVarIx, const int eVarIx)
+static ObserverInfo getObserverInfo_basicAll(const ProblemInfo pi, const int fVarIx, const int eVarIx)
 {
     ObserverInfo oi;
     oi.define="USE_OBSERVER_BASIC_ALLVAR";
-    size_t realsize = clSinglePrecision?sizeof(cl_float):sizeof(cl_double);
-    oi.observerDataSize=(pi.nVar*5+pi.nAux*3)*realsize + 2*sizeof(cl_long); //hard coded, because C++ code can't see the N_VAR, N_AUX etc... 
+    size_t n_real=(pi.nVar*5+pi.nAux*3); //hard coded, because C++ code can't see the N_VAR, N_AUX etc...
+    size_t n_int=2;
+    oi.observerDataSizeFloat=n_real*sizeof(cl_float) + n_int*sizeof(cl_int);
+    oi.observerDataSizeDouble=n_real*sizeof(cl_double) + n_int*sizeof(cl_int); 
     // oi.featureNames={}; //TODO: update with true varNames
     for (int j = 0; j < pi.nVar; ++j)
     {

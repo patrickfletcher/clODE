@@ -13,13 +13,12 @@
 #include <stdio.h>
 
 CLODEfeatures::CLODEfeatures(ProblemInfo prob, std::string stepper, std::string observer, bool clSinglePrecision, OpenCLResource opencl)
-	: CLODE(prob, stepper, clSinglePrecision, opencl)
+	: CLODE(prob, stepper, clSinglePrecision, opencl), observer(observer)
 {
-
-	//printf("\nCLODE has been specialized: CLODEfeatures\n");
-
-	getObserverDefineMap(prob, clSinglePrecision, 0, 0, observerDefineMap, availableObserverNames);
-	setObserver(observer);
+	// default fVarIx and eVarIx to allow first query of observer define map (exposes availableObservers, fNames)
+	op.fVarIx=0;
+	op.eVarIx=0;
+	updateObserverDefineMap();
 
 	clprogramstring += read_file(clodeRoot + "initializeObserver.cl");
 	clprogramstring += read_file(clodeRoot + "features.cl");
@@ -27,13 +26,12 @@ CLODEfeatures::CLODEfeatures(ProblemInfo prob, std::string stepper, std::string 
 }
 
 CLODEfeatures::CLODEfeatures(ProblemInfo prob, std::string stepper, std::string observer, bool clSinglePrecision,  unsigned int platformID, unsigned int deviceID)
-	: CLODE(prob, stepper, clSinglePrecision, platformID, deviceID)
+	: CLODE(prob, stepper, clSinglePrecision, platformID, deviceID), observer(observer)
 {
-
-	//printf("\nCLODE has been specialized: CLODEfeatures\n");
-
-	getObserverDefineMap(prob, clSinglePrecision, 0, 0, observerDefineMap, availableObserverNames);
-	setObserver(observer);
+	// default fVarIx and eVarIx to allow first query of observer define map
+	op.fVarIx=0;
+	op.eVarIx=0;
+	updateObserverDefineMap();
 
 	clprogramstring += read_file(clodeRoot + "initializeObserver.cl");
 	clprogramstring += read_file(clodeRoot + "features.cl");
@@ -42,66 +40,15 @@ CLODEfeatures::CLODEfeatures(ProblemInfo prob, std::string stepper, std::string 
 
 CLODEfeatures::~CLODEfeatures() {}
 
-//initialize everything
-void CLODEfeatures::initialize(std::vector<cl_double> newTspan, std::vector<cl_double> newX0, std::vector<cl_double> newPars, SolverParams<cl_double> newSp, ObserverParams<cl_double> newOp)
+// build program and create kernel objects - requires host variables to be set (specifically observerBuildOpts)
+void CLODEfeatures::buildCL()
 {
-	clInitialized = false;
-	// observerBuildOpts = getObserverBuildOpts();
-	getObserverDefineMap(prob, clSinglePrecision, newOp.fVarIx, newOp.eVarIx, observerDefineMap, availableObserverNames);
-	setObserver(observer);
-
-	//(re)build the program
 	buildProgram(observerBuildOpts);
 
-	//Base class initialize kernel:
-	initializeTransientKernel();
-
-	//initialize the trajectory kernel
-	initializeFeaturesKernel();
-	setProblemData(newX0, newPars); //will set nPts
-	resizeFeaturesVariables(); //set up d_F and d_odata too, which depend on nPts
-
-	setTspan(newTspan);
-	setSolverParams(newSp);
-	setObserverParams(newOp);
-
-	printf("Using observer: %s\n",observer.c_str());
-
-	doObserverInitialization = true;
-	clInitialized = true;
-	dbg_printf("initialize clODEfeatures.\n");
-}
-
-void CLODEfeatures::setObserver(std::string newObserver)
-{
-	// if (newObserver!=observer)
-	// {
-		auto loc = observerDefineMap.find(newObserver); //from steppers.cl
-		if ( loc != observerDefineMap.end() )
-		{
-			observer = newObserver;
-			observerBuildOpts=" -D" + observerDefineMap.at(observer).define;
-			observerDataSize=observerDefineMap.at(observer).observerDataSize;
-			dbg_printf("observerDataSize = %d\n",observerDataSize);
-			observerDataSize = observerDataSize + observerDataSize % realSize;
-			nFeatures=(int)observerDefineMap.at(observer).featureNames.size();
-			featureNames=observerDefineMap.at(observer).featureNames;
-			clInitialized = false;
-		}
-		else
-		{
-			printf("Warning: unknown observer: %s. Observer method unchanged\n",newObserver.c_str());
-		}
-		dbg_printf("set observer\n");
-	// }
-	
-}
-
-void CLODEfeatures::initializeFeaturesKernel()
-{
-
+	//set up the kernels
 	try
 	{
+		cl_transient = cl::Kernel(opencl.getProgram(), "transient", &opencl.error);
 		cl_initializeObserver = cl::Kernel(opencl.getProgram(), "initializeObserver", &opencl.error);
 		cl_features = cl::Kernel(opencl.getProgram(), "features", &opencl.error);
 
@@ -119,6 +66,45 @@ void CLODEfeatures::initializeFeaturesKernel()
 	dbg_printf("initialize features kernel\n");
 }
 
+//initialize everything
+void CLODEfeatures::initialize(std::vector<cl_double> newTspan, std::vector<cl_double> newX0, std::vector<cl_double> newPars, SolverParams<cl_double> newSp, ObserverParams<cl_double> newOp)
+{
+	clInitialized = false;
+
+	//(re)build the program
+	buildCL();
+
+	setProblemData(newX0, newPars); //will set nPts
+	resizeFeaturesVariables(); //set up d_F and d_odata too, which depend on nPts
+
+	setTspan(newTspan);
+	setSolverParams(newSp);
+	setObserverParams(newOp);
+
+	printf("Using observer: %s\n",observer.c_str());
+
+	doObserverInitialization = true;
+	clInitialized = true;
+	dbg_printf("initialize clODEfeatures.\n");
+}
+
+void CLODEfeatures::setObserver(std::string newObserver)
+{
+	auto loc = observerDefineMap.find(newObserver); //from steppers.cl
+	if ( loc != observerDefineMap.end() )
+	{
+		observer = newObserver;
+		updateObserverDefineMap();
+		clInitialized = false;
+	}
+	else
+	{
+		printf("Warning: unknown observer: %s. Observer method unchanged\n",newObserver.c_str());
+	}
+	dbg_printf("set observer\n");
+}
+
+
 void CLODEfeatures::setObserverParams(ObserverParams<cl_double> newOp)
 {
 	try
@@ -131,17 +117,20 @@ void CLODEfeatures::setObserverParams(ObserverParams<cl_double> newOp)
 				d_op = cl::Buffer(opencl.getContext(), CL_MEM_READ_ONLY, sizeof(ObserverParams<cl_double>), NULL, &opencl.error);
 		}
 
+		op = newOp; 
+
 		if (clSinglePrecision)
 		{ //downcast to float if desired
-			ObserverParams<cl_float> opF = observerParamsToFloat(op);
+			ObserverParams<cl_float> opF = observerParamsToFloat(newOp);
 			opencl.error = opencl.getQueue().enqueueWriteBuffer(d_op, CL_TRUE, 0, sizeof(opF), &opF);
 		}
 		else
 		{
-			opencl.error = opencl.getQueue().enqueueWriteBuffer(d_op, CL_TRUE, 0, sizeof(op), &op);
+			opencl.error = opencl.getQueue().enqueueWriteBuffer(d_op, CL_TRUE, 0, sizeof(op), &newOp);
 		}
 
-		op = newOp;
+		//if op.fVarIx or op.eVarIx change, observer's fNames may change
+		updateObserverDefineMap();
 	}
 	catch (cl::Error &er)
 	{
@@ -149,6 +138,24 @@ void CLODEfeatures::setObserverParams(ObserverParams<cl_double> newOp)
 		throw er;
 	}
 	dbg_printf("set observer params\n");
+}
+
+
+// updates the defineMap to reflect changes in problem, precision, observerParams
+void CLODEfeatures::updateObserverDefineMap()
+{
+	getObserverDefineMap(prob, op.fVarIx, op.eVarIx, observerDefineMap, availableObserverNames);
+	observerBuildOpts=" -D" + observerDefineMap.at(observer).define;
+
+	if (clSinglePrecision)
+		observerDataSize=observerDefineMap.at(observer).observerDataSizeFloat;
+	else
+		observerDataSize=observerDefineMap.at(observer).observerDataSizeDouble;
+	dbg_printf("observerDataSize = %d\n",observerDataSize);
+	observerDataSize = observerDataSize + observerDataSize % realSize; //align to a multiple of realsize. is this necessary?
+
+	nFeatures=(int)observerDefineMap.at(observer).featureNames.size();
+	featureNames=observerDefineMap.at(observer).featureNames;
 }
 
 //TODO: define an assignment/type cast operator in the struct?

@@ -20,11 +20,12 @@ struct ObserverData_basic
 
 #ifdef __cplusplus
 //Collect all the info for this observer. Must be a static function when defining function in header, otherwise defined for each time included.
-static ObserverInfo getObserverInfo_basic(const ProblemInfo pi, const bool clSinglePrecision, const int fVarIx, const int eVarIx)
+static ObserverInfo getObserverInfo_basic(const ProblemInfo pi, const int fVarIx, const int eVarIx)
 {
     ObserverInfo oi;
     oi.define="USE_OBSERVER_BASIC";
-    oi.observerDataSize=clSinglePrecision?sizeof(ObserverData_basic<float>):sizeof(ObserverData_basic<double>);
+    oi.observerDataSizeFloat=sizeof(ObserverData_basic<float>);
+    oi.observerDataSizeDouble=sizeof(ObserverData_basic<double>);
     std::string varName=pi.varNames[fVarIx];
     oi.featureNames={"max "+varName,"min "+varName,"mean "+varName,"max d"+varName+"/dt","min d"+varName+"/dt","stepcount"};
     return oi;
