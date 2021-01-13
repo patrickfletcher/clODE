@@ -20,7 +20,7 @@ classdef gridtool < handle %matlab.mixin.SetGet
         
         prob %read-only copy of the parseODE output (default values)
         %.par, parNames, var, varNames
-        parvar %working table of possible grid vars (par+var)
+        gridvars %working table of possible grid vars (par+var)
         %.name, value, lb, ub, type, ix
         trajvars %working table of possible trajectory varibles to plot
         %.name, type, ix
@@ -74,13 +74,16 @@ classdef gridtool < handle %matlab.mixin.SetGet
         NumericsTab             matlab.ui.container.Tab
         currentFileLabel        matlab.ui.control.Label
         SelectODEfileButton     matlab.ui.control.Button
+        
+        gridSolverParLabel      matlab.ui.control.Label
+        gridSolverParTable      matlab.ui.control.Table
         gridDeviceDropDownLabel   matlab.ui.control.Label
         gridDeviceDropDown      matlab.ui.control.DropDown
         gridPrecisionCheckBox   matlab.ui.control.CheckBox
         gridStepperDropDownLabel  matlab.ui.control.Label
         gridStepperDropDown     matlab.ui.control.DropDown
-        gridSolverParLabel      matlab.ui.control.Label
-        gridSolverParTable      matlab.ui.control.Table
+        gridBuildButton         matlab.ui.control.StateButton
+        
         gridObserverDropDownLabel   matlab.ui.control.Label
         gridObserverDropDown    matlab.ui.control.DropDown
         gridObserverParTable    matlab.ui.control.Table
@@ -93,6 +96,7 @@ classdef gridtool < handle %matlab.mixin.SetGet
         trajStepperDropDown     matlab.ui.control.DropDown
         trajPrecisionCheckBox   matlab.ui.control.CheckBox
         trajDeviceDropDown      matlab.ui.control.DropDown
+        trajBuildButton         matlab.ui.control.StateButton
         
         GridTab                 matlab.ui.container.Tab
         featureDropDownLabel    matlab.ui.control.Label
@@ -122,6 +126,8 @@ classdef gridtool < handle %matlab.mixin.SetGet
         zDropDown               matlab.ui.control.DropDown
         linkAxesButton          matlab.ui.control.StateButton
         threeDButton            matlab.ui.control.StateButton
+        
+%         HelpTab                 matlab.ui.container.Tab
     end
 
     % Callbacks that handle component events
@@ -194,7 +200,27 @@ classdef gridtool < handle %matlab.mixin.SetGet
             app.clo_t.setStepper(stepper);
             app.trajclInitialized=false;
         end
+        
+        % Value changed function: gridBuildButton
+        function gridBuildButtonValueChanged(app, src, event)
+            doBuild = app.gridBuildButton.Value;
+            if doBuild
+                app.gridBuildButton.BackgroundColor=[0.7,1,0.7];
+            else %normally this will be set by other callbacks with changes requiring new build
+                app.gridBuildButton.BackgroundColor=[1,0.7,0.7];
+            end
+        end
 
+    	% Value changed function: trajBuildButton
+        function trajBuildButtonValueChanged(app, src, event)
+            doBuild = app.trajBuildButton.Value;
+            if doBuild
+                app.trajBuildButton.BackgroundColor=[0.7,1,0.7];
+            else %normally this will be set by other callbacks with changes requiring new build
+                app.trajBuildButton.BackgroundColor=[1,0.7,0.7];
+            end
+        end
+        
         % Value changed function: gridObserverDropDown
         function gridObserverDropDownValueChanged(app, src, event)
             observer = app.gridObserverDropDown.Value;
@@ -344,17 +370,22 @@ classdef gridtool < handle %matlab.mixin.SetGet
     
     % clODE-UI interaction callbacks
     methods (Access = private)
-        
-        function makeGridData()
+        function gridKeyPress(app)
         end
         
-        function makeTrajData()
+        function trajKeyPress(app)
         end
         
-        function gridKeyPress()
+        function makeGridData(app)
         end
         
-        function trajKeyPress()
+        function makeTrajData(app)
+        end
+        
+        function integrateGrid(app)
+        end
+        
+        function integrateTraj(app)
         end
     end
     
@@ -424,13 +455,13 @@ classdef gridtool < handle %matlab.mixin.SetGet
             
             %valid grid variables
             icNames=strcat(app.prob.varNames(:),'0');
-            app.parvar=table;
-            app.parvar.name=[app.prob.parNames(:);icNames(:)];
-            app.parvar.value=[app.prob.p0(:);app.prob.x0(:)];
-            app.parvar.lb=[[app.prob.par.lb]';[app.prob.var.lb]'];
-            app.parvar.ub=[[app.prob.par.ub]';[app.prob.var.ub]'];
-            app.parvar.type=categorical([ones(app.prob.nPar,1);2*ones(app.prob.nVar,1)],[1,2],{'par','ic'});
-            app.parvar.ix=[(1:app.prob.nPar)';(1:app.prob.nVar)'];
+            app.gridvars=table;
+            app.gridvars.name=[app.prob.parNames(:);icNames(:)];
+            app.gridvars.value=[app.prob.p0(:);app.prob.x0(:)];
+            app.gridvars.lb=[[app.prob.par.lb]';[app.prob.var.lb]'];
+            app.gridvars.ub=[[app.prob.par.ub]';[app.prob.var.ub]'];
+            app.gridvars.type=categorical([ones(app.prob.nPar,1);2*ones(app.prob.nVar,1)],[1,2],{'par','ic'});
+            app.gridvars.ix=[(1:app.prob.nPar)';(1:app.prob.nVar)'];
             
             % trajectory variables
             app.trajvars=table;
@@ -439,13 +470,13 @@ classdef gridtool < handle %matlab.mixin.SetGet
             app.trajvars.ix=[(1:app.prob.nVar)';(1:app.prob.nAux)'];
             
             %set up initial default grid
-            app.grid.name=categorical(app.parvar.name(1:3),app.parvar.name);
-            app.grid.lb=app.parvar.lb(1:3);
-            app.grid.ub=app.parvar.ub(1:3);
+            app.grid.name=categorical(app.gridvars.name(1:3),app.gridvars.name);
+            app.grid.lb=app.gridvars.lb(1:3);
+            app.grid.ub=app.gridvars.ub(1:3);
             %compute dels
             for i=1:3
-                ix=app.parvar.name==app.grid.name(i);
-                app.grid.del(i)=(app.parvar.ub(ix)-app.parvar.lb(ix))/(app.grid.N(i)-1);
+                ix=app.gridvars.name==app.grid.name(i);
+                app.grid.del(i)=(app.gridvars.ub(ix)-app.gridvars.lb(ix))/(app.grid.N(i)-1);
             end
             app.gridTable.Data=app.grid;
 %             app.gridTable.Data=app.grid(:,{'name','N','del'});
@@ -453,10 +484,10 @@ classdef gridtool < handle %matlab.mixin.SetGet
             app.axGrid.YAxis.Label.String=app.grid.name(2);
             
             %parameter table
-            app.parTable.Data=app.parvar(app.parvar.type=="par",{'name','value','lb','ub'});
+            app.parTable.Data=app.gridvars(app.gridvars.type=="par",{'name','value','lb','ub'});
             
             %ic table
-            app.icTable.Data=app.parvar(app.parvar.type=="ic",{'name','value','lb','ub'});
+            app.icTable.Data=app.gridvars(app.gridvars.type=="ic",{'name','value','lb','ub'});
             
             %trajectory
             app.xDropDown.Items=[{'t'};app.trajvars.name];
@@ -580,6 +611,14 @@ classdef gridtool < handle %matlab.mixin.SetGet
             app.gridSolverParTable.CellEditCallback = @app.gridSolverParTableCellEdit;
             app.gridSolverParTable.Position = [13 355 150 145];
             
+            % Create gridBuildButton
+            app.gridBuildButton = uibutton(app.NumericsTab, 'state');
+            app.gridBuildButton.ValueChangedFcn = @app.gridBuildButtonValueChanged;
+            app.gridBuildButton.Text = 'Build';
+            app.gridBuildButton.Value=0;
+            app.gridBuildButton.BackgroundColor=[1,.7,.7];
+            app.gridBuildButton.Position = [217 355 69 22];
+            
 
             % Create gridObserverParLabel
             app.gridObserverParLabel = uilabel(app.NumericsTab);
@@ -646,6 +685,13 @@ classdef gridtool < handle %matlab.mixin.SetGet
             app.trajSolverParTable.CellEditCallback = @app.trajSolverParTableCellEdit;
             app.trajSolverParTable.Position = [15 15 150 145];
             
+            % Create trajBuildButton
+            app.trajBuildButton = uibutton(app.NumericsTab, 'state');
+            app.trajBuildButton.ValueChangedFcn = @app.trajBuildButtonValueChanged;
+            app.trajBuildButton.Text = 'Build';
+            app.trajBuildButton.Value=0;
+            app.trajBuildButton.BackgroundColor=[1,.7,.7];
+            app.trajBuildButton.Position = [217 15 69 22];
 
             % Create GridTab
             app.GridTab = uitab(app.TabGroup);
@@ -816,6 +862,11 @@ classdef gridtool < handle %matlab.mixin.SetGet
             app.threeDButton.Text = '3D';
             app.threeDButton.Position = [227 7 55 22];
             
+            
+%             app.HelpTab = uitab(app.TabGroup);
+%             app.HelpTab.Title = 'Usage';
+            
+            
             app.figControl.Visible = 'on';
             
         end
@@ -823,7 +874,7 @@ classdef gridtool < handle %matlab.mixin.SetGet
         function createGridFig(app)
             % Create figGrid and hide until all components are created
             app.figGrid = figure('Visible', 'off');
-            app.figGrid.Position = [375 400 600 600];
+            app.figGrid.Position = [375 450 600 600];
             app.figGrid.Name = 'grid';
             
             % grid axis
