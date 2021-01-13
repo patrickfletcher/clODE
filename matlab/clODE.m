@@ -158,6 +158,11 @@ classdef clODE < cppclass & matlab.mixin.SetGet
             end
         end
         
+        %build the OpenCL program with selected precision, stepper, prob
+        function buildCL(obj)
+            obj.cppmethod('buildcl');
+        end
+        
         %initialize builds the program and sets data needed to run
         %simulation in one call
         function initialize(obj, tspan, X0, P, sp)
@@ -172,10 +177,10 @@ classdef clODE < cppclass & matlab.mixin.SetGet
         
         %Set X0 and P together if trying to change nPts
         function setProblemData(obj, X0, P)
+            obj.cppmethod('setproblemdata', X0(:), P(:));
             obj.X0=X0;
             obj.P=P;
             obj.nPts=numel(X0)/obj.prob.nVar;
-            obj.cppmethod('setproblemdata', X0(:), P(:));
         end
         
         
@@ -189,16 +194,16 @@ classdef clODE < cppclass & matlab.mixin.SetGet
         
         
         function settspan(obj, tspan)
-            obj.tspan=tspan;
             obj.cppmethod('settspan', tspan);
+            obj.tspan=tspan;
         end
         
         %nPts cannot change here
         function setX0(obj, X0)
             testnPts=numel(X0)/obj.prob.nVar;
-            if testnPts==obj.nPts
-                obj.X0=X0;
+            if testnPts==obj.nPts %this check is redundant: c++ does it too
                 obj.cppmethod('setx0', X0(:));
+                obj.X0=X0;
             else
                 error('Size of X0 is incorrect');
             end
@@ -208,16 +213,16 @@ classdef clODE < cppclass & matlab.mixin.SetGet
         function setP(obj, P)
             testnPts=numel(P)/obj.prob.nPar;
             if testnPts==obj.nPts
-                obj.P=P;
                 obj.cppmethod('setpars', P(:));
+                obj.P=P;
             else
                 error('Size of P is incorrect');
             end
         end
         
-        function setsp(obj, sp)
-            obj.sp=sp;
+        function setSolverPars(obj, sp)
             obj.cppmethod('setsolverpars', sp);
+            obj.sp=sp;
         end
         
         % Integration

@@ -76,22 +76,18 @@ classdef clODEfeatures<clODE & matlab.mixin.SetGet
         end
         
         function setObserverPars(obj, op)
-            if ~isequal(op,obj.op)
-                obj.op=op;
-                obj.cppmethod('setobserverpars', op);
-            end
+            obj.op=op;
+            obj.cppmethod('setobserverpars', op);
         end
         
         function setObserver(obj, newObserver)
-            if ~strcmp(newObserver,obj.observer)
-                if ismember(newObserver,obj.observerNames)
-                    obj.observer=newObserver;
-                    obj.cppmethod('setobserver', newObserver);
-                    obj.featureNames();
-                    obj.getNFeatures();
-                else
-                    error(['undefined observer: ' newObserver]);
-                end
+            if ismember(newObserver,obj.observerNames)
+                obj.observer=newObserver;
+                obj.cppmethod('setobserver', newObserver);
+                obj.featureNames();
+                obj.getNFeatures();
+            else
+                error(['undefined observer: ' newObserver]);
             end
         end
         

@@ -24,18 +24,15 @@
 #include <stdio.h>
 
 //constructor sets problem info and builds the base clprogramstring
+
+// CLODE::CLODE()
+// {
+	// clprogramstring = read_file(clodeRoot + "transient.cl");
+// }
+
 CLODE::CLODE(ProblemInfo prob, std::string stepper, bool clSinglePrecision, OpenCLResource opencl)
-	: nPts(0), clodeRoot(CLODE_ROOT), nRNGstate(2)
 {
-	//printf("\nCLODE base class constructor\n");
-
 	getStepperDefineMap(stepperDefineMap, availableSteppers); //from steppers.cl
-
-	// for (auto s : availableSteppers)
-	// {
-	// 	printf("%s\n",s.c_str());
-	// }
-
 	setNewProblem(prob);
 	setStepper(stepper);
 	setPrecision(clSinglePrecision);
@@ -46,17 +43,8 @@ CLODE::CLODE(ProblemInfo prob, std::string stepper, bool clSinglePrecision, Open
 }
 
 CLODE::CLODE(ProblemInfo prob, std::string stepper, bool clSinglePrecision, unsigned int platformID, unsigned int deviceID)
-	: nPts(0), clodeRoot(CLODE_ROOT), nRNGstate(2)
 {
-	//printf("\nCLODE base class constructor\n");
-
 	getStepperDefineMap(stepperDefineMap, availableSteppers); //from steppers.cl
-
-	// for (auto s : availableSteppers)
-	// {
-	// 	printf("%s\n",s.c_str());
-	// }
-
 	setNewProblem(prob);
 	setStepper(stepper);
 	setPrecision(clSinglePrecision);
@@ -85,31 +73,31 @@ void CLODE::setNewProblem(ProblemInfo newProb)
 
 void CLODE::setStepper(std::string newStepper)
 {
-	if (newStepper!=stepper)
+	// if (newStepper!=stepper)
+	// {
+	auto loc = stepperDefineMap.find(newStepper); //from steppers.cl
+	if ( loc != stepperDefineMap.end() )
 	{
-		auto loc = stepperDefineMap.find(newStepper); //from steppers.cl
-		if ( loc != stepperDefineMap.end() )
-		{
-			stepper = newStepper;
-			clInitialized = false;
-		}
-		else
-		{
-			printf("Warning: unknown stepper: %s. Stepper method unchanged\n",newStepper.c_str());
-		}
-		dbg_printf("set stepper\n");	
+		stepper = newStepper;
+		clInitialized = false;
 	}
+	else
+	{
+		printf("Warning: unknown stepper: %s. Stepper method unchanged\n",newStepper.c_str());
+	}
+	dbg_printf("set stepper\n");	
+	// }
 }
 
 void CLODE::setPrecision(bool newPrecision)
 {
-	if (newPrecision != clSinglePrecision)
-	{
-		clSinglePrecision = newPrecision;
-		realSize = newPrecision ? sizeof(cl_float) : sizeof(cl_double);
-		clInitialized = false;
-		dbg_printf("set precision\n");
-	}
+	// if (newPrecision != clSinglePrecision)
+	// {
+	clSinglePrecision = newPrecision;
+	realSize = newPrecision ? sizeof(cl_float) : sizeof(cl_double);
+	clInitialized = false;
+	dbg_printf("set precision\n");
+	// }
 }
 
 void CLODE::setOpenCL(OpenCLResource newOpencl)
@@ -200,6 +188,7 @@ void CLODE::buildCL()
 		printf("ERROR in CLODE::initializeTransientKernel(): %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
 		throw er;
 	}
+	clInitialized = false;
 	dbg_printf("buildCL\n");
 }
 
@@ -207,11 +196,9 @@ void CLODE::buildCL()
 void CLODE::initialize(std::vector<cl_double> newTspan, std::vector<cl_double> newX0, std::vector<cl_double> newPars, SolverParams<cl_double> newSp)
 {
 	clInitialized = false;
-	//(re)build the program
-	buildCL();
 
-	setProblemData(newX0, newPars); //will call setNpts
 	setTspan(newTspan);
+	setProblemData(newX0, newPars); //will call setNpts
 	setSolverParams(newSp);
 
 	clInitialized = true;

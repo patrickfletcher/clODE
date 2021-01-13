@@ -57,6 +57,7 @@ void CLODEtrajectory::buildCL()
 		printf("ERROR in CLODEtrajectory::initializeTrajectoryKernel(): %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
 		throw er;
 	}
+	clInitialized = false;
 	dbg_printf("initialize trajectory kernel\n");
 }
 
@@ -65,14 +66,12 @@ void CLODEtrajectory::initialize(std::vector<cl_double> newTspan, std::vector<cl
 {
 
 	clInitialized = false;
-	//(re)build the program
-	buildCL();
 
-	setProblemData(newX0, newPars); //will set nPts
 	setTspan(newTspan);
+	setProblemData(newX0, newPars); //will set nPts
 	setSolverParams(newSp);
-
-	resizeTrajectoryVariables(); //set up output variables too, which depend on nPts and nStoreMax=(tspan[1]-tspan[0])/(sp.dt*sp.nout)+1
+	//set up output variables, depends on sp.max_store, nPts, nVar, nAux
+	resizeTrajectoryVariables(); 
 
 	clInitialized = true;
 	dbg_printf("initialize clODEfeatures\n");

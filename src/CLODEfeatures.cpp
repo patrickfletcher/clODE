@@ -43,6 +43,7 @@ CLODEfeatures::~CLODEfeatures() {}
 // build program and create kernel objects - requires host variables to be set (specifically observerBuildOpts)
 void CLODEfeatures::buildCL()
 {
+	observerBuildOpts=" -D" + observerDefineMap.at(observer).define;
 	buildProgram(observerBuildOpts);
 
 	//set up the kernels
@@ -64,24 +65,23 @@ void CLODEfeatures::buildCL()
 		throw er;
 	}
 	dbg_printf("initialize features kernel\n");
+
+	clInitialized = false;
+	printf("Using observer: %s\n",observer.c_str());
 }
 
 //initialize everything
 void CLODEfeatures::initialize(std::vector<cl_double> newTspan, std::vector<cl_double> newX0, std::vector<cl_double> newPars, SolverParams<cl_double> newSp, ObserverParams<cl_double> newOp)
 {
 	clInitialized = false;
-
-	//(re)build the program
-	buildCL();
-
-	setProblemData(newX0, newPars); //will set nPts
-	resizeFeaturesVariables(); //set up d_F and d_odata too, which depend on nPts
+	//at the time of initialize, make sure observerDataSize and nFeatures are up to date (for d_F, d_odata)
+	updateObserverDefineMap(); 
 
 	setTspan(newTspan);
+	setProblemData(newX0, newPars); //will set nPts
+	resizeFeaturesVariables(); //set up d_F and d_odata too, which depend on nPts
 	setSolverParams(newSp);
 	setObserverParams(newOp);
-
-	printf("Using observer: %s\n",observer.c_str());
 
 	doObserverInitialization = true;
 	clInitialized = true;

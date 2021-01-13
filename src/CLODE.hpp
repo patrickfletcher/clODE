@@ -63,7 +63,7 @@ protected:
     ProblemInfo prob;
     std::string clRHSfilename;
     cl_int nVar, nPar, nAux, nWiener;
-    cl_int nPts;
+    cl_int nPts = 1;
 
     //Stepper specification
     // StepperType stepper;
@@ -76,9 +76,9 @@ protected:
 
     //Compute device(s)
     OpenCLResource opencl;
-    const std::string clodeRoot;
+    const std::string clodeRoot = CLODE_ROOT;
 
-    cl_int nRNGstate; //TODO: different RNGs could be selected like steppers...?
+    cl_int nRNGstate = 2; //TODO: different RNGs could be selected like steppers...?
 
     SolverParams<cl_double> sp;
     std::vector<cl_double> tspan, x0, pars, xf, dt;
@@ -107,9 +107,10 @@ protected:
 
 public:
     //for now, require all arguments. TODO: convenience constructors?
+    // CLODE(); //must follow with all set functions to use
+    // CLODE(unsigned int platformID, unsigned int deviceID); //specify device only
     CLODE(ProblemInfo prob, std::string stepper, bool clSinglePrecision, OpenCLResource opencl);
     CLODE(ProblemInfo prob, std::string stepper, bool clSinglePrecision, unsigned int platformID, unsigned int deviceID);
-    //~ CLODE(); //must follow with all set functions to use
     //~ CLODE(ProblemInfo prob); //set stepper, precision, and opencl
     //~ CLODE(ProblemInfo prob, StepperType stepper=rungeKutta4, bool clSinglePrecision=true, OpenCLResource opencl=OpenCLResource()); //alt: use defaults?
     ~CLODE();
