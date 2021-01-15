@@ -24,6 +24,7 @@ classdef clODE < cppclass & matlab.mixin.SetGet
         sp
         tspan
         
+        clBuilt=false
         clInitialized=false
         
         tscale=1 %should go in IVP  
@@ -117,6 +118,7 @@ classdef clODE < cppclass & matlab.mixin.SetGet
             if ~strcmp(prob,obj.prob)
                 obj.prob=prob;
                 obj.cppmethod('setnewproblem', prob);
+                obj.clBuilt=false;
                 obj.clInitialized=false;
             end
         end
@@ -126,6 +128,7 @@ classdef clODE < cppclass & matlab.mixin.SetGet
             if ~strcmp(newStepper,obj.stepper)
                 obj.stepper=newStepper;
                 obj.cppmethod('setstepper', newStepper);
+                obj.clBuilt=false;
                 obj.clInitialized=false;
             end
         end
@@ -145,6 +148,7 @@ classdef clODE < cppclass & matlab.mixin.SetGet
                         error('Precision must be set to ''single'' or ''double''')
                 end
                 obj.cppmethod('setprecision', clSinglePrecision);
+                obj.clBuilt=false;
                 obj.clInitialized=false;
             end
         end
@@ -154,6 +158,7 @@ classdef clODE < cppclass & matlab.mixin.SetGet
             if newDevice~=obj.selectedDevice && newDevice<=length(obj.devices)
                 obj.selectedDevice=newDevice;
                 obj.cppmethod('setopencl', obj.devices(newDevice).platformID, obj.devices(newDevice).deviceID);
+                obj.clBuilt=false;
                 obj.clInitialized=false;
             end
         end
@@ -161,11 +166,15 @@ classdef clODE < cppclass & matlab.mixin.SetGet
         %build the OpenCL program with selected precision, stepper, prob
         function buildCL(obj)
             obj.cppmethod('buildcl');
+            obj.clBuilt=true;
         end
         
         %initialize builds the program and sets data needed to run
         %simulation in one call
         function initialize(obj, tspan, X0, P, sp)
+            if ~exist('tspan','var') %no input args: use stored values
+                tspan=obj.tspan; X0=obj.X0; P=obj.P; sp=obj.sp;
+            end
             obj.cppmethod('initialize', tspan, X0(:), P(:), sp);
             obj.tspan=tspan;
             obj.X0=X0;
@@ -227,6 +236,9 @@ classdef clODE < cppclass & matlab.mixin.SetGet
         
         % Integration
         function Xf=transient(obj, tspan)
+            if ~obj.clBuilt
+                error('OpenCL program not built. run buildCL')
+            end
             if exist('tspan','var')
                 obj.settspan(tspan);
             end

@@ -7,6 +7,10 @@ clo=clODE(odefile,precision);
 % clo.stepper='seuler'; %default='dopri5'
 % clo.selectDevice(); %{'type','gpu'}, {'vendor','nvidia'}, {platID,devID}, 'maxComputeUnits','maxClock' 
 
+%select ode problem (clo.prob), stepper, precision before building on
+%current device
+clo.buildCL();
+
 %solver parameters
 sp=clODE.defaultSolverParams();%create required ODE solver parameter struct
 % sp.dt=0.1;

@@ -18,18 +18,15 @@ classdef gridtool < handle %matlab.mixin.SetGet
         traj_device
         clo_t %clODE trajectory solver
         
-        prob %read-only copy of the parseODE output (default values)
-        %.par, parNames, var, varNames
-        gridvars %working table of possible grid vars (par+var)
-        %.name, value, lb, ub, type, ix
-        trajvars %working table of possible trajectory varibles to plot
+        prob %read-only copy of the parseODE output
+   
+        trajvars %table of possible trajectory varibles (for easier lookup)
         %.name, type, ix
-        
-        grid=table('Size',[3,5],'VariableTypes',{'categorical','double','double','double','double'},...
-                'VariableNames',{'name','lb','ub','N','del'},'RowNames',{'x';'y';'z'}); 
             
-        nGrid=[32;32;10] %nPts in x, y, z dims: x,y is the 2D integration plane with nPts=nGrid(1)*nGrid(2)
-        P %base parameter matrix with p0 replicated nPts times [nPts, nPar]
+        nGrid=[32,32] %nPts in x, y dims
+        nZ=10
+        nPts=1024
+        P0 %base parameter matrix with p0 replicated nPts times [nPts, nPar]
         X0 %base ic matrix with x0 replicated nPts times
         
         nClick=3
@@ -38,33 +35,59 @@ classdef gridtool < handle %matlab.mixin.SetGet
         
     end
     
+    %data needed to display graphs: set-observable, so that whenever these
+    %change, triggers update to relevant figure.
+    properties %(setObservable = true)
+        %should gridvars go here? update gridvars-->makeGridData & makeTrajData
+        grid %struct specifying grid x, y, z info (name, N, del, vals)
+        gridvars %working table of possible grid vars (par+var) with values
+        gridSol=struct('x',[],'y',[],'F',[]);
+        trajP0Sol=struct('t',[],'x',[],'aux',[]); %struct for p0 trajectory data
+        trajClickSol=struct('t',[],'x',[],'aux',[]); %array of nClick structs for pQuery trajectory data
+    end
+    
+    %listeners
+    properties (Access = private)
+        listenerGridData
+        listenerTrajP0
+        listenerTrajClick
+    end
+    
     % Properties that correspond to UI components
     properties (Access = public)
         
         %UI state
+        gridclBuilt=false %flag to indicate if OpenCL program is built
+        trajclBuilt=false
         gridclInitialized=false %flag to indicate if ready for integration
         trajclInitialized=false
-        solutionIsCurrent=false %flag to indicate need for new solution
+        
+        % change in grid, par.value, x0.value, sp, op => solution not current
+        gridIsCurrent=false  %flag to indicate need for new solution
+        trajP0SolIsCurrent=false
+        trajClickIsCurrent=false
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %grid figure
         figGrid                 
-        axGrid
-        imGrid %image handle for feature on grid
+        axGrid                  matlab.graphics.axis.Axes
+        imGrid                  matlab.graphics.primitive.Image
+        gridCBar
         markerP0 %marker (line object) specifying (x,y) for p0
         markerPquery %markers (line objects) specifying (x,y) for n query trajectories
 
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %figure with p0 trajectory
         figTrajP0               
-        axTrajP0
-        trajP0=struct('t',[],'x',[],'aux',[]); %trajectory struct for p0
+        axTrajP0                matlab.graphics.axis.Axes
+        lineTrajP0              matlab.graphics.chart.primitive.Line  %could be array of two if yyaxis
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %click trajectory figure with n trajectories
-        figTrajClick            
-        axTrajClick
-        trajClick=struct('t',[],'x',[],'aux',[]); %array of trajectory struct for pQuery
+        figTrajClick  
+        tilesTrajClick
+        axTrajClick             matlab.graphics.axis.Axes
+        lineTrajClick           matlab.graphics.chart.primitive.Line  %could be array of 2*nClick if yyaxis
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %control figure
@@ -72,47 +95,47 @@ classdef gridtool < handle %matlab.mixin.SetGet
         TabGroup                matlab.ui.container.TabGroup
         
         NumericsTab             matlab.ui.container.Tab
-        currentFileLabel        matlab.ui.control.Label
+        
         SelectODEfileButton     matlab.ui.control.Button
+        currentFileLabel        matlab.ui.control.Label
+        
+        gridDeviceDropDownLabel   matlab.ui.control.Label
+        gridDeviceDropDown        matlab.ui.control.DropDown
+        gridPrecisionCheckBox     matlab.ui.control.CheckBox
+        gridStepperDropDownLabel  matlab.ui.control.Label
+        gridStepperDropDown       matlab.ui.control.DropDown
+        gridObserverDropDownLabel matlab.ui.control.Label
+        gridObserverDropDown      matlab.ui.control.DropDown
+        gridCLIsBuiltButton       matlab.ui.control.StateButton
+        
+        trajDeviceDropDownLabel   matlab.ui.control.Label
+        trajStepperDropDownLabel  matlab.ui.control.Label
+        trajStepperDropDown       matlab.ui.control.DropDown
+        trajPrecisionCheckBox     matlab.ui.control.CheckBox
+        trajDeviceDropDown        matlab.ui.control.DropDown
+        trajCLIsBuiltButton       matlab.ui.control.StateButton
         
         gridSolverParLabel      matlab.ui.control.Label
         gridSolverParTable      matlab.ui.control.Table
-        gridDeviceDropDownLabel   matlab.ui.control.Label
-        gridDeviceDropDown      matlab.ui.control.DropDown
-        gridPrecisionCheckBox   matlab.ui.control.CheckBox
-        gridStepperDropDownLabel  matlab.ui.control.Label
-        gridStepperDropDown     matlab.ui.control.DropDown
-        gridBuildButton         matlab.ui.control.StateButton
-        
-        gridObserverDropDownLabel   matlab.ui.control.Label
-        gridObserverDropDown    matlab.ui.control.DropDown
-        gridObserverParTable    matlab.ui.control.Table
-        gridObserverParLabel    matlab.ui.control.Label
-        
         trajSolverParTable      matlab.ui.control.Table
         trajSolverParLabel      matlab.ui.control.Label
-        trajDeviceDropDownLabel   matlab.ui.control.Label
-        trajStepperDropDownLabel  matlab.ui.control.Label
-        trajStepperDropDown     matlab.ui.control.DropDown
-        trajPrecisionCheckBox   matlab.ui.control.CheckBox
-        trajDeviceDropDown      matlab.ui.control.DropDown
-        trajBuildButton         matlab.ui.control.StateButton
+        gridObserverParTable    matlab.ui.control.Table
+        gridObserverParLabel    matlab.ui.control.Label
         
         GridTab                 matlab.ui.container.Tab
         featureDropDownLabel    matlab.ui.control.Label
         featureDropDown         matlab.ui.control.DropDown
         fscaleEditFieldLabel    matlab.ui.control.Label
         fscaleEditField         matlab.ui.control.NumericEditField
-        t0EditFieldLabel        matlab.ui.control.Label
-        t0EditField             matlab.ui.control.NumericEditField
-        tfEditFieldLabel        matlab.ui.control.Label
-        tfEditField             matlab.ui.control.NumericEditField
+        
         gridTable               matlab.ui.control.Table
+        tspanTable              matlab.ui.control.Table
         parLabel                matlab.ui.control.Label
         parTable                matlab.ui.control.Table
-        parDefaultButton        matlab.ui.control.Button
         icLabel                 matlab.ui.control.Label
         icTable                 matlab.ui.control.Table
+        
+        parDefaultButton        matlab.ui.control.Button
         icDefaultButton         matlab.ui.control.Button
         icRandomButton          matlab.ui.control.Button
         trajectoriesLabel       matlab.ui.control.Label
@@ -201,26 +224,6 @@ classdef gridtool < handle %matlab.mixin.SetGet
             app.trajclInitialized=false;
         end
         
-        % Value changed function: gridBuildButton
-        function gridBuildButtonValueChanged(app, src, event)
-            doBuild = app.gridBuildButton.Value;
-            if doBuild
-                app.gridBuildButton.BackgroundColor=[0.7,1,0.7];
-            else %normally this will be set by other callbacks with changes requiring new build
-                app.gridBuildButton.BackgroundColor=[1,0.7,0.7];
-            end
-        end
-
-    	% Value changed function: trajBuildButton
-        function trajBuildButtonValueChanged(app, src, event)
-            doBuild = app.trajBuildButton.Value;
-            if doBuild
-                app.trajBuildButton.BackgroundColor=[0.7,1,0.7];
-            else %normally this will be set by other callbacks with changes requiring new build
-                app.trajBuildButton.BackgroundColor=[1,0.7,0.7];
-            end
-        end
-        
         % Value changed function: gridObserverDropDown
         function gridObserverDropDownValueChanged(app, src, event)
             observer = app.gridObserverDropDown.Value;
@@ -228,13 +231,75 @@ classdef gridtool < handle %matlab.mixin.SetGet
             app.gridclInitialized=false;
         end
 
+        % Value changed function: gridCLIsBuiltButton (doesn't execute for
+        % programmatic changes)
+        function gridCLIsBuiltButtonValueChanged(app, src, event)
+            isBuilt = app.gridCLIsBuiltButton.Value;
+            if ~isBuilt
+                app.buildCL('grid');
+            end
+        end
+
+    	% Value changed function: trajCLIsBuiltButton (doesn't execute for
+        % programmatic changes)
+        function trajCLIsBuiltButtonValueChanged(app, src, event)
+            isBuilt = app.trajCLIsBuiltButton.Value;
+            if ~isBuilt
+                app.buildCL('traj');
+            end
+        end
+
+        % helper functions for build/build needed
+        function buildCL(app,which_clo)
+            switch which_clo
+                case 'grid'
+                    app.clo_g.buildCL();
+                    app.gridCLIsBuiltButton.Value = 1;
+                    app.gridCLIsBuiltButton.Text = 'CL ready';
+                    app.gridCLIsBuiltButton.BackgroundColor=[0.7,1,0.7];
+                case 'traj'
+                    app.clo_t.buildCL();
+                    app.trajCLIsBuiltButton.Value = 1;
+                    app.trajCLIsBuiltButton.Text = 'CL ready';
+                    app.trajCLIsBuiltButton.BackgroundColor=[0.7,1,0.7];
+            end
+        end
+        
+        function setBuildNeeded(app,which_clo)
+            switch which_clo
+                case 'grid'
+                    app.gridCLIsBuiltButton.Value = 0;
+                    app.gridCLIsBuiltButton.Text = 'Build CL';
+                    app.gridCLIsBuiltButton.BackgroundColor=[1,0.7,0.7];
+                case 'traj'
+                    app.trajCLIsBuiltButton.Value = 0;
+                    app.trajCLIsBuiltButton.Text = 'Build CL';
+                    app.trajCLIsBuiltButton.BackgroundColor=[1,0.7,0.7];
+            end
+        end
+        
+        
         % Cell edit callback: gridSolverParTable
         function gridSolverParTableCellEdit(app, src, event)
             indices = event.Indices;
             newData = event.NewData;
             thisfield=src.DisplayData.Properties.RowNames{indices(1)};
             if isnumeric(newData) && newData>0
-                app.clo_g.sp.(thisfield)=newData;
+                sp=app.clo_g.sp;
+                sp.(thisfield)=newData;
+                app.clo_g.setSolverPars(sp); %do the device transfer (could clean this up if clODE had set.sp)
+            end
+        end
+
+        % Cell edit callback: trajSolverParTable
+        function trajSolverParTableCellEdit(app, src, event)
+            indices = event.Indices;
+            newData = event.NewData;
+            thisfield=src.DisplayData.Properties.RowNames{indices(1)};
+            if isnumeric(newData) && newData>0
+                sp=app.clo_t.sp;
+                sp.(thisfield)=newData;
+                app.clo_t.setSolverPars(sp);
             end
         end
 
@@ -245,29 +310,22 @@ classdef gridtool < handle %matlab.mixin.SetGet
             thisfield=src.DisplayData.Properties.RowNames{indices(1)};
             if isnumeric(newData) && newData>0
                 app.clo_g.op.(thisfield)=newData;
-            end
-        end
-
-        % Cell edit callback: trajSolverParTable
-        function trajSolverParTableCellEdit(app, src, event)
-            indices = event.Indices;
-            newData = event.NewData;
-            thisfield=src.DisplayData.Properties.RowNames{indices(1)};
-            if isnumeric(newData) && newData>0
-                app.clo_t.sp.(thisfield)=newData;
+                op=app.clo_g.op;
+                op.(thisfield)=newData;
+                app.clo_g.setObserverPars(op);
             end
         end
 
         % Value changed function: featureDropDown
         function featureDropDownValueChanged(app, src, event)
             newFeature = app.featureDropDown.Value;
-            
+            %trigger update grid
         end
 
         % Value changed function: fscaleEditField
         function fscaleEditFieldValueChanged(app, src, event)
             newFscale = app.fscaleEditField.Value;
-            
+            %trigger update grid
         end
 
         % Value changed function: t0EditField
@@ -368,8 +426,9 @@ classdef gridtool < handle %matlab.mixin.SetGet
         end
     end
     
-    % clODE-UI interaction callbacks
+    % internal functions (clODE control & ui interaction)
     methods (Access = private)
+        
         function gridKeyPress(app)
         end
         
@@ -377,20 +436,47 @@ classdef gridtool < handle %matlab.mixin.SetGet
         end
         
         function makeGridData(app)
+            newP=app.P0;
+            newX0=app.X0;
+            
+            vals={};
+            for i=1:3
+                vals{i,1}=linspace(app.grid.lb(1),app.grid.ub(1),app.nGrid(1));
+            end
+            app.grid.vals=vals;
+            [X,Y]=meshgrid(x,y);
+            
+            if app.grid{'x','type'}=="par"
+                newP(:,app.grid{'x','ix'})=X(:);
+            else
+                newX0(:,app.grid{'x','ix'})=X(:);
+            end
+            if app.grid{'y','type'}=="par"
+                newP(:,app.grid{'y','ix'})=Y(:);
+            else
+                newX0(:,app.grid{'y','ix'})=Y(:);
+            end
         end
         
-        function makeTrajData(app)
+        function makeTrajData(app, clickCoords)
         end
         
         function integrateGrid(app)
+%             app.clo_g.initialize(); %send all data to GPU.   NO: assume it is stored prior to this
+
         end
         
         function integrateTraj(app)
         end
-    end
-    
-    % helper functions
-    methods (Access = private)
+        
+        function updateGridPlot(app)
+        end
+        
+        function updateTrajP0Plot(app)
+        end
+        
+        function updateTrajClickPlot(app)
+        end
         
         function processNewODEfile(app, odefile, firstTime)
             
@@ -410,48 +496,59 @@ classdef gridtool < handle %matlab.mixin.SetGet
             %If first time, set up clODE objects using their default parameters
             if firstTime
                 app.clo_g=clODEfeatures(app.prob, [], app.grid_device);
+                app.clo_t=clODEtrajectory(app.prob, [], app.traj_device);
+                
                 app.gridObserverDropDown.Items=app.clo_g.observerNames;
                 app.gridObserverDropDown.Value=app.clo_g.observer;
-                
-                app.clo_t=clODEtrajectory(app.prob, [], app.traj_device);
-            
                 app.gridStepperDropDown.Items=app.clo_g.getAvailableSteppers();
                 app.gridStepperDropDown.Value=app.clo_g.stepper;
                 app.trajStepperDropDown.Items=app.clo_t.getAvailableSteppers();
                 app.trajStepperDropDown.Value=app.clo_t.stepper;
                 
-                defaultsp=clODE.defaultSolverParams();
+                defaultsp=clODE.defaultSolverParams(); %app.clo_g.sp
                 sptable=table('RowNames',fieldnames(defaultsp));
                 sptable.value=cell2mat(struct2cell(defaultsp));
                 app.gridSolverParTable.Data=sptable;
                 app.trajSolverParTable.Data=sptable;
-%                 app.clo_g.setsp(defaultsp); %this is done later in init
-%                 app.clo_t.setsp(defaultsp); 
+%                 app.clo_g.setSolverPars(sptable); %this is done later in init
+%                 app.clo_t.setSolverPars(sptable); 
             
-                defaultop=clODEfeatures.defaultObserverParams();
+                defaultop=clODEfeatures.defaultObserverParams(); %app.clo_g.op
                 optable=table('RowNames',fieldnames(defaultop));
                 optable.value=cell2mat(struct2cell(defaultop));
                 app.gridObserverParTable.Data=optable;
                 app.gridObserverParTable.RowName=fieldnames(defaultop);
-%                 app.clo_g.setop(defaultop); %this is done later in init
+%                 app.clo_g.setObserverPars(defaultop); %this is done later in init
                 
                 app.featureDropDown.Items=app.clo_g.featureNames();
                 
-                app.grid.N=app.nGrid;
-            else
+            else %to avoid reverting to default sp and op:
                 app.clo_g.setNewProblem(app.prob);
                 app.clo_t.setNewProblem(app.prob);
             end
+            app.buildCL('grid');
+            app.buildCL('traj');
+            
             app.gridclInitialized=false;
             app.trajclInitialized=false;
+            
+            %solver opts from ODE file
+            dt=app.prob.opt.dt;
+            %dtmax, abstol/reltol, nout, maxstore?
+            app.gridSolverParTable.Data{'dt','value'}=dt;
+            app.trajSolverParTable.Data{'dt','value'}=dt;
             
             %tspan
             t0=app.prob.opt.t0;
             tf=app.prob.opt.total;
             app.clo_g.settspan([t0,tf]); %device transfer - defer to init
             app.clo_t.settspan([t0,tf]); %device transfer
-            app.t0EditField.Value=t0;
-            app.tfEditField.Value=tf;
+            
+            tspan=table;
+            tspan.t0=[t0;t0];
+            tspan.tf=[tf;tf];
+            tspan.trans=[tf;tf];
+            app.tspanTable.Data=tspan;
             
             %valid grid variables
             icNames=strcat(app.prob.varNames(:),'0');
@@ -462,40 +559,53 @@ classdef gridtool < handle %matlab.mixin.SetGet
             app.gridvars.ub=[[app.prob.par.ub]';[app.prob.var.ub]'];
             app.gridvars.type=categorical([ones(app.prob.nPar,1);2*ones(app.prob.nVar,1)],[1,2],{'par','ic'});
             app.gridvars.ix=[(1:app.prob.nPar)';(1:app.prob.nVar)'];
+            app.gridvars.Properties.RowNames=app.gridvars.name;
             
             % trajectory variables
             app.trajvars=table;
             app.trajvars.name=[app.prob.varNames(:);app.prob.auxNames(:)];
             app.trajvars.type=categorical([ones(app.prob.nVar,1);2*ones(app.prob.nAux,1)],[1,2],{'var','aux'});
             app.trajvars.ix=[(1:app.prob.nVar)';(1:app.prob.nAux)'];
+            app.trajvars.Properties.RowNames=app.trajvars.name;
             
-            %set up initial default grid
-            app.grid.name=categorical(app.gridvars.name(1:3),app.gridvars.name);
-            app.grid.lb=app.gridvars.lb(1:3);
-            app.grid.ub=app.gridvars.ub(1:3);
-            %compute dels
-            for i=1:3
-                ix=app.gridvars.name==app.grid.name(i);
-                app.grid.del(i)=(app.gridvars.ub(ix)-app.gridvars.lb(ix))/(app.grid.N(i)-1);
+            %set up initial default gridTable
+            app.grid=app.gridvars.name(1:3,:);
+            app.grid.Properties.RowNames={'x','y','z'};
+            app.grid.N=[app.nGrid(:);app.nZ];
+            for i=1:3 
+                var=app.grid.name(i);
+                lb{i,1}=app.gridvars{var,'lb'};
+                ub{i,1}=app.gridvars{var,'ub'};
+                app.grid.del(i,1)=(app.grid.ub(i)-app.grid.lb(i))/(app.grid.N(i)-1); %compute dels
             end
-            app.gridTable.Data=app.grid;
-%             app.gridTable.Data=app.grid(:,{'name','N','del'});
-            app.axGrid.XAxis.Label.String=app.grid.name(1);
-            app.axGrid.YAxis.Label.String=app.grid.name(2);
+            app.gridTable.Data=table2cell(app.grid(:,{'name','N','del'}));
+            app.gridTable.ColumnFormat={app.gridvars.name',[],[]};
+            xlabel(app.axGrid,app.grid.name(1));
+            ylabel(app.axGrid,app.grid.name(2));
             
-            %parameter table
+            %parameters
             app.parTable.Data=app.gridvars(app.gridvars.type=="par",{'name','value','lb','ub'});
             
             %ic table
             app.icTable.Data=app.gridvars(app.gridvars.type=="ic",{'name','value','lb','ub'});
             
-            %trajectory
+            %trajectory plot variables
             app.xDropDown.Items=[{'t'};app.trajvars.name];
             app.yDropDown.Items=app.trajvars.name;
             app.zDropDown.Items=[{'none'};app.trajvars.name];
             
-            app.axTrajP0.XAxis.Label.String=app.xDropDown.Value;
-            app.axTrajP0.YAxis.Label.String=app.yDropDown.Value;
+            xlabel(app.axTrajP0,app.xDropDown.Value);
+            ylabel(app.axTrajP0,app.yDropDown.Value);
+            xlabel(app.axTrajClick(end),app.xDropDown.Value);
+            ylabel(app.axTrajClick(end),app.yDropDown.Value);
+            
+            %make the actual grid data for simulation
+            app.P0=repmat(app.gridvars.value(app.gridvars.type=="par")',app.nPts,1);
+            app.X0=repmat(app.gridvars.value(app.gridvars.type=="var")',app.nPts,1);
+            app.makeGridData();
+            app.makeTrajData(); %p0: no clickCoords
+            
+            figure(app.figControl)
         end
         
     end
@@ -609,17 +719,21 @@ classdef gridtool < handle %matlab.mixin.SetGet
             app.gridSolverParTable.ColumnWidth = {'fit'};
             app.gridSolverParTable.ColumnEditable = [true];
             app.gridSolverParTable.CellEditCallback = @app.gridSolverParTableCellEdit;
-            app.gridSolverParTable.Position = [13 355 150 145];
-            
-            % Create gridBuildButton
-            app.gridBuildButton = uibutton(app.NumericsTab, 'state');
-            app.gridBuildButton.ValueChangedFcn = @app.gridBuildButtonValueChanged;
-            app.gridBuildButton.Text = 'Build';
-            app.gridBuildButton.Value=0;
-            app.gridBuildButton.BackgroundColor=[1,.7,.7];
-            app.gridBuildButton.Position = [217 355 69 22];
+            app.gridSolverParTable.Position = [13 355 145 145];
             
 
+
+            % Create gridObserverDropDownLabel
+            app.gridObserverDropDownLabel = uilabel(app.NumericsTab);
+            app.gridObserverDropDownLabel.HorizontalAlignment = 'center';
+            app.gridObserverDropDownLabel.Position = [172 330 52 22];
+            app.gridObserverDropDownLabel.Text = 'observer';
+
+            % Create gridObserverDropDown
+            app.gridObserverDropDown = uidropdown(app.NumericsTab);
+            app.gridObserverDropDown.ValueChangedFcn = @app.gridObserverDropDownValueChanged;
+            app.gridObserverDropDown.Position = [175 309 107 22];
+            
             % Create gridObserverParLabel
             app.gridObserverParLabel = uilabel(app.NumericsTab);
             app.gridObserverParLabel.Position = [13 330 119 22];
@@ -632,17 +746,14 @@ classdef gridtool < handle %matlab.mixin.SetGet
             app.gridObserverParTable.ColumnEditable = [true];
             app.gridObserverParTable.CellEditCallback = @app.gridObserverParTableCellEdit;
             app.gridObserverParTable.Position = [13 186 150 145];
-
-            % Create gridObserverDropDownLabel
-            app.gridObserverDropDownLabel = uilabel(app.NumericsTab);
-            app.gridObserverDropDownLabel.HorizontalAlignment = 'center';
-            app.gridObserverDropDownLabel.Position = [172 330 52 22];
-            app.gridObserverDropDownLabel.Text = 'observer';
-
-            % Create gridObserverDropDown
-            app.gridObserverDropDown = uidropdown(app.NumericsTab);
-            app.gridObserverDropDown.ValueChangedFcn = @app.gridObserverDropDownValueChanged;
-            app.gridObserverDropDown.Position = [175 309 107 22];
+            
+            % Create gridCLIsBuiltButton
+            app.gridCLIsBuiltButton = uibutton(app.NumericsTab, 'state');
+            app.gridCLIsBuiltButton.ValueChangedFcn = @app.gridCLIsBuiltButtonValueChanged;
+            app.gridCLIsBuiltButton.Text = 'Build CL';
+            app.gridCLIsBuiltButton.Value=0;
+            app.gridCLIsBuiltButton.BackgroundColor=[1,.7,.7];
+            app.gridCLIsBuiltButton.Position = [217 186 69 22];
             
 
             % Create trajDeviceDropDownLabel
@@ -683,15 +794,15 @@ classdef gridtool < handle %matlab.mixin.SetGet
             app.trajSolverParTable.ColumnWidth = {'fit'};
             app.trajSolverParTable.ColumnEditable = [true];
             app.trajSolverParTable.CellEditCallback = @app.trajSolverParTableCellEdit;
-            app.trajSolverParTable.Position = [15 15 150 145];
+            app.trajSolverParTable.Position = [15 15 145 145];
             
-            % Create trajBuildButton
-            app.trajBuildButton = uibutton(app.NumericsTab, 'state');
-            app.trajBuildButton.ValueChangedFcn = @app.trajBuildButtonValueChanged;
-            app.trajBuildButton.Text = 'Build';
-            app.trajBuildButton.Value=0;
-            app.trajBuildButton.BackgroundColor=[1,.7,.7];
-            app.trajBuildButton.Position = [217 15 69 22];
+            % Create trajCLIsBuiltButton
+            app.trajCLIsBuiltButton = uibutton(app.NumericsTab, 'state');
+            app.trajCLIsBuiltButton.ValueChangedFcn = @app.trajCLIsBuiltButtonValueChanged;
+            app.trajCLIsBuiltButton.Text = 'Build CL';
+            app.trajCLIsBuiltButton.Value=0;
+            app.trajCLIsBuiltButton.BackgroundColor=[1,.7,.7];
+            app.trajCLIsBuiltButton.Position = [217 15 69 22];
 
             % Create GridTab
             app.GridTab = uitab(app.TabGroup);
@@ -719,35 +830,24 @@ classdef gridtool < handle %matlab.mixin.SetGet
             app.fscaleEditField.Position = [220 532 55 18];
             app.fscaleEditField.Value=1;
             
-            % Create t0EditFieldLabel
-            app.t0EditFieldLabel = uilabel(app.GridTab);
-            app.t0EditFieldLabel.HorizontalAlignment = 'center';
-            app.t0EditFieldLabel.Position = [176 498 43 22];
-            app.t0EditFieldLabel.Text = 't0';
-
-            % Create t0EditField
-            app.t0EditField = uieditfield(app.GridTab, 'numeric');
-            app.t0EditField.ValueChangedFcn = @app.t0EditFieldValueChanged;
-            app.t0EditField.Position = [220 500 55 18];
-
-            % Create tfEditFieldLabel
-            app.tfEditFieldLabel = uilabel(app.GridTab);
-            app.tfEditFieldLabel.HorizontalAlignment = 'center';
-            app.tfEditFieldLabel.Position = [176 479 43 22];
-            app.tfEditFieldLabel.Text = 'tf';
-
-            % Create tfEditField
-            app.tfEditField = uieditfield(app.GridTab, 'numeric');
-            app.tfEditField.ValueChangedFcn = @app.tfEditFieldValueChanged;
-            app.tfEditField.Position = [220 481 55 18];
 
             % Create gridTable
             app.gridTable = uitable(app.GridTab);
-            app.gridTable.ColumnName = app.grid.Properties.VariableNames;
-            app.gridTable.ColumnWidth = {'fit', 'fit', 'fit','fit','fit'};
-            app.gridTable.ColumnEditable = [true true true true true];
+            app.gridTable.RowName={'x';'y';'z'};
+            app.gridTable.ColumnName={'name','N','del'};
+            app.gridTable.ColumnWidth = {'fit', 'fit', 'fit'};
+            app.gridTable.ColumnEditable = [true true false];
             app.gridTable.CellEditCallback = @app.gridTableCellEdit;
-            app.gridTable.Position = [15 430 150 90];
+            app.gridTable.Position = [15 430 150 100];
+            
+            % Create tspanTable
+            app.tspanTable = uitable(app.GridTab);
+            app.tspanTable.ColumnName = {'t0','tf','trans'};
+            app.tspanTable.RowName = {'grid','trajectory'};
+            app.tspanTable.ColumnWidth = {'fit', 'fit', 'fit'};
+            app.tspanTable.ColumnEditable = [true true true];
+            app.tspanTable.CellEditCallback = @app.gridTableCellEdit;
+            app.tspanTable.Position = [170 430 125 100];
             
 
             % Create parLabel
@@ -757,9 +857,9 @@ classdef gridtool < handle %matlab.mixin.SetGet
 
             % Create parTable
             app.parTable = uitable(app.GridTab);
+            app.parTable.RowName={};
             app.parTable.ColumnName = {'name', 'value', 'lb', 'ub'};
             app.parTable.ColumnWidth = {'fit', 'fit', 'fit', 'fit'};
-            app.parTable.RowName = {};
             app.parTable.ColumnSortable = [true false false false];
             app.parTable.ColumnEditable = [true true true true];
             app.parTable.CellEditCallback = @app.parTableCellEdit;
@@ -779,14 +879,15 @@ classdef gridtool < handle %matlab.mixin.SetGet
 
             % Create icTable
             app.icTable = uitable(app.GridTab);
+            app.icTable.RowName={};
             app.icTable.ColumnName = {'name', 'value', 'lb', 'ub'};
             app.icTable.ColumnWidth = {'fit', 'fit', 'fit', 'fit'};
-            app.icTable.RowName = {};
             app.icTable.ColumnSortable = [true false false false];
             app.icTable.ColumnEditable = [true true true true];
             app.icTable.CellEditCallback = @app.icTableCellEdit;
             app.icTable.Position = [15 70 205 150];
 
+            
             % Create icDefaultButton
             app.icDefaultButton = uibutton(app.GridTab, 'push');
             app.icDefaultButton.ButtonPushedFcn = @app.icDefaultButtonPushed;
@@ -882,9 +983,16 @@ classdef gridtool < handle %matlab.mixin.SetGet
             t.TileSpacing = 'compact';
             t.Padding = 'compact';
             app.axGrid = nexttile(t);
+            
+            app.imGrid=imagesc(app.axGrid,0, 0, 0);
+            app.imGrid.Visible='off';
+            app.imGrid.HitTest='off';
+            app.axGrid.YDir='normal';
+            app.gridCBar=colorbar('northoutside');
+%             app.gridCBar.Position
+
             xlabel(app.axGrid,'x')
             ylabel(app.axGrid,'y')
-%             app.axGrid = axes(app.figGrid);
             
             app.figGrid.Visible = 'on';
         end
@@ -899,6 +1007,8 @@ classdef gridtool < handle %matlab.mixin.SetGet
             t.TileSpacing = 'compact';
             t.Padding = 'compact';
             app.axTrajP0 = nexttile(t);
+%             app.axTrajP0.XGrid='on';
+%             app.axTrajP0.YGrid='on';
             xlabel(app.axTrajP0,'t')
             ylabel(app.axTrajP0,'x')
 %             app.axTrajP0 = axes(app.figTrajP0);
@@ -912,16 +1022,21 @@ classdef gridtool < handle %matlab.mixin.SetGet
             app.figTrajClick.Position = [1000 50 900 950];
             app.figTrajClick.Name = 'click trajectories';
 
-            t=tiledlayout(app.figTrajClick,3,1);
-            t.TileSpacing = 'compact';
-            t.Padding = 'compact';
-            app.axTrajClick(1) = nexttile(t);
-            app.axTrajClick(2) = nexttile(t);
-            app.axTrajClick(3) = nexttile(t);
+            app.tilesTrajClick=tiledlayout(app.figTrajClick,app.nClick,1);
+            app.tilesTrajClick.TileSpacing = 'compact';
+            app.tilesTrajClick.Padding = 'compact';
+            for i=1:app.nClick
+                app.axTrajClick(i) = nexttile(app.tilesTrajClick);
+                app.axTrajClick(i).XTickLabel=[];
+%                 app.axTrajClick(i).XAxis.Visible='off';
+%                 app.axTrajClick(i).XGrid='on';
+%                 app.axTrajClick(i).YGrid='on';
+            end
+            app.axTrajClick(end).XTickLabelMode='auto';
             xlabel(app.axTrajClick(3),'t')
             ylabel(app.axTrajClick(3),'x')
 
-%             app.figTrajClick.Visible = 'on';
+            app.figTrajClick.Visible = 'on';
         end
     end
     

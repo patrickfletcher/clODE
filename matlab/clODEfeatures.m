@@ -66,6 +66,9 @@ classdef clODEfeatures<clODE & matlab.mixin.SetGet
         
         %override initialize to include observerparams arg
         function initialize(obj, tspan, X0, P, sp, op)
+            if ~exist('tspan','var') %no input args: use stored values
+                tspan=obj.tspan; X0=obj.X0; P=obj.P; sp=obj.sp; op=obj.op;
+            end
             obj.cppmethod('initialize', tspan, X0(:), P(:), sp, op);
             obj.tspan=tspan;
             obj.X0=X0;
@@ -86,6 +89,7 @@ classdef clODEfeatures<clODE & matlab.mixin.SetGet
                 obj.cppmethod('setobserver', newObserver);
                 obj.featureNames();
                 obj.getNFeatures();
+                obj.clBuilt=false;
             else
                 error(['undefined observer: ' newObserver]);
             end

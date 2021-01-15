@@ -129,7 +129,7 @@ void CLODEfeatures::setObserverParams(ObserverParams<cl_double> newOp)
 			opencl.error = opencl.getQueue().enqueueWriteBuffer(d_op, CL_TRUE, 0, sizeof(op), &newOp);
 		}
 
-		//if op.fVarIx or op.eVarIx change, observer's fNames may change
+		//if op.fVarIx or op.eVarIx change, observer's fNames may change (doesn't need rebuild though)
 		updateObserverDefineMap();
 	}
 	catch (cl::Error &er)

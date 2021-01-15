@@ -1,27 +1,32 @@
 %test basic clODE
 clear
 
-odefile='lactotroph.ode';
-precision='single';
-% precision='double';
-stepper='dopri5';
-% stepper='bs23'; 
-% stepper='rk4';
-
 openclDevices=queryOpenCL(); %inspect this struct to see properties of OpenCL devices found
 
-% selectedDevice=selectDevice(); %TODO: function to get a device with
-% specific properties: e.g. vendor=nvidia, type=cpu, fastest clock, most
-% compute units...
+odefile='lactotroph.ode';
+tic
+clo=clODEfeatures(odefile);
+toc
+
+clo.precision='single';
+% clo.precision='double';
+clo.stepper='dopri5';
+% clo.stepper='bs23'; 
+% clo.stepper='rk4';
 
 %Device to use for feature grid computation
 %The following uses the default device: first gpu found. It also parses the
 %ODEfile and writes the OpenCL code for the ODE system. 
-selectedDevice=[]; %autoselect: gpu>cpu
+% selectedDevice=[]; %autoselect: gpu>cpu
+% tic
+% clo=clODEfeatures(odefile,precision,selectedDevice,stepper);
+% toc
+
 tic
-clo=clODEfeatures(odefile,precision,selectedDevice,stepper);
+clo.buildCL();
 toc
-% clo.printStatus
+
+clo.printStatus
 
 %set properties 
 % clo.stepper='rk4'; %default='dorpri5'
