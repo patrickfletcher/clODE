@@ -56,9 +56,8 @@ classdef gridtool < handle %matlab.mixin.SetGet
             'RowNames',{'x','y'}) %table specifying grid x, y info
         feature %struct specifying feature info for grid display
         
-        gridSol=struct('x',[],'y',[],'F',[]);
-        trajP0Sol=struct('t',[],'x',[],'aux',[]); %struct for p0 trajectory data
-        trajClickSol=struct('t',[],'x',[],'aux',[]); %array of nClick structs for pQuery trajectory data
+%         gridSol=struct('x',[],'y',[],'F',[]);
+        trajSol=struct('t',[],'x',[],'xname',{},'tlim',[],'xlo',[],'xhi',[]); %struct for trajectory data
     end
     
     %listeners
@@ -721,7 +720,28 @@ classdef gridtool < handle %matlab.mixin.SetGet
         end
         
         
-        function trajKeyPress(app)
+        function trajKeyPress(app,src,event)
+            disp(event.Key)
+            switch(event.Key)
+                case 'c' %'continue' - append+shift
+                    app.integrateTraj('continue')
+                    
+                case 'g' %'go' - start here
+                    app.integrateTraj('go')
+                    
+                case 'p' %'p0' - 
+                    app.makeTrajData()
+                    app.integrateTraj('go')
+                    
+                case 'r' %'random'
+                    app.integrateTraj('random')
+                    
+                case 's' %'shift'
+                    app.integrateTraj('shift')
+                    
+                case 't' %'transient'
+                    app.integrateTraj('transient')
+            end
         end
         
         %clicking on the p0 marker lets the user select new p0 coords
@@ -730,69 +750,101 @@ classdef gridtool < handle %matlab.mixin.SetGet
             [px,py]=ginput(1);
             app.gridvars{app.grid.name(1),'val'}=px;
             app.gridvars{app.grid.name(2),'val'}=py;
-            app.makeTrajData();
+%             app.makeTrajData(); %called by grid listener
         end
         
         %clickin anywhere else in the axis triggers click-trajectories
         function clickTraj(app,src,event)
             disp('clickTraj')
-%             for i=1:length(app.nClick)
-%                 [px,py]=ginput(1);
-%                 coords=[px,py];
-%             end
-%             app.makeTrajData(coords);
+            for i=1:length(app.nClick)
+                [px,py]=ginput(1);
+                coords(i,:)=[px,py];
+            end
+            app.makeTrajData(coords);
         end
         
         
         function makeTrajData(app, coords)
-            newP=app.p0;
-            newX0=app.x0;%TODO: use nnsearch to find x0
-            if exist('coords','var') %clickCoords
-                newP=repmat(newP,app.nClick,1);
-                if app.grid{'x','type'}=="par"
-                    newP(:,app.grid.ix(1))=coords(:,1);
-                else
-                    newX0(:,app.grid.ix(2))=coords(:,1);
-                end
-                if app.grid{'y','type'}=="par"
-                    newP(:,app.grid.ix(1))=coords(:,2);
-                else
-                    newX0(:,app.grid.ix(2))=coords(:,2);
-                end
+            if ~exist('coords','var') %clickCoords
+                coords=app.grid.val';
             end
+            
+            newP=repmat(app.p0,size(coords,1),1);
+            
+            %find the coords' nearest point on the grid (for x0)
+            [X,Y]=ndgrid(app.gridx, app.gridy);
+            C=[X(:),Y(:)]; 
+            pix = knnsearch(C,coords);
+            for i=1:size(coords,1)
+                newX0(i,:)=app.XF(pix(i),:);
+            end
+            
+            %now overwrite relevant coords
+            if app.grid{'x','type'}=="par"
+                newP(:,app.grid.ix(1))=coords(:,1);
+            else
+                newX0(:,app.grid.ix(2))=coords(:,1);
+            end
+            if app.grid{'y','type'}=="par"
+                newP(:,app.grid.ix(1))=coords(:,2);
+            else
+                newX0(:,app.grid.ix(2))=coords(:,2);
+            end
+            
             app.clo_t.setProblemData(newX0, newP);
         end
         
         
         function integrateTraj(app)
             tic
-%             switch action
-%                 case 'continue'
-%                     app.clo_t.shiftX0();
-%                     app.clo_g.features(0);
-%                     app.clo_g.getF();
-%                     
-%                 case 'go'
-%                     app.clo_g.shiftX0();
-%                     %                     app.clo_g.initObserver();
-%                     app.clo_g.features(1);
-%                     app.clo_g.getF();
-%                     
-%                     %                 case 'shift'
-%                     
-%                 case 'random'
-%                     x0lb=app.gridvars.lb(app.gridvars.type=="ic")';
-%                     x0ub=app.gridvars.ub(app.gridvars.type=="ic")';
-%                     newX0=x0lb+rand(app.clo_g.nPts,length(x0lb)).*(x0ub-x0lb);
-%                     app.clo_g.setX0(newX0);
-%                     app.clo_g.transient();
-%                     
-%                 case 'transient'
-%                     app.clo_g.shiftX0();
-%                     app.clo_g.transient();
-%             end
-%             app.XF=app.clo_g.getXf();
+            append=false;
+            switch action
+                case 'continue'
+                    app.clo_t.shiftX0();
+                    append=true;
+                    
+                case 'go' %no prep
+                    
+                case 'shift'
+                    app.clo_t.shiftTspan();
+                    app.clo_t.shiftX0();
+                    
+                case 'random'
+                    x0lb=app.gridvars.lb(app.gridvars.type=="ic")';
+                    x0ub=app.gridvars.ub(app.gridvars.type=="ic")';
+                    newX0=x0lb+rand(size(app.clo_t.P,1), length(x0lb)).*(x0ub-x0lb);
+                    app.clo_t.setX0(newX0);
+                    
+                case 'transient'
+                    app.clo_t.shiftX0();
+            end
+            app.clo_t.trajectory(); %run the trajectory
+            app.clo_t.getXf();
             toc
+            
+            %extract results
+            xx=clo.getX();
+            aux=clo.getAux();
+            tt=clo.getT()*clo.tscale;
+            nStored=clo.getNstored();
+            
+            for i=1:nClick
+                traj(i).t=T{i};
+                for vv=1:length(varIx)
+                    if varIsAux(vv)
+                        traj(i).x(:,vv)=AUX{i}(:,varIx(vv));
+                        traj(i).xname(vv)=clo.prob.auxNames(varIx(vv));
+                    else
+                        traj(i).x(:,vv)=X{i}(:,varIx(vv));
+                        traj(i).xname(vv)=clo.prob.varNames(varIx(vv));
+                    end
+                end
+                %individual data limits
+                traj(i).tlim=[traj(i).t(1), traj(i).t(end)];
+                traj(i).xlo=min(traj(i).x,[],1);
+                traj(i).xhi=max(traj(i).x,[],1);
+            end
+            
         end
         
         function updateTrajP0Plot(app)
@@ -917,7 +969,7 @@ classdef gridtool < handle %matlab.mixin.SetGet
             
             %make the actual grid data for simulation
             app.makeGridData();
-%             app.makeTrajData(); %p0: no clickCoords
+            app.makeTrajData(); %p0: no clickCoords
             
             app.clo_g.initialize();
 %             app.clo_t.initialize();
