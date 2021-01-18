@@ -103,7 +103,6 @@ protected:
     //~ CLODE( const CLODE& other ); // non construction-copyable
     //~ CLODE& operator=( const CLODE& ); // non copyable
 
-    void setNpts(cl_int newNpts); //resizes the nPts-dependent input variables
 
 public:
     //for now, require all arguments. TODO: convenience constructors?
@@ -128,6 +127,7 @@ public:
     //build program, set all problem data needed to run
     virtual void initialize(std::vector<cl_double> newTspan, std::vector<cl_double> newX0, std::vector<cl_double> newPars, SolverParams<cl_double> newSp);
 
+    void setNpts(cl_int newNpts); //resizes the nPts-dependent input variables
     void setProblemData(std::vector<cl_double> newX0, std::vector<cl_double> newPars); //set both pars and X0 to change nPts
     void setTspan(std::vector<cl_double> newTspan);
     void setX0(std::vector<cl_double> newX0);     //no change in nPts: newX0 must match nPts

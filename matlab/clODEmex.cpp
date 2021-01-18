@@ -35,6 +35,7 @@ enum class Action
     SetOpenCL,
     BuildCL,
     Initialize,
+    SetNPts,
     SetProblemData,
     SetTspan,
     SetX0,
@@ -61,8 +62,9 @@ const std::map<std::string, Action> actionTypeMap =
     { "setstepper",     Action::SetStepper },
     { "setprecision",   Action::SetPrecision },
     { "setopencl",      Action::SetOpenCL },
-    { "initialize",     Action::Initialize },
     { "buildcl",        Action::BuildCL },
+    { "initialize",     Action::Initialize },
+    { "setnpts",        Action::SetNPts },
     { "setproblemdata", Action::SetProblemData },
     { "settspan",       Action::SetTspan },
     { "setx0",          Action::SetX0 },
@@ -218,6 +220,11 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
             setenv("CUDA_CACHE_DISABLE", "1", 1);
         #endif
         instance->buildCL();
+        break;
+	}
+    case Action::SetNPts:
+	{ //inputs: newNpts
+        instance->setNpts((cl_int)mxGetScalar(prhs[2]));
         break;
 	}
     case Action::SetProblemData:

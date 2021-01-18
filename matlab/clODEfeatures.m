@@ -76,9 +76,15 @@ classdef clODEfeatures<clODE & matlab.mixin.SetGet
             obj.sp=sp;
             obj.nPts=numel(X0)/obj.prob.nVar; 
             obj.op=op;
+            obj.getF();
+            obj.getXf();
+            obj.clInitialized=true;
         end
         
         function setObserverPars(obj, op)
+            if ~exist('op','var') %no input args: use stored values
+                op=obj.op;
+            end
             obj.op=op;
             obj.cppmethod('setobserverpars', op);
         end

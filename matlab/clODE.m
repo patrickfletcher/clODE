@@ -116,8 +116,8 @@ classdef clODE < cppclass & matlab.mixin.SetGet
         %set a new problem - must initialize again!
         function setNewProblem(obj, prob)
             if ~strcmp(prob,obj.prob)
-                obj.prob=prob;
                 obj.cppmethod('setnewproblem', prob);
+                obj.prob=prob;
                 obj.clBuilt=false;
                 obj.clInitialized=false;
             end
@@ -184,8 +184,19 @@ classdef clODE < cppclass & matlab.mixin.SetGet
             obj.clInitialized=true;
         end
         
+        function setNPts(obj, newNPts)
+            if ~exist('newNPts','var') %no input args: use stored values
+                newNPts=obj.nPts;
+            end
+            obj.cppmethod('setnpts', newNPts);
+            obj.nPts=newNPts;
+        end
+        
         %Set X0 and P together if trying to change nPts
         function setProblemData(obj, X0, P)
+            if ~exist('X0','var') %no input args: use stored values
+                X0=obj.X0; P=obj.P;
+            end
             obj.cppmethod('setproblemdata', X0(:), P(:));
             obj.X0=X0;
             obj.P=P;
@@ -203,12 +214,18 @@ classdef clODE < cppclass & matlab.mixin.SetGet
         
         
         function settspan(obj, tspan)
+            if ~exist('tspan','var') %no input args: use stored values
+                tspan=obj.tspan;
+            end
             obj.cppmethod('settspan', tspan);
             obj.tspan=tspan;
         end
         
         %nPts cannot change here
         function setX0(obj, X0)
+            if ~exist('X0','var') %no input args: use stored values
+                X0=obj.X0;
+            end
             testnPts=numel(X0)/obj.prob.nVar;
             if testnPts==obj.nPts %this check is redundant: c++ does it too
                 obj.cppmethod('setx0', X0(:));
@@ -220,6 +237,9 @@ classdef clODE < cppclass & matlab.mixin.SetGet
         
         %nPts cannot change here
         function setP(obj, P)
+            if ~exist('P','var') %no input args: use stored values
+                P=obj.P;
+            end
             testnPts=numel(P)/obj.prob.nPar;
             if testnPts==obj.nPts
                 obj.cppmethod('setpars', P(:));
@@ -230,6 +250,9 @@ classdef clODE < cppclass & matlab.mixin.SetGet
         end
         
         function setSolverPars(obj, sp)
+            if ~exist('sp','var') %no input args: use stored values
+                sp=obj.sp;
+            end
             obj.cppmethod('setsolverpars', sp);
             obj.sp=sp;
         end
