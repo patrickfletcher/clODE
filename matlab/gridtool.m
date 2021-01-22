@@ -26,13 +26,18 @@ classdef gridtool < handle %matlab.mixin.SetGet
         nGrid=[32,32] %nPts in x, y dims
         z %struct with z info: row from gridvars
         dz %increment to change z when using +/-
-        fscale
         XF %place to store the final state of most recent grid simulation
         
-        nClick=3
-        
+%         gridSol=struct('x',[],'y',[],'F',[]);
         %mechanism to cache F(:,:,z) values - for rapidly scanning z post compute
         
+        feature %struct specifying feature info for grid display
+        fscale
+        
+
+        nClick=3
+        trajP0=struct('p0',[],'x0',[],'t',[],'x',[],'dx',[],'aux',[]); %struct for trajectory data
+        trajClick=struct('p0',[],'x0',[],'t',[],'x',[],'dx',[],'aux',[]); %struct for trajectory data
     end
     
     properties (Dependent = true)
@@ -40,7 +45,7 @@ classdef gridtool < handle %matlab.mixin.SetGet
         gridy %grid ycoords
         p0 %current parameter vector value (extract from gridvars)
         x0 %current initial condition value
-        P0 %base parameter matrix with p0 replicated nPts times [nPts, nPar]
+        P0 %base parameter matrix with p0 replicated nPts tim es [nPts, nPar]
         X0 %base ic matrix with x0 replicated nPts times
         nPts
     end
@@ -54,10 +59,6 @@ classdef gridtool < handle %matlab.mixin.SetGet
             {'cellstr','double','double','double','categorical','double'},...
             'VariableNames',{'name','val','lb','ub','type','ix'},...
             'RowNames',{'x','y'}) %table specifying grid x, y info
-        feature %struct specifying feature info for grid display
-        
-%         gridSol=struct('x',[],'y',[],'F',[]);
-        trajSol=struct('t',[],'x',[],'xname',{},'tlim',[],'xlo',[],'xhi',[]); %struct for trajectory data
     end
     
     %listeners
@@ -135,8 +136,8 @@ classdef gridtool < handle %matlab.mixin.SetGet
         trajDeviceDropDown        matlab.ui.control.DropDown
         trajCLIsBuiltButton       matlab.ui.control.StateButton
         
-        SolverParLabel      matlab.ui.control.Label
-        SolverParTable      matlab.ui.control.Table
+        SolverParLabel          matlab.ui.control.Label
+        SolverParTable          matlab.ui.control.Table
         gridObserverParTable    matlab.ui.control.Table
         gridObserverParLabel    matlab.ui.control.Label
         
@@ -150,6 +151,8 @@ classdef gridtool < handle %matlab.mixin.SetGet
         tspanTable              matlab.ui.control.Table
         featureDropDownLabel    matlab.ui.control.Label
         featureDropDown         matlab.ui.control.DropDown
+%         transDropDownLabel    matlab.ui.control.Label
+%         transDropDown         matlab.ui.control.DropDown
         fscaleEditFieldLabel    matlab.ui.control.Label
         fscaleEditField         matlab.ui.control.NumericEditField
         parLabel                matlab.ui.control.Label
@@ -164,14 +167,21 @@ classdef gridtool < handle %matlab.mixin.SetGet
         trajectoriesLabel       matlab.ui.control.Label
         clicksEditFieldLabel    matlab.ui.control.Label
         clicksEditField         matlab.ui.control.NumericEditField
-        trajXDropDownLabel          matlab.ui.control.Label
-        trajXDropDown               matlab.ui.control.DropDown
-        trajYDropDownLabel          matlab.ui.control.Label
-        trajYDropDown               matlab.ui.control.DropDown
-        trajZDropDownLabel          matlab.ui.control.Label
-        trajZDropDown               matlab.ui.control.DropDown
+%         tscaleEditFieldLabel    matlab.ui.control.Label
+%         tscaleEditField         matlab.ui.control.NumericEditField
+        trajXDropDownLabel      matlab.ui.control.Label
+        trajXDropDown           matlab.ui.control.DropDown
+        trajYDropDownLabel      matlab.ui.control.Label
+        trajYDropDown           matlab.ui.control.DropDown
+        trajZDropDownLabel      matlab.ui.control.Label
+        trajZDropDown           matlab.ui.control.DropDown
         linkAxesButton          matlab.ui.control.StateButton
         threeDButton            matlab.ui.control.StateButton
+        
+        %axis in focus?
+        
+        %showTrajP0
+        %showTrajClick
         
 %         HelpTab                 matlab.ui.container.Tab
     end
@@ -282,20 +292,6 @@ classdef gridtool < handle %matlab.mixin.SetGet
         end
         
         % helper functions for build/build needed
-        function buildCL(app,which_clo)
-            switch which_clo
-                case 'grid'
-                    app.clo_g.buildCL();
-                    app.gridCLIsBuiltButton.Value = 1;
-                    app.gridCLIsBuiltButton.Text = 'CL ready';
-                    app.gridCLIsBuiltButton.BackgroundColor=[0.7,1,0.7];
-                case 'traj'
-                    app.clo_t.buildCL();
-                    app.trajCLIsBuiltButton.Value = 1;
-                    app.trajCLIsBuiltButton.Text = 'CL ready';
-                    app.trajCLIsBuiltButton.BackgroundColor=[0.7,1,0.7];
-            end
-        end
         
         function setBuildNeeded(app,which_clo)
             %listen for changes in clo.clBuilt? Two ifs: if
@@ -309,6 +305,21 @@ classdef gridtool < handle %matlab.mixin.SetGet
                     app.trajCLIsBuiltButton.Value = 0;
                     app.trajCLIsBuiltButton.Text = 'Build CL';
                     app.trajCLIsBuiltButton.BackgroundColor=[1,0.7,0.7];
+            end
+        end
+        
+        function buildCL(app,which_clo)
+            switch which_clo
+                case 'grid'
+                    app.clo_g.buildCL();
+                    app.gridCLIsBuiltButton.Value = 1;
+                    app.gridCLIsBuiltButton.Text = 'CL ready';
+                    app.gridCLIsBuiltButton.BackgroundColor=[0.7,1,0.7];
+                case 'traj'
+                    app.clo_t.buildCL();
+                    app.trajCLIsBuiltButton.Value = 1;
+                    app.trajCLIsBuiltButton.Text = 'CL ready';
+                    app.trajCLIsBuiltButton.BackgroundColor=[0.7,1,0.7];
             end
         end
         
@@ -467,19 +478,16 @@ classdef gridtool < handle %matlab.mixin.SetGet
         % Value changed function: trajXDropDown
         function trajXDropDownValueChanged(app, src, event)
             newX = app.trajXDropDown.Value;
-            
         end
         
         % Value changed function: trajYDropDown
         function trajYDropDownValueChanged(app, src, event)
             newY = app.trajYDropDown.Value;
-            
         end
         
         % Value changed function: trajZDropDown
         function trajZDropDownValueChanged(app, src, event)
             newZ = app.trajZDropDown.Value;
-            
         end
         
         % Value changed function: clicksEditField
@@ -492,12 +500,50 @@ classdef gridtool < handle %matlab.mixin.SetGet
         % Value changed function: linkAxesButton
         function linkAxesButtonValueChanged(app, src, event)
             doLinkAxes = app.linkAxesButton.Value;
+            ax=[app.axyyTrajP0, app.axyyTrajClick];
+            if doLinkAxes %only works for 2D axes
+                for i=1:length(ax)
+                    yyaxis(ax(i),'right')
+                end
+                linkaxes(ax,'y');
+                for i=1:length(ax)
+                    yyaxis(ax(i),'left')
+                end
+                linkaxes(ax,'y');
+            else
+                for i=1:length(ax)
+                    yyaxis(ax(i),'right')
+                end
+                linkaxes(ax,'off');
+                for i=1:length(ax)
+                    yyaxis(ax(i),'left')
+                end
+                linkaxes(ax,'off');
+            end
         end
         
         % Value changed function: threeDButton
         function threeDButtonValueChanged(app, src, event)
             do3D = app.threeDButton.Value;
-            %             app.threeDButton
+            if do3D
+                app.trajYDropDownLabel.Text = 'y';
+                app.trajZDropDownLabel.Text = 'z';
+                app.axyyTrajP0.Visible='off';
+                app.ax3DTrajP0.Visible='on';
+                for i=1:app.nClick
+                    app.axyyTrajClick(i).Visible='off';
+                    app.ax3DTrajClick(i).Visible='on';
+                end
+            else
+                app.trajYDropDownLabel.Text = 'y1';
+                app.trajZDropDownLabel.Text = 'y2';
+                app.ax3DTrajP0.Visible='off';
+                app.axyyTrajP0.Visible='on';
+                for i=1:app.nClick
+                    app.ax3DTrajClick(i).Visible='off';
+                    app.axyyTrajClick(i).Visible='on';
+                end
+            end
         end
     end
     
@@ -541,6 +587,8 @@ classdef gridtool < handle %matlab.mixin.SetGet
         end
     end
     
+    
+%TODO: just use gridTable.Data everywhere. no grid update listener???
     methods (Static = true)
         function gridUpdate(~,eventData)
             app = eventData.AffectedObject;
@@ -561,12 +609,20 @@ classdef gridtool < handle %matlab.mixin.SetGet
             end
             newGrid=app.gridvars(vars,:);
             newGrid.Row={'x';'y'};
-            if ~isequal(newGrid, app.grid)
+            nameChange=~strcmp(newGrid{:,'name'},app.grid{:,'name'});
+            boundChange=newGrid{:,{'lb','ub'}}~=app.grid{:,{'lb','ub'}};
+            if any(nameChange(:))||any(boundChange(:))
                 app.grid(:,:)=newGrid; %grid update triggers makeGridData
+            end
+            p0change=newGrid{:,'val'}~=app.grid{:,'val'};
+            if any(p0change(:))
+                app.grid{:,'val'}=newGrid{:,'val'};
+                app.markerP0.XData=app.grid{'x','val'};
+                app.markerP0.YData=app.grid{'y','val'};
             end
             newZ=app.gridvars(app.z.name,:);
             if ~isequal(newZ, app.z)
-                app.z=newZ; %grid update triggers makeGridData
+                app.z=newZ; 
             end
             %update parameter and ic table
             app.parTable.Data=app.gridvars(app.gridvars.type=="par",{'name','val','lb','ub'});
@@ -587,6 +643,10 @@ classdef gridtool < handle %matlab.mixin.SetGet
                     
                 case 'g' %'go' - features with initialization
                     app.integrateGrid('go')
+                    
+                case 'p' %'p0' - run the p0 trajectory
+                    app.makeTrajData()
+                    app.integrateTraj('go','p0')
                     
                 case 'r' %'random'
                     app.integrateGrid('random')
@@ -722,25 +782,28 @@ classdef gridtool < handle %matlab.mixin.SetGet
         
         function trajKeyPress(app,src,event)
             disp(event.Key)
+            
+            if src==app.figTrajP0
+                which_traj='p0';
+            elseif src==app.figTrajClick
+                which_traj='click';
+            end
+            
             switch(event.Key)
                 case 'c' %'continue' - append+shift
-                    app.integrateTraj('continue')
+                    app.integrateTraj('continue',which_traj)
                     
                 case 'g' %'go' - start here
-                    app.integrateTraj('go')
-                    
-                case 'p' %'p0' - 
-                    app.makeTrajData()
-                    app.integrateTraj('go')
+                    app.integrateTraj('go',which_traj)
                     
                 case 'r' %'random'
-                    app.integrateTraj('random')
+                    app.integrateTraj('random',which_traj)
                     
                 case 's' %'shift'
-                    app.integrateTraj('shift')
+                    app.integrateTraj('shift',which_traj)
                     
-                case 't' %'transient'
-                    app.integrateTraj('transient')
+%                 case 't' %'transient'
+%                     app.integrateTraj('transient',which_traj)
             end
         end
         
@@ -748,15 +811,14 @@ classdef gridtool < handle %matlab.mixin.SetGet
         function clickP0(app,src,event)
             disp('clickP0')
             [px,py]=ginput(1);
-            app.gridvars{app.grid.name(1),'val'}=px;
-            app.gridvars{app.grid.name(2),'val'}=py;
-%             app.makeTrajData(); %called by grid listener
+            app.gridvars{app.grid.name(1:2),'val'}=[px;py];
+            app.makeTrajData();
         end
         
         %clickin anywhere else in the axis triggers click-trajectories
         function clickTraj(app,src,event)
             disp('clickTraj')
-            for i=1:length(app.nClick)
+            for i=1:app.nClick
                 [px,py]=ginput(1);
                 coords(i,:)=[px,py];
             end
@@ -765,8 +827,10 @@ classdef gridtool < handle %matlab.mixin.SetGet
         
         
         function makeTrajData(app, coords)
-            if ~exist('coords','var') %clickCoords
+            isP0=false;
+            if ~exist('coords','var') %p0
                 coords=app.grid.val';
+                isP0=true;
             end
             
             newP=repmat(app.p0,size(coords,1),1);
@@ -775,9 +839,7 @@ classdef gridtool < handle %matlab.mixin.SetGet
             [X,Y]=ndgrid(app.gridx, app.gridy);
             C=[X(:),Y(:)]; 
             pix = knnsearch(C,coords);
-            for i=1:size(coords,1)
-                newX0(i,:)=app.XF(pix(i),:);
-            end
+            newX0=app.XF(pix(:),:);
             
             %now overwrite relevant coords
             if app.grid{'x','type'}=="par"
@@ -791,66 +853,152 @@ classdef gridtool < handle %matlab.mixin.SetGet
                 newX0(:,app.grid.ix(2))=coords(:,2);
             end
             
-            app.clo_t.setProblemData(newX0, newP);
+            %store the new p0/x0: will load the appropriate one in
+            %integrateTraj routine
+            if isP0
+                app.trajP0.p0=newP;
+                app.trajP0.x0=newX0;
+            else
+                app.trajClick.p0=newP;
+                app.trajClick.x0=newX0;
+            end
         end
         
         
-        function integrateTraj(app)
+        function integrateTraj(app, action, which_traj)
+            %manage tspan and x0 host side to allow two independent streams (p0 and click)
+            switch which_traj
+                case 'p0'
+                    traj=app.trajP0;
+                case 'click'
+                    traj=app.trajClick;
+            end
+            
             tic
             append=false;
             switch action
                 case 'continue'
-                    app.clo_t.shiftX0();
-                    append=true;
+%                     app.clo_t.shiftX0(); 
+                    if ~isempty(traj(1).t) %continue will work if prior trajectory available
+                        tspan=[traj(1).t(end),traj(1).t(end)];
+                        tspan=tspan+diff(tspan);
+                        app.clo_t.settspan(tspan);
+                        traj.x0=cat(1,traj(:).x(end,1:app.prob.nVar));
+                        append=true;
+                    end
                     
                 case 'go' %no prep
                     
                 case 'shift'
-                    app.clo_t.shiftTspan();
+                    tspan=[traj(1).t(end),traj(1).t(end)];
+                    tspan=tspan+diff(tspan);
+                    app.clo_t.settspan(tspan);
                     app.clo_t.shiftX0();
                     
                 case 'random'
                     x0lb=app.gridvars.lb(app.gridvars.type=="ic")';
                     x0ub=app.gridvars.ub(app.gridvars.type=="ic")';
-                    newX0=x0lb+rand(size(app.clo_t.P,1), length(x0lb)).*(x0ub-x0lb);
-                    app.clo_t.setX0(newX0);
+                    newX0=x0lb+rand(size(traj.p0,1), length(x0lb)).*(x0ub-x0lb);
+                    traj.x0=newX0;
                     
-                case 'transient'
-                    app.clo_t.shiftX0();
+%                 case 'transient'
+%                     traj.x0=[traj(:).x(end,:)];
+%                     app.clo_t.transient(); %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             end
+            app.clo_t.setProblemData(traj.x0, traj.p0);
             app.clo_t.trajectory(); %run the trajectory
-            app.clo_t.getXf();
             toc
             
             %extract results
-            xx=clo.getX();
-            aux=clo.getAux();
-            tt=clo.getT()*clo.tscale;
-            nStored=clo.getNstored();
+            tt=app.clo_t.getT()*app.clo_t.tscale;
+            xx=app.clo_t.getX();
+            aux=app.clo_t.getAux();
+            dx=app.clo_t.getDx();
+            nStored=app.clo_t.getNstored();
             
-            for i=1:nClick
-                traj(i).t=T{i};
-                for vv=1:length(varIx)
-                    if varIsAux(vv)
-                        traj(i).x(:,vv)=AUX{i}(:,varIx(vv));
-                        traj(i).xname(vv)=clo.prob.auxNames(varIx(vv));
-                    else
-                        traj(i).x(:,vv)=X{i}(:,varIx(vv));
-                        traj(i).xname(vv)=clo.prob.varNames(varIx(vv));
-                    end
-                end
-                %individual data limits
-                traj(i).tlim=[traj(i).t(1), traj(i).t(end)];
-                traj(i).xlo=min(traj(i).x,[],1);
-                traj(i).xhi=max(traj(i).x,[],1);
+            nTraj=length(traj);
+            for i=1:nTraj
+                traj(i).t=tt(1:nStored(i),i);
+                traj(i).x=[xx(1:nStored(i),:,i),...
+                    aux(1:nStored(i),:,i),...
+                    dx(1:nStored(i),:,i)];
+%                 traj(i).aux=aux(1:nStored(i),:,i);
+%                 traj(i).dx=dx(1:nStored(i),:,i);
             end
             
+            %finally, store the result and update plot
+            switch which_traj
+                case 'p0'
+                    app.trajP0=traj;
+                case 'click'
+                    app.trajClick=traj;
+            end
+            app.updateTrajPlot(which_traj, append);
+            
         end
         
-        function updateTrajP0Plot(app)
-        end
-        
-        function updateTrajClickPlot(app)
+        function updateTrajPlot(app, which_traj, append)
+            switch which_traj
+                case 'p0'
+                    traj=app.trajP0;
+                    axyy=app.axyyTrajP0;
+                    ax3d=app.ax3DTrajP0;
+                    lyy=app.lineyyTrajP0;
+                    l3d=app.line3DTrajP0;
+                case 'click'
+                    traj=app.trajClick;
+                    axyy=app.axyyTrajClick;
+                    ax3d=app.ax3DTrajClick;
+                    lyy=app.lineyyTrajClick;
+                    l3d=app.line3DTrajClick;
+            end
+            
+            for i=1:length(traj)
+                xname=app.trajXDropDown.Value;
+                if xname=="t"
+                    x=traj(i).t;
+                else
+                    xix=strcmp(app.trajvars,xname);
+                    x=traj(i).x(:,xix);
+                end
+
+                yname=app.trajYDropDown.Value;
+                yix=strcmp(app.trajvars,yname);
+                y=traj(i).x(:,yix);
+                
+                if append
+                    x=[lyy(i,1).XData,x(:)'];
+                    y=[lyy(i,1).YData,y(:)'];
+                end
+                
+                lyy(i,1).XData=x;
+                lyy(i).YData=y;
+
+                if app.trajZDropDown.Value~="none"
+                    zname=app.trajZDropDown.Value;
+                    zix=strcmp(app.trajvars,zname);
+                    zz=traj(i).x(:,zix);
+                    if append
+                        zz=[lyy(i,1).ZData,zz(:)'];
+                    end
+                    lyy(i,2).YData=zz;
+                    
+                    l3d(i).XData=x;
+                    l3d(i).YData=y;
+                    l3d(i).ZData=zz;
+                    xlabel(ax3d, xname);
+                    ylabel(ax3d, yname);
+                    zlabel(ax3d, zname);
+                    
+                    yyaxis(axyy,'right');
+                    ylabel(axyy, zname);
+                    
+                end
+                
+                yyaxis(axyy,'left'); %bring focus back to left
+                xlabel(axyy, xname);
+                ylabel(axyy, yname);
+            end
         end
         
         function processNewODEfile(app, odefile)
@@ -937,42 +1085,51 @@ classdef gridtool < handle %matlab.mixin.SetGet
             newGridvars.type=categorical([ones(app.prob.nPar,1);2*ones(app.prob.nVar,1)],[1,2],{'par','ic'});
             newGridvars.ix=[(1:app.prob.nPar)';(1:app.prob.nVar)'];
             newGridvars.Properties.RowNames=newGridvars.name;
+            
+            % specify Z for +/- incrementing
+            app.z=newGridvars(3,:);
+            app.dz=(app.z.ub-app.z.lb)/10;
+            app.gridZDropDown.Items=newGridvars.name;
+            app.gridZDropDown.Value=app.z.name;
+            app.dzEditField.Value=app.dz;
+            
             app.gridvars=newGridvars; %triggers postSet listener
 
             %set up selectable gridTable name
             app.gridTable.ColumnFormat={app.gridvars.name',[],[],[],[]};
             
-            % specify Z for +/- incrementing
-            app.z=app.gridvars(3,:);
-            app.dz=(app.z.ub-app.z.lb)/10;
-            app.gridZDropDown.Items=app.gridvars.name;
-            app.gridZDropDown.Value=app.z.name;
-            app.dzEditField.Value=app.dz;
             
             % trajectory variables
-            newTrajvars=table;
-            newTrajvars.name=[app.prob.varNames(:);app.prob.auxNames(:)];
-            newTrajvars.type=categorical([ones(app.prob.nVar,1);2*ones(app.prob.nAux,1)],[1,2],{'var','aux'});
-            newTrajvars.ix=[(1:app.prob.nVar)';(1:app.prob.nAux)'];
-            newTrajvars.Properties.RowNames=newTrajvars.name;
-            app.trajvars=newTrajvars;
+%             newTrajvars=table;
+%             newTrajvars.name=[app.prob.varNames(:);app.prob.auxNames(:)];
+%             newTrajvars.type=categorical([ones(app.prob.nVar,1);2*ones(app.prob.nAux,1)],[1,2],{'var','aux'});
+%             newTrajvars.ix=[(1:app.prob.nVar)';(1:app.prob.nAux)'];
+%             newTrajvars.Properties.RowNames=newTrajvars.name;
+%             app.trajvars=newTrajvars;
+            app.trajvars=[app.prob.varNames(:);app.prob.auxNames(:);...
+                strcat('d',app.prob.varNames(:),'/dt')];
             
             %trajectory plot variables
-            app.trajXDropDown.Items=[{'t'};app.trajvars.name];
-            app.trajYDropDown.Items=app.trajvars.name;
-            app.trajZDropDown.Items=[{'none'};app.trajvars.name];
+            app.trajXDropDown.Items=[{'t'};app.trajvars];
+            app.trajYDropDown.Items=app.trajvars;
+            app.trajZDropDown.Items=[{'none'};app.trajvars];
             
-            xlabel(app.axTrajP0,app.trajXDropDown.Value);
-            ylabel(app.axTrajP0,app.trajYDropDown.Value);
-            xlabel(app.axTrajClick(end),app.trajXDropDown.Value);
-            ylabel(app.axTrajClick(end),app.trajYDropDown.Value);
-            
+            yyaxis(app.axyyTrajP0,'left');
+            xlabel(app.axyyTrajP0,app.trajXDropDown.Value);
+            ylabel(app.axyyTrajP0,app.trajYDropDown.Value);
+            yyaxis(app.axyyTrajClick(end),'left');
+            xlabel(app.axyyTrajClick(end),app.trajXDropDown.Value);
+            ylabel(app.axyyTrajClick(end),app.trajYDropDown.Value);
+           
             %make the actual grid data for simulation
             app.makeGridData();
             app.makeTrajData(); %p0: no clickCoords
             
             app.clo_g.initialize();
-%             app.clo_t.initialize();
+            
+            app.clo_t.P=app.trajP0.p0;
+            app.clo_t.X0=app.trajP0.x0;
+            app.clo_t.initialize();
             
             figure(app.figControl)
         end
@@ -1027,9 +1184,9 @@ classdef gridtool < handle %matlab.mixin.SetGet
             %TODO: normalized position units, relative to screen size?
             
             % Create figControl and hide until all components are created
-            app.figControl = figure(111);
+            app.figControl = uifigure(111);
             app.figControl.Visible = 'off';
-            app.figControl.Position = [50 450 300 650];
+            app.figControl.Position = [50 400 300 650];
             app.figControl.Name = 'controls';
             app.figControl.CloseRequestFcn = @app.figControlCloseRequest;
             
@@ -1309,7 +1466,7 @@ classdef gridtool < handle %matlab.mixin.SetGet
             app.trajYDropDownLabel = uilabel(app.GridTab);
             app.trajYDropDownLabel.HorizontalAlignment = 'right';
             app.trajYDropDownLabel.Position = [83 7 10 22];
-            app.trajYDropDownLabel.Text = 'y';
+            app.trajYDropDownLabel.Text = 'y1';
             
             % Create trajYDropDown
             app.trajYDropDown = uidropdown(app.GridTab);
@@ -1320,7 +1477,7 @@ classdef gridtool < handle %matlab.mixin.SetGet
             app.trajZDropDownLabel = uilabel(app.GridTab);
             app.trajZDropDownLabel.HorizontalAlignment = 'right';
             app.trajZDropDownLabel.Position = [152 7 10 22];
-            app.trajZDropDownLabel.Text = 'z';
+            app.trajZDropDownLabel.Text = 'y2';
             
             % Create trajZDropDown
             app.trajZDropDown = uidropdown(app.GridTab);
@@ -1363,7 +1520,7 @@ classdef gridtool < handle %matlab.mixin.SetGet
             % Create figGrid and hide until all components are created
             app.figGrid = figure(112);
             app.figGrid.Visible = 'off';
-            app.figGrid.Position = [375 450 600 600];
+            app.figGrid.Position = [375 400 600 600];
             app.figGrid.Name = 'grid';
             app.figGrid.NumberTitle='off';
             
@@ -1399,7 +1556,7 @@ classdef gridtool < handle %matlab.mixin.SetGet
             % Create figTraj and hide until all components are created
             app.figTrajP0 = figure(113);
             app.figTrajP0.Visible = 'off';
-            app.figTrajP0.Position = [375 250 600 200];
+            app.figTrajP0.Position = [375 100 600 200];
             app.figTrajP0.Name = 'p0';
             app.figTrajP0.NumberTitle='off';
             
@@ -1413,10 +1570,16 @@ classdef gridtool < handle %matlab.mixin.SetGet
             app.lineyyTrajP0(1)=plot(app.axyyTrajP0,nan,nan);
             yyaxis(app.axyyTrajP0,'right');
             app.lineyyTrajP0(2)=plot(app.axyyTrajP0,nan,nan);
+            
             xlabel(app.axyyTrajP0,'t')
+            axis(app.axyyTrajP0,'tight')
+            app.axyyTrajP0.YAxis(2).Visible='off'; %turn it on if y2 is set
             
             app.line3DTrajP0=plot3(app.ax3DTrajP0,nan,nan,nan);
-            app.ax3DTrajP0.Visible='off';
+            axis(app.ax3DTrajP0,'tight')
+            
+            app.ax3DTrajP0.Visible='off'; %start in yyaxis mode
+            app.figTrajP0.KeyPressFcn = @app.trajKeyPress;
             app.figTrajP0.Visible = 'on';
         end
         
@@ -1424,7 +1587,7 @@ classdef gridtool < handle %matlab.mixin.SetGet
             % Create figTraj and hide until all components are created
             app.figTrajClick = figure(114);
             app.figTrajClick.Visible = 'off';
-            app.figTrajClick.Position = [1000 50 900 950];
+            app.figTrajClick.Position = [1000 100 900 900];
             app.figTrajClick.Name = 'click trajectories';
             app.figTrajClick.NumberTitle='off';
             
@@ -1432,14 +1595,29 @@ classdef gridtool < handle %matlab.mixin.SetGet
             app.tilesTrajClick.TileSpacing = 'compact';
             app.tilesTrajClick.Padding = 'compact';
             for i=1:app.nClick
-                app.axTrajClick(i) = nexttile(app.tilesTrajClick);
-                app.axTrajClick(i).XTickLabel=[];
-            end
-            app.axTrajClick(end).XTickLabelMode='auto';
-            xlabel(app.axTrajClick(3),'t')
-            ylabel(app.axTrajClick(3),'x')
+                app.axyyTrajClick(i,1) = nexttile(app.tilesTrajClick);
+                app.ax3DTrajClick(i,1) = copyobj(app.axyyTrajClick(i),app.figTrajClick);
+                
+                yyaxis(app.axyyTrajClick(i),'left');
+                app.lineyyTrajClick(i,1)=plot(app.axyyTrajClick(i),nan,nan);
+                yyaxis(app.axyyTrajClick(i),'right');
+                app.lineyyTrajClick(i,2)=plot(app.axyyTrajClick(i),nan,nan);
+                
+                app.axyyTrajClick(i).XTickLabel=[];
+                axis(app.axyyTrajClick(i),'tight')
+%                 app.axyyTrajClick(i).YAxis(2).Visible='off'; %off until y2 is set
+                yyaxis(app.axyyTrajClick(i),'left'); %focus on left
+                
+                app.line3DTrajClick(i)=plot3(app.ax3DTrajClick(i),nan,nan,nan);
+                axis(app.ax3DTrajClick(i),'tight')
+                app.ax3DTrajClick(i).Visible='off'; %start in yyaxis mode
+            end 
+            app.axyyTrajClick(end).XTickLabelMode='auto';
+            xlabel(app.axyyTrajClick(end),'t')
+%             ylabel(app.axyyTrajClick(end),'x')
             
-            %             app.figTrajClick.Visible = 'on';
+            app.figTrajClick.KeyPressFcn = @app.trajKeyPress;
+            app.figTrajClick.Visible = 'on';
         end
     end
     
