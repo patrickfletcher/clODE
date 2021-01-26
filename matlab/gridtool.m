@@ -115,11 +115,14 @@ classdef gridtool < handle %matlab.mixin.SetGet
         ax3DTrajClick             matlab.graphics.axis.Axes
         line3DTrajClick           matlab.graphics.chart.primitive.Line 
         
-        hlinkyy             matlab.graphics.internal.LinkProp
+        hlinkyyL             matlab.graphics.internal.LinkProp
+        hlinkyyR             matlab.graphics.internal.LinkProp
         hlink3d             matlab.graphics.internal.LinkProp
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %control figure
+        %TODO: gridlayout instead of manual pixel positions everywhere
+        
         figControl              matlab.ui.Figure
         TabGroup                matlab.ui.container.TabGroup
         
@@ -169,6 +172,7 @@ classdef gridtool < handle %matlab.mixin.SetGet
         icLabel                 matlab.ui.control.Label
         icTable                 matlab.ui.control.Table
         parDefaultButton        matlab.ui.control.Button
+        parSaveButton           matlab.ui.control.Button
         icDefaultButton         matlab.ui.control.Button
         
 %         TrajTab                 matlab.ui.container.Tab
@@ -552,40 +556,30 @@ classdef gridtool < handle %matlab.mixin.SetGet
         
         % Value changed function: linkAxesButton
         function linkAxesButtonValueChanged(app, src, event)
-            doLinkAxes = app.linkAxesButton.Value;
-            
-            if doLinkAxes
-                %yyaxes
-                xL=[app.lineyyTrajP0(1).XData,app.lineyyTrajClick(:,1).XData];
-                yL=[app.lineyyTrajP0(1).YData,app.lineyyTrajClick(:,1).YData];
-                yR=[app.lineyyTrajP0(2).YData,app.lineyyTrajClick(:,2).YData];
-                xLimL=[min(xL),max(xL)];
-                yLimL=[min(yL),max(yL)];
-                yLimR=[min(yR),max(yR)];
-                app.axyyTrajP0.XLim=xLimL;
-                app.axyyTrajP0.YAxis(1).Limits=yLimL;
-                app.axyyTrajP0.YAxis(2).Limits=yLimR;
-                for i=1:app.nClick
-                    app.axyyTrajClick(i).XLim=xLimL;
-                    app.axyyTrajClick(i).YAxis(1).Limits=yLimL;
-                    app.axyyTrajClick(i).YAxis(2).Limits=yLimR;
-                end
-                %3daxes
-                xx=[app.line3DTrajP0.XData,app.line3DTrajClick(:).XData];
-                yy=[app.line3DTrajP0.YData,app.line3DTrajClick(:).YData];
-                zz=[app.line3DTrajP0.ZData,app.line3DTrajClick(:).ZData];
-                xLim=[min(xx),max(xx)];
-                yLim=[min(yy),max(yy)];
-                zLim=[min(zz),max(zz)];
-                app.ax3DTrajP0.XLim=xLim;
-                app.ax3DTrajP0.YLim=yLim;
-                app.ax3DTrajP0.ZLim=zLim;
-                for i=1:app.nClick
-                    app.ax3DTrajClick(i).XLim=xLim;
-                    app.ax3DTrajClick(i).YLim=yLim;
-                    app.ax3DTrajClick(i).ZLim=zLim;
-                end
+            if app.linkAxesButton.Value
+                app.setLinkedLims();
+%                 axyyL=app.axyyTrajP0.YAxis(1);
+%                 axyyR=app.axyyTrajP0.YAxis(2);
+%                 for i=1:app.nClick
+%                     axyyL=[axyyL;app.axyyTrajClick(i).YAxis(1)];
+%                     axyyR=[axyyR;app.axyyTrajClick(i).YAxis(2)];
+%                 end
+%                 app.hlinkyyL=linkprop(axyyL,'Limits');
+%                 app.hlinkyyR=linkprop(axyyR,'Limits');
+%                 
+%                 ax3d=app.ax3DTrajP0;
+%                 for i=1:app.nClick
+%                     ax3d=[ax3d;app.ax3DTrajClick(i)];
+%                 end
+%                 app.hlink3d=linkprop(ax3d,{'XLim','YLim','ZLim'});
+                
             else
+%                 app.hlinkyyL.removeprop('Limits')
+%                 app.hlinkyyR.removeprop('Limits')
+%                 app.hlink3d.removeprop('XLim')
+%                 app.hlink3d.removeprop('YLim')
+%                 app.hlink3d.removeprop('ZLim')
+                
                 %yyaxes
                 app.axyyTrajP0.XLimMode='auto';
                 app.axyyTrajP0.YAxis(1).LimitsMode='auto';
@@ -603,6 +597,46 @@ classdef gridtool < handle %matlab.mixin.SetGet
                     app.ax3DTrajClick(i).XLimMode='auto';
                     app.ax3DTrajClick(i).YLimMode='auto';
                     app.ax3DTrajClick(i).ZLimMode='auto';
+                end
+            end
+        end
+        
+        function setLinkedLims(app)
+            xL=[app.lineyyTrajP0(1).XData];
+            yL=[app.lineyyTrajP0(1).YData,app.lineyyTrajClick(:,1).YData];
+            yR=[app.lineyyTrajP0(2).YData,app.lineyyTrajClick(:,2).YData];
+            xLimL=[min(xL),max(xL)]; xLimL=xLimL+[-1,1]*diff(xLimL)*0.01;
+            yLimL=[min(yL),max(yL)]; yLimL=yLimL+[-1,1]*diff(yLimL)*0.01;
+            app.axyyTrajP0.XLim=xLimL;
+            app.axyyTrajP0.YAxis(1).Limits=yLimL;
+            if ~isnan(app.trajClick(1).zp)
+                yLimR=[min(yR),max(yR)]; yLimR=yLimR+[-1,1]*diff(yLimR)*0.01;
+                app.axyyTrajP0.YAxis(2).Limits=yLimR;
+            end
+            xL=[app.lineyyTrajClick(:,1).XData];
+            xLimL=[min(xL),max(xL)]; xLimL=xLimL+[-1,1]*diff(xLimL)*0.01;
+            for i=1:app.nClick
+                app.axyyTrajClick(i).XLim=xLimL;
+                app.axyyTrajClick(i).YAxis(1).Limits=yLimL;
+                if ~isnan(app.trajClick(1).zp)
+                    app.axyyTrajClick(i).YAxis(2).Limits=yLimR;
+                end
+            end
+            %3daxes
+            if ~isnan(app.trajClick(1).zp)
+                xx=[app.line3DTrajP0.XData,app.line3DTrajClick(:).XData];
+                yy=[app.line3DTrajP0.YData,app.line3DTrajClick(:).YData];
+                zz=[app.line3DTrajP0.ZData,app.line3DTrajClick(:).ZData];
+                xLim=[min(xx),max(xx)]; xLim=xLim+[-1,1]*diff(xLim)*0.01;
+                yLim=[min(yy),max(yy)]; yLim=yLim+[-1,1]*diff(yLim)*0.01;
+                zLim=[min(zz),max(zz)]; zLim=zLim+[-1,1]*diff(zLim)*0.01;
+                app.ax3DTrajP0.XLim=xLim;
+                app.ax3DTrajP0.YLim=yLim;
+                app.ax3DTrajP0.ZLim=zLim;
+                for i=1:app.nClick
+                    app.ax3DTrajClick(i).XLim=xLim;
+                    app.ax3DTrajClick(i).YLim=yLim;
+                    app.ax3DTrajClick(i).ZLim=zLim;
                 end
             end
         end
@@ -1186,6 +1220,9 @@ classdef gridtool < handle %matlab.mixin.SetGet
             end
             xlabel(axyy(end), xname);
             ylabel(axyy(end), yname);
+            if app.linkAxesButton.Value
+                app.setLinkedLims();
+            end
             figure(fig)
         end
         
@@ -1247,9 +1284,8 @@ classdef gridtool < handle %matlab.mixin.SetGet
             end
                         
             %solver opts from ODE file
-            dt=app.prob.opt.dt;
             %dtmax, abstol/reltol, nout, maxstore?
-            app.SolverParTable.Data{'dt',:}=dt;
+            app.SolverParTable.Data{'dt',:}=app.prob.opt.dt;
             
             %tspan
             t0=app.prob.opt.t0;
@@ -1709,7 +1745,7 @@ classdef gridtool < handle %matlab.mixin.SetGet
             
             % Create trajectoriesLabel
             app.trajectoriesLabel = uilabel(app.GridTab);
-            app.trajectoriesLabel.Position = [5 30 68 23];
+            app.trajectoriesLabel.Position = [5 45 68 23];
             app.trajectoriesLabel.Text = 'Trajectories';
             
             % Create clicksEditFieldLabel
