@@ -289,6 +289,7 @@ classdef gridtool < handle %matlab.mixin.SetGet
             isBuilt = app.gridCLIsBuiltButton.Value;
             if ~isBuilt
                 app.buildCL('grid');
+                app.updateFeatureNames();
                 app.clo_g.initialize();
             end
         end
@@ -1306,30 +1307,7 @@ classdef gridtool < handle %matlab.mixin.SetGet
             app.trajvars=[app.prob.varNames(:);app.prob.auxNames(:);...
                 strcat('d',app.prob.varNames(:),'/dt')];
             
-            app.clo_g.getNFeatures(); %update features (nVar may affect)
-            fNames=app.clo_g.featureNames();
-            ampvars=fNames(startsWith(fNames,'max')); %same as trajvars
-            ampvars=split(ampvars);
-            ampvars=ampvars(:,2);
-            f=containers.Map;
-            fNamesPlus=string();
-            for i=1:length(ampvars)
-                var=ampvars{i};
-                f(var+" max")=@(F)F(:,fNames=="max "+var);
-                fNamesPlus(end+1,1)=var+" max";
-                f(var+" min")=@(F)F(:,fNames=="min "+var);
-                fNamesPlus(end+1,1)=var+" min";
-                if any(fNames=="mean "+var)
-                    f(var+" mean")=@(F)F(:,fNames=="mean "+var);
-                    fNamesPlus(end+1,1)=var+" mean";
-                end
-                f(var+" range")=@(F)F(:,fNames=="max "+var)-F(:,fNames=="min "+var);
-                fNamesPlus(end+1,1)=var+" range";
-            end
-            fNamesPlus(1)=[];
-            app.feature=f;
-            app.featureDropDown.Items=fNamesPlus;
-            title(app.gridCBar,app.featureDropDown.Value);
+            app.updateFeatureNames()
             
             %trajectory plot variables
             app.trajXDropDown.Items=[{'t'};app.trajvars];
@@ -1354,6 +1332,35 @@ classdef gridtool < handle %matlab.mixin.SetGet
             app.clo_t.initialize();
             
             figure(app.figControl)
+        end
+    
+        function updateFeatureNames(app)
+            
+            app.clo_g.getNFeatures(); %update features (nVar may affect)
+            app.clo_g.featureNames();
+            fNames=app.clo_g.featureNames();
+            ampvars=fNames(startsWith(fNames,'max')); %same as trajvars
+            ampvars=split(ampvars);
+            ampvars=ampvars(:,2);
+            f=containers.Map;
+            fNamesPlus=string();
+            for i=1:length(ampvars)
+                var=ampvars{i};
+                f(var+" max")=@(F)F(:,fNames=="max "+var);
+                fNamesPlus(end+1,1)=var+" max";
+                f(var+" min")=@(F)F(:,fNames=="min "+var);
+                fNamesPlus(end+1,1)=var+" min";
+                if any(fNames=="mean "+var)
+                    f(var+" mean")=@(F)F(:,fNames=="mean "+var);
+                    fNamesPlus(end+1,1)=var+" mean";
+                end
+                f(var+" range")=@(F)F(:,fNames=="max "+var)-F(:,fNames=="min "+var);
+                fNamesPlus(end+1,1)=var+" range";
+            end
+            fNamesPlus(1)=[];
+            app.feature=f;
+            app.featureDropDown.Items=fNamesPlus;
+            title(app.gridCBar,app.featureDropDown.Value);
         end
         
     end
