@@ -76,8 +76,8 @@ classdef clODEfeatures<clODE & matlab.mixin.SetGet
             obj.sp=sp;
             obj.nPts=numel(X0)/obj.prob.nVar; 
             obj.op=op;
-            obj.getF();
-            obj.getXf();
+            obj.featureNames();
+            obj.getNFeatures();
             obj.clInitialized=true;
         end
         

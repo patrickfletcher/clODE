@@ -34,9 +34,9 @@ classdef gridtool < handle %matlab.mixin.SetGet
 %         gridSol=struct('x',[],'y',[],'F',[]);
         %mechanism to cache F(:,:,z) values - for rapidly scanning z post compute
         
-        feature %struct specifying feature info for grid display
-        fscale
-        
+        feature %map specifying feature functions for display
+        fscale=1
+        tscale=1
 
         nClick=3
         trajP0=struct('p0',[],'x0',[],'tspan',[],...
@@ -115,6 +115,9 @@ classdef gridtool < handle %matlab.mixin.SetGet
         ax3DTrajClick             matlab.graphics.axis.Axes
         line3DTrajClick           matlab.graphics.chart.primitive.Line 
         
+        hlinkyy             matlab.graphics.internal.LinkProp
+        hlink3d             matlab.graphics.internal.LinkProp
+        
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %control figure
         figControl              matlab.ui.Figure
@@ -153,13 +156,14 @@ classdef gridtool < handle %matlab.mixin.SetGet
         gridZDropDown           matlab.ui.control.DropDown
         dzEditFieldLabel        matlab.ui.control.Label
         dzEditField             matlab.ui.control.NumericEditField
+        zValueEditField         matlab.ui.control.NumericEditField
         tspanTable              matlab.ui.control.Table
         featureDropDownLabel    matlab.ui.control.Label
         featureDropDown         matlab.ui.control.DropDown
-%         transDropDownLabel    matlab.ui.control.Label
-%         transDropDown         matlab.ui.control.DropDown
         fscaleEditFieldLabel    matlab.ui.control.Label
         fscaleEditField         matlab.ui.control.NumericEditField
+        tscaleEditFieldLabel    matlab.ui.control.Label
+        tscaleEditField         matlab.ui.control.NumericEditField
         parLabel                matlab.ui.control.Label
         parTable                matlab.ui.control.Table
         icLabel                 matlab.ui.control.Label
@@ -172,8 +176,6 @@ classdef gridtool < handle %matlab.mixin.SetGet
         trajectoriesLabel       matlab.ui.control.Label
         clicksEditFieldLabel    matlab.ui.control.Label
         clicksEditField         matlab.ui.control.NumericEditField
-%         tscaleEditFieldLabel    matlab.ui.control.Label
-%         tscaleEditField         matlab.ui.control.NumericEditField
         trajXDropDownLabel      matlab.ui.control.Label
         trajXDropDown           matlab.ui.control.DropDown
         trajYDropDownLabel      matlab.ui.control.Label
@@ -274,6 +276,11 @@ classdef gridtool < handle %matlab.mixin.SetGet
             app.featureDropDown.Items=app.clo_g.featureNames();
             app.setBuildNeeded('grid');
             app.gridclInitialized=false;
+        end
+        
+        function augmentFeatures(app)
+            basefeatures=app.clo_g.featureNames();
+            
         end
         
         % Value changed function: gridCLIsBuiltButton (doesn't execute for
@@ -383,6 +390,9 @@ classdef gridtool < handle %matlab.mixin.SetGet
             switch prop
                 case 'name'
                     app.grid(vix,:)=app.gridvars(newData,:);
+                    newGridDisplayData=app.grid(vix,{'name','val','lb','ub'});
+                    newGridDisplayData.N=app.nGrid(vix);
+                    app.gridTable.Data(vix,:)=table2cell(newGridDisplayData);
                     app.updateGridPlot('nosol');
                     app.makeGridData(); %prep for next integration
                     
@@ -406,10 +416,17 @@ classdef gridtool < handle %matlab.mixin.SetGet
         
         % Value changed function: dzEditField
         function dzEditFieldValueChanged(app, src, event)
-            %TODO: value checking
             newDZ = app.dzEditField.Value;
             if isnumeric(newDZ) && isreal(newDZ)
                 app.dz=newDZ;
+            end
+        end
+        
+        % Value changed function: zValueEditField
+        function zValueEditFieldValueChanged(app, src, event)
+            newZval = app.zValueEditField.Value;
+            if isnumeric(newZval) && isreal(newZval)
+                app.gridvars{app.z.name,'val'}=newZval;
             end
         end
         
@@ -439,6 +456,19 @@ classdef gridtool < handle %matlab.mixin.SetGet
         function fscaleEditFieldValueChanged(app, src, event)
             app.fscale = app.fscaleEditField.Value;
             app.updateGridPlot('feature');
+        end
+        
+        % Value changed function: tscaleEditField
+        function tscaleEditFieldValueChanged(app, src, event)
+            %change t scale for trajectories (only?)
+            %TODO: change should really be sent to feature detector, so
+            %time-dep features are also changed?
+            app.tscale = app.tscaleEditField.Value;
+%             app.trajP0.t=app.trajP0.t*app.tscale;
+            app.updateTrajPlotData('p0');
+            app.updateTrajPlotData('click');
+            app.updateTrajPlot('p0');
+            app.updateTrajPlot('click');
         end
         
         
@@ -522,25 +552,57 @@ classdef gridtool < handle %matlab.mixin.SetGet
         % Value changed function: linkAxesButton
         function linkAxesButtonValueChanged(app, src, event)
             doLinkAxes = app.linkAxesButton.Value;
-            ax=[app.axyyTrajP0, app.axyyTrajClick];
-            if doLinkAxes %only works for 2D axes
-                for i=1:length(ax)
-                    yyaxis(ax(i),'right')
+            
+            if doLinkAxes
+                %yyaxes
+                xL=[app.lineyyTrajP0(1).XData,app.lineyyTrajClick(:,1).XData];
+                yL=[app.lineyyTrajP0(1).YData,app.lineyyTrajClick(:,1).YData];
+                yR=[app.lineyyTrajP0(2).YData,app.lineyyTrajClick(:,2).YData];
+                xLimL=[min(xL),max(xL)];
+                yLimL=[min(yL),max(yL)];
+                yLimR=[min(yR),max(yR)];
+                app.axyyTrajP0.XLim=xLimL;
+                app.axyyTrajP0.YAxis(1).Limits=yLimL;
+                app.axyyTrajP0.YAxis(2).Limits=yLimR;
+                for i=1:app.nClick
+                    app.axyyTrajClick(i).XLim=xLimL;
+                    app.axyyTrajClick(i).YAxis(1).Limits=yLimL;
+                    app.axyyTrajClick(i).YAxis(2).Limits=yLimR;
                 end
-                linkaxes(ax,'y');
-                for i=1:length(ax)
-                    yyaxis(ax(i),'left')
+                %3daxes
+                xx=[app.line3DTrajP0.XData,app.line3DTrajClick(:).XData];
+                yy=[app.line3DTrajP0.YData,app.line3DTrajClick(:).YData];
+                zz=[app.line3DTrajP0.ZData,app.line3DTrajClick(:).ZData];
+                xLim=[min(xx),max(xx)];
+                yLim=[min(yy),max(yy)];
+                zLim=[min(zz),max(zz)];
+                app.ax3DTrajP0.XLim=xLim;
+                app.ax3DTrajP0.YLim=yLim;
+                app.ax3DTrajP0.ZLim=zLim;
+                for i=1:app.nClick
+                    app.ax3DTrajClick(i).XLim=xLim;
+                    app.ax3DTrajClick(i).YLim=yLim;
+                    app.ax3DTrajClick(i).ZLim=zLim;
                 end
-                linkaxes(ax,'y');
             else
-                for i=1:length(ax)
-                    yyaxis(ax(i),'right')
+                %yyaxes
+                app.axyyTrajP0.XLimMode='auto';
+                app.axyyTrajP0.YAxis(1).LimitsMode='auto';
+                app.axyyTrajP0.YAxis(2).LimitsMode='auto';
+                for i=1:app.nClick
+                    app.axyyTrajClick(i).XLimMode='auto';
+                    app.axyyTrajClick(i).YAxis(1).LimitsMode='auto';
+                    app.axyyTrajClick(i).YAxis(2).LimitsMode='auto';
                 end
-                linkaxes(ax,'off');
-                for i=1:length(ax)
-                    yyaxis(ax(i),'left')
+                %3daxes
+                app.ax3DTrajP0.XLimMode='auto';
+                app.ax3DTrajP0.YLimMode='auto';
+                app.ax3DTrajP0.ZLimMode='auto';
+                for i=1:app.nClick
+                    app.ax3DTrajClick(i).XLimMode='auto';
+                    app.ax3DTrajClick(i).YLimMode='auto';
+                    app.ax3DTrajClick(i).ZLimMode='auto';
                 end
-                linkaxes(ax,'off');
             end
         end
         
@@ -616,11 +678,11 @@ classdef gridtool < handle %matlab.mixin.SetGet
         function gridvarUpdate(~,eventData)
             app = eventData.AffectedObject;
             %update grid
-            if isempty(app.grid.name{1})
-                vars=app.gridvars.name(1:2);
-            else
+%             if isempty(app.grid.name{1})
+%                 vars=app.gridvars.name(1:2);
+%             else
                 vars=app.grid.name;
-            end
+%             end
             newGrid=app.gridvars(vars,:);
             newGrid.Row={'x';'y'};
             
@@ -643,9 +705,12 @@ classdef gridtool < handle %matlab.mixin.SetGet
                 app.markerP0.YData=app.grid{'y','val'};
             end
             
-            newZ=app.gridvars(app.z.name,:);
+            newZ=app.gridvars(app.z.name,:); %zname doesn't change, but val/lb/ub might
             if ~isequal(newZ, app.z)
-                app.z=newZ; 
+                app.z=newZ;
+%                 app.dz=(app.z.ub-app.z.lb)/10;
+%                 app.dzEditField.Value=app.dz; 
+                app.zValueEditField.Value=app.z.val;
             end
             
             %update parameter and ic table
@@ -681,8 +746,7 @@ classdef gridtool < handle %matlab.mixin.SetGet
                 case 'add' % increment z by +dz, transient
                     newZ=min(app.z.val+app.dz, app.z.ub);
                     if newZ~=app.z.val
-                        app.z.val=newZ;
-                        app.gridvars{app.z.name,'val'}=app.z.val;
+                        app.gridvars{app.z.name,'val'}=newZ;
                         app.makeGridData(); %prep for next integration
                         app.integrateGrid('transient')
                     end
@@ -690,8 +754,7 @@ classdef gridtool < handle %matlab.mixin.SetGet
                 case 'subtract' % increment z by -dz, transient
                     newZ=max(app.z.val-app.dz, app.z.lb);
                     if newZ~=app.z.val
-                        app.z.val=newZ;
-                        app.gridvars{app.z.name,'val'}=app.z.val;
+                        app.gridvars{app.z.name,'val'}=newZ;
                         app.makeGridData(); %prep for next integration
                         app.integrateGrid('transient')
                     end
@@ -782,8 +845,9 @@ classdef gridtool < handle %matlab.mixin.SetGet
                     
                 case 'feature'
                     %handle F plotting seletion
-                    ix=strcmp(app.featureDropDown.Value,app.clo_g.fNames);
-                    C=reshape(app.clo_g.F(:,ix)*app.fscale,app.nGrid)';
+%                     ix=strcmp(app.featureDropDown.Value,app.clo_g.fNames);
+                    fun=app.feature(app.featureDropDown.Value);
+                    C=reshape(fun(app.clo_g.F)*app.fscale,app.nGrid)';
                     C(C<-1e10|C>1e10)=nan; %hack to prevent display of bad values
                     app.imGrid.CData=C;
                     title(app.gridCBar,app.featureDropDown.Value,'Interpreter','none')
@@ -794,6 +858,9 @@ classdef gridtool < handle %matlab.mixin.SetGet
                     app.imGrid.CData=zeros(app.nGrid(1),app.nGrid(2));
                     app.markerP0.XData=app.grid{'x','val'};
                     app.markerP0.YData=app.grid{'y','val'};
+                    for i=1:app.nClick
+                        app.markerPquery(i).Visible='off';
+                    end
                     xlabel(app.axGrid,app.grid{'x','name'});
                     ylabel(app.axGrid,app.grid{'y','name'});
                     title(app.gridCBar,app.featureDropDown.Value,'Interpreter','none')
@@ -852,6 +919,7 @@ classdef gridtool < handle %matlab.mixin.SetGet
                 coords(i,:)=[px,py];
                 app.markerPquery(i).XData=px;
                 app.markerPquery(i).YData=py;
+                app.markerPquery(i).Visible='on';
             end
             app.makeTrajData(coords);
             app.integrateTraj('go','click');
@@ -890,6 +958,7 @@ classdef gridtool < handle %matlab.mixin.SetGet
             if isP0
                 app.trajP0.p0=newP;
                 app.trajP0.x0=newX0;
+                app.gridvars{app.gridvars.type=="ic",'val'}=newX0(:);
             else
                 for i=1:size(coords,1)
                     app.trajClick(i).p0=newP(i,:);
@@ -1005,12 +1074,15 @@ classdef gridtool < handle %matlab.mixin.SetGet
                 case 'click'
                     traj=app.trajClick;
             end
+            if isempty(traj(1).t)
+                return
+            end
             nTraj=length(traj);
             for i=1:nTraj
                 %extract the plotting data
                 xname=app.trajXDropDown.Value;
                 if xname=="t"
-                    xp=traj(i).t;
+                    xp=traj(i).t*app.tscale;
                 else
                     xix=strcmp(app.trajvars,xname);
                     xp=traj(i).x(:,xix);
@@ -1063,6 +1135,10 @@ classdef gridtool < handle %matlab.mixin.SetGet
                     lyy=app.lineyyTrajClick;
                     ax3d=app.ax3DTrajClick;
                     l3d=app.line3DTrajClick;
+            end
+            
+            if isempty(traj(1).t)
+                return
             end
             
             xname=app.trajXDropDown.Value;
@@ -1148,7 +1224,6 @@ classdef gridtool < handle %matlab.mixin.SetGet
                 app.gridObserverParTable.Data=optable;
                 app.gridObserverParTable.RowName=fieldnames(defaultop);
                 
-                app.featureDropDown.Items=app.clo_g.featureNames();
                 app.fscale=1;
                 
             else %to avoid reverting to default sp and op:
@@ -1163,12 +1238,13 @@ classdef gridtool < handle %matlab.mixin.SetGet
                 app.clo_g.Xf=[]; %to allow new nVar
                 app.XF=[]; %to allow new nVar
             end
-            app.buildCL('grid');
-            app.clo_g.getNFeatures(); %update features (nVar may affect)
-            app.featureDropDown.Items=app.clo_g.featureNames();
-                
-            app.buildCL('traj');
-            
+            if ~app.clo_g.clBuilt
+                app.buildCL('grid');
+            end
+            if ~app.clo_t.clBuilt
+                app.buildCL('traj');
+            end
+                        
             %solver opts from ODE file
             dt=app.prob.opt.dt;
             %dtmax, abstol/reltol, nout, maxstore?
@@ -1199,12 +1275,20 @@ classdef gridtool < handle %matlab.mixin.SetGet
             newGridvars.ix=[(1:app.prob.nPar)';(1:app.prob.nVar)'];
             newGridvars.Properties.RowNames=newGridvars.name;
             
+            const_bounds=newGridvars.lb==newGridvars.ub;
+            newGridvars.lb(const_bounds)=newGridvars.val(const_bounds)/2;
+            newGridvars.ub(const_bounds)=newGridvars.val(const_bounds)*2;
+            
+            %set grid to first two names
+            app.grid.name=newGridvars.name(1:2);
+            
             % specify Z for +/- incrementing
             app.z=newGridvars(3,:);
             app.dz=(app.z.ub-app.z.lb)/10;
             app.gridZDropDown.Items=newGridvars.name;
             app.gridZDropDown.Value=app.z.name;
             app.dzEditField.Value=app.dz;
+            app.zValueEditField.Value=app.z.val;
             
             app.gridvars=newGridvars; %triggers postSet listener
 
@@ -1221,6 +1305,31 @@ classdef gridtool < handle %matlab.mixin.SetGet
 %             app.trajvars=newTrajvars;
             app.trajvars=[app.prob.varNames(:);app.prob.auxNames(:);...
                 strcat('d',app.prob.varNames(:),'/dt')];
+            
+            app.clo_g.getNFeatures(); %update features (nVar may affect)
+            fNames=app.clo_g.featureNames();
+            ampvars=fNames(startsWith(fNames,'max')); %same as trajvars
+            ampvars=split(ampvars);
+            ampvars=ampvars(:,2);
+            f=containers.Map;
+            fNamesPlus=string();
+            for i=1:length(ampvars)
+                var=ampvars{i};
+                f(var+" max")=@(F)F(:,fNames=="max "+var);
+                fNamesPlus(end+1,1)=var+" max";
+                f(var+" min")=@(F)F(:,fNames=="min "+var);
+                fNamesPlus(end+1,1)=var+" min";
+                if any(fNames=="mean "+var)
+                    f(var+" mean")=@(F)F(:,fNames=="mean "+var);
+                    fNamesPlus(end+1,1)=var+" mean";
+                end
+                f(var+" range")=@(F)F(:,fNames=="max "+var)-F(:,fNames=="min "+var);
+                fNamesPlus(end+1,1)=var+" range";
+            end
+            fNamesPlus(1)=[];
+            app.feature=f;
+            app.featureDropDown.Items=fNamesPlus;
+            title(app.gridCBar,app.featureDropDown.Value);
             
             %trajectory plot variables
             app.trajXDropDown.Items=[{'t'};app.trajvars];
@@ -1277,6 +1386,21 @@ classdef gridtool < handle %matlab.mixin.SetGet
             %                 clear app
             %             end
             
+        end
+        
+        % Copy current parameter set into an XPP file (requires
+        % ChangeXPPodeFile and packagePars4XPP)
+        function savePars(app,~,~)
+            
+            [fileToWrite,path]=uiputfile('*.ode','Save parameters to ODE file', app.odefile);
+            
+            fileToWrite=fullfile(path,fileToWrite);
+            
+            if ~exist(fileToWrite,'file')
+                copyfile(app.odefile,fileToWrite)
+            end
+            
+            ChangeXPPodeFile(fileToWrite,package4XPP(app.prob.parNames, app.p0, app.prob.varNames, app.x0));
         end
         
     end
@@ -1459,41 +1583,58 @@ classdef gridtool < handle %matlab.mixin.SetGet
             app.gridZDropDown.ValueChangedFcn = @app.gridZDropDownValueChanged;
             app.gridZDropDown.Position = [20 510 65 20];
             
+            % Create zValueEditField
+            app.zValueEditField = uieditfield(app.GridTab, 'numeric');
+            app.zValueEditField.ValueChangedFcn = @app.zValueEditFieldValueChanged;
+            app.zValueEditField.Position = [90 510 60 20];
+            app.zValueEditField.Value=0;
+            app.zValueEditField.ValueDisplayFormat='%.2g';
+            
             % Create dzEditFieldLabel
             app.dzEditFieldLabel = uilabel(app.GridTab);
-            app.dzEditFieldLabel.Position = [85 510 15 20];
+            app.dzEditFieldLabel.Position = [155 510 15 20];
             app.dzEditFieldLabel.Text = 'dz';
-            app.dzEditFieldLabel.HorizontalAlignment = 'right';
+            app.dzEditFieldLabel.HorizontalAlignment = 'left';
             
             % Create dzEditField
             app.dzEditField = uieditfield(app.GridTab, 'numeric');
             app.dzEditField.ValueChangedFcn = @app.dzEditFieldValueChanged;
-            app.dzEditField.Position = [105 510 50 20];
+            app.dzEditField.Position = [170 510 60 20];
             app.dzEditField.Value=0;
             app.dzEditField.ValueDisplayFormat='%.2g';
             
             % Create featureDropDownLabel
             app.featureDropDownLabel = uilabel(app.GridTab);
-            app.featureDropDownLabel.Position = [200 510 85 20];
+            app.featureDropDownLabel.Position = [200 490 85 20];
             app.featureDropDownLabel.Text = 'feature';
-            app.featureDropDownLabel.HorizontalAlignment='center';
+            app.featureDropDownLabel.HorizontalAlignment='right';
             
             % Create featureDropDown
             app.featureDropDown = uidropdown(app.GridTab);
             app.featureDropDown.ValueChangedFcn = @app.featureDropDownValueChanged;
-            app.featureDropDown.Position = [160 490 120 20];
+            app.featureDropDown.Position = [160 474 125 20];
             
             % Create fscaleEditFieldLabel
             app.fscaleEditFieldLabel = uilabel(app.GridTab);
-            app.fscaleEditFieldLabel.Position = [195 465 40 20];
+            app.fscaleEditFieldLabel.Position = [195 453 40 20];
             app.fscaleEditFieldLabel.Text = 'fscale';
             
             % Create fscaleEditField
             app.fscaleEditField = uieditfield(app.GridTab, 'numeric');
             app.fscaleEditField.ValueChangedFcn = @app.fscaleEditFieldValueChanged;
-            app.fscaleEditField.Position = [235 465 50 20];
+            app.fscaleEditField.Position = [235 453 50 20];
             app.fscaleEditField.Value=1;
             
+            % Create tscaleEditFieldLabel
+            app.tscaleEditFieldLabel = uilabel(app.GridTab);
+            app.tscaleEditFieldLabel.Position = [195 431 40 20];
+            app.tscaleEditFieldLabel.Text = 'tscale';
+            
+            % Create tscaleEditField
+            app.tscaleEditField = uieditfield(app.GridTab, 'numeric');
+            app.tscaleEditField.ValueChangedFcn = @app.tscaleEditFieldValueChanged;
+            app.tscaleEditField.Position = [235 431 50 20];
+            app.tscaleEditField.Value=1;
             
             % Create tspanTable
             app.tspanTable = uitable(app.GridTab);
@@ -1524,18 +1665,18 @@ classdef gridtool < handle %matlab.mixin.SetGet
             app.parTable.ColumnSortable = [true false false false];
             app.parTable.ColumnEditable = [true true true true];
             app.parTable.CellEditCallback = @app.parTableCellEdit;
-            app.parTable.Position = [5 240 280 160];
+            app.parTable.Position = [5 225 280 175];
             
             
             % Create icLabel
             app.icLabel = uilabel(app.GridTab);
-            app.icLabel.Position = [5 210 91 23];
+            app.icLabel.Position = [5 195 91 23];
             app.icLabel.Text = 'Initial conditions';
             
             % Create icDefaultButton
             app.icDefaultButton = uibutton(app.GridTab, 'push');
             app.icDefaultButton.ButtonPushedFcn = @app.icDefaultButtonPushed;
-            app.icDefaultButton.Position = [233 213 52 20];
+            app.icDefaultButton.Position = [233 198 52 20];
             app.icDefaultButton.Text = 'default';
             
             % Create icTable
@@ -1546,7 +1687,7 @@ classdef gridtool < handle %matlab.mixin.SetGet
             app.icTable.ColumnSortable = [true false false false];
             app.icTable.ColumnEditable = [true true true true];
             app.icTable.CellEditCallback = @app.icTableCellEdit;
-            app.icTable.Position = [5 70 280 140];
+            app.icTable.Position = [5 70 280 125];
             
             
             %             % Create icRandomButton
@@ -1561,69 +1702,68 @@ classdef gridtool < handle %matlab.mixin.SetGet
             
             % Create trajectoriesLabel
             app.trajectoriesLabel = uilabel(app.GridTab);
-            app.trajectoriesLabel.Position = [5 34 68 23];
+            app.trajectoriesLabel.Position = [5 30 68 23];
             app.trajectoriesLabel.Text = 'Trajectories';
-            
-            % Create trajXDropDownLabel
-            app.trajXDropDownLabel = uilabel(app.GridTab);
-            app.trajXDropDownLabel.HorizontalAlignment = 'right';
-            app.trajXDropDownLabel.Position = [5 5 10 20];
-            app.trajXDropDownLabel.Text = 'x';
-            
-            % Create trajXDropDown
-            app.trajXDropDown = uidropdown(app.GridTab);
-            app.trajXDropDown.ValueChangedFcn = @app.trajXDropDownValueChanged;
-            app.trajXDropDown.Position = [20 5 52 20];
-            
-            % Create trajYDropDownLabel
-            app.trajYDropDownLabel = uilabel(app.GridTab);
-            app.trajYDropDownLabel.HorizontalAlignment = 'right';
-            app.trajYDropDownLabel.Position = [75 5 15 20];
-            app.trajYDropDownLabel.Text = 'y1';
-            
-            % Create trajYDropDown
-            app.trajYDropDown = uidropdown(app.GridTab);
-            app.trajYDropDown.ValueChangedFcn = @app.trajYDropDownValueChanged;
-            app.trajYDropDown.Position = [95 5 52 20];
-            
-            % Create trajZDropDownLabel
-            app.trajZDropDownLabel = uilabel(app.GridTab);
-            app.trajZDropDownLabel.HorizontalAlignment = 'right';
-            app.trajZDropDownLabel.Position = [150 5 15 20];
-            app.trajZDropDownLabel.Text = 'y2';
-            
-            % Create trajZDropDown
-            app.trajZDropDown = uidropdown(app.GridTab);
-            app.trajZDropDown.ValueChangedFcn = @app.trajZDropDownValueChanged;
-            app.trajZDropDown.Position = [170 5 52 20];
             
             % Create clicksEditFieldLabel
             app.clicksEditFieldLabel = uilabel(app.GridTab);
-            app.clicksEditFieldLabel.HorizontalAlignment = 'right';
-            app.clicksEditFieldLabel.Position = [146 35 44 21];
+            app.clicksEditFieldLabel.HorizontalAlignment = 'center';
+            app.clicksEditFieldLabel.Position = [115 30 45 22];
             app.clicksEditFieldLabel.Text = '# clicks';
             
             % Create clicksEditField
             app.clicksEditField = uieditfield(app.GridTab, 'numeric');
             app.clicksEditField.ValueChangedFcn = @app.clicksEditFieldValueChanged;
-            app.clicksEditField.Position = [193 34 27 21];
+            app.clicksEditField.Position = [160 30 30 22];
             app.clicksEditField.Value=app.nClick;
             
             % Create linkAxesButton
             app.linkAxesButton = uibutton(app.GridTab, 'state');
             app.linkAxesButton.ValueChangedFcn = @app.linkAxesButtonValueChanged;
             app.linkAxesButton.Text = 'link axes';
-            app.linkAxesButton.Position = [227 34 55 22];
+            app.linkAxesButton.Position = [195 30 55 22];
             
             % Create threeDButton
             app.threeDButton = uibutton(app.GridTab, 'state');
             app.threeDButton.ValueChangedFcn = @app.threeDButtonValueChanged;
             app.threeDButton.Text = '3D';
-            app.threeDButton.Position = [227 5 55 20];
+            app.threeDButton.Position = [255 30 30 22];
+            
+            % Create trajXDropDownLabel
+            app.trajXDropDownLabel = uilabel(app.GridTab);
+            app.trajXDropDownLabel.HorizontalAlignment = 'center';
+            app.trajXDropDownLabel.Position = [5 5 15 20];
+            app.trajXDropDownLabel.Text = 'x';
+            
+            % Create trajXDropDown
+            app.trajXDropDown = uidropdown(app.GridTab);
+            app.trajXDropDown.ValueChangedFcn = @app.trajXDropDownValueChanged;
+            app.trajXDropDown.Position = [20 5 75 20];
+            
+            % Create trajYDropDownLabel
+            app.trajYDropDownLabel = uilabel(app.GridTab);
+            app.trajYDropDownLabel.HorizontalAlignment = 'left';
+            app.trajYDropDownLabel.Position = [100 5 10 20];
+            app.trajYDropDownLabel.Text = 'y1';
+            
+            % Create trajYDropDown
+            app.trajYDropDown = uidropdown(app.GridTab);
+            app.trajYDropDown.ValueChangedFcn = @app.trajYDropDownValueChanged;
+            app.trajYDropDown.Position = [115 5 75 20];
+            
+            % Create trajZDropDownLabel
+            app.trajZDropDownLabel = uilabel(app.GridTab);
+            app.trajZDropDownLabel.HorizontalAlignment = 'left';
+            app.trajZDropDownLabel.Position = [195 5 15 20];
+            app.trajZDropDownLabel.Text = 'y2';
+            
+            % Create trajZDropDown
+            app.trajZDropDown = uidropdown(app.GridTab);
+            app.trajZDropDown.ValueChangedFcn = @app.trajZDropDownValueChanged;
+            app.trajZDropDown.Position = [210 5 75 20];
             
             %             app.HelpTab = uitab(app.TabGroup);
             %             app.HelpTab.Title = 'Usage';
-            
             
             app.figControl.Visible = 'on';
             
@@ -1692,7 +1832,7 @@ classdef gridtool < handle %matlab.mixin.SetGet
             
             xlabel(app.axyyTrajP0,'t')
             axis(app.axyyTrajP0,'tight')
-%             app.axyyTrajP0.YAxis(2).Visible='off'; %turn it on if y2 is set
+            app.axyyTrajP0.YAxis(2).Visible='off'; %turn it on if y2 is set
             
             app.line3DTrajP0=plot3(app.ax3DTrajP0,nan,nan,nan);
             app.line3DTrajP0.XDataSource='app.trajP0.xp';

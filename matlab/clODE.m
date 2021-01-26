@@ -109,6 +109,7 @@ classdef clODE < cppclass & matlab.mixin.SetGet
             obj.stepper=stepper;
             obj.precision=precision;
             obj.sp=clODE.defaultSolverParams(); %default solver params (device transfer during init)
+%             obj.buildCL();
         end
         
         % new and delete are inherited
