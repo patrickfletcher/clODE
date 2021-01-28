@@ -178,6 +178,8 @@ classdef gridtool < handle %matlab.mixin.SetGet
 %         TrajTab                 matlab.ui.container.Tab
         
         trajectoriesLabel       matlab.ui.control.Label
+        showTrajP0CheckBox      matlab.ui.control.CheckBox
+        showTrajClickCheckBox   matlab.ui.control.CheckBox
         clicksEditFieldLabel    matlab.ui.control.Label
         clicksEditField         matlab.ui.control.NumericEditField
         trajXDropDownLabel      matlab.ui.control.Label
@@ -190,9 +192,6 @@ classdef gridtool < handle %matlab.mixin.SetGet
         threeDButton            matlab.ui.control.StateButton
         
         %axis in focus?
-        
-        %showTrajP0
-        %showTrajClick
         
 %         HelpTab                 matlab.ui.container.Tab
     end
@@ -417,6 +416,7 @@ classdef gridtool < handle %matlab.mixin.SetGet
             app.z=app.gridvars(newZ,:);
             app.dz=(app.z.ub-app.z.lb)/10;
             app.dzEditField.Value=app.dz;
+            app.zValueEditField.Value=app.z.val;
         end
         
         % Value changed function: dzEditField
@@ -500,6 +500,11 @@ classdef gridtool < handle %matlab.mixin.SetGet
             app.gridvars{var, prop}=newData; %sync gridvars table
         end
         
+        % Button pushed function: parSaveButton
+        function parSaveButtonPushed(app, src, event)
+            app.savePars();
+        end
+        
         % Button pushed function: parDefaultButton
         function parDefaultButtonPushed(app, src, event)
             %get the original default values for par.val/lb/ub from app.prob
@@ -519,6 +524,33 @@ classdef gridtool < handle %matlab.mixin.SetGet
             newGridvars.lb=[app.prob.var.lb]';
             newGridvars.ub=[app.prob.var.ub]';
             app.gridvars(app.gridvars.type=="ic",{'val','lb','ub'})=newGridvars;
+        end
+        
+        %CheckBox value changed function: showTrajP0CheckBox
+        function showTrajP0CheckBoxValueChanged(app, src, event)
+            if app.showTrajP0CheckBox.Value
+                app.markerP0.Visible='on';
+                app.figTrajP0.Visible='on';
+            else
+                app.markerP0.Visible='off';
+                app.figTrajP0.Visible='off';
+            end
+        end
+        
+        
+        %CheckBox value changed function: showTrajClickCheckBox
+        function showTrajClickCheckBoxValueChanged(app, src, event)
+            if app.showTrajClickCheckBox.Value
+                for i=1:app.nClick
+                    app.markerPquery(i).Visible='on';
+                end
+                app.figTrajClick.Visible='on';
+            else
+                for i=1:app.nClick
+                    app.markerPquery(i).Visible='off';
+                end
+                app.figTrajClick.Visible='off';
+            end
         end
         
         % Value changed function: trajXDropDown
@@ -602,6 +634,7 @@ classdef gridtool < handle %matlab.mixin.SetGet
         end
         
         function setLinkedLims(app)
+            
             xL=[app.lineyyTrajP0(1).XData];
             yL=[app.lineyyTrajP0(1).YData,app.lineyyTrajClick(:,1).YData];
             yR=[app.lineyyTrajP0(2).YData,app.lineyyTrajClick(:,2).YData];
@@ -613,6 +646,7 @@ classdef gridtool < handle %matlab.mixin.SetGet
                 yLimR=[min(yR),max(yR)]; yLimR=yLimR+[-1,1]*diff(yLimR)*0.01;
                 app.axyyTrajP0.YAxis(2).Limits=yLimR;
             end
+            
             xL=[app.lineyyTrajClick(:,1).XData];
             xLimL=[min(xL),max(xL)]; xLimL=xLimL+[-1,1]*diff(xLimL)*0.01;
             for i=1:app.nClick
@@ -1014,27 +1048,27 @@ classdef gridtool < handle %matlab.mixin.SetGet
             
             tic
             append=false;
+            app.clo_t.settspan(app.trajTspan);
             switch action
                 case 'continue'
                     if isempty(traj(1).t) %only works if prior trajectory available
                         return
                     end
-                    tspan=app.trajTspan + traj(1).t(end);
-                    app.clo_t.settspan(tspan);
+                    %NOTE: non-autonomous needs time shift!
+%                     tspan=app.trajTspan + traj(1).t(end);
+%                     app.clo_t.settspan(tspan);
                     for i=1:length(traj)
                         newX0(i,:)=traj(i).x(end,1:app.prob.nVar);
                     end
                     append=true;
                     
                 case 'go' %no prep
-                    app.clo_t.settspan(app.trajTspan);
                     newX0=cat(1,traj(:).x0);
                     
                 case 'last'
                     if isempty(traj(1).t) %only works if prior trajectory available
                         return
                     end
-                    app.clo_t.settspan(app.trajTspan);
                     for i=1:length(traj)
                         newX0(i,:)=traj(i).x(end,1:app.prob.nVar);
                     end
@@ -1050,7 +1084,6 @@ classdef gridtool < handle %matlab.mixin.SetGet
                     end
                     
                 case 'random'
-                    app.clo_t.settspan(app.trajTspan);
                     x0lb=app.gridvars.lb(app.gridvars.type=="ic")';
                     x0ub=app.gridvars.ub(app.gridvars.type=="ic")';
                     for i=1:length(traj)
@@ -1083,7 +1116,7 @@ classdef gridtool < handle %matlab.mixin.SetGet
                     aux(1:nStored(i),:,i),...
                     dx(1:nStored(i),:,i)];
                 if append
-                    newt=[traj(i).t; newt];
+                    newt=[traj(i).t; newt+traj(i).t(end)];
                     newx=[traj(i).x; newx];
                 end
                 traj(i).t=newt;
@@ -1160,6 +1193,9 @@ classdef gridtool < handle %matlab.mixin.SetGet
                     ax3d=app.ax3DTrajP0;
                     l3d=app.line3DTrajP0;
                     
+                    app.showTrajP0CheckBox.Value=1;
+                    app.showTrajP0CheckBoxValueChanged()
+                    
                 case 'click'
                     traj=app.trajClick;
                     if ~isvalid(app.figTrajClick)
@@ -1170,6 +1206,9 @@ classdef gridtool < handle %matlab.mixin.SetGet
                     lyy=app.lineyyTrajClick;
                     ax3d=app.ax3DTrajClick;
                     l3d=app.line3DTrajClick;
+                    
+                    app.showTrajClickCheckBox.Value=1;
+                    app.showTrajClickCheckBoxValueChanged()
             end
             
             if isempty(traj(1).t)
@@ -1264,6 +1303,10 @@ classdef gridtool < handle %matlab.mixin.SetGet
                 
                 app.fscale=1;
                 
+                %solver opts from ODE file
+                %dtmax, abstol/reltol, nout, maxstore?
+                app.SolverParTable.Data{'dt',:}=app.prob.opt.dt;
+                
             else %to avoid reverting to default sp and op:
                 app.clo_g.setNewProblem(app.prob);
                 app.clo_t.setNewProblem(app.prob);
@@ -1283,9 +1326,6 @@ classdef gridtool < handle %matlab.mixin.SetGet
                 app.buildCL('traj');
             end
                         
-            %solver opts from ODE file
-            %dtmax, abstol/reltol, nout, maxstore?
-            app.SolverParTable.Data{'dt',:}=app.prob.opt.dt;
             
             %tspan
             t0=app.prob.opt.t0;
@@ -1313,8 +1353,9 @@ classdef gridtool < handle %matlab.mixin.SetGet
             newGridvars.Properties.RowNames=newGridvars.name;
             
             const_bounds=newGridvars.lb==newGridvars.ub;
-            newGridvars.lb(const_bounds)=newGridvars.val(const_bounds)/2;
-            newGridvars.ub(const_bounds)=newGridvars.val(const_bounds)*2;
+            const_vals=newGridvars.val(const_bounds);
+            newGridvars.lb(const_bounds)=const_vals-abs(const_vals)*0.25;
+            newGridvars.ub(const_bounds)=const_vals+abs(const_vals)*0.25;
             
             %set grid to first two names
             app.grid.name=newGridvars.name(1:2);
@@ -1371,7 +1412,6 @@ classdef gridtool < handle %matlab.mixin.SetGet
         end
     
         function updateFeatureNames(app)
-            
             app.clo_g.getNFeatures(); %update features (nVar may affect)
             app.clo_g.featureNames();
             fNames=app.clo_g.featureNames();
@@ -1394,6 +1434,7 @@ classdef gridtool < handle %matlab.mixin.SetGet
                 fNamesPlus(end+1,1)=var+" range";
             end
             fNamesPlus(1)=[];
+            fNamesPlus=[fNamesPlus;fNames(contains(fNames,'count'))];
             app.feature=f;
             app.featureDropDown.Items=fNamesPlus;
             title(app.gridCBar,app.featureDropDown.Value);
@@ -1694,6 +1735,12 @@ classdef gridtool < handle %matlab.mixin.SetGet
             app.parLabel.Position = [5 400 69 23];
             app.parLabel.Text = 'Parameters';
             
+            % Create parSaveButton
+            app.parSaveButton = uibutton(app.GridTab, 'push');
+            app.parSaveButton.ButtonPushedFcn = @app.parSaveButtonPushed;
+            app.parSaveButton.Position = [180 403 48 20];
+            app.parSaveButton.Text = 'save';
+            
             % Create parDefaultButton
             app.parDefaultButton = uibutton(app.GridTab, 'push');
             app.parDefaultButton.ButtonPushedFcn = @app.parDefaultButtonPushed;
@@ -1730,7 +1777,7 @@ classdef gridtool < handle %matlab.mixin.SetGet
             app.icTable.ColumnSortable = [true false false false];
             app.icTable.ColumnEditable = [true true true true];
             app.icTable.CellEditCallback = @app.icTableCellEdit;
-            app.icTable.Position = [5 70 280 125];
+            app.icTable.Position = [5 75 280 120];
             
             
             %             % Create icRandomButton
@@ -1745,8 +1792,20 @@ classdef gridtool < handle %matlab.mixin.SetGet
             
             % Create trajectoriesLabel
             app.trajectoriesLabel = uilabel(app.GridTab);
-            app.trajectoriesLabel.Position = [5 45 68 23];
+            app.trajectoriesLabel.Position = [5 50 68 23];
             app.trajectoriesLabel.Text = 'Trajectories';
+            
+            % Create showTrajP0CheckBox
+            app.showTrajP0CheckBox = uicheckbox(app.GridTab);
+            app.showTrajP0CheckBox.ValueChangedFcn = @app.showTrajP0CheckBoxValueChanged;
+            app.showTrajP0CheckBox.Text = 'p0';
+            app.showTrajP0CheckBox.Position = [5 30 55 22];
+            
+            % Create showTrajClickCheckBox
+            app.showTrajClickCheckBox = uicheckbox(app.GridTab);
+            app.showTrajClickCheckBox.ValueChangedFcn = @app.showTrajClickCheckBoxValueChanged;
+            app.showTrajClickCheckBox.Text = 'click';
+            app.showTrajClickCheckBox.Position = [60 30 55 22];
             
             % Create clicksEditFieldLabel
             app.clicksEditFieldLabel = uilabel(app.GridTab);

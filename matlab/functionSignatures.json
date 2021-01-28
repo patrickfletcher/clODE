@@ -1,0 +1,13 @@
+{
+"gridtool.gridtool":
+    {
+    "inputs":
+    [
+        {"name":"odefile", "kind":"required", "type":[["file=*.ode"], ["char"]]}
+    ],
+	"outputs":
+	[
+		{"name":"app", "type":"gridtool"}
+	]
+    }
+}

@@ -415,7 +415,7 @@ classdef clODE < cppclass & matlab.mixin.SetGet
             sp.dt=.1;
             sp.dtmax=100.00;
             sp.abstol=1e-6;
-            sp.reltol=1e-3;
+            sp.reltol=1e-4;
             sp.max_steps=1000000;
             sp.max_store=100000; %allocated number of timepoints: min( (tf-t0)/(dt*nout)+1 , sp.max_store)
             sp.nout=1;
