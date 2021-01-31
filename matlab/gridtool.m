@@ -292,8 +292,6 @@ classdef gridtool < handle %matlab.mixin.SetGet
             isBuilt = app.gridCLIsBuiltButton.Value;
             if ~isBuilt
                 app.buildCL('grid');
-                app.updateFeatureNames();
-                app.clo_g.initialize();
             end
         end
         
@@ -303,7 +301,6 @@ classdef gridtool < handle %matlab.mixin.SetGet
             isBuilt = app.trajCLIsBuiltButton.Value;
             if ~isBuilt
                 app.buildCL('traj');
-                app.clo_t.initialize();
             end
         end
         
@@ -321,21 +318,6 @@ classdef gridtool < handle %matlab.mixin.SetGet
                     app.trajCLIsBuiltButton.Value = 0;
                     app.trajCLIsBuiltButton.Text = 'Build CL';
                     app.trajCLIsBuiltButton.BackgroundColor=[1,0.7,0.7];
-            end
-        end
-        
-        function buildCL(app,which_clo)
-            switch which_clo
-                case 'grid'
-                    app.clo_g.buildCL();
-                    app.gridCLIsBuiltButton.Value = 1;
-                    app.gridCLIsBuiltButton.Text = 'CL ready';
-                    app.gridCLIsBuiltButton.BackgroundColor=[0.7,1,0.7];
-                case 'traj'
-                    app.clo_t.buildCL();
-                    app.trajCLIsBuiltButton.Value = 1;
-                    app.trajCLIsBuiltButton.Text = 'CL ready';
-                    app.trajCLIsBuiltButton.BackgroundColor=[0.7,1,0.7];
             end
         end
         
@@ -512,6 +494,10 @@ classdef gridtool < handle %matlab.mixin.SetGet
             newGridvars.val=app.prob.p0(:);
             newGridvars.lb=[app.prob.par.lb]';
             newGridvars.ub=[app.prob.par.ub]';
+            const_bounds=newGridvars.lb==newGridvars.ub;
+            const_vals=newGridvars.val(const_bounds);
+            newGridvars.lb(const_bounds)=const_vals-abs(const_vals)*0.05;
+            newGridvars.ub(const_bounds)=const_vals+abs(const_vals)*0.05;
             app.gridvars(app.gridvars.type=="par",{'val','lb','ub'})=newGridvars;
             app.makeGridData(); %in case grid wasn't changed, but other pars were
         end
@@ -523,6 +509,10 @@ classdef gridtool < handle %matlab.mixin.SetGet
             newGridvars.val=app.prob.x0(:);
             newGridvars.lb=[app.prob.var.lb]';
             newGridvars.ub=[app.prob.var.ub]';
+            const_bounds=newGridvars.lb==newGridvars.ub;
+            const_vals=newGridvars.val(const_bounds);
+            newGridvars.lb(const_bounds)=const_vals-abs(const_vals)*0.05;
+            newGridvars.ub(const_bounds)=const_vals+abs(const_vals)*0.05;
             app.gridvars(app.gridvars.type=="ic",{'val','lb','ub'})=newGridvars;
         end
         
@@ -817,7 +807,8 @@ classdef gridtool < handle %matlab.mixin.SetGet
                     if newZ~=app.z.val
                         app.gridvars{app.z.name,'val'}=newZ;
                         app.makeGridData(); %prep for next integration
-                        app.integrateGrid('transient')
+%                         app.integrateGrid('transient')
+                        app.integrateGrid('random')
                     end
                     
                 case 'subtract' % increment z by -dz, transient
@@ -825,7 +816,8 @@ classdef gridtool < handle %matlab.mixin.SetGet
                     if newZ~=app.z.val
                         app.gridvars{app.z.name,'val'}=newZ;
                         app.makeGridData(); %prep for next integration
-                        app.integrateGrid('transient')
+%                         app.integrateGrid('transient')
+                        app.integrateGrid('random')
                     end
             end
         end
@@ -914,7 +906,7 @@ classdef gridtool < handle %matlab.mixin.SetGet
                     
                 case 'feature'
                     %handle F plotting seletion
-%                     ix=strcmp(app.featureDropDown.Value,app.clo_g.fNames);
+                    if isempty(app.clo_g.F), return; end
                     fun=app.feature(app.featureDropDown.Value);
                     C=reshape(fun(app.clo_g.F)*app.fscale,app.nGrid)';
                     C(C<-1e10|C>1e10)=nan; %hack to prevent display of bad values
@@ -1318,14 +1310,7 @@ classdef gridtool < handle %matlab.mixin.SetGet
                 app.clo_g.F=[]; %to allow new nVar
                 app.clo_g.Xf=[]; %to allow new nVar
                 app.XF=[]; %to allow new nVar
-            end
-            if ~app.clo_g.clBuilt
-                app.buildCL('grid');
-            end
-            if ~app.clo_t.clBuilt
-                app.buildCL('traj');
-            end
-                        
+            end        
             
             %tspan
             t0=app.prob.opt.t0;
@@ -1354,8 +1339,8 @@ classdef gridtool < handle %matlab.mixin.SetGet
             
             const_bounds=newGridvars.lb==newGridvars.ub;
             const_vals=newGridvars.val(const_bounds);
-            newGridvars.lb(const_bounds)=const_vals-abs(const_vals)*0.25;
-            newGridvars.ub(const_bounds)=const_vals+abs(const_vals)*0.25;
+            newGridvars.lb(const_bounds)=const_vals-abs(const_vals)*0.05;
+            newGridvars.ub(const_bounds)=const_vals+abs(const_vals)*0.05;
             
             %set grid to first two names
             app.grid.name=newGridvars.name(1:2);
@@ -1373,18 +1358,9 @@ classdef gridtool < handle %matlab.mixin.SetGet
             %set up selectable gridTable name
             app.gridTable.ColumnFormat={app.gridvars.name',[],[],[],[]};
             
-            
             % trajectory variables
-%             newTrajvars=table;
-%             newTrajvars.name=[app.prob.varNames(:);app.prob.auxNames(:)];
-%             newTrajvars.type=categorical([ones(app.prob.nVar,1);2*ones(app.prob.nAux,1)],[1,2],{'var','aux'});
-%             newTrajvars.ix=[(1:app.prob.nVar)';(1:app.prob.nAux)'];
-%             newTrajvars.Properties.RowNames=newTrajvars.name;
-%             app.trajvars=newTrajvars;
             app.trajvars=[app.prob.varNames(:);app.prob.auxNames(:);...
                 strcat('d',app.prob.varNames(:),'/dt')];
-            
-            app.updateFeatureNames()
             
             %trajectory plot variables
             app.trajXDropDown.Items=[{'t'};app.trajvars];
@@ -1398,19 +1374,37 @@ classdef gridtool < handle %matlab.mixin.SetGet
             xlabel(app.axyyTrajClick(end),app.trajXDropDown.Value);
             ylabel(app.axyyTrajClick(end),app.trajYDropDown.Value);
            
-            %make the actual grid data for simulation
-            app.makeGridData();
-            app.makeTrajData(); %p0: no clickCoords
-            
-            app.clo_g.initialize();
-            
-            app.clo_t.P=app.trajP0.p0;
-            app.clo_t.X0=app.trajP0.x0;
-            app.clo_t.initialize();
+            app.buildCL('grid');
+            app.buildCL('traj');
             
             figure(app.figControl)
         end
     
+        
+        function buildCL(app,which_clo)
+            switch which_clo
+                case 'grid'
+                    app.clo_g.buildCL();
+                    app.updateFeatureNames();
+                    app.clo_g.Xf=app.X0;
+                    app.makeGridData();
+                    app.clo_g.initialize();
+                    app.gridCLIsBuiltButton.Value = 1;
+                    app.gridCLIsBuiltButton.Text = 'CL ready';
+                    app.gridCLIsBuiltButton.BackgroundColor=[0.7,1,0.7];
+                case 'traj'
+                    app.clo_t.buildCL();
+                    app.clo_t.P=app.p0;
+                    app.clo_t.X0=app.x0;
+                    app.clo_t.Xf=app.x0;
+                    app.makeTrajData(); %p0: no clickCoords
+                    app.clo_t.initialize();
+                    app.trajCLIsBuiltButton.Value = 1;
+                    app.trajCLIsBuiltButton.Text = 'CL ready';
+                    app.trajCLIsBuiltButton.BackgroundColor=[0.7,1,0.7];
+            end
+        end
+        
         function updateFeatureNames(app)
             app.clo_g.getNFeatures(); %update features (nVar may affect)
             app.clo_g.featureNames();
@@ -1433,10 +1427,16 @@ classdef gridtool < handle %matlab.mixin.SetGet
                 f(var+" range")=@(F)F(:,fNames=="max "+var)-F(:,fNames=="min "+var);
                 fNamesPlus(end+1,1)=var+" range";
             end
+            extraF=fNames(contains(fNames,'count'));
+            for i=1:length(extraF)
+                thisF=string(extraF{i});
+                f(thisF)=@(F)F(:,fNames==thisF);
+            end
             fNamesPlus(1)=[];
             fNamesPlus=[fNamesPlus;fNames(contains(fNames,'count'))];
             app.feature=f;
             app.featureDropDown.Items=fNamesPlus;
+            app.featureDropDown.Value=fNamesPlus(1);
             title(app.gridCBar,app.featureDropDown.Value);
         end
         
