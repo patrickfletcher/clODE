@@ -21,6 +21,7 @@ clo.stepper='dopri5';
 % tic
 % clo=clODEfeatures(odefile,precision,selectedDevice,stepper);
 % toc
+clo.getProgramString
 
 tic
 clo.buildCL();

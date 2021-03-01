@@ -62,6 +62,7 @@ void CLODE::setNewProblem(ProblemInfo newProb)
 { //TODO: not equality check for ProblemInfo struct, error checking: at least one variable!
 	prob=newProb;
 	clRHSfilename = newProb.clRHSfilename;
+	ODEsystemsource = read_file(clRHSfilename);
 	nVar = newProb.nVar;
 	nPar = newProb.nPar>0?newProb.nPar:1; //support zero params
 	nAux = newProb.nAux>0?newProb.nAux:1; //support zero aux
@@ -118,9 +119,10 @@ void CLODE::setOpenCL(unsigned int platformID, unsigned int deviceID)
 	dbg_printf("set OpenCL\n");
 }
 
-//build creates build option defined constants based on selected options, adds the ODEsystem source to clprogramstring then builds for selected OpenCL resource
-void CLODE::buildProgram(std::string extraBuildOpts)
+
+void CLODE::setCLbuildOpts(std::string extraBuildOpts)
 {
+	
 	if (!clSinglePrecision && !opencl.getDoubleSupport())
 	{ //TODO: make this an error?
 		clSinglePrecision = true;
@@ -151,9 +153,16 @@ void CLODE::buildProgram(std::string extraBuildOpts)
 	buildOptions += " -I" + clodeRoot;
 
 	buildOptions += extraBuildOpts;
+}
+
+
+//build creates build option defined constants based on selected options, adds the ODEsystem source to clprogramstring then builds for selected OpenCL resource
+void CLODE::buildProgram(std::string extraBuildOpts)
+{
+	setCLbuildOpts(extraBuildOpts);
 
 	//ODEsystem source is delayed to here, in case we change it
-	ODEsystemsource = read_file(clRHSfilename);
+	// ODEsystemsource = read_file(clRHSfilename);
 	// clprogramstring += ODEsystemsource;
 
 	// printf("%s", clprogramstring.c_str());
@@ -579,6 +588,14 @@ std::vector<cl_double> CLODE::getXf()
 
 	return xf;
 }
+
+
+std::string CLODE::getProgramString() 
+{
+	setCLbuildOpts();
+	return buildOptions+clprogramstring+ODEsystemsource; 
+}
+
 
 void CLODE::printStatus()
 {

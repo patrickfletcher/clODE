@@ -96,6 +96,8 @@ protected:
     //flag to ensure kernel can be executed
     bool clInitialized = false;
 
+    
+    void setCLbuildOpts(std::string extraBuildOpts = "");
     std::string getStepperDefine();
     SolverParams<cl_float> solverParamsToFloat(SolverParams<cl_double> sp);
 
@@ -150,7 +152,7 @@ public:
     std::vector<cl_double> getTspan() { return tspan; };
     std::vector<cl_double> getX0();
     std::vector<cl_double> getXf();
-    std::string getProgramString() { return buildOptions+clprogramstring+ODEsystemsource; };
+    std::string getProgramString();
     std::vector<std::string> getAvailableSteppers() { return availableSteppers; };
 
     void printStatus();

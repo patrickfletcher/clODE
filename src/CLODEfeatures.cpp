@@ -70,6 +70,14 @@ void CLODEfeatures::buildCL()
 	printf("Using observer: %s\n",observer.c_str());
 }
 
+
+std::string CLODEfeatures::getProgramString() 
+{
+	observerBuildOpts=" -D" + observerDefineMap.at(observer).define;
+	setCLbuildOpts(observerBuildOpts);
+	return buildOptions+clprogramstring+ODEsystemsource; 
+}
+
 //initialize everything
 void CLODEfeatures::initialize(std::vector<cl_double> newTspan, std::vector<cl_double> newX0, std::vector<cl_double> newPars, SolverParams<cl_double> newSp, ObserverParams<cl_double> newOp)
 {
