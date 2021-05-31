@@ -514,6 +514,7 @@ classdef gridtool < handle %matlab.mixin.SetGet
             newGridvars.lb(const_bounds)=const_vals-abs(const_vals)*0.05;
             newGridvars.ub(const_bounds)=const_vals+abs(const_vals)*0.05;
             app.gridvars(app.gridvars.type=="ic",{'val','lb','ub'})=newGridvars;
+            app.makeGridData(); %in case grid wasn't changed, but other pars were
         end
         
         %CheckBox value changed function: showTrajP0CheckBox
@@ -1293,8 +1294,6 @@ classdef gridtool < handle %matlab.mixin.SetGet
                 app.gridObserverParTable.Data=optable;
                 app.gridObserverParTable.RowName=fieldnames(defaultop);
                 
-                app.fscale=1;
-                
                 %solver opts from ODE file
                 %dtmax, abstol/reltol, nout, maxstore?
                 app.SolverParTable.Data{'dt',:}=app.prob.opt.dt;
@@ -1309,9 +1308,11 @@ classdef gridtool < handle %matlab.mixin.SetGet
                 app.listenerGrid.Enabled=1;
                 app.clo_g.F=[]; %to allow new nVar
                 app.clo_g.Xf=[]; %to allow new nVar
-                app.XF=[]; %to allow new nVar
             end        
             
+            app.fscale=1;
+            app.XF=[]; %to allow new nVar
+                
             %tspan
             t0=app.prob.opt.t0;
             tf=app.prob.opt.total;
