@@ -1459,9 +1459,11 @@ classdef gridtool < handle %matlab.mixin.SetGet
             [~,app.traj_device]=max([app.devices(:).maxClock]);
             
             app.gridDeviceDropDown.Items={app.devices(:).name};
-            app.gridDeviceDropDown.Value=app.devices(app.grid_device).name;
+            app.gridDeviceDropDown.ItemsData=1:length(app.devices);
+            app.gridDeviceDropDown.Value=app.grid_device;
             app.trajDeviceDropDown.Items={app.devices(:).name};
-            app.trajDeviceDropDown.Value=app.devices(app.traj_device).name;
+            app.trajDeviceDropDown.ItemsData=1:length(app.devices);
+            app.trajDeviceDropDown.Value=app.traj_device;
             
             if exist('odefile','var')&&~isempty(odefile)
                 app.processNewODEfile(odefile)
