@@ -7,6 +7,8 @@ classdef gridtool < handle %matlab.mixin.SetGet
     %automatically, and the interface shares some of the same keyboard
     %shortcuts.
     
+    %TODO: store the app object as User Data in Control fig?
+
     %properties representing clODE and the initial value problem
     properties (Access = public) %TODO: make private later
         
