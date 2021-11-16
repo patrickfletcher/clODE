@@ -218,7 +218,8 @@ classdef gridtool < handle %matlab.mixin.SetGet
                 return
             end
             app.odefile=fullfile(path,name);
-            app.processNewODEfile(app.odefile);
+            app.loadNewProblem(app.odefile)
+            app.processNewProblem()
         end
         
         % Value changed function: gridDeviceDropDown
@@ -491,16 +492,18 @@ classdef gridtool < handle %matlab.mixin.SetGet
         
         % Button pushed function: parDefaultButton
         function parDefaultButtonPushed(app, src, event)
-            %get the original default values for par.val/lb/ub from app.prob
+            %get the original default values for par.val from app.prob
             newGridvars=table;
             newGridvars.val=app.prob.p0(:);
-            newGridvars.lb=[app.prob.par.lb]';
-            newGridvars.ub=[app.prob.par.ub]';
-            const_bounds=newGridvars.lb==newGridvars.ub;
-            const_vals=newGridvars.val(const_bounds);
-            newGridvars.lb(const_bounds)=const_vals-abs(const_vals)*0.05;
-            newGridvars.ub(const_bounds)=const_vals+abs(const_vals)*0.05;
-            app.gridvars(app.gridvars.type=="par",{'val','lb','ub'})=newGridvars;
+            app.gridvars(app.gridvars.type=="par",{'val'})=newGridvars;
+            %get the original default values for par.val/lb/ub from app.prob
+%             newGridvars.lb=[app.prob.par.lb]';
+%             newGridvars.ub=[app.prob.par.ub]';
+%             const_bounds=newGridvars.lb==newGridvars.ub;
+%             const_vals=newGridvars.val(const_bounds);
+%             newGridvars.lb(const_bounds)=const_vals-abs(const_vals)*0.05;
+%             newGridvars.ub(const_bounds)=const_vals+abs(const_vals)*0.05;
+%             app.gridvars(app.gridvars.type=="par",{'val','lb','ub'})=newGridvars;
             app.makeGridData(); %in case grid wasn't changed, but other pars were
         end
         
@@ -509,13 +512,14 @@ classdef gridtool < handle %matlab.mixin.SetGet
             %get the original default values for var.val/lb/ub from app.prob
             newGridvars=table;
             newGridvars.val=app.prob.x0(:);
-            newGridvars.lb=[app.prob.var.lb]';
-            newGridvars.ub=[app.prob.var.ub]';
-            const_bounds=newGridvars.lb==newGridvars.ub;
-            const_vals=newGridvars.val(const_bounds);
-            newGridvars.lb(const_bounds)=const_vals-abs(const_vals)*0.05;
-            newGridvars.ub(const_bounds)=const_vals+abs(const_vals)*0.05;
-            app.gridvars(app.gridvars.type=="ic",{'val','lb','ub'})=newGridvars;
+            app.gridvars(app.gridvars.type=="ic",{'val'})=newGridvars;
+%             newGridvars.lb=[app.prob.var.lb]';
+%             newGridvars.ub=[app.prob.var.ub]';
+%             const_bounds=newGridvars.lb==newGridvars.ub;
+%             const_vals=newGridvars.val(const_bounds);
+%             newGridvars.lb(const_bounds)=const_vals-abs(const_vals)*0.05;
+%             newGridvars.ub(const_bounds)=const_vals+abs(const_vals)*0.05;
+%             app.gridvars(app.gridvars.type=="ic",{'val','lb','ub'})=newGridvars;
             app.makeGridData(); %in case grid wasn't changed, but other pars were
         end
         
@@ -628,20 +632,37 @@ classdef gridtool < handle %matlab.mixin.SetGet
         
         function setLinkedLims(app)
             
-            xL=[app.lineyyTrajP0(1).XData];
+            xL=[app.lineyyTrajP0(1).XData,app.lineyyTrajClick(:,1).XData];
+            xLimL=[min(xL),max(xL)]; 
+            if diff(xLimL)==0
+                xLimL=xLimL(1)+[-1,1]*0.1*xLimL(1);
+            else
+                xLimL=xLimL+[-1,1]*diff(xLimL)*0.01;
+            end
+
             yL=[app.lineyyTrajP0(1).YData,app.lineyyTrajClick(:,1).YData];
-            yR=[app.lineyyTrajP0(2).YData,app.lineyyTrajClick(:,2).YData];
-            xLimL=[min(xL),max(xL)]; xLimL=xLimL+[-1,1]*diff(xLimL)*0.01;
-            yLimL=[min(yL),max(yL)]; yLimL=yLimL+[-1,1]*diff(yLimL)*0.01;
+            yLimL=[min(yL),max(yL)]; 
+            if diff(yLimL)==0
+                yLimL=yLimL(1)+[-1,1]*0.1*yLimL(1);
+            else
+                yLimL=yLimL+[-1,1]*diff(yLimL)*0.01;
+            end
+
+            if ~isnan(app.trajClick(1).zp)
+                yR=[app.lineyyTrajP0(2).YData,app.lineyyTrajClick(:,2).YData];
+                yLimR=[min(yR),max(yR)]; 
+                if diff(yLimR)==0
+                    yLimR=yLimR(1)+[-1,1]*0.1*yLimR(1);
+                else
+                    yLimR=yLimR+[-1,1]*diff(yLimR)*0.01;
+                end
+            end
+
             app.axyyTrajP0.XLim=xLimL;
             app.axyyTrajP0.YAxis(1).Limits=yLimL;
             if ~isnan(app.trajClick(1).zp)
-                yLimR=[min(yR),max(yR)]; yLimR=yLimR+[-1,1]*diff(yLimR)*0.01;
                 app.axyyTrajP0.YAxis(2).Limits=yLimR;
             end
-            
-            xL=[app.lineyyTrajClick(:,1).XData];
-            xLimL=[min(xL),max(xL)]; xLimL=xLimL+[-1,1]*diff(xLimL)*0.01;
             for i=1:app.nClick
                 app.axyyTrajClick(i).XLim=xLimL;
                 app.axyyTrajClick(i).YAxis(1).Limits=yLimL;
@@ -649,14 +670,32 @@ classdef gridtool < handle %matlab.mixin.SetGet
                     app.axyyTrajClick(i).YAxis(2).Limits=yLimR;
                 end
             end
+
             %3daxes
             if ~isnan(app.trajClick(1).zp)
                 xx=[app.line3DTrajP0.XData,app.line3DTrajClick(:).XData];
                 yy=[app.line3DTrajP0.YData,app.line3DTrajClick(:).YData];
                 zz=[app.line3DTrajP0.ZData,app.line3DTrajClick(:).ZData];
-                xLim=[min(xx),max(xx)]; xLim=xLim+[-1,1]*diff(xLim)*0.01;
-                yLim=[min(yy),max(yy)]; yLim=yLim+[-1,1]*diff(yLim)*0.01;
-                zLim=[min(zz),max(zz)]; zLim=zLim+[-1,1]*diff(zLim)*0.01;
+
+                xLim=[min(xx),max(xx)];
+                if diff(xLim)==0
+                    xLim=xLim(1)+[-1,1]*0.1*xLim(1);
+                else
+                    xLim=xLim+[-1,1]*diff(xLim)*0.01;
+                end
+                yLim=[min(yy),max(yy)];
+                if diff(yLim)==0
+                    yLim=yLim(1)+[-1,1]*0.1*yLim(1);
+                else
+                    yLim=yLim+[-1,1]*diff(yLim)*0.01;
+                end
+                zLim=[min(zz),max(zz)];
+                if diff(zLim)==0
+                    zLim=zLim(1)+[-1,1]*0.1*zLim(1);
+                else
+                    zLim=zLim+[-1,1]*diff(zLim)*0.01;
+                end
+
                 app.ax3DTrajP0.XLim=xLim;
                 app.ax3DTrajP0.YLim=yLim;
                 app.ax3DTrajP0.ZLim=zLim;
@@ -785,9 +824,29 @@ classdef gridtool < handle %matlab.mixin.SetGet
     % internal functions (clODE control & ui interaction)
     methods (Access = private)
         
+        function commonKeyPress(app,src,event)
+            disp(event.Key)
+            switch(event.Key)
+                case 'f1'
+                    figure(app.figControl)
+                case 'f2'
+                    figure(app.figGrid)
+                case 'f3'
+                    figure(app.figTrajClick)
+                case 'f4'
+                    figure(app.figTrajP0)
+                otherwise
+                    if src==app.figGrid
+                        app.gridKeyPress(src,event);
+                    elseif src~=app.figControl
+                        app.trajKeyPress(src,event);
+                    end
+            end
+        end
+
         function gridKeyPress(app,src,event)
             %             app.clo_g.initialize();
-            disp(event.Key)
+%             disp(event.Key)
             switch(event.Key)
                 case 'c' %'continue' - features without initialization
                     app.integrateGrid('continue')
@@ -799,11 +858,41 @@ classdef gridtool < handle %matlab.mixin.SetGet
                     app.makeTrajData()
                     app.integrateTraj('go','p0')
                     
+                case '1' %'random'
+                    app.integrateGrid('point')
+
                 case 'r' %'random'
                     app.integrateGrid('random')
                     
                 case 't' %'transient'
                     app.integrateGrid('transient')
+
+%                 case 'z' %zoom grid
+%                     tmp=get(app.figGrid,'KeyPressFcn'); %
+%                     set(app.figGrid,'KeyPressFcn',[]); %temporarily turn off clicktrajectory
+%                     
+%                     k=waitforbuttonpress;
+%                     if k==0
+%                         point1 = app.figGrid.CurrentPoint;    % location when mouse clicked
+%                         rbbox;                 % rubberbox
+%                         point2 = app.figGrid.CurrentPoint;    % location when mouse released
+%                         point1 = point1(1,1:2);            % extract x and y
+%                         point2 = point2(1,1:2);
+%                         lb = min(point1,point2);           % calculate bounds
+%                         ub = max(point1,point2);           % calculate bounds
+%             
+%                         if all(ub-lb>0)
+%                             app.gridvars{app.grid.name(1:2),'lb'}=lb;
+%                             app.gridvars{app.grid.name(1:2),'ub'}=ub;
+%                             app.makeGridData();
+%                         else
+%                             disp('Try selecting new bounds more slowly...')
+%                         end
+%                     else
+%                         disp('Window Zoom-in canceled by keypress')
+%                     end
+%                     
+%                     set(app.figGrid,'KeyPressFcn',tmp);
                     
                 case 'add' % increment z by +dz, transient
                     newZ=min(app.z.val+app.dz, app.z.ub);
@@ -811,7 +900,8 @@ classdef gridtool < handle %matlab.mixin.SetGet
                         app.gridvars{app.z.name,'val'}=newZ;
                         app.makeGridData(); %prep for next integration
 %                         app.integrateGrid('transient')
-                        app.integrateGrid('random')
+%                         app.integrateGrid('random')
+                        app.integrateGrid('point')
                     end
                     
                 case 'subtract' % increment z by -dz, transient
@@ -820,7 +910,8 @@ classdef gridtool < handle %matlab.mixin.SetGet
                         app.gridvars{app.z.name,'val'}=newZ;
                         app.makeGridData(); %prep for next integration
 %                         app.integrateGrid('transient')
-                        app.integrateGrid('random')
+%                         app.integrateGrid('random')
+                        app.integrateGrid('point')
                     end
             end
         end
@@ -864,6 +955,10 @@ classdef gridtool < handle %matlab.mixin.SetGet
                     app.clo_g.getF();
                     
 %                 case 'shift'
+                case 'point'
+                    newX0=repmat(app.gridvars.val(app.gridvars.type=="ic")',app.nPts,1);
+                    app.clo_g.setX0(newX0);
+                    app.clo_g.transient();
                     
                 case 'random'
                     x0lb=app.gridvars.lb(app.gridvars.type=="ic")';
@@ -883,7 +978,7 @@ classdef gridtool < handle %matlab.mixin.SetGet
             switch action
                 case {'continue','go'}
                     app.updateGridPlot('feature')
-                case {'random','transient'}
+                case {'random','transient','point'}
                     app.updateGridPlot('transient')
             end
         end
@@ -911,7 +1006,7 @@ classdef gridtool < handle %matlab.mixin.SetGet
                     %handle F plotting seletion
                     if isempty(app.clo_g.F), return; end
                     fun=app.feature(app.featureDropDown.Value);
-                    C=reshape(fun(app.clo_g.F)*app.fscale,app.nGrid)';
+                    C=reshape(fun(app.clo_g.F)/app.fscale,app.nGrid)';
                     C(C<-1e10|C>1e10)=nan; %hack to prevent display of bad values
                     app.imGrid.CData=C;
                     title(app.gridCBar,app.featureDropDown.Value,'Interpreter','none')
@@ -937,8 +1032,7 @@ classdef gridtool < handle %matlab.mixin.SetGet
         
         
         function trajKeyPress(app,src,event)
-            disp(event.Key)
-            
+%             disp(event.Key)
             if src==app.figTrajP0
                 which_traj='p0';
             elseif src==app.figTrajClick
@@ -985,6 +1079,7 @@ classdef gridtool < handle %matlab.mixin.SetGet
                 app.markerPquery(i).YData=py;
                 app.markerPquery(i).Visible='on';
             end
+            coords
             app.makeTrajData(coords);
             app.integrateTraj('go','click');
         end
@@ -1022,7 +1117,7 @@ classdef gridtool < handle %matlab.mixin.SetGet
             if isP0
                 app.trajP0.p0=newP;
                 app.trajP0.x0=newX0;
-                app.gridvars{app.gridvars.type=="ic",'val'}=newX0(:);
+%                 app.gridvars{app.gridvars.type=="ic",'val'}=newX0(:);
             else
                 for i=1:size(coords,1)
                     app.trajClick(i).p0=newP(i,:);
@@ -1095,7 +1190,7 @@ classdef gridtool < handle %matlab.mixin.SetGet
             toc
             
             %extract results
-            tt=app.clo_t.getT()*app.clo_t.tscale;
+            tt=app.clo_t.getT()/app.clo_t.tscale;
             xx=app.clo_t.getX();
             aux=app.clo_t.getAux();
             dx=app.clo_t.getDx();
@@ -1145,7 +1240,7 @@ classdef gridtool < handle %matlab.mixin.SetGet
                 %extract the plotting data
                 xname=app.trajXDropDown.Value;
                 if xname=="t"
-                    xp=traj(i).t*app.tscale;
+                    xp=traj(i).t/app.tscale;
                 else
                     xix=strcmp(app.trajvars,xname);
                     xp=traj(i).x(:,xix);
@@ -1259,11 +1354,13 @@ classdef gridtool < handle %matlab.mixin.SetGet
             end
             figure(fig)
         end
-        
-        function processNewODEfile(app, odefile)
-            
-            app.odefile=odefile;
+
+        function loadNewProblem(app,odefile)
             [~,app.prob]=ode2cl(odefile);
+            app.odefile=app.prob.name+".ode";
+        end
+        
+        function processNewProblem(app)
             
             if app.prob.nPar+app.prob.nVar<2
                 error('Not enough parameters and variables for a 2D grid!')
@@ -1271,34 +1368,7 @@ classdef gridtool < handle %matlab.mixin.SetGet
             
             app.currentFileLabel.Text=app.prob.name+".ode";
             
-            %If first time, set up clODE objects using their default parameters
             if isempty(app.clo_g)
-                app.clo_g=clODEfeatures(app.prob, [], app.grid_device);
-                app.clo_t=clODEtrajectory(app.prob, [], app.traj_device);
-                
-                app.gridObserverDropDown.Items=app.clo_g.observerNames;
-                app.gridObserverDropDown.Value=app.clo_g.observer;
-                app.gridStepperDropDown.Items=app.clo_g.getAvailableSteppers();
-                app.gridStepperDropDown.Value=app.clo_g.stepper;
-                app.trajStepperDropDown.Items=app.clo_t.getAvailableSteppers();
-                app.trajStepperDropDown.Value=app.clo_t.stepper;
-                
-                defaultsp=clODE.defaultSolverParams(); %app.clo_g.sp
-                spvalues=cell2mat(struct2cell(defaultsp));
-                sptable=table('RowNames',fieldnames(defaultsp));
-                sptable.grid=spvalues;
-                sptable.traj=spvalues;
-                app.SolverParTable.Data=sptable;
-                
-                defaultop=clODEfeatures.defaultObserverParams(); %app.clo_g.op
-                optable=table('RowNames',fieldnames(defaultop));
-                optable.value=cell2mat(struct2cell(defaultop));
-                app.gridObserverParTable.Data=optable;
-                app.gridObserverParTable.RowName=fieldnames(defaultop);
-                
-                %solver opts from ODE file
-                %dtmax, abstol/reltol, nout, maxstore?
-                app.SolverParTable.Data{'dt',:}=app.prob.opt.dt;
                 
             else %to avoid reverting to default sp and op:
                 app.clo_g.setNewProblem(app.prob);
@@ -1442,21 +1512,32 @@ classdef gridtool < handle %matlab.mixin.SetGet
             app.featureDropDown.Value=fNamesPlus(1);
             title(app.gridCBar,app.featureDropDown.Value);
         end
-        
+            
     end
     
+
     
     methods (Access = public)
         %constructor
-        function app=gridtool(odefile)%, precision, selectedDevice, stepper, observer
+        function app=gridtool(odefile, opts)
+            arguments
+                odefile=[]
+                opts.observer='basicall'
+                opts.stepper='dopri5'
+                opts.precision='single'
+                opts.nGrid=[32,32]
+                opts.nClick=3
+                opts.tscale=1
+            end
             
-            app.createUIComponents();
+            app.createControlFig();
+            app.createGridFig();
+            app.createTrajP0Fig();
+            app.createTrajClickFig();
             app.attachListeners();
-            
-            %OpenCL device list
-            app.devices=queryOpenCL();
-            
+                        
             %auto select first GPU for grid, fastest clock for traj
+            app.devices=queryOpenCL();
             app.grid_device=find({app.devices(:).type}=="GPU",1,'first');
             [~,app.traj_device]=max([app.devices(:).maxClock]);
             
@@ -1466,11 +1547,43 @@ classdef gridtool < handle %matlab.mixin.SetGet
             app.trajDeviceDropDown.Items={app.devices(:).name};
             app.trajDeviceDropDown.ItemsData=1:length(app.devices);
             app.trajDeviceDropDown.Value=app.traj_device;
+
+            app.nGrid=opts.nGrid;
+            app.nClick=opts.nClick;
+            app.tscale=opts.tscale;
+            app.tscaleEditField.Value=opts.tscale;
+
+            app.loadNewProblem(odefile)
+
+            app.clo_g=clODEfeatures(app.prob, opts.precision, app.grid_device, opts.stepper, opts.observer);
+            app.clo_t=clODEtrajectory(app.prob, opts.precision, app.traj_device, opts.stepper);
+
+            app.processNewProblem()
+
+            app.gridObserverDropDown.Items=app.clo_g.observerNames;
+            app.gridObserverDropDown.Value=opts.observer;
+            app.gridStepperDropDown.Items=app.clo_g.getAvailableSteppers();
+            app.gridStepperDropDown.Value=opts.stepper;
+            app.trajStepperDropDown.Items=app.clo_t.getAvailableSteppers();
+            app.trajStepperDropDown.Value=opts.stepper;
             
-            if exist('odefile','var')&&~isempty(odefile)
-                app.processNewODEfile(odefile)
-            end
+            defaultsp=clODE.defaultSolverParams(); %app.clo_g.sp
+            spvalues=cell2mat(struct2cell(defaultsp));
+            sptable=table('RowNames',fieldnames(defaultsp));
+            sptable.grid=spvalues;
+            sptable.traj=spvalues;
+            app.SolverParTable.Data=sptable;
+
+            %solver opts from ODE file
+            %dtmax, abstol/reltol, nout, maxstore?
+            app.SolverParTable.Data{'dt',:}=app.prob.opt.dt;
             
+            defaultop=clODEfeatures.defaultObserverParams(); %app.clo_g.op
+            optable=table('RowNames',fieldnames(defaultop));
+            optable.value=cell2mat(struct2cell(defaultop));
+            app.gridObserverParTable.Data=optable;
+            app.gridObserverParTable.RowName=fieldnames(defaultop);
+
             %             if nargout==0
             %                 clear app
             %             end
@@ -1498,19 +1611,11 @@ classdef gridtool < handle %matlab.mixin.SetGet
     % Component initialization
     methods (Access = private)
         
-        % Create UI figures and components
-        function createUIComponents(app)
-            app.createControlFig();
-            app.createGridFig();
-            app.createTrajP0Fig();
-            app.createTrajClickFig();
-        end
-        
         function createControlFig(app)
             %TODO: normalized position units, relative to screen size?
             
             % Create figControl and hide until all components are created
-            app.figControl = uifigure(111);
+            app.figControl = uifigure();
             app.figControl.Visible = 'off';
             app.figControl.Position = [50 400 300 650];
             app.figControl.Name = 'controls';
@@ -1872,13 +1977,15 @@ classdef gridtool < handle %matlab.mixin.SetGet
             %             app.HelpTab = uitab(app.TabGroup);
             %             app.HelpTab.Title = 'Usage';
             
+            app.figControl.KeyPressFcn = @app.commonKeyPress;
+
             app.figControl.Visible = 'on';
             
         end
         
         function createGridFig(app)
             % Create figGrid and hide until all components are created
-            app.figGrid = figure(112);
+            app.figGrid = figure();
             app.figGrid.Visible = 'off';
             app.figGrid.Position = [375 400 600 600];
             app.figGrid.Name = 'grid';
@@ -1896,7 +2003,8 @@ classdef gridtool < handle %matlab.mixin.SetGet
             app.axGrid.YDir='normal';
             axis(app.axGrid,'tight');
             app.gridCBar=colorbar('northoutside');
-            
+            colormap(app.axGrid,'turbo')
+
             app.markerP0=line(app.axGrid,nan,nan,'color','k','marker','o','linestyle','none');
             app.markerP0.ButtonDownFcn=@app.clickP0;  %p0 marker is clickable
             markers='sdp^v';
@@ -1908,14 +2016,14 @@ classdef gridtool < handle %matlab.mixin.SetGet
             xlabel(app.axGrid,'x')
             ylabel(app.axGrid,'y')
             
-            app.axGrid.ButtonDownFcn=@app.clickTraj; %axis is clickable
-            app.figGrid.KeyPressFcn = @app.gridKeyPress;
+            app.axGrid.ButtonDownFcn = @app.clickTraj; %axis is clickable
+            app.figGrid.KeyPressFcn = @app.commonKeyPress;
             app.figGrid.Visible = 'on';
         end
         
         function createTrajP0Fig(app)
             % Create figTraj and hide until all components are created
-            app.figTrajP0 = figure(113);
+            app.figTrajP0 = figure();
             app.figTrajP0.Visible = 'off';
             app.figTrajP0.Position = [375 100 600 200];
             app.figTrajP0.Name = 'p0';
@@ -1945,16 +2053,16 @@ classdef gridtool < handle %matlab.mixin.SetGet
             app.line3DTrajP0.XDataSource='app.trajP0.xp';
             app.line3DTrajP0.YDataSource='app.trajP0.yp';
             app.line3DTrajP0.ZDataSource='app.trajP0.zp';
-            axis(app.ax3DTrajP0,'tight')
+            axis(app.ax3DTrajP0,'vis3d')
             
             app.ax3DTrajP0.Visible='off'; %start in yyaxis mode
-            app.figTrajP0.KeyPressFcn = @app.trajKeyPress;
+            app.figTrajP0.KeyPressFcn = @app.commonKeyPress;
             app.figTrajP0.Visible = 'on';
         end
         
         function createTrajClickFig(app)
             % Create figTraj and hide until all components are created
-            app.figTrajClick = figure(114);
+            app.figTrajClick = figure();
             app.figTrajClick.Visible = 'off';
             app.figTrajClick.Position = [1000 100 900 900];
             app.figTrajClick.Name = 'click trajectories';
@@ -1995,10 +2103,11 @@ classdef gridtool < handle %matlab.mixin.SetGet
                 app.line3DTrajClick(i).ZDataSource=['app.trajClick(',num2str(i),').zp'];
                 axis(app.ax3DTrajClick(i),'tight')
                 app.ax3DTrajClick(i).Visible='off'; %start in yyaxis mode
+                axis(app.ax3DTrajClick(i),'vis3d');
             end 
             app.axyyTrajClick(end).XTickLabelMode='auto';
             
-            app.figTrajClick.KeyPressFcn = @app.trajKeyPress;
+            app.figTrajClick.KeyPressFcn = @app.commonKeyPress;
             app.figTrajClick.Visible = 'on';
         end
     end
