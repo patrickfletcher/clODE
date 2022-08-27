@@ -98,7 +98,7 @@ int main(int argc, char **argv)
 	
 	// create the simulator
 	//~ CLODE clo(prob);
-	CLODE clo(prob, stepper, CLSinglePrecision, opencl);
+	CLODE clo(prob, stepper, CLSinglePrecision, opencl, CLODE_ROOT);
 	
 	//copy problem data to the device
 	clo.initialize(tspan, x0, pars, sp); 

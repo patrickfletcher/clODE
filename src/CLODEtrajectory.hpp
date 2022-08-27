@@ -45,8 +45,8 @@ protected:
     void resizeTrajectoryVariables(); //creates trajectory output global variables, called just before launching trajectory kernel
 
 public:
-    CLODEtrajectory(ProblemInfo prob, std::string stepper, bool clSinglePrecision, OpenCLResource opencl); //will construct the base class with same arguments
-    CLODEtrajectory(ProblemInfo prob, std::string stepper, bool clSinglePrecision, unsigned int platformID, unsigned int deviceID);
+    CLODEtrajectory(ProblemInfo prob, std::string stepper, bool clSinglePrecision, OpenCLResource opencl, const std::string clodeRoot); //will construct the base class with same arguments
+    CLODEtrajectory(ProblemInfo prob, std::string stepper, bool clSinglePrecision, unsigned int platformID, unsigned int deviceID, const std::string clodeRoot);
     ~CLODEtrajectory();
 
     void buildCL(); // build program and create kernel objects

@@ -73,3 +73,11 @@ ehthumbs.db
 Thumbs.db
 
 .vscode
+
+# Bazel #
+#########
+bazel-*
+
+# IntelliJ #
+#########
+.idea

@@ -76,7 +76,7 @@ protected:
 
     //Compute device(s)
     OpenCLResource opencl;
-    const std::string clodeRoot = CLODE_ROOT;
+    std::string clodeRoot;
 
     cl_int nRNGstate = 2; //TODO: different RNGs could be selected like steppers...?
 
@@ -110,8 +110,8 @@ public:
     //for now, require all arguments. TODO: convenience constructors?
     // CLODE(); //must follow with all set functions to use
     // CLODE(unsigned int platformID, unsigned int deviceID); //specify device only
-    CLODE(ProblemInfo prob, std::string stepper, bool clSinglePrecision, OpenCLResource opencl);
-    CLODE(ProblemInfo prob, std::string stepper, bool clSinglePrecision, unsigned int platformID, unsigned int deviceID);
+    CLODE(ProblemInfo prob, std::string stepper, bool clSinglePrecision, OpenCLResource opencl, const std::string clodeRoot);
+    CLODE(ProblemInfo prob, std::string stepper, bool clSinglePrecision, unsigned int platformID, unsigned int deviceID, const std::string clodeRoot);
     //~ CLODE(ProblemInfo prob); //set stepper, precision, and opencl
     //~ CLODE(ProblemInfo prob, StepperType stepper=rungeKutta4, bool clSinglePrecision=true, OpenCLResource opencl=OpenCLResource()); //alt: use defaults?
     ~CLODE();
@@ -122,6 +122,7 @@ public:
     void setPrecision(bool clSinglePrecision);          //buildCL, all device vars. Opencl context OK
     void setOpenCL(OpenCLResource opencl);              //buildCL, all device vars. Host problem data OK
     void setOpenCL(unsigned int platformID, unsigned int deviceID);
+    void setClodeRoot(const std::string clodeRoot);
 
     void buildProgram(std::string extraBuildOpts = ""); //build the program object (inherited by subclasses)
     void buildCL(); // build program and create kernel objects - overloaded by subclasses to include any extra kernels

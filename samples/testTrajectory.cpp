@@ -34,20 +34,20 @@ int main(int argc, char **argv)
 	{
 		
 	cl_int nPts=32;
-	bool CLSinglePrecision=true;
+	bool CLSinglePrecision=false;
 	
 	ProblemInfo prob;
 	if (CLSinglePrecision)
-		prob.clRHSfilename="../lactotrophF.cl";
+		prob.clRHSfilename="lactotrophF.cl";
 	else
-		prob.clRHSfilename="../lactotroph.cl";
+		prob.clRHSfilename="lactotroph.cl";
 		
 	prob.nVar=4;
 	prob.nPar=3;
 	prob.nAux=1;
 	prob.nWiener=1;
 	
-	StepperType stepper=euler;
+    std::string stepper="euler";
 	
 	//parameters for solver and objective function
 	std::vector<double> tspan({0.0,1000.0});
@@ -59,8 +59,8 @@ int main(int argc, char **argv)
 	sp.dtmax=1.00;
 	sp.abstol=1e-6;
 	sp.reltol=1e-3;
-	sp.max_steps=10000000;
-	sp.max_store=10000000;
+	sp.max_steps=100000;
+	sp.max_store=100000;
 	sp.nout=100;
 	
 	int mySeed=1;
@@ -106,7 +106,7 @@ int main(int argc, char **argv)
 	std::chrono::duration<double, std::milli> elapsed_ms;
 	
 	//test trajectory
-	CLODEtrajectory clo(prob, stepper, CLSinglePrecision, opencl);
+	CLODEtrajectory clo(prob, stepper, CLSinglePrecision, opencl, CLODE_ROOT);
 	clo.initialize(tspan, x0, pars, sp); 
 	
 	clo.seedRNG(mySeed);
@@ -124,7 +124,8 @@ int main(int argc, char **argv)
 	elapsed_ms += end-start;
 	
 	//retrieve result from device
-	int nStoreMax=clo.getNStoreMax();
+    const auto &nStoredVec = clo.getNstored();
+	int nStoreMax=*std::max_element(nStoredVec.begin(), nStoredVec.end());
 	std::vector<double> t=clo.getT();
 	std::vector<double> x=clo.getX();
 	std::vector<double> xf=clo.getX0();

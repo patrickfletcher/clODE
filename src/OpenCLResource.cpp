@@ -16,7 +16,7 @@
 
 //if compiling from matlab MEX, redefine printf to mexPrintf so it prints to matlab command window.
 // #define dbg_printf printf
-#define dbg_printf
+#define dbg_printf (void)
 #ifdef MATLAB_MEX_FILE
 #include "mex.h"
 #define printf mexPrintf
@@ -25,6 +25,9 @@
 #include <stdexcept>
 #include <fstream>
 #include <stdio.h>
+#include <iostream>
+
+#include "spdlog/spdlog.h"
 
 /******************************** 
  * OpenCLResource Member Functions
@@ -270,14 +273,14 @@ void OpenCLResource::buildProgramFromString(std::string sourceStr, std::string b
     try
     {
         program = cl::Program(context, source, &error);
-        // printf("Program Object creation error code: %s\n",CLErrorString(error).c_str());
+        dbg_printf("Program Object creation error code: %s\n",CLErrorString(error).c_str());
 
         builderror = program.build(devices, buildOptions.c_str());
-        // printf("Program Object build error code: %s\n",CLErrorString(builderror).c_str());
+        dbg_printf("Program Object build error code: %s\n",CLErrorString(builderror).c_str());
 
-        // std::string kernelnames;
-        // program.getInfo(CL_PROGRAM_KERNEL_NAMES,&kernelnames);
-        // printf("Kernels built:   %s\n", kernelnames.c_str());
+        std::string kernelnames;
+        program.getInfo(CL_PROGRAM_KERNEL_NAMES,&kernelnames);
+        dbg_printf("Kernels built:   %s\n", kernelnames.c_str());
     }
     catch (cl::Error &er)
     {
@@ -564,7 +567,10 @@ std::string read_file(std::string filename)
 {
     std::ifstream sourceFile(filename.c_str());
     if (sourceFile.fail())
+    {   
+        std::cout << "Error: Cannot find file " << filename << std::endl;
         throw cl::Error(1, "Failed to open OpenCL source file");
+    }
     std::string sourceStr(std::istreambuf_iterator<char>(sourceFile), (std::istreambuf_iterator<char>())); //second arg is "end of stream" iterator
     sourceFile.close();
     // printf("%s",sourceStr.c_str());

@@ -1,0 +1,26 @@
+REPOSITORY_LOCATIONS_SPEC = dict(
+    com_github_fmtlib_fmt = dict(
+        project_name = "fmt",
+        project_desc = "{fmt} is an open-source formatting library providing a fast and safe alternative to C stdio and C++ iostreams",
+        project_url = "https://fmt.dev",
+        version = "8.1.1",
+        sha256 = "23778bad8edba12d76e4075da06db591f3b0e3c6c04928ced4a7282ca3400e5d",
+        strip_prefix = "fmt-{version}",
+        urls = ["https://github.com/fmtlib/fmt/releases/download/{version}/fmt-{version}.zip"],
+        use_category = ["dataplane_core", "controlplane"],
+        release_date = "2022-01-06",
+        cpe = "cpe:2.3:a:fmt:fmt:*",
+    ),
+    com_github_gabime_spdlog = dict(
+        project_name = "spdlog",
+        project_desc = "Very fast, header-only/compiled, C++ logging library",
+        project_url = "https://github.com/gabime/spdlog",
+        version = "1.9.2",
+        sha256 = "6fff9215f5cb81760be4cc16d033526d1080427d236e86d70bb02994f85e3d38",
+        strip_prefix = "spdlog-{version}",
+        urls = ["https://github.com/gabime/spdlog/archive/v{version}.tar.gz"],
+        use_category = ["dataplane_core", "controlplane"],
+        release_date = "2021-08-12",
+        cpe = "N/A",
+    ),
+)

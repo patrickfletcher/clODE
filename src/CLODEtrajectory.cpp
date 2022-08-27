@@ -12,8 +12,8 @@
 #include <stdexcept>
 #include <stdio.h>
 
-CLODEtrajectory::CLODEtrajectory(ProblemInfo prob, std::string stepper, bool clSinglePrecision, OpenCLResource opencl)
-	: CLODE(prob, stepper, clSinglePrecision, opencl), nStoreMax(0)
+CLODEtrajectory::CLODEtrajectory(ProblemInfo prob, std::string stepper, bool clSinglePrecision, OpenCLResource opencl, const std::string clodeRoot)
+	: CLODE(prob, stepper, clSinglePrecision, opencl, clodeRoot), nStoreMax(0)
 {
 
 	//printf("\nCLODE has been specialized: CLODEtrajectory\n");
@@ -22,8 +22,8 @@ CLODEtrajectory::CLODEtrajectory(ProblemInfo prob, std::string stepper, bool clS
 	dbg_printf("constructor clODEtrajectory\n");
 }
 
-CLODEtrajectory::CLODEtrajectory(ProblemInfo prob, std::string stepper, bool clSinglePrecision, unsigned int platformID, unsigned int deviceID)
-	: CLODE(prob, stepper, clSinglePrecision, platformID, deviceID), nStoreMax(0)
+CLODEtrajectory::CLODEtrajectory(ProblemInfo prob, std::string stepper, bool clSinglePrecision, unsigned int platformID, unsigned int deviceID, const std::string clodeRoot)
+	: CLODE(prob, stepper, clSinglePrecision, platformID, deviceID, clodeRoot), nStoreMax(0)
 {
 
 	//printf("\nCLODE has been specialized: CLODEtrajectory\n");
@@ -66,6 +66,8 @@ void CLODEtrajectory::initialize(std::vector<cl_double> newTspan, std::vector<cl
 {
 
 	clInitialized = false;
+    
+    buildCL();
 
 	setTspan(newTspan);
 	setProblemData(newX0, newPars); //will set nPts

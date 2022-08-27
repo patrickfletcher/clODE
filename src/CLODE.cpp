@@ -11,10 +11,12 @@
 // #endif
 
 // #define dbg_printf printf
-#define dbg_printf
+// #define dbg_printf
 #ifdef MATLAB_MEX_FILE
 #include "mex.h"
 #define printf mexPrintf
+#else
+#define dbg_printf printf
 #endif
 
 #include <algorithm> //std::max
@@ -30,24 +32,26 @@
 	// clprogramstring = read_file(clodeRoot + "transient.cl");
 // }
 
-CLODE::CLODE(ProblemInfo prob, std::string stepper, bool clSinglePrecision, OpenCLResource opencl)
+CLODE::CLODE(ProblemInfo prob, std::string stepper, bool clSinglePrecision, OpenCLResource opencl, const std::string clodeRoot)
 {
 	getStepperDefineMap(stepperDefineMap, availableSteppers); //from steppers.cl
 	setNewProblem(prob);
 	setStepper(stepper);
 	setPrecision(clSinglePrecision);
+    setClodeRoot(clodeRoot);
 	setOpenCL(opencl);
 
 	clprogramstring = read_file(clodeRoot + "transient.cl");
 	dbg_printf("constructor clODE\n");
 }
 
-CLODE::CLODE(ProblemInfo prob, std::string stepper, bool clSinglePrecision, unsigned int platformID, unsigned int deviceID)
+CLODE::CLODE(ProblemInfo prob, std::string stepper, bool clSinglePrecision, unsigned int platformID, unsigned int deviceID, const std::string clodeRoot)
 {
 	getStepperDefineMap(stepperDefineMap, availableSteppers); //from steppers.cl
 	setNewProblem(prob);
 	setStepper(stepper);
 	setPrecision(clSinglePrecision);
+    setClodeRoot(clodeRoot);
 	setOpenCL(platformID, deviceID);
 
 	clprogramstring = read_file(clodeRoot + "transient.cl");
@@ -117,6 +121,11 @@ void CLODE::setOpenCL(unsigned int platformID, unsigned int deviceID)
 	clInitialized = false;
 	//~ }
 	dbg_printf("set OpenCL\n");
+}
+
+void CLODE::setClodeRoot(const std::string newClodeRoot)
+{
+    clodeRoot = newClodeRoot;
 }
 
 
@@ -205,6 +214,8 @@ void CLODE::buildCL()
 void CLODE::initialize(std::vector<cl_double> newTspan, std::vector<cl_double> newX0, std::vector<cl_double> newPars, SolverParams<cl_double> newSp)
 {
 	clInitialized = false;
+
+    buildCL();
 
 	setTspan(newTspan);
 	setProblemData(newX0, newPars); //will call setNpts
