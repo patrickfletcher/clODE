@@ -7,25 +7,9 @@
 
 #include "OpenCLResource.hpp"
 
-// #define __CL_ENABLE_EXCEPTIONS
-// #if defined(__APPLE__) || defined(__MACOSX)
-//     #include "OpenCL/cl.hpp"
-// #else
-//     #include <CL/cl.hpp>
-// #endif
-
-//if compiling from matlab MEX, redefine printf to mexPrintf so it prints to matlab command window.
-// #define dbg_printf printf
-#define dbg_printf (void)
-#ifdef MATLAB_MEX_FILE
-#include "mex.h"
-#define printf mexPrintf
-#endif
-
 #include <stdexcept>
 #include <fstream>
-#include <stdio.h>
-#include <iostream>
+#include <filesystem>
 
 #include "spdlog/spdlog.h"
 
@@ -112,7 +96,7 @@ OpenCLResource::OpenCLResource(int argc, char **argv)
 
     if (nValidArgs == 0 && argc > 1)
     {
-        printf("Warning: OpenCLResource didn't recognize the command line arguments. Using default device. \n");
+        spdlog::warn("OpenCLResource didn't recognize the command line arguments. Using default device. \n");
     }
 
     getPlatformAndDevices(type, vendor);
@@ -256,11 +240,11 @@ void OpenCLResource::initializeOpenCL()
     }
     catch (cl::Error &er)
     {
-        printf("ERROR: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
+        spdlog::error("{}({})\n", er.what(), CLErrorString(er.err()).c_str());
         throw er;
     }
 
-    //~ printf("OpenCLResource Created\n");
+    //~ spdlog::info("OpenCLResource Created\n");
 }
 
 //attempt to build OpenCL program given as a string, build options empty if not supplied.
@@ -273,26 +257,27 @@ void OpenCLResource::buildProgramFromString(std::string sourceStr, std::string b
     try
     {
         program = cl::Program(context, source, &error);
-        dbg_printf("Program Object creation error code: %s\n",CLErrorString(error).c_str());
+        spdlog::debug("Program Object creation error code: {}\n",CLErrorString(error).c_str());
 
         builderror = program.build(devices, buildOptions.c_str());
-        dbg_printf("Program Object build error code: %s\n",CLErrorString(builderror).c_str());
+        spdlog::debug("Program Object build error code: {}\n",CLErrorString(builderror).c_str());
 
         std::string kernelnames;
         program.getInfo(CL_PROGRAM_KERNEL_NAMES,&kernelnames);
-        dbg_printf("Kernels built:   %s\n", kernelnames.c_str());
+        spdlog::debug("Kernels built:   {}\n", kernelnames.c_str());
     }
     catch (cl::Error &er)
     {
-        printf("ERROR: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
+        spdlog::error("{}({})\n", er.what(), CLErrorString(er.err()).c_str());
         if (er.err() == CL_BUILD_PROGRAM_FAILURE)
         {
-            // printf("%s\n",sourceStr.c_str());
+            // spdlog::info("{}\n",sourceStr.c_str());
             for (unsigned int i = 0; i < devices.size(); ++i)
             {
                 program.getBuildInfo(devices[i], CL_PROGRAM_BUILD_LOG, &buildLog);
-                printf("OpenCL build log, Device %u:\n", i);
-                printf("%s\n", buildLog.c_str());
+                spdlog::error("OpenCL build log, Device {}:\n", i);
+                spdlog::error("{}\n", buildLog.c_str());
+                spdlog::error(std::__fs::filesystem::current_path().c_str());
             }
         }
         throw er;
@@ -310,8 +295,8 @@ void OpenCLResource::buildProgramFromSource(std::string filename, std::string bu
 void OpenCLResource::print()
 {
     std::string tmp;
-    printf("\nSelected platform and device: \n");
-    printf("\nPlatform  --------------------\n");
+    spdlog::info("\nSelected platform and device: \n");
+    spdlog::info("\nPlatform  --------------------\n");
     printPlatformInfo(platform_info);
 }
 
@@ -406,7 +391,7 @@ deviceInfo getDeviceInfo(cl::Device device)
 void printOpenCL()
 {
 
-    printf("\nQuerying OpenCL platforms...\n");
+    spdlog::info("\nQuerying OpenCL platforms...\n");
     std::vector<platformInfo> pinfo = queryOpenCL();
     printOpenCL(pinfo);
 }
@@ -415,25 +400,25 @@ void printOpenCL()
 void printOpenCL(std::vector<platformInfo> pinfo)
 {
 
-    printf("Number of platforms found: %u\n", (unsigned int)pinfo.size());
+    spdlog::info("Number of platforms found: %u\n", (unsigned int)pinfo.size());
     for (unsigned int i = 0; i < pinfo.size(); ++i)
     {
-        printf("\nPlatform %d. ------------------------------\n", i);
+        spdlog::info("\nPlatform {}. ------------------------------\n", i);
         printPlatformInfo(pinfo[i]);
     }
-    printf("\n");
+    spdlog::info("\n");
 }
 
 //print information about a platform and its devices given pre-queried info in platformInfo struct
 void printPlatformInfo(platformInfo pinfo)
 {
-    printf("Name:    %s\n", pinfo.name.c_str());
-    printf("Vendor:  %s\n", pinfo.vendor.c_str());
-    printf("Version: %s\n", pinfo.version.c_str());
+    spdlog::info("Name:    {}\n", pinfo.name.c_str());
+    spdlog::info("Vendor:  {}\n", pinfo.vendor.c_str());
+    spdlog::info("Version: {}\n", pinfo.version.c_str());
 
     for (unsigned int j = 0; j < pinfo.nDevices; j++)
     {
-        printf("\nDevice %d. --------------------\n", j);
+        spdlog::info("\nDevice {}. --------------------\n", j);
         printDeviceInfo(pinfo.device_info[j]);
     }
 }
@@ -448,17 +433,17 @@ void printDeviceInfo(cl::Device device)
 //print info about a specific cl::Device given pre-queried info in deviceInfo struct
 void printDeviceInfo(deviceInfo dinfo)
 {
-    printf("Name:   %s\n", dinfo.name.c_str());
-    printf("Type:   %s\n", dinfo.devTypeStr.c_str());
-    printf("Vendor: %s\n", dinfo.vendor.c_str());
-    printf("Version: %s\n", dinfo.version.c_str());
-    printf("Compute units (CUs): %d\n", dinfo.computeUnits);
-    printf("Clock frequency:     %d MHz\n", dinfo.maxClock);
-    printf("Global memory size:  %llu MB\n", (long long unsigned int)(dinfo.deviceMemSize / 1024 / 1024));
-    printf("Max allocation size: %llu MB\n", (long long unsigned int)(dinfo.maxMemAllocSize / 1024 / 1024));
-    printf("Max work group/CU:   %d\n", (int)dinfo.maxWorkGroupSize);
-    printf("Double support:      %s\n", (dinfo.doubleSupport ? "true" : "false"));
-    printf("Device available:    %s\n", (dinfo.deviceAvailable ? "true" : "false"));
+    spdlog::info("Name:   {}\n", dinfo.name.c_str());
+    spdlog::info("Type:   {}\n", dinfo.devTypeStr.c_str());
+    spdlog::info("Vendor: {}\n", dinfo.vendor.c_str());
+    spdlog::info("Version: {}\n", dinfo.version.c_str());
+    spdlog::info("Compute units (CUs): {}\n", dinfo.computeUnits);
+    spdlog::info("Clock frequency:     {} MHz\n", dinfo.maxClock);
+    spdlog::info("Global memory size:  {} MB\n", (long long unsigned int)(dinfo.deviceMemSize / 1024 / 1024));
+    spdlog::info("Max allocation size: {} MB\n", (long long unsigned int)(dinfo.maxMemAllocSize / 1024 / 1024));
+    spdlog::info("Max work group/CU:   {}\n", (int)dinfo.maxWorkGroupSize);
+    spdlog::info("Double support:      {}\n", (dinfo.doubleSupport ? "true" : "false"));
+    spdlog::info("Device available:    {}\n", (dinfo.deviceAvailable ? "true" : "false"));
 };
 
 std::string CLErrorString(cl_int error)
@@ -567,12 +552,12 @@ std::string read_file(std::string filename)
 {
     std::ifstream sourceFile(filename.c_str());
     if (sourceFile.fail())
-    {   
-        std::cout << "Error: Cannot find file " << filename << std::endl;
+    {
+        spdlog::error("Cannot find file {}", filename.c_str());
         throw cl::Error(1, "Failed to open OpenCL source file");
     }
     std::string sourceStr(std::istreambuf_iterator<char>(sourceFile), (std::istreambuf_iterator<char>())); //second arg is "end of stream" iterator
     sourceFile.close();
-    // printf("%s",sourceStr.c_str());
+    // spdlog::info(sourceStr.c_str());
     return sourceStr;
 }

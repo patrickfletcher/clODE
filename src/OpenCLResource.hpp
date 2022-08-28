@@ -14,13 +14,6 @@
 #ifndef OPENCL_RESOURCE_HPP_
 #define OPENCL_RESOURCE_HPP_
 
-// #define __CL_ENABLE_EXCEPTIONS
-// #include "OpenCL/cl.hpp"
-// #if defined(__APPLE__) || defined(__MACOSX)
-// #include "OpenCL/cl.hpp"
-// #else
-// #include <CL/cl.hpp>
-// #endif
 #define CL_HPP_ENABLE_EXCEPTIONS
 #define CL_HPP_MINIMUM_OPENCL_VERSION 120
 #define CL_HPP_TARGET_OPENCL_VERSION 120

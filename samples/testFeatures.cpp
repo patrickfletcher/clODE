@@ -17,7 +17,7 @@
 #include "CLODE.hpp"
 #include "CLODEfeatures.hpp"
 
-
+#define CLODE_ROOT "src/"
 
 //Generate random points within given bounds
 template<typename T> std::vector<T> generateRandomPoints(std::vector<T> lb, std::vector<T> ub, int nPts);
@@ -34,20 +34,30 @@ int main(int argc, char **argv)
 	{
 		
 	cl_int nPts=4096;
-	bool CLSinglePrecision=false;
+	bool CLSinglePrecision=true;
 	
 	ProblemInfo prob;
-	if (CLSinglePrecision)
-		prob.clRHSfilename="../lactotrophF.cl";
-	else
-		prob.clRHSfilename="../lactotroph.cl";
+
+	prob.clRHSfilename="samples/lactotroph.cl";
 		
 	prob.nVar=4;
 	prob.nPar=3;
 	prob.nAux=1;
 	prob.nWiener=1;
-	
-	StepperType stepper=euler;
+
+    prob.varNames.push_back("a");
+    prob.varNames.push_back("b");
+    prob.varNames.push_back("c");
+    prob.varNames.push_back("d");
+
+    prob.parNames.push_back("aa");
+    prob.parNames.push_back("bb");
+    prob.parNames.push_back("cc");
+
+    prob.auxNames.push_back("dd");
+
+
+	std::string stepper="euler";
 	
 	//parameters for solver and objective function
 	std::vector<double> tspan({0.0,1000.0});
@@ -63,7 +73,7 @@ int main(int argc, char **argv)
 	sp.max_store=10000000;
 	sp.nout=50;
 	
-	ObserverType observer=basic;
+	std::string observer="basic";
 	
 	ObserverParams<double> op;
 	op.eVarIx=0;
@@ -119,16 +129,16 @@ int main(int argc, char **argv)
 	srand(static_cast <unsigned> (time(0))); 
     std::chrono::time_point<std::chrono::high_resolution_clock> start, end;
 	std::chrono::duration<double, std::milli> elapsed_ms;
-	
-	
+
+
 	// create the simulator
-	CLODEfeatures clo(prob, stepper, observer, CLSinglePrecision, opencl);
-	
-	
+	CLODEfeatures clo(prob, stepper, observer, CLSinglePrecision, opencl, CLODE_ROOT);
+
 	//~ std::cout<<"here"<<std::endl;
 	//copy problem data to the device
-	clo.initialize(tspan, x0, pars, sp, op); 
-	
+
+	clo.initialize(tspan, x0, pars, sp, op);
+
 	clo.seedRNG(mySeed);
 	
 	//run the simulation 
@@ -141,8 +151,6 @@ int main(int argc, char **argv)
 	//~ clo.transient(pars);
 	//~ clo.transient(tspan, x0);
 	//~ clo.transient(tspan, x0, pars);
-	
-	
 		
 	start = std::chrono::high_resolution_clock::now();
 		

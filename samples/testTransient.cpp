@@ -16,7 +16,9 @@
 #include "OpenCLResource.hpp"
 #include "CLODE.hpp"
 
+#include "spdlog/spdlog.h"
 
+#define CLODE_ROOT "src/"
 
 //Generate random points within given bounds
 template<typename T> std::vector<T> generateRandomPoints(std::vector<T> lb, std::vector<T> ub, int nPts);
@@ -24,6 +26,7 @@ template<typename T> std::vector<T> generateRandomPoints(std::vector<T> lb, std:
 //currently the only command line arguments are to select device/vendor type ("--device cpu/gpu/accel", "--vendor amd/intel/nvidia")
 int main(int argc, char **argv)
 {
+    spdlog::set_level(spdlog::level::debug);
 	try 
 	{
 		
@@ -31,7 +34,7 @@ int main(int argc, char **argv)
 	bool CLSinglePrecision=true;
 	
 	ProblemInfo prob;
-	prob.clRHSfilename="lactotroph.cl";
+	prob.clRHSfilename="samples/lactotroph.cl";
 	prob.nVar=4;
 	prob.nPar=3;
 	prob.nAux=1;

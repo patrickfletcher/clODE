@@ -1,19 +1,13 @@
 #include "CLODEfeatures.hpp"
 
-// #define dbg_printf printf
-#define dbg_printf
-#ifdef MATLAB_MEX_FILE
-#include "mex.h"
-#define printf mexPrintf
-#endif
-
 #include <algorithm> //std::max
 #include <cmath>
 #include <stdexcept>
-#include <stdio.h>
 
-CLODEfeatures::CLODEfeatures(ProblemInfo prob, std::string stepper, std::string observer, bool clSinglePrecision, OpenCLResource opencl)
-	: CLODE(prob, stepper, clSinglePrecision, opencl), observer(observer)
+#include "spdlog/spdlog.h"
+
+CLODEfeatures::CLODEfeatures(ProblemInfo prob, std::string stepper, std::string observer, bool clSinglePrecision, OpenCLResource opencl, const std::string clodeRoot)
+	: CLODE(prob, stepper, clSinglePrecision, opencl, clodeRoot), observer(observer)
 {
 	// default fVarIx and eVarIx to allow first query of observer define map (exposes availableObservers, fNames)
 	op.fVarIx=0;
@@ -22,11 +16,11 @@ CLODEfeatures::CLODEfeatures(ProblemInfo prob, std::string stepper, std::string 
 
 	clprogramstring += read_file(clodeRoot + "initializeObserver.cl");
 	clprogramstring += read_file(clodeRoot + "features.cl");
-	dbg_printf("constructor clODEfeatures\n");
+	spdlog::debug("constructor clODEfeatures\n");
 }
 
-CLODEfeatures::CLODEfeatures(ProblemInfo prob, std::string stepper, std::string observer, bool clSinglePrecision,  unsigned int platformID, unsigned int deviceID)
-	: CLODE(prob, stepper, clSinglePrecision, platformID, deviceID), observer(observer)
+CLODEfeatures::CLODEfeatures(ProblemInfo prob, std::string stepper, std::string observer, bool clSinglePrecision,  unsigned int platformID, unsigned int deviceID, const std::string clodeRoot)
+	: CLODE(prob, stepper, clSinglePrecision, platformID, deviceID, clodeRoot), observer(observer)
 {
 	// default fVarIx and eVarIx to allow first query of observer define map
 	op.fVarIx=0;
@@ -35,7 +29,7 @@ CLODEfeatures::CLODEfeatures(ProblemInfo prob, std::string stepper, std::string 
 
 	clprogramstring += read_file(clodeRoot + "initializeObserver.cl");
 	clprogramstring += read_file(clodeRoot + "features.cl");
-	dbg_printf("constructor clODEfeatures\n");
+	spdlog::debug("constructor clODEfeatures\n");
 }
 
 CLODEfeatures::~CLODEfeatures() {}
@@ -57,17 +51,17 @@ void CLODEfeatures::buildCL()
 		// cl::Device dev;
 		// opencl.getProgram().getInfo(CL_PROGRAM_DEVICES,&dev);
 		// cl_features.getWorkGroupInfo(dev,CL_KERNEL_PREFERRED_WORK_GROUP_SIZE_MULTIPLE,&preferred_multiple);
-		// printf("Preferred work size multiple (features): %d\n",preferred_multiple);
+		// spdlog::info("Preferred work size multiple (features): {}\n",preferred_multiple);
 	}
 	catch (cl::Error &er)
 	{
-		printf("ERROR in CLODEfeatures::initializeFeaturesKernel: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
+		spdlog::error("CLODEfeatures::initializeFeaturesKernel:{}({})\n", er.what(), CLErrorString(er.err()).c_str());
 		throw er;
 	}
-	dbg_printf("initialize features kernel\n");
+	spdlog::debug("initialize features kernel\n");
 
 	clInitialized = false;
-	printf("Using observer: %s\n",observer.c_str());
+	spdlog::info("Using observer: {}\n",observer.c_str());
 }
 
 
@@ -78,12 +72,19 @@ std::string CLODEfeatures::getProgramString()
 	return buildOptions+clprogramstring+ODEsystemsource; 
 }
 
+void CLODEfeatures::initialize(std::vector<cl_double> newTspan, std::vector<cl_double> newX0, std::vector<cl_double> newPars, SolverParams<cl_double> newSp) {
+    throw std::runtime_error("CLODEfeatures reuqires the newOp parameter!");
+}
+
 //initialize everything
 void CLODEfeatures::initialize(std::vector<cl_double> newTspan, std::vector<cl_double> newX0, std::vector<cl_double> newPars, SolverParams<cl_double> newSp, ObserverParams<cl_double> newOp)
 {
 	clInitialized = false;
+
+    buildCL();
+
 	//at the time of initialize, make sure observerDataSize and nFeatures are up to date (for d_F, d_odata)
-	updateObserverDefineMap(); 
+	updateObserverDefineMap();
 
 	setTspan(newTspan);
 	setProblemData(newX0, newPars); //will set nPts
@@ -93,7 +94,7 @@ void CLODEfeatures::initialize(std::vector<cl_double> newTspan, std::vector<cl_d
 
 	doObserverInitialization = true;
 	clInitialized = true;
-	dbg_printf("initialize clODEfeatures.\n");
+	spdlog::debug("initialize clODEfeatures.\n");
 }
 
 void CLODEfeatures::setObserver(std::string newObserver)
@@ -107,9 +108,9 @@ void CLODEfeatures::setObserver(std::string newObserver)
 	}
 	else
 	{
-		printf("Warning: unknown observer: %s. Observer method unchanged\n",newObserver.c_str());
+		spdlog::warn("unknown observer: {}. Observer method unchanged\n",newObserver.c_str());
 	}
-	dbg_printf("set observer\n");
+	spdlog::debug("set observer\n");
 }
 
 
@@ -142,10 +143,10 @@ void CLODEfeatures::setObserverParams(ObserverParams<cl_double> newOp)
 	}
 	catch (cl::Error &er)
 	{
-		printf("ERROR in CLODEfeatures::setObserverParams: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
+		spdlog::error("CLODEfeatures::setObserverParams:{}({})\n", er.what(), CLErrorString(er.err()).c_str());
 		throw er;
 	}
-	dbg_printf("set observer params\n");
+	spdlog::debug("set observer params\n");
 }
 
 
@@ -154,12 +155,11 @@ void CLODEfeatures::updateObserverDefineMap()
 {
 	getObserverDefineMap(prob, op.fVarIx, op.eVarIx, observerDefineMap, availableObserverNames);
 	observerBuildOpts=" -D" + observerDefineMap.at(observer).define;
-
 	if (clSinglePrecision)
 		observerDataSize=observerDefineMap.at(observer).observerDataSizeFloat;
 	else
 		observerDataSize=observerDefineMap.at(observer).observerDataSizeDouble;
-	dbg_printf("observerDataSize = %d\n",observerDataSize);
+	spdlog::debug("observerDataSize = {}\n",observerDataSize);
 	observerDataSize = observerDataSize + observerDataSize % realSize; //align to a multiple of realsize. is this necessary?
 
 	nFeatures=(int)observerDefineMap.at(observer).featureNames.size();
@@ -193,7 +193,7 @@ void CLODEfeatures::resizeFeaturesVariables()
 	if (largestAlloc > opencl.getMaxMemAllocSize())
 	{
 		int maxNpts = floor(opencl.getMaxMemAllocSize() / (cl_ulong)std::max(nFeatures * realSize, observerDataSize));
-		printf("nPts is too large, requested memory size exceeds selected device's limit. Maximum nPts appears to be %d \n", maxNpts);
+		spdlog::info("nPts is too large, requested memory size exceeds selected device's limit. Maximum nPts appears to be {} \n", maxNpts);
 		throw std::invalid_argument("nPts is too large");
 	}
 
@@ -212,10 +212,10 @@ void CLODEfeatures::resizeFeaturesVariables()
 		}
 		catch (cl::Error &er)
 		{
-			printf("ERROR in CLODEfeatures::resizeFeaturesVariables: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
+			spdlog::error("CLODEfeatures::resizeFeaturesVariables:{}({})\n", er.what(), CLErrorString(er.err()).c_str());
 			throw er;
 		}
-		dbg_printf("resize F, d_F, d_odata with: nPts=%d, nF=%d\n",nPts,nFeatures);
+		spdlog::debug("resize F, d_F, d_odata with: nPts={}, nF={}\n",nPts,nFeatures);
 	}
 	
 }
@@ -228,7 +228,7 @@ void CLODEfeatures::initializeObserver()
 
 	if (clInitialized)
 	{
-		// printf("do init=%s\n",doObserverInitialization?"true":"false");
+		// spdlog::info("do init={}\n",doObserverInitialization?"true":"false");
 		//resize output variables - will only occur if nPts has changed
 		resizeFeaturesVariables();
 
@@ -247,21 +247,21 @@ void CLODEfeatures::initializeObserver()
 
 			//execute the kernel
 			opencl.error = opencl.getQueue().enqueueNDRangeKernel(cl_initializeObserver, cl::NullRange, cl::NDRange(nPts));
-			// printf("Enqueue error code: %s\n",CLErrorString(opencl.error).c_str());
+			// spdlog::info("Enqueue error code: {}\n",CLErrorString(opencl.error).c_str());
 			opencl.error = opencl.getQueue().finish();
-			// printf("Finish Queue error code: %s\n",CLErrorString(opencl.error).c_str());
+			// spdlog::info("Finish Queue error code: {}\n",CLErrorString(opencl.error).c_str());
 			doObserverInitialization = false;
 		}
 		catch (cl::Error &er)
 		{
-			printf("ERROR in CLODEfeatures::initializeObserver: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
+			spdlog::error("CLODEfeatures::initializeObserver:{}({})\n", er.what(), CLErrorString(er.err()).c_str());
 			throw er;
 		}
-		dbg_printf("run initializeObserver\n");
+		spdlog::debug("run initializeObserver\n");
 	}
 	else
 	{
-		printf("CLODE has not been initialized\n");
+		spdlog::info("CLODE has not been initialized\n");
 	}
 }
 
@@ -278,7 +278,7 @@ void CLODEfeatures::features()
 
 	if (clInitialized)
 	{
-		// printf("do init=%s\n",doObserverInitialization?"true":"false");
+		// spdlog::info("do init={}\n",doObserverInitialization?"true":"false");
 		//resize output variables - will only occur if nPts has changed
 		resizeFeaturesVariables();
 
@@ -302,20 +302,20 @@ void CLODEfeatures::features()
 
 			//execute the kernel
 			opencl.error = opencl.getQueue().enqueueNDRangeKernel(cl_features, cl::NullRange, cl::NDRange(nPts));
-			// printf("Enqueue error code: %s\n",CLErrorString(opencl.error).c_str());
+			// spdlog::info("Enqueue error code: {}\n",CLErrorString(opencl.error).c_str());
 			opencl.error = opencl.getQueue().finish();
-			// printf("Finish Queue error code: %s\n",CLErrorString(opencl.error).c_str());
+			// spdlog::info("Finish Queue error code: {}\n",CLErrorString(opencl.error).c_str());
 		}
 		catch (cl::Error &er)
 		{
-			printf("ERROR in CLODEfeatures::features: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
+			spdlog::error("CLODEfeatures::features:{}({})\n", er.what(), CLErrorString(er.err()).c_str());
 			throw er;
 		}
-		dbg_printf("run features\n");
+		spdlog::debug("run features\n");
 	}
 	else
 	{
-		printf("CLODE has not been initialized\n");
+		spdlog::info("CLODE has not been initialized\n");
 	}
 }
 

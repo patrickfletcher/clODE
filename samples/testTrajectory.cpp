@@ -17,7 +17,7 @@
 #include "CLODE.hpp"
 #include "CLODEtrajectory.hpp"
 
-
+#define CLODE_ROOT "src/"
 
 //Generate random points within given bounds
 template<typename T> std::vector<T> generateRandomPoints(std::vector<T> lb, std::vector<T> ub, int nPts);
@@ -38,9 +38,9 @@ int main(int argc, char **argv)
 	
 	ProblemInfo prob;
 	if (CLSinglePrecision)
-		prob.clRHSfilename="lactotrophF.cl";
+		prob.clRHSfilename="samples/lactotrophF.cl";
 	else
-		prob.clRHSfilename="lactotroph.cl";
+		prob.clRHSfilename="samples/lactotroph.cl";
 		
 	prob.nVar=4;
 	prob.nPar=3;
