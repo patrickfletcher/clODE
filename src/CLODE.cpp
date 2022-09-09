@@ -24,18 +24,15 @@
 #include <stdio.h>
 
 //constructor sets problem info and builds the base clprogramstring
+
+// CLODE::CLODE()
+// {
+	// clprogramstring = read_file(clodeRoot + "transient.cl");
+// }
+
 CLODE::CLODE(ProblemInfo prob, std::string stepper, bool clSinglePrecision, OpenCLResource opencl)
-	: nPts(0), clodeRoot(CLODE_ROOT), nRNGstate(2)
 {
-	//printf("\nCLODE base class constructor\n");
-
 	getStepperDefineMap(stepperDefineMap, availableSteppers); //from steppers.cl
-
-	// for (auto s : availableSteppers)
-	// {
-	// 	printf("%s\n",s.c_str());
-	// }
-
 	setNewProblem(prob);
 	setStepper(stepper);
 	setPrecision(clSinglePrecision);
@@ -46,17 +43,8 @@ CLODE::CLODE(ProblemInfo prob, std::string stepper, bool clSinglePrecision, Open
 }
 
 CLODE::CLODE(ProblemInfo prob, std::string stepper, bool clSinglePrecision, unsigned int platformID, unsigned int deviceID)
-	: nPts(0), clodeRoot(CLODE_ROOT), nRNGstate(2)
 {
-	//printf("\nCLODE base class constructor\n");
-
 	getStepperDefineMap(stepperDefineMap, availableSteppers); //from steppers.cl
-
-	// for (auto s : availableSteppers)
-	// {
-	// 	printf("%s\n",s.c_str());
-	// }
-
 	setNewProblem(prob);
 	setStepper(stepper);
 	setPrecision(clSinglePrecision);
@@ -74,6 +62,7 @@ void CLODE::setNewProblem(ProblemInfo newProb)
 { //TODO: not equality check for ProblemInfo struct, error checking: at least one variable!
 	prob=newProb;
 	clRHSfilename = newProb.clRHSfilename;
+	ODEsystemsource = read_file(clRHSfilename);
 	nVar = newProb.nVar;
 	nPar = newProb.nPar>0?newProb.nPar:1; //support zero params
 	nAux = newProb.nAux>0?newProb.nAux:1; //support zero aux
@@ -85,31 +74,31 @@ void CLODE::setNewProblem(ProblemInfo newProb)
 
 void CLODE::setStepper(std::string newStepper)
 {
-	if (newStepper!=stepper)
+	// if (newStepper!=stepper)
+	// {
+	auto loc = stepperDefineMap.find(newStepper); //from steppers.cl
+	if ( loc != stepperDefineMap.end() )
 	{
-		auto loc = stepperDefineMap.find(newStepper); //from steppers.cl
-		if ( loc != stepperDefineMap.end() )
-		{
-			stepper = newStepper;
-			clInitialized = false;
-		}
-		else
-		{
-			printf("Warning: unknown stepper: %s. Stepper method unchanged\n",newStepper.c_str());
-		}
-		dbg_printf("set stepper\n");	
+		stepper = newStepper;
+		clInitialized = false;
 	}
+	else
+	{
+		printf("Warning: unknown stepper: %s. Stepper method unchanged\n",newStepper.c_str());
+	}
+	dbg_printf("set stepper\n");	
+	// }
 }
 
 void CLODE::setPrecision(bool newPrecision)
 {
-	if (newPrecision != clSinglePrecision)
-	{
-		clSinglePrecision = newPrecision;
-		realSize = newPrecision ? sizeof(cl_float) : sizeof(cl_double);
-		clInitialized = false;
-		dbg_printf("set precision\n");
-	}
+	// if (newPrecision != clSinglePrecision)
+	// {
+	clSinglePrecision = newPrecision;
+	realSize = newPrecision ? sizeof(cl_float) : sizeof(cl_double);
+	clInitialized = false;
+	dbg_printf("set precision\n");
+	// }
 }
 
 void CLODE::setOpenCL(OpenCLResource newOpencl)
@@ -130,12 +119,12 @@ void CLODE::setOpenCL(unsigned int platformID, unsigned int deviceID)
 	dbg_printf("set OpenCL\n");
 }
 
-//build creates build option defined constants based on selected options, adds the ODEsystem source to clprogramstring then builds for selected OpenCL resource
-void CLODE::buildProgram(std::string extraBuildOpts)
-{
 
+void CLODE::setCLbuildOpts(std::string extraBuildOpts)
+{
+	
 	if (!clSinglePrecision && !opencl.getDoubleSupport())
-	{ //TODO: running with double-precision clRHSfile probably will crash. gen both double/single with ode2cl always?
+	{ //TODO: make this an error?
 		clSinglePrecision = true;
 		printf("Warning: device selected does not support double precision. Using single precision\n");
 	}
@@ -164,9 +153,16 @@ void CLODE::buildProgram(std::string extraBuildOpts)
 	buildOptions += " -I" + clodeRoot;
 
 	buildOptions += extraBuildOpts;
+}
+
+
+//build creates build option defined constants based on selected options, adds the ODEsystem source to clprogramstring then builds for selected OpenCL resource
+void CLODE::buildProgram(std::string extraBuildOpts)
+{
+	setCLbuildOpts(extraBuildOpts);
 
 	//ODEsystem source is delayed to here, in case we change it
-	ODEsystemsource = read_file(clRHSfilename);
+	// ODEsystemsource = read_file(clRHSfilename);
 	// clprogramstring += ODEsystemsource;
 
 	// printf("%s", clprogramstring.c_str());
@@ -180,37 +176,14 @@ void CLODE::buildProgram(std::string extraBuildOpts)
 	dbg_printf("build clODE\n");
 }
 
-//initialize everything: build the program, create the kernels, and set all needed problem data.
-void CLODE::initialize(std::vector<cl_double> newTspan, std::vector<cl_double> newX0, std::vector<cl_double> newPars, SolverParams<cl_double> newSp)
+// build program and create kernel objects. requires host variables to be set
+void CLODE::buildCL()
 {
-
-	clInitialized = false;
-	//(re)build the program
 	buildProgram();
 
 	//set up the kernel
-	initializeTransientKernel();
-
-	setProblemData(newX0, newPars); //will call setNpts
-	setTspan(newTspan);
-	setSolverParams(newSp);
-
-	clInitialized = true;
-	dbg_printf("initialize clODE\n");
-}
-
-void CLODE::initializeTransientKernel()
-{
-
 	try
-	{ //declare device arrays that won't change size: tspan, SolverParams
-		d_tspan = cl::Buffer(opencl.getContext(), CL_MEM_READ_ONLY, realSize * 2, NULL, &opencl.error);
-		if (clSinglePrecision)
-			d_sp = cl::Buffer(opencl.getContext(), CL_MEM_READ_ONLY, sizeof(SolverParams<cl_float>), NULL, &opencl.error);
-		else
-			d_sp = cl::Buffer(opencl.getContext(), CL_MEM_READ_ONLY, sizeof(SolverParams<cl_double>), NULL, &opencl.error);
-
-		//initialize kernel and assign kernel arguments
+	{ 
 		cl_transient = cl::Kernel(opencl.getProgram(), "transient", &opencl.error);
 
 		// size_t preferred_multiple;
@@ -224,14 +197,26 @@ void CLODE::initializeTransientKernel()
 		printf("ERROR in CLODE::initializeTransientKernel(): %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
 		throw er;
 	}
-	dbg_printf("initialize transient kernel\n");
+	clInitialized = false;
+	dbg_printf("buildCL\n");
+}
+
+//initialize everything: build the program, create the kernels, and set all needed problem data.
+void CLODE::initialize(std::vector<cl_double> newTspan, std::vector<cl_double> newX0, std::vector<cl_double> newPars, SolverParams<cl_double> newSp)
+{
+	clInitialized = false;
+
+	setTspan(newTspan);
+	setProblemData(newX0, newPars); //will call setNpts
+	setSolverParams(newSp);
+
+	clInitialized = true;
+	dbg_printf("initialize clODE\n");
 }
 
 //initialize new set of trajectories (nPts may change)
 void CLODE::setProblemData(std::vector<cl_double> newX0, std::vector<cl_double> newPars)
-{
-
-	//check if newX0 and newPars are valid, and update nPts if needed:
+{	//check if newX0 and newPars are valid, and update nPts if needed:
 	if (newX0.size() % nVar != 0)
 	{
 		printf("Invalid initial condition vector: not a multiple of nVar=%d\n", nVar);
@@ -269,8 +254,7 @@ void CLODE::setProblemData(std::vector<cl_double> newX0, std::vector<cl_double> 
 
 //resize all the nPts dependent variables, only if nPts changed
 void CLODE::setNpts(cl_int newNpts)
-{
-	//unlikely that any of these should ever exceed memory limits...
+{	//unlikely that any of these should ever exceed memory limits...
 	size_t largestAlloc = std::max(nVar, std::max(nPar, nAux)) * nPts * realSize;
 	// printf("Computed largestAlloc: %d\n", largestAlloc);
 
@@ -317,29 +301,29 @@ void CLODE::setNpts(cl_int newNpts)
 
 void CLODE::setTspan(std::vector<cl_double> newTspan)
 {
-	if (newTspan!=tspan)
+	try
 	{
+		if (!clInitialized)
+			d_tspan = cl::Buffer(opencl.getContext(), CL_MEM_READ_ONLY, realSize * 2, NULL, &opencl.error);
+
 		tspan = newTspan;
-		//sync to device
-		try
-		{
-			if (clSinglePrecision)
-			{ //downcast to float if desired
-				std::vector<cl_float> tspanF(tspan.begin(), tspan.end());
-				opencl.error = copy(opencl.getQueue(), tspanF.begin(), tspanF.end(), d_tspan);
-			}
-			else
-			{
-				opencl.error = copy(opencl.getQueue(), tspan.begin(), tspan.end(), d_tspan);
-			}
+
+		if (clSinglePrecision)
+		{ //downcast to float if desired
+			std::vector<cl_float> tspanF(tspan.begin(), tspan.end());
+			opencl.error = copy(opencl.getQueue(), tspanF.begin(), tspanF.end(), d_tspan);
 		}
-		catch (cl::Error &er)
+		else
 		{
-			printf("ERROR in CLODE::setTspan: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
-			throw er;
+			opencl.error = copy(opencl.getQueue(), tspan.begin(), tspan.end(), d_tspan);
 		}
-		dbg_printf("set tspan\n");
 	}
+	catch (cl::Error &er)
+	{
+		printf("ERROR in CLODE::setTspan: %s(%s)\n", er.what(), CLErrorString(er.err()).c_str());
+		throw er;
+	}
+	dbg_printf("set tspan\n");
 }
 
 void CLODE::shiftTspan()
@@ -436,9 +420,17 @@ void CLODE::setPars(std::vector<cl_double> newPars)
 
 void CLODE::setSolverParams(SolverParams<cl_double> newSp)
 {//TODO: equality operator for SolverParams struct
-	sp = newSp;
 	try
 	{
+		if (!clInitialized)
+		{
+			if (clSinglePrecision)
+				d_sp = cl::Buffer(opencl.getContext(), CL_MEM_READ_ONLY, sizeof(SolverParams<cl_float>), NULL, &opencl.error);
+			else
+				d_sp = cl::Buffer(opencl.getContext(), CL_MEM_READ_ONLY, sizeof(SolverParams<cl_double>), NULL, &opencl.error);	
+		}
+	
+		sp = newSp;
 		std::fill(dt.begin(), dt.end(), sp.dt);
 		
 		if (clSinglePrecision)
@@ -455,6 +447,7 @@ void CLODE::setSolverParams(SolverParams<cl_double> newSp)
 			opencl.error = copy(opencl.getQueue(), dt.begin(), dt.end(), d_dt);
 			// opencl.error = opencl.getQueue().enqueueFillBuffer(d_dt, sp.dt, 0, sizeof(sp.dt));
 		}
+		
 	}
 	catch (cl::Error &er)
 	{
@@ -595,6 +588,14 @@ std::vector<cl_double> CLODE::getXf()
 
 	return xf;
 }
+
+
+std::string CLODE::getProgramString() 
+{
+	setCLbuildOpts();
+	return buildOptions+clprogramstring+ODEsystemsource; 
+}
+
 
 void CLODE::printStatus()
 {

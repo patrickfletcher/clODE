@@ -24,29 +24,20 @@ template<typename T> std::vector<T> generateRandomPoints(std::vector<T> lb, std:
 //currently the only command line arguments are to select device/vendor type ("--device cpu/gpu/accel", "--vendor amd/intel/nvidia")
 int main(int argc, char **argv)
 {
- 	#if defined(WIN32)||defined(_WIN64)
- 		_putenv_s("CUDA_CACHE_DISABLE", "1");
- 	#else
- 		setenv("CUDA_CACHE_DISABLE", "1", 1);
- 	#endif
 	try 
 	{
 		
 	cl_int nPts=4096;
-	bool CLSinglePrecision=false;
+	bool CLSinglePrecision=true;
 	
 	ProblemInfo prob;
-	if (CLSinglePrecision)
-		prob.clRHSfilename="../lactotrophF.cl";
-	else
-		prob.clRHSfilename="../lactotroph.cl";
-		
+	prob.clRHSfilename="lactotroph.cl";
 	prob.nVar=4;
 	prob.nPar=3;
 	prob.nAux=1;
 	prob.nWiener=1;
 	
-	StepperType stepper=euler;
+	std::string stepper="rk4";
 	
 	//parameters for solver and objective function
 	std::vector<double> tspan({0.0,1000.0});
@@ -127,16 +118,9 @@ int main(int argc, char **argv)
 	//~ clo.transient(tspan, x0, pars);
 	
 	
-	//loop
-	//~ std::cout<<clo.getT0();
-	//~ for (int i=0; i<prob.nVar; ++i)
-		//~ std::cout<< " " << xf[i*nPts];
-		
+	std::cout<<std::endl;
 	start = std::chrono::high_resolution_clock::now();
 	
-	std::vector<double> xf;
-	
-	std::cout<<std::endl;
 	for(int i=0;i<nReps;++i){
 		clo.transient();
 		//~ xf=clo.getX0();
@@ -151,14 +135,13 @@ int main(int argc, char **argv)
 	elapsed_ms += end-start;
 	
 	//retrieve result from device
-	xf=clo.getX0();
+	std::vector<double> xf=clo.getXf();
 	tspan=clo.getTspan();
 	std::cout<< "\ntf="<< tspan[0] <<", xf:"<< "\n";
 	for (int i=0; i<prob.nVar; ++i)
 		std::cout<< " " << xf[i*nPts];
-	
+
 	std::cout<<std::endl;
-	
     std::cout<< "Compute time: " << elapsed_ms.count() << "ms\n";
 	std::cout<<std::endl;
 	

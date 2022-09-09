@@ -96,7 +96,7 @@ classdef clODEtrajectory<clODE & matlab.mixin.SetGet
 
         function nStored=getNstored(obj)
             nStored=obj.cppmethod('getnstored');
-            obj.nStored=nStored;
+            obj.nStored=nStored+1;
         end
         
     end

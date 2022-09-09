@@ -12,7 +12,7 @@ switch(evt.Key)
         clo.features();
         toc
         F=clo.getF();
-        F(F<-1e10|F>1e10)=nan;
+%         F(F<-1e10|F>1e10)=nan;
         hi.CData=reshape(feature.fun(F),Grid.dim);
         hcb=colorbar('northoutside');
         title(hcb,feature.name,'Interpreter','none')
@@ -24,7 +24,7 @@ switch(evt.Key)
         clo.features(1);
         toc
         F=clo.getF();
-        F(F<-1e10|F>1e10)=nan;
+%         F(F<-1e10|F>1e10)=nan;
         hi.CData=reshape(feature.fun(F),Grid.dim);
         hcb=colorbar('northoutside');
         title(hcb,feature.name,'Interpreter','none')
@@ -101,10 +101,8 @@ switch(evt.Key)
         set(hi.Parent,'ButtonDownFcn',tmp); %restore clicktrajectory
     
     case 'add'
-        disp('+')
         
     case 'subtract'
-        disp('+')
         
     case '1'
         setBounds(initBounds([1,3]),initBounds([2,4]));

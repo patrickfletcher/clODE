@@ -1,14 +1,11 @@
 classdef clODEfeatures<clODE & matlab.mixin.SetGet
-    % clODEfeatures(prob, stepper=rk4, observer=basic, clSinglePrecision=true, cl_vendor=any, cl_deviceType=default)
-   
-    %TODO: this should have a method for default observer params
-    
+ 
     %TODO: support post-processing functions for F - add amplitude etc
     %      [newF, newNames]=processFeatures(F, fNames);
     
     properties
         F
-        observer='basic'
+        observer
         op
         nFeatures
         oNames
@@ -52,22 +49,26 @@ classdef clODEfeatures<clODE & matlab.mixin.SetGet
             end
             
             if ~exist('observer','var')
-                observer='basic';
+                observer='basicall';
             end
-%             observerInt=clODEfeatures.getObserverEnum(observer);
             
             if ~exist('mexFilename','var')
                 mexFilename='clODEfeaturesmex';
             end
             obj@clODE(arg1, precision, selectedDevice, stepper, mexFilename, observer);
             
-            obj.op=clODEfeatures.defaultObserverParams();
-            obj.observerNames;
+            obj.observerNames();
             obj.observer=observer;
+            obj.featureNames();
+            obj.getNFeatures();
+            obj.op=clODEfeatures.defaultObserverParams();%default observer params (device transfer during init)
         end
         
         %override initialize to include observerparams arg
         function initialize(obj, tspan, X0, P, sp, op)
+            if ~exist('tspan','var') %no input args: use stored values
+                tspan=obj.tspan; X0=obj.X0; P=obj.P; sp=obj.sp; op=obj.op;
+            end
             obj.cppmethod('initialize', tspan, X0(:), P(:), sp, op);
             obj.tspan=tspan;
             obj.X0=X0;
@@ -75,26 +76,28 @@ classdef clODEfeatures<clODE & matlab.mixin.SetGet
             obj.sp=sp;
             obj.nPts=numel(X0)/obj.prob.nVar; 
             obj.op=op;
-            obj.getNFeatures();
             obj.featureNames();
+            obj.getNFeatures();
+            obj.clInitialized=true;
         end
         
         function setObserverPars(obj, op)
-            if ~isequal(op,obj.op)
-                obj.op=op;
-                obj.cppmethod('setobserverpars', op);
+            if ~exist('op','var') %no input args: use stored values
+                op=obj.op;
             end
+            obj.op=op;
+            obj.cppmethod('setobserverpars', op);
         end
         
-        function set.observer(obj, newObserver)
-            if ~strcmp(newObserver,obj.observer)
-                if ismember(newObserver,obj.observerNames)
-                    obj.observer=newObserver;
-                    obj.cppmethod('setobserver', newObserver);
-                    obj.featureNames();
-                else
-                    error(['undefined observer: ' newObserver]);
-                end
+        function setObserver(obj, newObserver)
+            if ismember(newObserver,obj.observerNames)
+                obj.observer=newObserver;
+                obj.cppmethod('setobserver', newObserver);
+                obj.featureNames();
+                obj.getNFeatures();
+                obj.clBuilt=false;
+            else
+                error(['undefined observer: ' newObserver]);
             end
         end
         
@@ -102,12 +105,14 @@ classdef clODEfeatures<clODE & matlab.mixin.SetGet
             obj.cppmethod('initobserver');
         end
         
-        %overloads to fetch data if desired
-        function features(obj, doInit)
+        function F=features(obj, doInit)
             if ~exist('doInit','var')
                 obj.cppmethod('features');
             else
                 obj.cppmethod('features',doInit);
+            end
+            if nargout==1 %overloads to fetch data if desired
+                F=obj.getF();
             end
         end
         
@@ -119,7 +124,7 @@ classdef clODEfeatures<clODE & matlab.mixin.SetGet
         
         function F=getF(obj, fix)
             F=obj.cppmethod('getf'); 
-            F=reshape(F,obj.nPts,obj.nFeatures); %force column
+            F=reshape(F,obj.nPts,obj.nFeatures);
             obj.F=F;
             if nargin==2 
                 %return argument is just the subset fix of features 
@@ -139,12 +144,39 @@ classdef clODEfeatures<clODE & matlab.mixin.SetGet
         
     end
     
+    %ui public methods
+    methods (Access=public)
+        function hop=uisetOP(obj,parent)
+            if ~exist('parent','var')||isempty(parent)
+                parent=uifigure();
+            end
+            %TODO: convert observer pars to name/value struct..?
+            sptable=table;
+            sptable.name=fieldnames(obj.op);
+            sptable.value=cell2mat(struct2cell(obj.op));
+            hop=uitable(parent,'Data',sptable);
+            hop.ColumnName = sptable.Properties.VariableNames;
+%             hop.ColumnName = {'name'; 'value'};
+            hop.ColumnWidth = {'auto', 'fit'};
+            hop.RowName = {};
+            hop.ColumnSortable = [false false];
+            hop.ColumnEditable = [false true];
+%             hop.Position = position;
+            hop.CellEditCallback=@updateOP;
+            
+            function updateOP(src,event)
+                thisfield=hop.DisplayData.name{event.Indices(1)};
+                if isnumeric(event.NewData) && event.NewData>0
+                    obj.op.(thisfield)=event.NewData;
+                end
+            end
+        end
+    end
      
     %static helper methods
     methods (Static=true)
         
         function op = defaultObserverParams()
-
             op.eVarIx=1; %not implemented
             op.fVarIx=1; %feature detection variable
             op.maxEventCount=5000; %stops if this many events found

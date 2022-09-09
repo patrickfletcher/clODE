@@ -52,6 +52,7 @@ if exist('click_pars','var')
     cloTraj=clODEtrajectory(clo.prob,precision,trajDevice,stepper);
     cloTraj.tscale=clo.tscale;
     cloTraj.tunits=clo.tunits;
+    cloTraj.buildCL();
 
     X0t=repmat(clo.prob.x0,1,1);
     Pt=repmat(clo.prob.p0,1,1);

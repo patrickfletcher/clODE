@@ -31,7 +31,9 @@ enum class Action
     SetStepper,
     SetPrecision,
     SetOpenCL,
+    BuildCL,
     Initialize, //overridden for clODEfeatures
+    SetNPts,
     SetProblemData,
     SetTspan,
     SetX0,
@@ -67,7 +69,9 @@ const std::map<std::string, Action> actionTypeMap =
     { "setstepper",     Action::SetStepper },
     { "setprecision",   Action::SetPrecision },
     { "setopencl",      Action::SetOpenCL },
+    { "buildcl",        Action::BuildCL},
     { "initialize",     Action::Initialize },
+    { "setnpts",        Action::SetNPts },
     { "setproblemdata", Action::SetProblemData },
     { "settspan",       Action::SetTspan },
     { "setx0",          Action::SetX0 },
@@ -143,13 +147,6 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     {
     case Action::New:
     {
-		
- 	#if defined(WIN32)||defined(_WIN64)
- 		_putenv_s("CUDA_CACHE_DISABLE", "1");
- 	#else
- 		setenv("CUDA_CACHE_DISABLE", "1", 1);
- 	#endif
- 	
 		//sig: clODEobjective(nPar,nVar,nObjTimes,nObjVars,devicetype=all,vendor=any)
 		
         handle_type newHandle = instanceTab.size() ? (instanceTab.rbegin())->first + 1 : 1;
@@ -221,6 +218,31 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 		unsigned int platformID = static_cast<unsigned int>(mxGetScalar(prhs[2]));
 		unsigned int deviceID = static_cast<unsigned int>(mxGetScalar(prhs[3]));
         instance->setOpenCL(platformID, deviceID);
+        break;
+	}
+    case Action::Initialize:
+	{ //inputs: tspan, x0, pars, sp, op //OVERRIDE
+        std::vector<cl_double> tspan ( static_cast<cl_double *>(mxGetData(prhs[2])),  static_cast<cl_double *>(mxGetData(prhs[2])) + mxGetNumberOfElements(prhs[2]) ); 
+        std::vector<cl_double> x0 ( static_cast<cl_double *>(mxGetData(prhs[3])),  static_cast<cl_double *>(mxGetData(prhs[3])) + mxGetNumberOfElements(prhs[3]) ); 
+        std::vector<cl_double> pars (static_cast<cl_double *>(mxGetData(prhs[4])),  static_cast<cl_double *>(mxGetData(prhs[4])) + mxGetNumberOfElements(prhs[4]) );  
+		SolverParams<cl_double> sp = getMatlabSPstruct(prhs[5]);
+		ObserverParams<cl_double> op = getMatlabOPstruct(prhs[6]);
+        instance->initialize(tspan, x0, pars, sp, op);       
+        break;
+	}
+    case Action::BuildCL:
+	{ //inputs: none
+        #if defined(WIN32)||defined(_WIN64)
+            _putenv_s("CUDA_CACHE_DISABLE", "1");
+        #else
+            setenv("CUDA_CACHE_DISABLE", "1", 1);
+        #endif
+        instance->buildCL();
+        break;
+	}
+    case Action::SetNPts:
+	{ //inputs: newNpts
+        instance->setNpts((cl_int)mxGetScalar(prhs[2]));
         break;
 	}
     case Action::SetProblemData:
@@ -321,16 +343,6 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         break;
     }
 	//CLODEfeatures methods:
-    case Action::Initialize:
-	{ //inputs: tspan, x0, pars, sp, op //OVERRIDE
-        std::vector<cl_double> tspan ( static_cast<cl_double *>(mxGetData(prhs[2])),  static_cast<cl_double *>(mxGetData(prhs[2])) + mxGetNumberOfElements(prhs[2]) ); 
-        std::vector<cl_double> x0 ( static_cast<cl_double *>(mxGetData(prhs[3])),  static_cast<cl_double *>(mxGetData(prhs[3])) + mxGetNumberOfElements(prhs[3]) ); 
-        std::vector<cl_double> pars (static_cast<cl_double *>(mxGetData(prhs[4])),  static_cast<cl_double *>(mxGetData(prhs[4])) + mxGetNumberOfElements(prhs[4]) );  
-		SolverParams<cl_double> sp = getMatlabSPstruct(prhs[5]);
-		ObserverParams<cl_double> op = getMatlabOPstruct(prhs[6]);
-        instance->initialize(tspan, x0, pars, sp, op);       
-        break;
-	}
     case Action::SetObserverPars:
 	{	//inputs: op 
 		ObserverParams<cl_double> op = getMatlabOPstruct(prhs[2]);
