@@ -50,7 +50,8 @@ classdef clODE < cppclass & matlab.mixin.SetGet
             clSinglePrecision=true;
             if precision=="double", clSinglePrecision=false;end
             
-            if ischar(arg1)
+            if ischar(arg1)||isstring(arg1)
+                arg1=char(arg1);
                 [~,prob]=ode2cl(arg1,[],clSinglePrecision);
             elseif isstruct(arg1)
                 prob=arg1;
