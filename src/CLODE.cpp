@@ -238,7 +238,7 @@ void CLODE::setProblemData(std::vector<cl_double> newX0, std::vector<cl_double> 
 	if (nPtsX0 != nPtsPars)
 	{
 		printf("Initial contition and parameter vector dimensions don't match");
-		printf("...Expected %d sets of each, recieved %d for x0 and %d for pars\n", nPts, nPtsX0, nPtsPars);
+		printf("...Recieved %d sets for x0 and %d sets for pars\n", nPts, nPtsX0, nPtsPars);
 		printf("...Problem data was not updated!\n");
 		return;
 	}
