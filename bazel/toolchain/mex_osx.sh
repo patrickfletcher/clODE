@@ -29,6 +29,7 @@ set -eu
 
 GCC=/Applications/MATLAB_R2022a.app/bin/mex
 OUTPUT=
+OUTPUT_FILE=
 DEPENDENCY_FILE=
 
 declare -a commands
@@ -37,6 +38,7 @@ function parse_option() {
     local -r opt="$1"
     echo Found out "$opt"
     if [[ "${OUTPUT}" = "1" ]]; then
+        OUTPUT_FILE="$opt"
         OUTPUT=$(dirname "$opt")
         commands+=("$OUTPUT")
     elif [[ "${DEPENDENCY_FILE}" = "1" ]]; then
@@ -76,3 +78,21 @@ PWD=$(pwd)
 echo sed -i '.bak' "s#${PWD}/##" ${DEPENDENCY_FILE}
 sed -i '.bak' "s#${PWD}/##" ${DEPENDENCY_FILE}
 # TODO correct dependency file by stripping PWD
+
+#OUTPUT_FILE=$(echo $OUTPUT | grep -oE "([A-Za-z0-9_-]+)\.o"  | rev | cut -c3- | rev)
+BUILD_ITEM=$(echo $OUTPUT | sed -E "s|[A-Za-z0-9_/-]+/([A-Za-z0-9_-]+)|\1|")
+PARAMS_PATH=$(echo $OUTPUT | sed "s|/_objs/$BUILD_ITEM||")
+PARAMS_FILE="$PARAMS_PATH/lib$BUILD_ITEM.a-2.params"
+
+echo "OUTPUT!!!" "$OUTPUT"
+echo "BUILD_ITEM!!!" "$BUILD_ITEM"
+echo "PARAMS_PATH!!!" "$PARAMS_PATH"
+
+{
+  echo "-D"
+  echo "-no_warning_for_no_symbols"
+  echo "-static"
+  echo "-o"
+  echo "$PARAMS_PATH/lib$BUILD_ITEM.a"
+  echo "$OUTPUT_FILE"
+} > "$PARAMS_FILE"

@@ -33,14 +33,11 @@ int main(int argc, char **argv)
 	try 
 	{
 		
-	cl_int nPts=32;
+	cl_int nPts=4096;
 	bool CLSinglePrecision=false;
 	
 	ProblemInfo prob;
-	if (CLSinglePrecision)
-		prob.clRHSfilename="samples/lactotrophF.cl";
-	else
-		prob.clRHSfilename="samples/lactotroph.cl";
+    prob.clRHSfilename="samples/lactotroph.cl";
 		
 	prob.nVar=4;
 	prob.nPar=3;

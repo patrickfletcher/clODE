@@ -51,182 +51,6 @@ all_compile_actions = [
     ACTION_NAMES.clif_match,
 ]
 
-#def _impl(ctx):
-#    tool_paths = [
-#        tool_path(
-#            name = "gcc",
-#            path = "/Applications/MATLAB_R2022a.app/bin/mex",
-#        ),
-#        tool_path(
-#            name = "ld",
-#            path = "/usr/bin/ld",
-#        ),
-#        tool_path(
-#            name = "ar",
-#            path = "/bin/false",
-#        ),
-#        tool_path(
-#            name = "cpp",
-#            path = "/bin/false",
-#        ),
-#        tool_path(
-#            name = "gcov",
-#            path = "/bin/false",
-#        ),
-#        tool_path(
-#            name = "nm",
-#            path = "/bin/false",
-#        ),
-#        tool_path(
-#            name = "objdump",
-#            path = "/bin/false",
-#        ),
-#        tool_path(
-#            name = "strip",
-#            path = "/bin/false",
-#        ),
-#    ]
-#
-#    features = [
-#        feature(
-#            name = "set_compiler",
-#            enabled = True,
-#            flag_sets = [
-#                flag_set(
-#                    actions = all_compile_actions,
-#                    flag_groups = ([
-#                        flag_group(
-#                            flags = [
-#                                "CPP=/usr/bin/clang",
-#                            ],
-#                        ),
-#                    ]),
-#                ),
-#            ],
-#        ),
-#        feature(
-#            name = "default_linker_flags",
-#            enabled = True,
-#            flag_sets = [
-#                flag_set(
-#                    actions = all_link_actions,
-#                    flag_groups = ([
-#                        flag_group(
-#                            flags = [
-#                                "-lstdc++",
-#                            ],
-#                        ),
-#                    ]),
-#                ),
-#            ],
-#        ),
-#        feature(
-#            name = "dependency_file",
-#            enabled = True,
-#            flag_sets = [
-#                flag_set(
-#                    actions = all_compile_actions,
-#                    flag_groups = ([
-#                        flag_group(
-#                            flags = [
-#                                "COMPFLAGS=$COMPFLAGS -MD -MF %{dependency_file}",
-#                            ],
-#                            expand_if_available = "dependency_file",
-#                        ),
-#                    ]),
-#                ),
-#            ],
-#        ),
-#        feature(
-#            name = "random_seed",
-#            enabled = True,
-#            flag_sets = [
-#                flag_set(
-#                    actions = all_compile_actions,
-#                    flag_groups = ([
-#                        flag_group(
-#                            flags = [
-#                                "COMPFLAGS='$COMPFLAGS -frandom-seed=%{random_seed}'",
-#                            ],
-#                            expand_if_available = "random_seed",
-#                        ),
-#                    ]),
-#                ),
-#            ],
-#        ),
-#        feature(
-#            name = "includes",
-#            enabled = True,
-#            flag_sets = [
-#                flag_set(
-#                    actions = all_compile_actions,
-#                    flag_groups = [
-#                        flag_group(
-#                            iterate_over = "include_paths",
-#                            flags = ["-I%{include_paths}"],
-#                        ),
-#                        flag_group(
-#                            iterate_over = "quote_include_paths",
-#                            flags = ["-I%{quote_include_paths}"],
-#                        ),
-#                        flag_group(
-#                            iterate_over = "system_include_paths",
-#                            flags = ["-I%{system_include_paths}"],
-#                        ),
-#                    ],
-#                ),
-#            ],
-#        ),
-#        feature(
-#            name = "include_paths",
-#            enabled = False,
-#        ),
-#        feature(
-#            name = "output_file",
-#            enabled = True,
-#            flag_sets = [
-#                flag_set(
-#                    actions = all_compile_actions,
-#                    flag_groups = ([
-#                        flag_group(
-#                            flags = [
-#                                "-output",
-#                                "%{output_file}",
-#                            ],
-#                            expand_if_available = "output_file",
-#                        ),
-#                    ]),
-#                ),
-#            ],
-#        ),
-#        feature(
-#            name = "compiler_output_flags",
-#            enabled = False,
-#        ),
-#        feature(
-#            name = "output_execpath_flags",
-#            enabled = False,
-#        ),
-#        #        feature(
-#        #            name = "no_legacy_features",
-#        #            enabled = True,
-#        #        ),
-#    ]
-#
-#    return cc_common.create_cc_toolchain_config_info(
-#        ctx = ctx,
-#        features = features,
-#        toolchain_identifier = "mex-toolchain",
-#        host_system_name = "local",
-#        target_system_name = "local",
-#        target_cpu = "mex",
-#        target_libc = "unknown",
-#        compiler = "/Applications/MATLAB_R2022a.app/bin/mex",
-#        abi_version = "unknown",
-#        abi_libc_version = "unknown",
-#        tool_paths = tool_paths,
-#    )
-
 def _impl(ctx):
     print("ctx.attr", ctx.attr)
     print("ctx.bin_dir", ctx.bin_dir.path)
@@ -240,11 +64,11 @@ def _impl(ctx):
         tool_path(
             name = "gcc",
             #path = "/Applications/MATLAB_R2022a.app/bin/mex",
-            path = "mex.sh",
+            path = "mex_osx.sh",
         ),
         tool_path(
             name = "ld",
-            path = "mex.sh",
+            path = "/bin/true",
         ),
         tool_path(
             name = "ar",
@@ -277,7 +101,7 @@ def _impl(ctx):
             action_name = action_name,
             tools = [
                 tool(
-                    path = "mex.sh",
+                    path = "mex_osx.sh",
                 ),
             ],
         )
@@ -300,7 +124,7 @@ def _impl(ctx):
             action_name = ACTION_NAMES.cpp_compile,
             tools = [
                 tool(
-                    path = "mex.sh",
+                    path = "mex_osx.sh",
                 ),
             ],
         ),
@@ -308,7 +132,7 @@ def _impl(ctx):
             action_name = ACTION_NAMES.c_compile,
             tools = [
                 tool(
-                    path = "mex.sh",
+                    path = "mex_osx.sh",
                 ),
             ],
         ),
@@ -316,7 +140,7 @@ def _impl(ctx):
             action_name = ACTION_NAMES.cpp_module_compile,
             tools = [
                 tool(
-                    path = "mex.sh",
+                    path = "mex_osx.sh",
                 ),
             ],
         ),
@@ -417,9 +241,29 @@ def _impl(ctx):
                 ),
             ],
         ),
+        feature(
+            name = "linker_param_file",
+            enabled = True,
+            flag_sets = [
+                flag_set(
+                    actions = all_link_actions + [
+                        ACTION_NAMES.cpp_link_static_library,
+                        ACTION_NAMES.objc_archive,
+                        ACTION_NAMES.objc_fully_link,
+                        ACTION_NAMES.objc_executable,
+                        ACTION_NAMES.objcpp_executable,
+                    ],
+                    flag_groups = [
+                        flag_group(
+                            #flags = ["@%{linker_param_file}"],
+                            flags = ["bazel-out/mez-fastbuild/bin/example/libtest_class.a-2.params"],
+                            #expand_if_available = "linker_param_file",
+                        ),
+                    ],
+                ),
+            ],
+        ),
     ]
-
-    #features = []
 
     return cc_common.create_cc_toolchain_config_info(
         ctx = ctx,
@@ -430,7 +274,7 @@ def _impl(ctx):
         target_system_name = "local",
         target_cpu = "mex",
         target_libc = "unknown",
-        compiler = "mex.sh",
+        compiler = "mex_osx.sh",
         abi_version = "unknown",
         abi_libc_version = "unknown",
         tool_paths = tool_paths,

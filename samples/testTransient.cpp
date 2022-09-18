@@ -47,14 +47,15 @@ int main(int argc, char **argv)
 	
 	int nReps=1;
 	
-	SolverParams<double> sp;
-	sp.dt=0.1;
-	sp.dtmax=1.00;
-	sp.abstol=1e-6;
-	sp.reltol=1e-3;
-	sp.max_steps=10000000;
-	sp.max_store=10000000;
-	sp.nout=50;
+	SolverParams<double> sp {
+        .dt=0.1,
+        .dtmax=1.00,
+        .abstol=1e-6,
+        .reltol=1e-3,
+        .max_steps=10000000,
+        .max_store=10000000,
+        .nout=50,
+    };
 	
 	int mySeed=1;
 	
@@ -68,30 +69,8 @@ int main(int argc, char **argv)
 	
 	//initial values: all zeros
 	std::vector<double> x0(nPts*prob.nVar, 0.0);
-	
-	
-//initialize opencl (several device selection options are commented out below)
-	
-	// Default constructor: selects first OpenCL device found
-	//~ OpenCLResource opencl;
-	
-	// Select device type and/or vendor using command line flags ("--device cpu/gpu/accel", "--vendor amd/intel/nvidia")
+
 	OpenCLResource opencl( argc, argv);
-	
-	// Select device type/vendor programmatically
-	//~ cl_device_type deviceType=CL_DEVICE_TYPE_DEFAULT;
-	//~ cl_device_type deviceType=CL_DEVICE_TYPE_CPU;
-	//~ cl_device_type deviceType=CL_DEVICE_TYPE_GPU;
-	//~ cl_device_type deviceType=CL_DEVICE_TYPE_ACCELERATOR;
-	//~ cl_device_type deviceType=CL_DEVICE_TYPE_ALL;
-	
-	//~ cl_vendor vendor=VENDOR_ANY;
-	//~ cl_vendor vendor=VENDOR_AMD;
-	//~ cl_vendor vendor=VENDOR_INTEL;
-	//~ cl_vendor vendor=VENDOR_NVIDIA;
-	
-	//~ OpenCLResource opencl(deviceType); //default vendor=VENDOR_ANY
-	//~ OpenCLResource opencl(deviceType, vendor);
 	
 	//prep timer and PRNG
 	srand(static_cast <unsigned> (time(0))); 

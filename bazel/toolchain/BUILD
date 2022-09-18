@@ -9,7 +9,7 @@ filegroup(name = "empty")
 filegroup(
     name = "all",
     srcs = [
-        "mex.sh",
+        "mex_osx.sh",
     ],
 )
 
