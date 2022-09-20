@@ -47,7 +47,7 @@ protected:
 public:
     CLODEtrajectory(ProblemInfo prob, std::string stepper, bool clSinglePrecision, OpenCLResource opencl, const std::string clodeRoot); //will construct the base class with same arguments
     CLODEtrajectory(ProblemInfo prob, std::string stepper, bool clSinglePrecision, unsigned int platformID, unsigned int deviceID, const std::string clodeRoot);
-    ~CLODEtrajectory();
+    virtual ~CLODEtrajectory();
 
     void buildCL(); // build program and create kernel objects
 

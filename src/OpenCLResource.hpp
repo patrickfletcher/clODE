@@ -95,9 +95,12 @@ public:
 
 	//command line constructor, expects "--device gpu/cpu/accel" and/or "--vendor amd/intel/nvidia".  Defaults as above
 	OpenCLResource(int argc, char **argv);
+    //OpenCLResource(const std::vector<std::string> &);
 
 	OpenCLResource(unsigned int platformID, unsigned int deviceID);				 //specify the platform and optionally device by integer ID
 	OpenCLResource(unsigned int platformID, std::vector<unsigned int> deviceID); //specify the platform and optionally device by integer IDs. default uses all available devices on that platform.
+
+    ~OpenCLResource() {}
 
 	cl_int error; //use this for error checking in host program
 

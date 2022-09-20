@@ -1,3 +1,9 @@
+filegroup(
+    name = "lactotroph",
+    srcs = ["lactotroph.cl"],
+    visibility = ["//visibility:public"],
+)
+
 cc_binary(
     name = "testTrans",
     srcs = ["testTransient.cpp"],

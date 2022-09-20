@@ -114,7 +114,7 @@ public:
     CLODE(ProblemInfo prob, std::string stepper, bool clSinglePrecision, unsigned int platformID, unsigned int deviceID, const std::string clodeRoot);
     //~ CLODE(ProblemInfo prob); //set stepper, precision, and opencl
     //~ CLODE(ProblemInfo prob, StepperType stepper=rungeKutta4, bool clSinglePrecision=true, OpenCLResource opencl=OpenCLResource()); //alt: use defaults?
-    ~CLODE();
+    virtual ~CLODE();
 
     //Set functions: trigger rebuild etc
     void setNewProblem(ProblemInfo prob);               //buildCL, pars/vars. Opencl context OK

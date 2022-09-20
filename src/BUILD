@@ -116,3 +116,35 @@ cc_library(
         ":clode_trajectory",
     ],
 )
+
+cc_binary(
+    name = "clode.so",
+    srcs = ["CLODEpython.cpp"],
+    copts = [
+        "-I/Library/Frameworks/Python.framework/Versions/Current/Headers/",
+        #"-F/Library/Frameworks/Python.framework",
+        #"-framework",
+        #"Python",
+    ],
+    includes = [
+        ".",
+        #"/Library/Framework/Python.framework/Versions/Current/Headers/",
+    ],
+    linkshared = True,
+    visibility = ["//visibility:public"],
+    deps = [
+        ":clode",
+        ":clode_features",
+        ":clode_trajectory",
+        "@com_github_pybind_pybind11//:pybind11",
+        "//src/logging:python_sink",
+        #"@org_python_ftp//:python",
+    ],
+)
+
+py_library(
+    name = "py_clode",
+    data = [":clode.so"],
+    imports = ["."],
+    visibility = ["//visibility:public"],
+)

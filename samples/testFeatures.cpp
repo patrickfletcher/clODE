@@ -100,30 +100,10 @@ int main(int argc, char **argv)
 	
 	//initial values: all zeros
 	std::vector<double> x0(nPts*prob.nVar, 0.0);
-	
-	
-//initialize opencl (several device selection options are commented out below)
-	
-	// Default constructor: selects first OpenCL device found
-	//~ OpenCLResource opencl;
+
 	
 	// Select device type and/or vendor using command line flags ("--device cpu/gpu/accel", "--vendor amd/intel/nvidia")
 	OpenCLResource opencl( argc, argv);
-	
-	// Select device type/vendor programmatically
-	//~ cl_device_type deviceType=CL_DEVICE_TYPE_DEFAULT;
-	//~ cl_device_type deviceType=CL_DEVICE_TYPE_CPU;
-	//~ cl_device_type deviceType=CL_DEVICE_TYPE_GPU;
-	//~ cl_device_type deviceType=CL_DEVICE_TYPE_ACCELERATOR;
-	//~ cl_device_type deviceType=CL_DEVICE_TYPE_ALL;
-	
-	//~ cl_vendor vendor=VENDOR_ANY;
-	//~ cl_vendor vendor=VENDOR_AMD;
-	//~ cl_vendor vendor=VENDOR_INTEL;
-	//~ cl_vendor vendor=VENDOR_NVIDIA;
-	
-	//~ OpenCLResource opencl(deviceType); //default vendor=VENDOR_ANY
-	//~ OpenCLResource opencl(deviceType, vendor);
 	
 	//prep timer and PRNG
 	srand(static_cast <unsigned> (time(0))); 
@@ -143,14 +123,7 @@ int main(int argc, char **argv)
 	
 	//run the simulation 
 	clo.transient();
-	
-	//~ clo.initialize(tspan, x0, pars, sp); 
-	//~ clo.initializeProblem(tspan, x0, pars); 
-	
-	//~ clo.transient(); 
-	//~ clo.transient(pars);
-	//~ clo.transient(tspan, x0);
-	//~ clo.transient(tspan, x0, pars);
+
 		
 	start = std::chrono::high_resolution_clock::now();
 		
