@@ -72,11 +72,6 @@ PYBIND11_MODULE(clode, m) {
                           bool,
                           OpenCLResource &,
                           std::string &>())
-//            .def("initialize", py::overload_cast<std::vector<double> &,
-//                                                 std::vector<double> &,
-//                                                 std::vector<double> &,
-//                                                 SolverParams<double> &>
-//                                                 (&CLODEfeatures::initialize), "Set the pet's age");
             .def("initialize", static_cast<void (CLODEfeatures::*)
                                                     (std::vector<double>,
                                                     std::vector<double>,
@@ -86,43 +81,10 @@ PYBIND11_MODULE(clode, m) {
                                                     (&CLODEfeatures::initialize), "Initialize CLODEfeatures")
             .def("seed_rng", static_cast<void (CLODEfeatures::*)(int)>(&CLODEfeatures::seedRNG))
             .def("seed_rng", static_cast<void (CLODEfeatures::*)()>(&CLODEfeatures::seedRNG))
-            .def("transient", &CLODEfeatures::transient);
-
+            .def("transient", &CLODEfeatures::transient)
+            .def("features", static_cast<void (CLODEfeatures::*)()>(&CLODEfeatures::features))
+            .def("get_tspan", &CLODEfeatures::getTspan)
+            .def("get_f", &CLODEfeatures::getF)
+            .def("get_n_features", &CLODEfeatures::getNFeatures);
 
 }
-
-
-
-//static CLODEfeatures *clodEfeatures = NULL;
-//
-//static PyObject *initialiseCLODEfeatures(PyObject *self, PyObject *args) {
-//    const char *clRHSfilename;
-//    PyObject *varNames;
-//    PyObject *parNames;
-//    PyObject *auxNames;
-//    int nWiener;
-//    if (!PyArg_ParseTuple(args, "sOOOi", &clRHSfilename, &varNames, &parNames, &auxNames, &nWiener))
-//        return NULL;
-//    return PyLong_FromLong(12);
-//}
-//
-//static PyMethodDef ClodeMethods[] = {
-//        {"initialise_features",  initialiseCLODEfeatures, METH_VARARGS,
-//                    "Initialises a Features run."},
-//        {NULL, NULL, 0, NULL}        /* Sentinel */
-//};
-//
-//static struct PyModuleDef ClodeModule = {
-//        PyModuleDef_HEAD_INIT,
-//        "clODE",   /* name of module */
-//        NULL, /* module documentation, may be NULL */
-//        -1,       /* size of per-interpreter state of the module,
-//                 or -1 if the module keeps state in global variables. */
-//        ClodeMethods
-//};
-//
-//PyMODINIT_FUNC PyInit_clode(void)
-//{
-//    return PyModule_Create(&ClodeModule);
-//}
-
