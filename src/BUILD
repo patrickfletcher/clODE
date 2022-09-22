@@ -144,7 +144,11 @@ cc_binary(
 
 py_library(
     name = "py_clode",
-    data = [":clode.so"],
+    data = [
+        ":clode.so",
+        ":opencl",
+        "//samples:lactotroph",
+    ],
     imports = ["."],
     visibility = ["//visibility:public"],
 )
