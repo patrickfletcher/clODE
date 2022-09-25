@@ -10,3 +10,10 @@ py_test(
     srcs = ["test_clode.py"],
     deps = ["//src:py_clode"],
 )
+
+py_test(
+    name = "pituitary",
+    srcs = ["pituitary.py"],
+    data = [":test.cl"],
+    deps = ["//src:py_clode"],
+)

@@ -2,6 +2,7 @@ import clode
 import time
 
 pi = clode.problem_info("samples/lactotroph.cl", 4, 3, 1, 1, ["a", "b", "c", "d"], ["aa", "bb", "cc"], ["dd"])
+pi = clode.problem_info("research/clODE/samples/lactotroph.cl", 4, 3, 1, 1, ["a", "b", "c", "d"], ["aa", "bb", "cc"], ["dd"])
 stepper = "euler"
 observer = "basic"
 nReps = 1

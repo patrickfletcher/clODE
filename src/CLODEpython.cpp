@@ -85,6 +85,7 @@ PYBIND11_MODULE(clode, m) {
             .def("features", static_cast<void (CLODEfeatures::*)()>(&CLODEfeatures::features))
             .def("get_tspan", &CLODEfeatures::getTspan)
             .def("get_f", &CLODEfeatures::getF)
-            .def("get_n_features", &CLODEfeatures::getNFeatures);
+            .def("get_n_features", &CLODEfeatures::getNFeatures)
+            .def("getXf", &CLODEfeatures::getXf);
 
 }
