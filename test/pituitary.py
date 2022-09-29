@@ -1,3 +1,5 @@
+import os.path
+
 import warnings
 
 import numpy as np
@@ -6,6 +8,10 @@ from collections import OrderedDict
 
 peakutils = None
 
+import sys
+
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+import pyclode as clode
 
 #  OrderedDict remembers the key order. Required for python<3.9
 default_ode_parameters = OrderedDict([
@@ -117,21 +123,28 @@ def pituitary_ori_ode_parameters_Isk_Ibk_Ikir_Icat_Ia_Inav():
     return parameters
 
 
-import clode
+def generate_pituitary(parameter_function, dt: float, num_simulations: int):
 
+    integrator = clode.CLODEFeatures(
+        src_file="test/test.cl",
+        variables=["V", "n", "m", "b", "h", "h_T", "h_Na", "c"],
+        parameters=list(default_ode_parameters.keys()),
+        event_var="V",
+        feature_var="c",
+    )
 
-def generate_pituitary(parameter_function, dt):
-    pi = clode.problem_info("test/test.cl", 8, 18, 0, 1,
-                            ["V", "n", "m", "b", "h", "h_T", "h_Na", "c"],
-                            [], [])
-    stepper = "euler"
-    observer = "basic"
-    nReps = 1
-    nPts = 1000000
-    sp = clode.solver_params(0.1, 1.00, 1e-6, 1e-3, 10000000, 10000000, 50)
-    op = clode.observer_params(0, 7, 100, 1, 1, 0.01, 0.3, 0.2, 0, 0, 1e-7)
-    open_cl = clode.opencl_resource()
-    clode_features = clode.clode_features(pi, stepper, observer, True, open_cl, "src/")
+    #
+    # pi = clode.problem_info("test/test.cl", 8, 18, 0, 1,
+    #                         ["V", "n", "m", "b", "h", "h_T", "h_Na", "c"],
+    #                         [], [])
+    # stepper = "euler"
+    # observer = "basic"
+    # nReps = 1
+    # nPts = 1000000
+    # sp = clode.solver_params(0.1, 1.00, 1e-6, 1e-3, 10000000, 10000000, 50)
+    # op = clode.observer_params(0, 7, 100, 1, 1, 0.01, 0.3, 0.2, 0, 0, 1e-7)
+    # open_cl = clode.opencl_resource()
+    # clode_features = clode.clode_features(pi, stepper, observer, True, open_cl, "src/")
 
     # Initial conditions
     V = -60.
@@ -143,55 +156,65 @@ def generate_pituitary(parameter_function, dt):
     h_Na = 0.01
     c = 0.1
 
-    x0 = (V, n, m, b, h, h_T, h_Na, c)
-    x0_v = []
-    for index in range (len(x0)):
-        for _ in range(nPts):
-            x0_v.append(x0[index])
+    x0 = np.array([(V, n, m, b, h, h_T, h_Na, c)])
+    # x0_v = []
+    # for index in range (len(x0)):
+    #     for _ in range(nPts):
+    #         x0_v.append(x0[index])
+
+    x0_v = np.tile(x0, (num_simulations, 1))
 
     abserr = 1.0e-8
     relerr = 1.0e-6
 
     tspan = [0.0, 1000.0]
 
-    parameters = parameter_function()
-
-    # We need to add default parameters to the simulation so
-    # our ODE function executes correctly
-    simulation_parameters = parameters.copy()
-    for key in default_ode_parameters.keys():
-        if key not in simulation_parameters:
-            simulation_parameters[key] = default_ode_parameters[key][2]
-
-    # Note - the key order in default_ode_parameters is correct.
-    # Disregard the key order in parameters
-
-    pars = tuple([simulation_parameters[key] for key in default_ode_parameters.keys()])
-
     pars_v = []
-    for index in range (len(pars)):
-        for _ in range(nPts):
-            pars_v.append(pars[index])
+    for _ in range(num_simulations):
+        parameters = parameter_function()
 
-    clode_features.initialize(tspan, x0_v, pars_v, sp, op)
+        # We need to add default parameters to the simulation so
+        # our ODE function executes correctly
+        simulation_parameters = parameters.copy()
+        for key in default_ode_parameters.keys():
+            if key not in simulation_parameters:
+                simulation_parameters[key] = default_ode_parameters[key][2]
 
-    clode_features.transient()
+        # Note - the key order in default_ode_parameters is correct.
+        # Disregard the key order in parameters
+        pars = tuple([simulation_parameters[key] for key in default_ode_parameters.keys()])
+        pars_v.append(pars)
+    # pars_v = []
+    # for index in range (len(pars)):
+    #     for _ in range(nPts):
+    #         pars_v.append(pars[index])
 
-    for _ in range(nReps):
-        clode_features.features()
+    pars_v = np.array(pars_v)
+    #print(x0_v)
+    integrator.initialize(x0_v, pars_v)
 
-    wsol = clode_features.get_f()
+    integrator.transient()
 
-    F = clode_features.get_f()
-    print(pars)
-    print(len(F))
-    for i in range(clode_features.get_n_features()):
-        print(F[i*nPts], end=" ")
-    print()
-    for i in range(8):
-        print(clode_features.getXf()[i * nPts])
+    integrator.features()
+    simulation_output = integrator.get_final_state()
+    observer_output = integrator.get_observer_results()
+    # for _ in range(nReps):
+    #     clode_features.features()
+    #
+    # print(simulation_output)
+    #
+    # wsol = clode_features.get_f()
+    #
+    # F = clode_features.get_f()
+    # print(pars)
+    # print(len(F))
+    # for i in range(clode_features.get_n_features()):
+    #     print(F[i*nPts], end=" ")
+    # print()
+    # for i in range(8):
+    #     print(clode_features.getXf()[i * nPts])
 
-    return wsol, parameters
+    return simulation_output, pars_v, observer_output
 
 
 def find_pituitary_activation_event(wsol_trimmed, V_threshold, dV_max_threshold, dV_min_threshold, dVs):
@@ -317,36 +340,45 @@ def generate_pitutary_dataframe(parameter_function, sample_id: int, trim_start: 
     #    raise ValueError("Error! Generated samples will have no class and no trajectory!")
 
     dt = 0.5
-    pituitary_simulation, parameters = generate_pituitary(parameter_function, dt)
-    if retain_trajectories:
-        df = pd.DataFrame(pituitary_simulation, columns=['V', 'n', 'm', 'b', 'h', 'h_T', 'h_Na', 'c'])
-    else:
-        df = pd.DataFrame()
-    if add_timesteps:
-        df['timesteps'] = np.arange(0, 10000, dt)
-    if classify:
-        voltage_simulation = pituitary_simulation[:, 0]
-        simulation_class, (_, _) = classify_pituitary_ode(voltage_simulation, dt,
-                                                          recognise_one_burst_spiking=recognise_one_burst_spiking)
-        df['class'] = simulation_class
-        if retain_trajectories:
-            df['class'] = simulation_class
-        else:
-            df['class'] = [simulation_class]
-    if retain_trajectories:
-        df = df[trim_start:]
-        df['ID'] = sample_id
-        for key, value in parameters.items():
-            df[key] = value
+    pituitary_simulation, parameters, observer_output = generate_pituitary(parameter_function, dt, num_simulations=100)
+    # if retain_trajectories:
+    #     df = pd.DataFrame(pituitary_simulation, columns=['V', 'n', 'm', 'b', 'h', 'h_T', 'h_Na', 'c'])
+    # else:
+    #     df = pd.DataFrame()
+    # if add_timesteps:
+    #     df['timesteps'] = np.arange(0, 10000, dt)
+    # if classify:
+    #     voltage_simulation = pituitary_simulation[:, 0]
+    #     simulation_class, (_, _) = classify_pituitary_ode(voltage_simulation, dt,
+    #                                                       recognise_one_burst_spiking=recognise_one_burst_spiking)
+    #     df['class'] = simulation_class
+    #     if retain_trajectories:
+    #         df['class'] = simulation_class
+    #     else:
+    #         df['class'] = [simulation_class]
+    # if retain_trajectories:
+    #     df = df[trim_start:]
+    #     df['ID'] = sample_id
+    #     for key, value in parameters.items():
+    #         df[key] = value
+    #
+    #     df = df.iloc[::downsample_rate, :]
+    # else:
+    #     df['ID'] = [sample_id]
+    #     for key, value in parameters.items():
+    #         df[key] = [value]
+    #
+    # if compute_calcium_concentration:
+    #     df['calcium_concentration'] = sum(pituitary_simulation[16000:, 7] / 4000)
 
-        df = df.iloc[::downsample_rate, :]
-    else:
-        df['ID'] = [sample_id]
-        for key, value in parameters.items():
-            df[key] = [value]
+    print(pituitary_simulation.shape, parameters.shape, observer_output[:, 2:3].shape)
 
-    if compute_calcium_concentration:
-        df['calcium_concentration'] = sum(pituitary_simulation[16000:, 7] / 4000)
+    df_input = np.concatenate([pituitary_simulation, parameters, observer_output[:, 2:3]], axis=1)
+    columns = ['V', 'n', 'm', 'b', 'h', 'h_T', 'h_Na', 'c'] + list(default_ode_parameters.keys()) + ['calcium_concentration']
+    df = pd.DataFrame(df_input, columns=columns)
+    df.insert(0, 'ID', range(pituitary_simulation.shape[0]))
+
+    print(df)
     return df
 
 
@@ -398,17 +430,16 @@ def generate_pituitary_dataset(parameter_function, num_samples, trim_start: int 
         warnings.warn("Classification not requested but a classification option is set." +
                       "This is likely a mistake - please check the training options")
 
-    dataframes = list()
-    for sample_id in range(num_samples):
-        df = generate_pitutary_dataframe(parameter_function, sample_id=sample_id, trim_start=trim_start,
-                                         downsample_rate=downsample_rate, classify=classify,
-                                         recognise_one_burst_spiking=recognise_one_burst_spiking,
-                                         retain_trajectories=retain_trajectories, add_timesteps=add_timesteps,
-                                         compute_calcium_concentration=compute_calcium_concentration)
-        dataframes.append(df)
+    df = generate_pitutary_dataframe(parameter_function, sample_id=0, trim_start=trim_start,
+                                     downsample_rate=downsample_rate, classify=classify,
+                                     recognise_one_burst_spiking=recognise_one_burst_spiking,
+                                     retain_trajectories=retain_trajectories, add_timesteps=add_timesteps,
+                                     compute_calcium_concentration=compute_calcium_concentration)
 
-    return pd.concat(dataframes)
+    return df
 
+
+print(os.path.dirname(__file__))
 
 df_test = generate_pituitary_dataset(parameter_function=pituitary_ori_ode_parameters,
                                      num_samples=100,

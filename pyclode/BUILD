@@ -18,7 +18,7 @@ py_package(
 )
 
 py_wheel(
-    name = "clode_wheel",
+    name = "pyclode",
     # Package data. We're building "example_minimal_package-0.0.1-py3-none-any.whl"
     distribution = "clode",
     python_tag = "py3",
