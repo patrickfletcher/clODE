@@ -171,10 +171,10 @@ class CLODEFeatures:
         #
         # else:
         #     results = self._result_features
-        print("Len results", len(self._result_features), self._num_result_features)
+        #print("Len results", len(self._result_features), self._num_result_features)
         results = np.array(self._result_features)
-        print(len(results), results.shape[0])
-        print((self._num_result_features, results.shape[0] // len(self.vars)))
+        # print(len(results), results.shape[0])
+        # print((self._num_result_features, results.shape[0] // len(self.vars)))
 
         return results.reshape((self._num_result_features, len(results) // self._num_result_features)).transpose()
 

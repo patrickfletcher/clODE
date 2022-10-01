@@ -123,7 +123,7 @@ def pituitary_ori_ode_parameters_Isk_Ibk_Ikir_Icat_Ia_Inav():
     return parameters
 
 
-def generate_pituitary(parameter_function, dt: float, num_simulations: int):
+def generate_clode_pituitary(parameter_function, dt: float, num_simulations: int):
 
     integrator = clode.CLODEFeatures(
         src_file="test/test.cl",
@@ -340,7 +340,7 @@ def generate_pitutary_dataframe(parameter_function, sample_id: int, trim_start: 
     #    raise ValueError("Error! Generated samples will have no class and no trajectory!")
 
     dt = 0.5
-    pituitary_simulation, parameters, observer_output = generate_pituitary(parameter_function, dt, num_simulations=100)
+    pituitary_simulation, parameters, observer_output = generate_clode_pituitary(parameter_function, dt, num_simulations=100)
     # if retain_trajectories:
     #     df = pd.DataFrame(pituitary_simulation, columns=['V', 'n', 'm', 'b', 'h', 'h_T', 'h_Na', 'c'])
     # else:
