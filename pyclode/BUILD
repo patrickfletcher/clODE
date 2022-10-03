@@ -2,7 +2,10 @@ load("@rules_python//python:packaging.bzl", "py_package", "py_wheel")
 
 py_library(
     name = "clode_init",
-    srcs = ["__init__.py"],
+    srcs = [
+        "__init__.py",
+        "observer.py",
+    ],
     visibility = ["//visibility:public"],
     deps = ["//src:py_clode"],
 )

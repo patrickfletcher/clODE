@@ -6,6 +6,8 @@ import numpy as np
 import pandas as pd
 from collections import OrderedDict
 
+from pyclode import Observer
+
 peakutils = None
 
 import sys
@@ -129,9 +131,14 @@ def generate_clode_pituitary(parameter_function, dt: float, num_simulations: int
         src_file="test/test.cl",
         variables=["V", "n", "m", "b", "h", "h_T", "h_Na", "c"],
         parameters=list(default_ode_parameters.keys()),
+        aux=["aux"],
         event_var="V",
         feature_var="c",
+        observer=Observer.threshold_2,
+        dt=dt,
+        dtmax=dt
     )
+    #print(list(default_ode_parameters.keys()))
 
     #
     # pi = clode.problem_info("test/test.cl", 8, 18, 0, 1,
@@ -167,7 +174,7 @@ def generate_clode_pituitary(parameter_function, dt: float, num_simulations: int
     abserr = 1.0e-8
     relerr = 1.0e-6
 
-    tspan = [0.0, 1000.0]
+    tspan = [0.0, 10000.0]
 
     pars_v = []
     for _ in range(num_simulations):
@@ -195,7 +202,7 @@ def generate_clode_pituitary(parameter_function, dt: float, num_simulations: int
 
     integrator.transient()
 
-    integrator.features()
+    integrator.features(initialize_observer=True)
     simulation_output = integrator.get_final_state()
     observer_output = integrator.get_observer_results()
     # for _ in range(nReps):
@@ -340,7 +347,8 @@ def generate_pitutary_dataframe(parameter_function, sample_id: int, trim_start: 
     #    raise ValueError("Error! Generated samples will have no class and no trajectory!")
 
     dt = 0.5
-    pituitary_simulation, parameters, observer_output = generate_clode_pituitary(parameter_function, dt, num_simulations=100)
+    num_simulations=100
+    pituitary_simulation, parameters, observer_output = generate_clode_pituitary(parameter_function, dt, num_simulations=num_simulations)
     # if retain_trajectories:
     #     df = pd.DataFrame(pituitary_simulation, columns=['V', 'n', 'm', 'b', 'h', 'h_T', 'h_Na', 'c'])
     # else:
@@ -371,12 +379,46 @@ def generate_pitutary_dataframe(parameter_function, sample_id: int, trim_start: 
     # if compute_calcium_concentration:
     #     df['calcium_concentration'] = sum(pituitary_simulation[16000:, 7] / 4000)
 
-    print(pituitary_simulation.shape, parameters.shape, observer_output[:, 2:3].shape)
+    avg_calcium = observer_output.get_var_mean('c')
+    #print(pituitary_simulation.shape, parameters.shape, avg_calcium.shape)
 
-    df_input = np.concatenate([pituitary_simulation, parameters, observer_output[:, 2:3]], axis=1)
-    columns = ['V', 'n', 'm', 'b', 'h', 'h_T', 'h_Na', 'c'] + list(default_ode_parameters.keys()) + ['calcium_concentration']
+
+    # The classes are returned as numbers:
+    # 0: hyperpolarised
+    # 1: Depolarised
+    # 2: Spiking
+    # 3: Bursting
+    # 4: One-spike bursting
+
+    max_v = observer_output.get_var_max('V')
+    min_v = observer_output.get_var_min('V')
+
+    max_period = observer_output.get_var_max('period')
+    min_period = observer_output.get_var_min('period')
+
+    active = max_v - min_v > 10
+
+    inactive = np.logical_not(active)
+    #print(inactive)
+    depolarised = (max_v > -30) & inactive
+
+    bursting = (min_period > max_period * 0.8) & active
+
+    classes = np.zeros(active.shape)
+    classes[depolarised] = 1
+    classes[active] = 2
+
+    #print("Period count", observer_output.get_var_count('period'))
+    #print("Step count", observer_output.get_var_count('step'))
+    print(np.concatenate([active, bursting, max_period, min_period], axis=1))
+
+    df_input = np.concatenate([pituitary_simulation, parameters, avg_calcium, classes], axis=1)
+    columns = ['V', 'n', 'm', 'b', 'h', 'h_T', 'h_Na', 'c'] + list(default_ode_parameters.keys()) + ['calcium_concentration', 'class']
     df = pd.DataFrame(df_input, columns=columns)
     df.insert(0, 'ID', range(pituitary_simulation.shape[0]))
+
+
+
 
     print(df)
     return df
@@ -441,7 +483,7 @@ def generate_pituitary_dataset(parameter_function, num_samples, trim_start: int 
 
 print(os.path.dirname(__file__))
 
-df_test = generate_pituitary_dataset(parameter_function=pituitary_ori_ode_parameters,
+df_test = generate_pituitary_dataset(parameter_function=pituitary_ori_ode_parameters_Isk_Ibk_Ikir_Icat_Ia_Inav,
                                      num_samples=100,
                                      classify=True,
                                      retain_trajectories=False,

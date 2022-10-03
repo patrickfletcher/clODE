@@ -73,7 +73,7 @@ int main(int argc, char **argv)
 	sp.max_store=10000000;
 	sp.nout=50;
 	
-	std::string observer="basic";
+	std::string observer="thresh2";
 	
 	ObserverParams<double> op;
 	op.eVarIx=0;
@@ -123,6 +123,7 @@ int main(int argc, char **argv)
 	
 	//run the simulation 
 	clo.transient();
+    clo.shiftX0();
 
 		
 	start = std::chrono::high_resolution_clock::now();

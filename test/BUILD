@@ -6,8 +6,15 @@
 #)
 
 py_test(
-    name = "test_clode",
-    srcs = ["test_clode.py"],
+    name = "test_lactotroph",
+    srcs = ["test_lactotroph.py"],
+    deps = ["//src:py_clode"],
+)
+
+py_test(
+    name = "test_lactotroph_more_vars",
+    srcs = ["test_lactotroph_more_vars.py"],
+    data = [":test.cl"],
     deps = ["//src:py_clode"],
 )
 

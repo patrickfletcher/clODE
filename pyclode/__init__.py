@@ -4,6 +4,7 @@ import os
 import typing
 
 import numpy as np
+from pyclode.observer import Observer, ObserverOutput
 
 _runtime = None
 _clode_root_dir: str = os.path.join(os.path.dirname(os.path.dirname(__file__)), "src", "")
@@ -18,10 +19,6 @@ def _get_runtime():
 
 class Stepper(Enum):
     euler = "euler"
-
-
-class Observer(Enum):
-    basic = "basic"
 
 
 class ProblemInfo:
@@ -67,7 +64,7 @@ class CLODEFeatures:
                  feature_var: str = "",
                  observer_max_event_count: int = 100,
                  observer_min_x_amp: float = 1.0,
-                 observer_min_imi: float = 1.0,
+                 observer_min_imi: float = 0,
                  observer_neighbourhood_radius: float = 0.01,
                  observer_x_up_thresh: float = 0.3,
                  observer_x_down_thresh: float = 0.2,
@@ -129,6 +126,7 @@ class CLODEFeatures:
                                                _clode_root_dir)
 
         self.tspan = tspan
+        self._observer_type = observer
 
     def initialize(self,
                    x0: np.array,
@@ -156,11 +154,20 @@ class CLODEFeatures:
                                   self._sp,
                                   self._op)
 
-    def transient(self):
+    def transient(self, update_x0=True):
         self._features.transient()
+        if update_x0:
+            self.shift_x0()
 
-    def features(self):
-        self._features.features()
+    def shift_x0(self):
+        self._features.shift_x0()
+
+    def features(self, initialize_observer: typing.Optional[bool] = None):
+        if initialize_observer is not None:
+            print("Reinitializing observer")
+            self._features.features(initialize_observer)
+        else:
+            self._features.features()
         self._result_features = self._features.get_f()
         self._num_result_features = self._features.get_n_features()
         self._final_state = self._features.getXf()
@@ -172,11 +179,18 @@ class CLODEFeatures:
         # else:
         #     results = self._result_features
         #print("Len results", len(self._result_features), self._num_result_features)
-        results = np.array(self._result_features)
+        #results_array = np.array(self._result_features)
         # print(len(results), results.shape[0])
         # print((self._num_result_features, results.shape[0] // len(self.vars)))
 
-        return results.reshape((self._num_result_features, len(results) // self._num_result_features)).transpose()
+        #observer_results = results.reshape((self._num_result_features, len(results) // self._num_result_features)).transpose()
+        print("Feature names", self._features.get_feature_names())
+        return ObserverOutput(self._op,
+                              np.array(self._result_features),
+                              self._num_result_features,
+                              self.vars,
+                              self._observer_type,
+                              self._features.get_feature_names())
 
     def get_final_state(self):
         final_state = np.array(self._final_state)

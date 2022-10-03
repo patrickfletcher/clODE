@@ -60,7 +60,9 @@ PYBIND11_MODULE(clode, m) {
             double,
             double>
             ()
-    );
+    ).def_readwrite("e_var_ix", &ObserverParams<double>::eVarIx)
+    .def_readwrite("f_var_ix", &ObserverParams<double>::fVarIx)
+    .def_readwrite("maxEventCount", &ObserverParams<double>::maxEventCount);
 
     py::class_<OpenCLResource>(m, "opencl_resource")
     .def(py::init<>());
@@ -82,10 +84,14 @@ PYBIND11_MODULE(clode, m) {
             .def("seed_rng", static_cast<void (CLODEfeatures::*)(int)>(&CLODEfeatures::seedRNG))
             .def("seed_rng", static_cast<void (CLODEfeatures::*)()>(&CLODEfeatures::seedRNG))
             .def("transient", &CLODEfeatures::transient)
+            .def("features", static_cast<void (CLODEfeatures::*)(bool)>(&CLODEfeatures::features))
             .def("features", static_cast<void (CLODEfeatures::*)()>(&CLODEfeatures::features))
             .def("get_tspan", &CLODEfeatures::getTspan)
             .def("get_f", &CLODEfeatures::getF)
             .def("get_n_features", &CLODEfeatures::getNFeatures)
-            .def("getXf", &CLODEfeatures::getXf);
+            .def("get_feature_names", &CLODEfeatures::getFeatureNames)
+            .def("getXf", &CLODEfeatures::getXf)
+            .def("shift_tspan", &CLODEfeatures::shiftTspan)
+            .def("shift_x0", &CLODEfeatures::shiftX0);
 
 }

@@ -53,7 +53,7 @@ void getRHS(const realtype t,
     realtype E_Na = RCONST(75.);
 
     realtype V_m = RCONST(-20.);
-    realtype V_mt = RCONST(-30.);
+    realtype V_mt = RCONST(-38.);
     realtype V_ht = RCONST(-56.);
     realtype V_n = RCONST(-5.);
     realtype V_k = RCONST(-65.);
@@ -92,7 +92,7 @@ void getRHS(const realtype t,
     realtype I_A = g_A * x_inf(V, V_a, s_a) * h * (V - E_K);
     realtype I_leak = g_leak * (V - E_leak);
 
-    realtype I_noise = w_[0];
+    realtype I_noise = 0;//w_[0];
 
     realtype I = I_CaL + I_CaT + I_K + I_SK + I_Kir + I_BK + I_NaV + I_A + I_leak + I_noise;
 
@@ -115,4 +115,5 @@ void getRHS(const realtype t,
     dx_[5] = dh_T;
     dx_[6] = dh_Na;
     dx_[7] = dc;
+    aux_[0] = 0;
 }

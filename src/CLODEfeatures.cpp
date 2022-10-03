@@ -73,7 +73,7 @@ std::string CLODEfeatures::getProgramString()
 }
 
 void CLODEfeatures::initialize(std::vector<cl_double> newTspan, std::vector<cl_double> newX0, std::vector<cl_double> newPars, SolverParams<cl_double> newSp) {
-    throw std::runtime_error("CLODEfeatures reuqires the newOp parameter!");
+    throw std::runtime_error("CLODEfeatures requires the newOp parameter!");
 }
 
 //initialize everything
