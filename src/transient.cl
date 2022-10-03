@@ -1,4 +1,3 @@
-// the most basic trajectory solver that stores nothing but the final variable values (and RNG state)
 
 #include "clODE_random.cl"
 #include "clODE_struct_defs.cl"
@@ -6,6 +5,7 @@
 #include "realtype.cl"
 #include "steppers.cl"
 
+// the most basic trajectory solver that stores nothing but the final variable values (and RNG state)
 __kernel void transient(
     __constant realtype *tspan,         //time vector [t0,tf] - adds (tf-t0) to these at the end
     __global realtype *x0,              //initial state 				[nPts*nVar]
@@ -53,8 +53,8 @@ __kernel void transient(
     {
         ++step;
         stepflag = stepper(&ti, xi, dxi, p, sp, &dt, tspan, auxi, wi, &rd);
-        if (stepflag!=0)
-            break;
+        // if (stepflag!=0)
+        //     break;
     }
 
     //write the final solution values to global memory.

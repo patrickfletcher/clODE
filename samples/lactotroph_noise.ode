@@ -35,7 +35,10 @@ ibk=gbk*f*vkdrive
 ik=gk*n*vkdrive
 il=gl*(v-vl)
 
-itot=ica+ isk + ibk + ik + il
+p sig=2
+wiener w
+inoise=sig*w
+itot=ica+ isk + ibk + ik + il +inoise
 
 v'= -itot/Cm
 n'= (ninf - n)/taun

@@ -15,11 +15,12 @@ struct ObserverData_template
 }
 
 #ifdef __cplusplus
-ObserverInfo getFeatureInfo_template(const ProblemInfo pi, const bool clSinglePrecision, const int fVarIx, const int eVarIx)
+ObserverInfo getFeatureInfo_template(const ProblemInfo pi, const int fVarIx, const int eVarIx)
 {
     ObserverInfo oi;
     oi.define="USE_OBSERVER_TEMPLATE";
-    oi.observerDataSize=clSinglePrecision?sizeof(ObserverData_template<float>):sizeof(ObserverData_template<double>);
+    oi.observerDataSizeFloat=sizeof(ObserverData_basic<float>);
+    oi.observerDataSizeDouble=sizeof(ObserverData_basic<double>);
 
     //feature names. Could depend on problem info; nVar, varNames, etc. make sure this matches number of features actually returned
     oi.featureNames={}; 

@@ -3,28 +3,88 @@
 
 
 #ifdef __cplusplus
-template <typename realtype>
+//Collect all the info for this observer. Must be a static function when defining function in header, otherwise defined for each time included.
+static ObserverInfo getObserverInfo_thresh2(const ProblemInfo pi, const int fVarIx, const int eVarIx)
+{
+    ObserverInfo oi;
+    oi.define="USE_OBSERVER_THRESHOLD_2";
+    size_t n_real=(11*pi.nVar + 7*3 + 13 + 3*pi.nAux); //hard coded, because C++ code can't see the N_VAR, N_AUX etc...
+    size_t n_int=5;
+    oi.observerDataSizeFloat=n_real*sizeof(cl_float) + n_int*sizeof(cl_int);
+    oi.observerDataSizeDouble=n_real*sizeof(cl_double) + n_int*sizeof(cl_int); 
+    
+    oi.featureNames.push_back("max period");
+    oi.featureNames.push_back("min period");
+    oi.featureNames.push_back("mean period");
+    oi.featureNames.push_back("max peaks");
+    oi.featureNames.push_back("min peaks");
+    oi.featureNames.push_back("mean peaks");
+    oi.featureNames.push_back("max upDuration");
+    oi.featureNames.push_back("min upDuration");
+    oi.featureNames.push_back("mean upDuration");
+    oi.featureNames.push_back("max downDuration");
+    oi.featureNames.push_back("min downDuration");
+    oi.featureNames.push_back("mean downDuration");
+    oi.featureNames.push_back("max duty");
+    oi.featureNames.push_back("min duty");
+    oi.featureNames.push_back("mean duty");
+    for (int j = 0; j < pi.nVar; ++j)
+    {
+        oi.featureNames.push_back("max " + pi.varNames[j]);
+        oi.featureNames.push_back("min " + pi.varNames[j]);
+        oi.featureNames.push_back("mean " + pi.varNames[j]);
+        oi.featureNames.push_back("max d" + pi.varNames[j] + "/dt");
+        oi.featureNames.push_back("min d" + pi.varNames[j] + "/dt");
+    }
+    for (int j = 0; j < pi.nAux; ++j)
+    {
+        oi.featureNames.push_back("max " + pi.auxNames[j]);
+        oi.featureNames.push_back("min " + pi.auxNames[j]);
+        oi.featureNames.push_back("mean " + pi.auxNames[j]);
+    }
+    oi.featureNames.push_back("period count");
+    oi.featureNames.push_back("step count");
+    oi.featureNames.push_back("max dt");
+    oi.featureNames.push_back("min dt");
+    oi.featureNames.push_back("mean dt");
+    return oi;
+}
 #endif
+
+
+
+#ifdef USE_OBSERVER_THRESHOLD_2
+#define TWO_PASS_EVENT_DETECTOR
+
 struct ObserverData_thresh2
 {
     realtype tbuffer[3];
-    realtype xbuffer[3];
-    realtype dxbuffer[3];
+    realtype xbuffer[3 * N_VAR];
+    realtype dxbuffer[3 * N_VAR];
+
+    realtype xTrajectoryMax[N_VAR];
+    realtype xTrajectoryMin[N_VAR];
+    realtype xTrajectoryMean[N_VAR];
+    realtype dxTrajectoryMax[N_VAR];
+    realtype dxTrajectoryMin[N_VAR];
+
+    realtype auxTrajectoryMax[N_AUX];
+    realtype auxTrajectoryMin[N_AUX];
+    realtype auxTrajectoryMean[N_AUX];
 
     realtype nMaxima[3]; //max/min/mean
     realtype period[3];  //max/min/mean
     realtype upDuration[3];  //max/min/mean
     realtype downDuration[3];  //max/min/mean
+    realtype duty[3];  //max/min/mean
 
     realtype stepDt[3]; //max/min/mean
 
-    realtype xTrajectoryMean;
+    //thresholds
     realtype xGlobalMax;
     realtype xGlobalMin;
     realtype dxGlobalMax;
     realtype dxGlobalMin;
-
-    //thresholds
     realtype xUp;
     realtype xDown;
     realtype dxUp;
@@ -44,54 +104,32 @@ struct ObserverData_thresh2
     int inUpstate;
 };
 
-#ifdef __cplusplus
-//Collect all the info for this observer. Must be a static function when defining function in header, otherwise defined for each time included.
-static ObserverInfo getObserverInfo_thresh2(const ProblemInfo pi, const bool clSinglePrecision, const int fVarIx, const int eVarIx)
-{
-    ObserverInfo oi;
-    oi.define="USE_OBSERVER_THRESHOLD_2";
-    oi.observerDataSize=clSinglePrecision?sizeof(ObserverData_thresh2<cl_float>):sizeof(ObserverData_thresh2<cl_double>);
-    std::string varName=pi.varNames[fVarIx];
-
-    oi.featureNames.push_back("max period");
-    oi.featureNames.push_back("min period");
-    oi.featureNames.push_back("mean period");
-    oi.featureNames.push_back("max peaks");
-    oi.featureNames.push_back("min peaks");
-    oi.featureNames.push_back("mean peaks");
-    oi.featureNames.push_back("max upDuration");
-    oi.featureNames.push_back("min upDuration");
-    oi.featureNames.push_back("mean upDuration");
-    oi.featureNames.push_back("max downDuration");
-    oi.featureNames.push_back("min downDuration");
-    oi.featureNames.push_back("mean downDuration");
-    oi.featureNames.push_back("max "+varName);
-    oi.featureNames.push_back("min "+varName);
-    oi.featureNames.push_back("mean "+varName);
-    oi.featureNames.push_back("max d"+varName+"/dt");
-    oi.featureNames.push_back("min d"+varName+"/dt");
-    oi.featureNames.push_back("period count");
-    oi.featureNames.push_back("step count");
-    oi.featureNames.push_back("max dt");
-    oi.featureNames.push_back("min dt");
-    oi.featureNames.push_back("mean dt");
-    return oi;
-}
-#endif
-
-
-
-#ifdef USE_OBSERVER_THRESHOLD_2
-#define TWO_PASS_EVENT_DETECTOR
-
 typedef struct ObserverData_thresh2 ObserverData;
 
 //set initial values to relevant fields in ObserverData
 inline void initializeObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
 {
     od->tbuffer[2] = *ti;
-    od->xbuffer[2] = xi[op->fVarIx];
-    od->dxbuffer[2] = dxi[op->fVarIx];
+    for (int j = 0; j < N_VAR; ++j)
+    {
+        od->xbuffer[j * 3 + 2] = xi[j];
+        od->dxbuffer[j * 3 + 2] = dxi[j];
+    }
+
+    for (int j = 0; j < N_VAR; ++j)
+    {
+        od->xTrajectoryMean[j] = RCONST(0.0); //not needed - set first time anyway.
+        od->xTrajectoryMax[j] = -BIG_REAL;
+        od->xTrajectoryMin[j] = BIG_REAL;
+        od->dxTrajectoryMax[j] = -BIG_REAL;
+        od->dxTrajectoryMin[j] = BIG_REAL;
+    }
+    for (int j = 0; j < N_AUX; ++j)
+    {
+        od->auxTrajectoryMax[j] = -BIG_REAL;
+        od->auxTrajectoryMin[j] = BIG_REAL;
+        od->auxTrajectoryMean[j] = RCONST(0.0); //not needed - set first time anyway.
+    }
 
     od->nMaxima[0] = -BIG_REAL;
     od->nMaxima[1] = BIG_REAL;
@@ -109,16 +147,18 @@ inline void initializeObserverData(realtype *ti, realtype xi[], realtype dxi[], 
     od->downDuration[1] = BIG_REAL;
     od->downDuration[2] = RCONST(0.0);
 
+    od->duty[0] = -BIG_REAL;
+    od->duty[1] = BIG_REAL;
+    od->duty[2] = RCONST(0.0);
+
     od->stepDt[0] = -BIG_REAL;
     od->stepDt[1] = BIG_REAL;
     od->stepDt[2] = RCONST(0.0);
 
-    od->xTrajectoryMean = RCONST(0.0);
     od->xGlobalMax = -BIG_REAL;
     od->xGlobalMin = BIG_REAL;
     od->dxGlobalMax = -BIG_REAL;
     od->dxGlobalMin = BIG_REAL;
-
     od->xUp = RCONST(0.0);
     od->xDown = RCONST(0.0);
     od->dxUp = RCONST(0.0);
@@ -128,7 +168,6 @@ inline void initializeObserverData(realtype *ti, realtype xi[], realtype dxi[], 
     od->tLastMax = -BIG_REAL;
     od->tLastMin = RCONST(0.0);
     od->xLastMin = -BIG_REAL; 
-
 
     od->thisNMaxima=0;
     od->stepcount=0;
@@ -140,6 +179,7 @@ inline void initializeObserverData(realtype *ti, realtype xi[], realtype dxi[], 
 //restricted per-timestep update of observer data for initializing event detector
 inline void warmupObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
 {
+    // only need fVarix for thresholds
     od->xGlobalMax = fmax(od->xGlobalMax, xi[op->fVarIx]);
     od->xGlobalMin = fmin(od->xGlobalMin, xi[op->fVarIx]);
     od->dxGlobalMax = fmax(od->dxGlobalMax, dxi[op->fVarIx]);
@@ -165,7 +205,8 @@ inline void initializeEventDetector(realtype *ti, realtype xi[], realtype dxi[],
 		od->dxDown = od->dxGlobalMin;
 
 	//determine if we are up or down.
-	od->inUpstate=(xi[op->fVarIx] > od->xUp) ? 1 : 0;
+	od->inUpstate = xi[op->fVarIx] > od->xUp ? 1 : 0;
+	// od->inUpstate = xi[op->fVarIx] > od->xUp & dxi[op->fVarIx] > 0 ? 1 : 0;
     // od->xGlobalMax = -BIG_REAL;
     // od->xGlobalMin = BIG_REAL;
     // od->dxGlobalMax = -BIG_REAL;
@@ -194,7 +235,15 @@ inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dxi[], re
         tThisEvent=*ti;
 
         //alts: linearly interp to get more accurate tThisEvent within the last time step: xi-1, xi, ti-1, ti; get t @ x=xUp
-        // tThisEvent = linearInterp(od->xbuffer[2], xi[op->fVarIx], od->tbuffer[2], *ti, od->xUp);
+        // realtype thisXbuffer[N_VAR];
+        // thisXbuffer[0] = od->xbuffer[op->fVarIx * 3 + 1];
+        // thisXbuffer[1] = od->xbuffer[op->fVarIx * 3 + 2];
+        // thisXbuffer[2] = xi[op->fVarIx];
+        // realtype thisTbuffer[3];
+        // thisTbuffer[0] = od->tbuffer[1];
+        // thisTbuffer[1] = od->tbuffer[2];
+        // thisTbuffer[2] = *ti;
+        // tThisEvent = linearInterpArray(thisXbuffer, thisTbuffer, od->xUp);
 
         if (od->eventcount > 1)
         {
@@ -217,6 +266,11 @@ inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dxi[], re
             od->downDuration[0] = fmax(thisDownDuration, od->downDuration[0]);
             od->downDuration[1] = fmin(thisDownDuration, od->downDuration[1]);
             runningMean(&od->downDuration[2], thisDownDuration, nPeriods);
+            
+            realtype thisduty = thisUpDuration/thisPeriod;
+            od->duty[0] = fmax(thisduty, od->duty[0]);
+            od->duty[1] = fmin(thisduty, od->duty[1]);
+            runningMean(&od->duty[2], thisduty, nPeriods);
         }
 
         od->tLastEvent = tThisEvent;
@@ -229,15 +283,18 @@ inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dxi[], re
 inline void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
 {
     //advance solution buffer
-    for (int i = 0; i < 2; ++i)
-    {
-        od->tbuffer[i] = od->tbuffer[i + 1];
-        od->xbuffer[i] = od->xbuffer[i + 1];
-        od->dxbuffer[i] = od->dxbuffer[i + 1];
-    }
+    od->tbuffer[0] = od->tbuffer[1];
+    od->tbuffer[1] = od->tbuffer[2];
     od->tbuffer[2] = *ti;
-    od->xbuffer[2] = xi[op->fVarIx];
-    od->dxbuffer[2] = dxi[op->fVarIx];
+    for (int j = 0; j < N_VAR; ++j)
+    {
+        od->xbuffer[j * 3 + 0] = od->xbuffer[j * 3 + 1];
+        od->xbuffer[j * 3 + 1] = od->xbuffer[j * 3 + 2];
+        od->xbuffer[j * 3 + 2] = xi[j];
+        od->dxbuffer[j * 3 + 0] = od->dxbuffer[j * 3 + 1];
+        od->dxbuffer[j * 3 + 1] = od->dxbuffer[j * 3 + 2];
+        od->dxbuffer[j * 3 + 2] = dxi[j];
+    }
     
     //record actual dt
     realtype thisDt = od->tbuffer[2] - od->tbuffer[1];
@@ -245,29 +302,36 @@ inline void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], real
     od->stepDt[1] = fmin(thisDt, od->stepDt[1]);
     runningMean(&od->stepDt[2], thisDt, od->stepcount);
 
+    //global extent of all vars, var slopes, and aux vars
+    for (int j = 0; j < N_VAR; ++j)
+    {
+        od->xTrajectoryMax[j] = fmax(xi[j], od->xTrajectoryMax[j]);
+        od->xTrajectoryMin[j] = fmin(xi[j], od->xTrajectoryMin[j]);
+        runningMean(&od->xTrajectoryMean[j], xi[j], od->stepcount);
+        od->dxTrajectoryMax[j] = fmax(dxi[j], od->dxTrajectoryMax[j]);
+        od->dxTrajectoryMin[j] = fmin(dxi[j], od->dxTrajectoryMin[j]);
+    }
+    for (int j = 0; j < N_AUX; ++j)
+    {
+        od->auxTrajectoryMax[j] = fmax(auxi[j], od->auxTrajectoryMax[j]);
+        od->auxTrajectoryMin[j] = fmin(auxi[j], od->auxTrajectoryMin[j]);
+        runningMean(&od->auxTrajectoryMean[j], auxi[j], od->stepcount);
+    }
+
     od->buffer_filled = od->stepcount > 2; //no conditional
 
-    //global
-    od->xGlobalMax = fmax(od->xGlobalMax, xi[op->fVarIx]);
-    od->xGlobalMin = fmin(od->xGlobalMin, xi[op->fVarIx]);
-    od->dxGlobalMax = fmax(od->dxGlobalMax, dxi[op->fVarIx]);
-    od->dxGlobalMin = fmin(od->dxGlobalMin, dxi[op->fVarIx]);
-    runningMean(&od->xTrajectoryMean, xi[op->fVarIx], od->stepcount);
-
-    if (!od->buffer_filled)
-    {
-        if (od->stepcount > 2)
-            od->buffer_filled=1;
-    }
-    else
+    if (od->buffer_filled)
     {
         //local max check in fVarIx
-        if (od->dxbuffer[1] >= -op->eps_dx && od->dxbuffer[2] < -op->eps_dx)
-        // if (od->xbuffer[0] < od->xbuffer[1] && od->xbuffer[2] < od->xbuffer[1])
+        // if (od->xbuffer[op->fVarIx * 3 + 0] < od->xbuffer[op->fVarIx * 3 + 1] && od->xbuffer[op->fVarIx * 3 + 2] < od->xbuffer[op->fVarIx * 3 + 1])
+        if (od->dxbuffer[op->fVarIx * 3 + 1] >= -op->eps_dx && od->dxbuffer[op->fVarIx * 3 + 2] < -op->eps_dx)
         {
             int ix;
+            realtype thisXbuffer[N_VAR];
             realtype xThisMax;
-            maxOfArray(od->xbuffer, 3, &xThisMax, &ix);
+            for (int j = 0; j < 3; ++j)
+            	thisXbuffer[j] = od->xbuffer[op->fVarIx * 3 + j];
+            maxOfArray(thisXbuffer, 3, &xThisMax, &ix);
             realtype tThisMax = od->tbuffer[ix];
 
             // initialize tLastMax and xLastMin such that the first time around, thisIMI and thisAmp are BIG_REAL
@@ -283,10 +347,13 @@ inline void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], real
         }
 
         //local min check in fVarIx - one between each max - simply overwrite tLastMin, xLastMin
-        if (od->dxbuffer[1] <= op->eps_dx && od->dxbuffer[2] > op->eps_dx)
+        if (od->dxbuffer[op->fVarIx * 3 + 1] <= op->eps_dx && od->dxbuffer[op->fVarIx * 3 + 2] > op->eps_dx)
         {
             int ix;
-            minOfArray(od->xbuffer, 3, &od->xLastMin, &ix);
+            realtype thisXbuffer[N_VAR];
+            for (int j = 0; j < 3; ++j)
+            	thisXbuffer[j] = od->xbuffer[op->fVarIx * 3 + j];
+            minOfArray(thisXbuffer, 3, &od->xLastMin, &ix);
             od->tLastMin = od->tbuffer[ix]; //actually not used...
         }
 
@@ -322,11 +389,23 @@ inline void finalizeFeatures(realtype *ti, realtype xi[], realtype dxi[], realty
     F[ix++ * nPts + i] = od->eventcount > 1 ? od->downDuration[0] : RCONST(0.0);
     F[ix++ * nPts + i] = od->eventcount > 1 ? od->downDuration[1] : RCONST(0.0);
     F[ix++ * nPts + i] = od->eventcount > 1 ? od->downDuration[2] : RCONST(0.0);
-    F[ix++ * nPts + i] = od->xGlobalMax;
-    F[ix++ * nPts + i] = od->xGlobalMin;
-    F[ix++ * nPts + i] = od->xTrajectoryMean;
-    F[ix++ * nPts + i] = od->dxGlobalMax;
-    F[ix++ * nPts + i] = od->dxGlobalMin;
+    F[ix++ * nPts + i] = od->eventcount > 1 ? od->duty[0] : RCONST(0.0);
+    F[ix++ * nPts + i] = od->eventcount > 1 ? od->duty[1] : RCONST(0.0);
+    F[ix++ * nPts + i] = od->eventcount > 1 ? od->duty[2] : RCONST(0.0);
+    for (int j = 0; j < N_VAR; ++j) //5*N_VAR
+    {
+        F[ix++ * nPts + i] = od->xTrajectoryMax[j];
+        F[ix++ * nPts + i] = od->xTrajectoryMin[j];
+        F[ix++ * nPts + i] = od->xTrajectoryMean[j];
+        F[ix++ * nPts + i] = od->dxTrajectoryMax[j];
+        F[ix++ * nPts + i] = od->dxTrajectoryMin[j];
+    }
+    for (int j = 0; j < N_AUX; ++j) //3*N_AUX
+    {
+        F[ix++ * nPts + i] = od->auxTrajectoryMax[j];
+        F[ix++ * nPts + i] = od->auxTrajectoryMin[j];
+        F[ix++ * nPts + i] = od->auxTrajectoryMean[j];
+    }
     F[ix++ * nPts + i] = od->eventcount > 0 ? od->eventcount - 1 : RCONST(0.0);
     F[ix++ * nPts + i] = od->stepcount;
     F[ix++ * nPts + i] = od->stepDt[0];

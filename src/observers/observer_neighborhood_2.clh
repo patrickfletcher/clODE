@@ -4,13 +4,15 @@
 
 #ifdef __cplusplus
 //Collect all the info for this observer. Must be a static function when defining function in header, otherwise defined for each time included.
-static ObserverInfo getObserverInfo_nhood2(const ProblemInfo pi, const bool clSinglePrecision, const int fVarIx, const int eVarIx)
+static ObserverInfo getObserverInfo_nhood2(const ProblemInfo pi, const int fVarIx, const int eVarIx)
 {
     ObserverInfo oi;
     oi.define="USE_OBSERVER_NEIGHBORHOOD_2";
-    size_t realsize = clSinglePrecision?sizeof(cl_float):sizeof(cl_double);
-    oi.observerDataSize=(pi.nVar*12+16+pi.nAux*3)*realsize + 6*sizeof(cl_int); //hard coded, because C++ code can't see the N_VAR, N_AUX etc... 
-    
+    size_t n_real=(12*pi.nVar + 16 + 3*pi.nAux); //hard coded, because C++ code can't see the N_VAR, N_AUX etc...
+    size_t n_int=6;
+    oi.observerDataSizeFloat=n_real*sizeof(cl_float) + n_int*sizeof(cl_int);
+    oi.observerDataSizeDouble=n_real*sizeof(cl_double) + n_int*sizeof(cl_int); 
+
     oi.featureNames.push_back("max period");
     oi.featureNames.push_back("min period");
     oi.featureNames.push_back("mean period");
@@ -31,8 +33,8 @@ static ObserverInfo getObserverInfo_nhood2(const ProblemInfo pi, const bool clSi
         oi.featureNames.push_back("min " + pi.auxNames[j]);
         oi.featureNames.push_back("mean " + pi.auxNames[j]);
     }
-    oi.featureNames.push_back("eventcount");
-    oi.featureNames.push_back("stepcount");
+    oi.featureNames.push_back("period count");
+    oi.featureNames.push_back("step count");
     oi.featureNames.push_back("max dt");
     oi.featureNames.push_back("min dt");
     oi.featureNames.push_back("mean dt");
@@ -229,10 +231,10 @@ inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dxi[], re
     else
     {
         //simplest: time and state of trajectory point that landed in the neighborhood.
-        // tThisEvent=*ti;
+        tThisEvent=*ti;
 
         //alts: linearly interp to get tThisEvent using thisNormXDiff/lastNormXDiff; use norm values as x, since we know the interp value of that
-        tThisEvent = linearInterp(od->lastNormXdiff, od->thisNormXdiff, od->tbuffer[2], *ti, op->nHoodRadius);
+        // tThisEvent = linearInterp(od->lastNormXdiff, od->thisNormXdiff, od->tbuffer[2], *ti, op->nHoodRadius);
 
         od->nMaxima[0] = fmax((realtype)od->thisNMaxima, od->nMaxima[0]); //cast to realtype (for mean)
         od->nMaxima[1] = fmin((realtype)od->thisNMaxima, od->nMaxima[1]);
@@ -293,17 +295,15 @@ inline void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], real
         runningMean(&od->auxTrajectoryMean[j], auxi[j], od->stepcount);
     }
 
-    if (!od->buffer_filled)
-    {
-        if (od->stepcount > 2)
-            od->buffer_filled=1;
-    }
-    else
+    od->buffer_filled = od->stepcount > 2; //no conditional
+
+    if (od->buffer_filled)
     {
         //check for x0
         if (!od->foundX0)
         {   //x0 is first time dropping below threshold in x[eVarIx] - xbuffer holds previous xi
-            float lastX=od->xbuffer[op->eVarIx * 3 + 1], thisX=od->xbuffer[op->eVarIx * 3 + 2];
+            float lastX=od->xbuffer[op->eVarIx * 3 + 1];
+            float thisX=od->xbuffer[op->eVarIx * 3 + 2];
             if (lastX > od->xThreshold && thisX < od->xThreshold)
             {
                 od->foundX0 = 1;
@@ -381,7 +381,7 @@ inline void finalizeFeatures(realtype *ti, realtype xi[], realtype dxi[], realty
         F[ix++ * nPts + i] = od->auxTrajectoryMin[j];
         F[ix++ * nPts + i] = od->auxTrajectoryMean[j];
     }
-    F[ix++ * nPts + i] = od->eventcount;
+    F[ix++ * nPts + i] = od->eventcount > 0 ? od->eventcount - 1 : RCONST(0.0);
     F[ix++ * nPts + i] = od->stepcount;
     F[ix++ * nPts + i] = od->stepDt[0];
     F[ix++ * nPts + i] = od->stepDt[1];

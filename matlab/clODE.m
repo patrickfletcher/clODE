@@ -6,13 +6,13 @@ classdef clODE < cppclass & matlab.mixin.SetGet
     
     properties
         
-        stepper='dopri5'
-        precision='single'
-        
 %         cl_vendor='any'
 %         cl_deviceType='default'
         devices %array of structs describing OpenCL compatible devices
-        selectedDevice=1
+        selectedDevice=[]
+        
+        stepper='rk4'
+        precision='single'
         
         prob
         
@@ -24,12 +24,11 @@ classdef clODE < cppclass & matlab.mixin.SetGet
         sp
         tspan
         
+        clBuilt=false
+        clInitialized=false
+        
         tscale=1 %should go in IVP  
         tunits='';
-    end
-    
-    properties (Dependent)
-        %nPts
     end
     
     properties (Access = private)
@@ -51,7 +50,8 @@ classdef clODE < cppclass & matlab.mixin.SetGet
             clSinglePrecision=true;
             if precision=="double", clSinglePrecision=false;end
             
-            if ischar(arg1)
+            if ischar(arg1)||isstring(arg1)
+                arg1=char(arg1);
                 [~,prob]=ode2cl(arg1,[],clSinglePrecision);
             elseif isstruct(arg1)
                 prob=arg1;
@@ -72,7 +72,7 @@ classdef clODE < cppclass & matlab.mixin.SetGet
             
             devices=queryOpenCL(); %throws error if no opencl 
             %device selection: parse inputs
-            if  ~exist('selectedDevice','var')
+            if ~exist('selectedDevice','var')
                 selectedDevice=[];
             elseif selectedDevice>length(devices)
                 error('Device index specifed is greater than the number of OpenCL devices present')
@@ -100,14 +100,17 @@ classdef clODE < cppclass & matlab.mixin.SetGet
                 args=[args,extraArgs];
             end
             
+            %TODO: mex call constructing the object is slow!!! why?
             obj@cppclass(mexFilename,args{:});
             
             obj.prob=prob;
-            obj.stepper=stepper;
-            obj.precision=precision;
             obj.devices=devices;
             obj.selectedDevice=selectedDevice;
-            obj.sp=clODE.defaultSolverParams(); %default solver params
+            
+            obj.stepper=stepper;
+            obj.precision=precision;
+            obj.sp=clODE.defaultSolverParams(); %default solver params (device transfer during init)
+%             obj.buildCL();
         end
         
         % new and delete are inherited
@@ -115,22 +118,26 @@ classdef clODE < cppclass & matlab.mixin.SetGet
         %set a new problem - must initialize again!
         function setNewProblem(obj, prob)
             if ~strcmp(prob,obj.prob)
-                obj.prob=prob;
                 obj.cppmethod('setnewproblem', prob);
+                obj.prob=prob;
+                obj.clBuilt=false;
+                obj.clInitialized=false;
             end
         end
         
         %set a new time step method - must initialize again!
-        function set.stepper(obj, newStepper)
+        function setStepper(obj, newStepper)
             if ~strcmp(newStepper,obj.stepper)
                 obj.stepper=newStepper;
                 obj.cppmethod('setstepper', newStepper);
+                obj.clBuilt=false;
+                obj.clInitialized=false;
             end
         end
         
         %set single precision true/false - must initialize again! 
-        %TODO: Need to run ode2cl again!!! Alt: just generate both and swap filenames...
-        function set.precision(obj, newPrecision)
+        %ode2cl generates a file with "realtype"
+        function setPrecision(obj, newPrecision)
             if ~strcmp(newPrecision,obj.precision)
                 switch lower(newPrecision)
                     case {'single'}
@@ -142,8 +149,9 @@ classdef clODE < cppclass & matlab.mixin.SetGet
                     otherwise
                         error('Precision must be set to ''single'' or ''double''')
                 end
-%                 [~,obj.prob]=ode2cl(obj.prob.file,[],clSinglePrecision);
                 obj.cppmethod('setprecision', clSinglePrecision);
+                obj.clBuilt=false;
+                obj.clInitialized=false;
             end
         end
         
@@ -152,26 +160,49 @@ classdef clODE < cppclass & matlab.mixin.SetGet
             if newDevice~=obj.selectedDevice && newDevice<=length(obj.devices)
                 obj.selectedDevice=newDevice;
                 obj.cppmethod('setopencl', obj.devices(newDevice).platformID, obj.devices(newDevice).deviceID);
+                obj.clBuilt=false;
+                obj.clInitialized=false;
             end
+        end
+        
+        %build the OpenCL program with selected precision, stepper, prob
+        function buildCL(obj)
+            obj.cppmethod('buildcl');
+            obj.clBuilt=true;
         end
         
         %initialize builds the program and sets data needed to run
         %simulation in one call
         function initialize(obj, tspan, X0, P, sp)
+            if ~exist('tspan','var') %no input args: use stored values
+                tspan=obj.tspan; X0=obj.X0; P=obj.P; sp=obj.sp;
+            end
             obj.cppmethod('initialize', tspan, X0(:), P(:), sp);
             obj.tspan=tspan;
             obj.X0=X0;
             obj.P=P;
             obj.sp=sp;
             obj.nPts=numel(X0)/obj.prob.nVar;
+            obj.clInitialized=true;
+        end
+        
+        function setNPts(obj, newNPts)
+            if ~exist('newNPts','var') %no input args: use stored values
+                newNPts=obj.nPts;
+            end
+            obj.cppmethod('setnpts', newNPts);
+            obj.nPts=newNPts;
         end
         
         %Set X0 and P together if trying to change nPts
         function setProblemData(obj, X0, P)
+            if ~exist('X0','var') %no input args: use stored values
+                X0=obj.X0; P=obj.P;
+            end
+            obj.cppmethod('setproblemdata', X0(:), P(:));
             obj.X0=X0;
             obj.P=P;
             obj.nPts=numel(X0)/obj.prob.nVar;
-            obj.cppmethod('setproblemdata', X0(:), P(:));
         end
         
         
@@ -185,16 +216,22 @@ classdef clODE < cppclass & matlab.mixin.SetGet
         
         
         function settspan(obj, tspan)
-            obj.tspan=tspan;
+            if ~exist('tspan','var') %no input args: use stored values
+                tspan=obj.tspan;
+            end
             obj.cppmethod('settspan', tspan);
+            obj.tspan=tspan;
         end
         
         %nPts cannot change here
         function setX0(obj, X0)
+            if ~exist('X0','var') %no input args: use stored values
+                X0=obj.X0;
+            end
             testnPts=numel(X0)/obj.prob.nVar;
-            if testnPts==obj.nPts
-                obj.X0=X0;
+            if testnPts==obj.nPts %this check is redundant: c++ does it too
                 obj.cppmethod('setx0', X0(:));
+                obj.X0=X0;
             else
                 error('Size of X0 is incorrect');
             end
@@ -202,35 +239,50 @@ classdef clODE < cppclass & matlab.mixin.SetGet
         
         %nPts cannot change here
         function setP(obj, P)
+            if ~exist('P','var') %no input args: use stored values
+                P=obj.P;
+            end
             testnPts=numel(P)/obj.prob.nPar;
             if testnPts==obj.nPts
-                obj.P=P;
                 obj.cppmethod('setpars', P(:));
+                obj.P=P;
             else
                 error('Size of P is incorrect');
             end
         end
         
-        function setsp(obj, sp)
-            obj.sp=sp;
+        function setSolverPars(obj, sp)
+            if ~exist('sp','var') %no input args: use stored values
+                sp=obj.sp;
+            end
             obj.cppmethod('setsolverpars', sp);
+            obj.sp=sp;
         end
         
-        %matlab object becomes de-synchronized from GPU arrays when calling
-        %simulation routines. User must trigger data fetch from GPU
-        function transient(obj, tspan)
+        % Integration
+        function Xf=transient(obj, tspan)
+            if ~obj.clBuilt
+                error('OpenCL program not built. run buildCL')
+            end
             if exist('tspan','var')
                 obj.settspan(tspan);
             end
             obj.cppmethod('transient');
+            if nargout==1 %overload to also transfer Xf from device to host
+                Xf=obj.getXf();
+            end
         end
         
         function shiftTspan(obj)
             obj.cppmethod('shifttspan');
+            obj.getTspan();
         end
         
-        function shiftX0(obj)
-            obj.cppmethod('shiftx0');
+        function X0=shiftX0(obj)
+            obj.cppmethod('shiftx0'); %device-device transfer Xf to X0
+            if nargout==1 %overload to also transfer X0 from device to host
+                X0=obj.getX0();
+            end
         end
         
         function tspan=getTspan(obj)
@@ -253,15 +305,109 @@ classdef clODE < cppclass & matlab.mixin.SetGet
         function stepperNames=getAvailableSteppers(obj)
             stepperNames=obj.cppmethod('getsteppernames');
         end
+        
         function programString=getProgramString(obj)
             prog=obj.cppmethod('getprogramstring');
             programString=sprintf('%s',prog{1});
         end
+        
         function printStatus(obj)
             obj.cppmethod('printstatus');
         end
     end
     
+    
+    %ui public methods
+    methods (Access=public)
+        
+        function hpar=uisetpars(obj,parent)
+            if ~exist('parent','var')||isempty(parent)
+                parent=uifigure();
+            end
+            partable=struct2table(obj.prob.par);
+            hpar=uitable(parent,'Data',partable);
+            hpar.ColumnName = partable.Properties.VariableNames;
+%             hpar.ColumnName = {'name'; 'value'; 'lb'; 'ub'};
+            hpar.ColumnWidth = {'auto', 'fit', 'fit', 'fit'};
+            hpar.RowName = {};
+            hpar.ColumnSortable = [false false false false];
+            hpar.ColumnEditable = [false true true true];
+%             hpar.Position = position;
+            hpar.CellEditCallback=@updatePars;
+            
+            function updatePars(src,event)
+                row=event.Indices(1);
+                col=event.Indices(2);
+                fieldname=hpar.DisplayData.Properties.VariableNames{col};
+                if isnumeric(event.NewData) && event.NewData>0
+                    obj.prob.par(row).(fieldname)=event.NewData;
+                    if fieldname=="value"
+                        obj.prob.p0(row)=event.NewData;
+                    end
+                end
+            end
+        end
+        
+        function hic=uisetIC(obj,parent)
+            if ~exist('parent','var')||isempty(parent)
+                parent=uifigure();
+            end
+            fullvartable=struct2table(obj.prob.var);
+            vartable=fullvartable(:,1:4);
+            hic=uitable(parent,'Data',vartable);
+            hic.ColumnName = vartable.Properties.VariableNames;
+%             hic.ColumnName = {'name'; 'value'; 'lb'; 'ub'};
+            hic.ColumnWidth = {'auto', 'fit', 'fit', 'fit'};
+            hic.RowName = {};
+            hic.ColumnSortable = [false false false false];
+            hic.ColumnEditable = [false true true true];
+%             hpar.Position = position;
+            hic.CellEditCallback=@updateVars;
+            
+            function updateVars(src,event)
+                row=event.Indices(1);
+                col=event.Indices(2);
+                fieldname=hic.DisplayData.Properties.VariableNames{col};
+                if isnumeric(event.NewData) && event.NewData>0
+                    obj.prob.var(row).(fieldname)=event.NewData;
+                    if fieldname=="value"
+                        obj.prob.x0(row)=event.NewData;
+                    end
+                end
+            end
+        end
+        
+        function hsp=uisetSP(obj,parent)
+            if ~exist('parent','var')||isempty(parent)
+                parent=uifigure();
+            end
+            %TODO: convert XPP opts to name/value struct...
+            %TODO: subset to relevant params (adaptive vs not)
+            sptable=table;
+            sptable.name=fieldnames(obj.sp);
+            sptable.value=cell2mat(struct2cell(obj.sp));
+            hsp=uitable(parent,'Data',sptable);
+            hsp.ColumnName = sptable.Properties.VariableNames;
+%             hpar.ColumnName = {'name'; 'value'};
+            hsp.ColumnWidth = {'auto', 'fit'};
+            hsp.RowName = {};
+            hsp.ColumnSortable = [false false];
+            hsp.ColumnEditable = [false true];
+%             hsp.Position = position;
+            hsp.CellEditCallback=@updateSP;
+            
+            function updateSP(src,event)
+                thisfield=hsp.DisplayData.name{event.Indices(1)};
+                if isnumeric(event.NewData) && event.NewData>0
+                    obj.sp.(thisfield)=event.NewData;
+                end
+            end
+        end
+    end
+    
+    %ui private methods
+    methods (Access=private)
+    end
     
     %static helper methods
     methods (Static=true)
@@ -270,22 +416,23 @@ classdef clODE < cppclass & matlab.mixin.SetGet
             sp.dt=.1;
             sp.dtmax=100.00;
             sp.abstol=1e-6;
-            sp.reltol=1e-3;
+            sp.reltol=1e-4;
             sp.max_steps=1000000;
-            sp.max_store=10000; %allocated number of timepoints: min( (tf-t0)/(dt*nout)+1 , sp.max_store)
+            sp.max_store=100000; %allocated number of timepoints: min( (tf-t0)/(dt*nout)+1 , sp.max_store)
             sp.nout=1;
+%             sp.storevars=[]; %empty => all, otherwise specify list of var indices to store (for trajectories, or max/min/mean for features)
         end
         
         function selectedDevice=autoselectDevice(devices)
             selectedDevice=[];
 %             if  isempty(selectedDevice)
-%                 selectedDevice=find({devices(:).type}=="accel");
+%                 selectedDevice=find({devices(:).type}=="Accelerator",1,'first');
 %             end
             if  isempty(selectedDevice)
-                selectedDevice=find({devices(:).type}=="GPU");
+                selectedDevice=find({devices(:).type}=="GPU",1,'first');
             end
             if  isempty(selectedDevice)
-                selectedDevice=find({devices(:).type}=="CPU");
+                selectedDevice=find({devices(:).type}=="CPU",1,'first');
             end
         end
         

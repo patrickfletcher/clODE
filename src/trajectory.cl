@@ -75,8 +75,8 @@ __kernel void trajectory(
     {
         ++step;
         stepflag = stepper(&ti, xi, dxi, p, sp, &dt, tspan, auxi, wi, &rd);
-        if (stepflag!=0)
-            break;
+        // if (stepflag!=0)
+        //     break;
 
         //store every sp.nout'th step after the initial point
         if (step % sp->nout == 0)

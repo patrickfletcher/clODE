@@ -3,8 +3,16 @@ clear
 
 odefile='lactotroph.ode';
 precision='single';
+tic
 clo=clODEtrajectory(odefile,precision);
+toc
 % clo.stepper='seuler'; %default='dopri5'
+
+tic
+clo.buildCL();
+toc
+
+clo.printStatus();
 
 %solver parameters
 sp=clODE.defaultSolverParams();%create required ODE solver parameter struct

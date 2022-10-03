@@ -4,6 +4,7 @@ plb=[clo.prob.par.lb];
 pub=[clo.prob.par.ub];
 initBounds = [plb(Grid.xix),pub(Grid.xix),plb(Grid.yix),pub(Grid.yix)];
 
+disp(evt.Key)
 switch(evt.Key)
     case 'c' %'continue' - features without initialization
         tic
@@ -11,19 +12,22 @@ switch(evt.Key)
         clo.features();
         toc
         F=clo.getF();
+%         F(F<-1e10|F>1e10)=nan;
         hi.CData=reshape(feature.fun(F),Grid.dim);
         hcb=colorbar('northoutside');
-        title(hcb,feature.name)
+        title(hcb,feature.name,'Interpreter','none')
 %         axis tight
         
     case 'g' %'go' - features with initialization
         tic
+        clo.shiftX0();
         clo.features(1);
         toc
         F=clo.getF();
+%         F(F<-1e10|F>1e10)=nan;
         hi.CData=reshape(feature.fun(F),Grid.dim);
         hcb=colorbar('northoutside');
-        title(hcb,feature.name)
+        title(hcb,feature.name,'Interpreter','none')
 %         axis tight
         
     case 't' %'transient'
@@ -34,7 +38,7 @@ switch(evt.Key)
         Xf=clo.getXf();
         hi.CData=reshape(Xf(:,clo.op.fVarIx),Grid.dim);
         hcb=colorbar('northoutside');
-        title(hcb,clo.prob.varNames(clo.op.fVarIx))
+        title(hcb,clo.prob.varNames(clo.op.fVarIx),'Interpreter','none')
 %         axis tight
         
     case 'f' %select feature to plot %%%TODO: add computed features
@@ -57,15 +61,15 @@ switch(evt.Key)
         x0lb=[clo.prob.var.lb];
         x0ub=[clo.prob.var.ub];
         X0=x0lb+rand(clo.nPts,length(x0lb)).*(x0ub-x0lb);
-        clo.setX0(X0(:));
+        clo.setX0(X0);
         
-        tic
-        clo.transient();
-        toc
-        Xf=clo.getXf();
-        hi.CData=reshape(Xf(:,clo.op.fVarIx),Grid.dim);
+%         tic
+%         clo.transient();
+%         toc
+%         Xf=clo.getXf();
+        hi.CData=reshape(X0(:,clo.op.fVarIx),Grid.dim);
         hcb=colorbar('northoutside');
-        title(hcb,clo.prob.varNames(clo.op.fVarIx))
+        title(hcb,clo.prob.varNames(clo.op.fVarIx),'Interpreter','none')
 %         axis tight
         
     case 'z' %zoom using rbbox
@@ -95,6 +99,10 @@ switch(evt.Key)
         end
         
         set(hi.Parent,'ButtonDownFcn',tmp); %restore clicktrajectory
+    
+    case 'add'
+        
+    case 'subtract'
         
     case '1'
         setBounds(initBounds([1,3]),initBounds([2,4]));
