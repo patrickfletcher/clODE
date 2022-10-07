@@ -19,6 +19,7 @@ def _get_runtime():
 
 class Stepper(Enum):
     euler = "euler"
+    rk4 = "rk4"
 
 
 class ProblemInfo:
@@ -56,15 +57,15 @@ class CLODEFeatures:
 
     def __init__(self,
                  src_file: str,
-                 variables: list[str],
-                 parameters: list[str],
+                 variable_names: list[str],
+                 parameter_names: list[str],
                  aux: typing.Optional[list[str]] = None,
                  num_noise: int = 1,
                  event_var: str = "",
                  feature_var: str = "",
                  observer_max_event_count: int = 100,
                  observer_min_x_amp: float = 1.0,
-                 observer_min_imi: float = 0,
+                 observer_min_imi: float = 1,
                  observer_neighbourhood_radius: float = 0.01,
                  observer_x_up_thresh: float = 0.3,
                  observer_x_down_thresh: float = 0.2,
@@ -89,22 +90,23 @@ class CLODEFeatures:
         if aux is None:
             aux = []
 
-        self.vars = variables
-        self.pars = parameters
+        self.vars = variable_names
+        self.pars = parameter_names
+        #print(f"Vars {len(variable_names)}, parameters {len(parameter_names)}")
         self.aux_variables = aux
         self._pi = _clode.problem_info(src_file,
-                                       len(variables),
-                                       len(parameters),
+                                       len(variable_names),
+                                       len(parameter_names),
                                        len(aux),
                                        num_noise,
-                                       variables,
-                                       parameters,
+                                       variable_names,
+                                       parameter_names,
                                        aux)
         self._sp = _clode.solver_params(dt, dtmax, abstol, reltol,
                                         max_steps, max_store, nout)
 
-        event_var_idx = variables.index(event_var) if event_var != "" else 0
-        feature_var_idx = variables.index(feature_var) if feature_var != "" else 0
+        event_var_idx = variable_names.index(event_var) if event_var != "" else 0
+        feature_var_idx = variable_names.index(feature_var) if feature_var != "" else 0
 
         self._op = _clode.observer_params(event_var_idx,
                                           feature_var_idx,
@@ -146,13 +148,15 @@ class CLODEFeatures:
             raise ValueError(f"Length of parameters vector {parameters.shape[1]}"
                              f" does not match number of parameters {len(self.pars)}")
 
-        print("Init with x0", x0.transpose().flatten().shape)
-        print("Init with pars", parameters.transpose().flatten().shape)
+        #print("Init with x0", x0.transpose().flatten().shape)
+        #print("Init with pars", parameters.transpose().flatten().shape)
+        #print(x0.transpose().flatten())
         self._features.initialize(self.tspan,
                                   x0.transpose().flatten(),
                                   parameters.transpose().flatten(),
                                   self._sp,
                                   self._op)
+        self._features.seed_rng(1)
 
     def transient(self, update_x0=True):
         self._features.transient()
@@ -184,7 +188,7 @@ class CLODEFeatures:
         # print((self._num_result_features, results.shape[0] // len(self.vars)))
 
         #observer_results = results.reshape((self._num_result_features, len(results) // self._num_result_features)).transpose()
-        print("Feature names", self._features.get_feature_names())
+        #print("Feature names", self._features.get_feature_names())
         return ObserverOutput(self._op,
                               np.array(self._result_features),
                               self._num_result_features,

@@ -15,7 +15,8 @@
 
 #include "OpenCLResource.hpp"
 #include "CLODE.hpp"
-#include "CLODEtrajectory.hpp"
+#include "CLODEfeatures.hpp"
+#include "observers.cl"
 
 #define CLODE_ROOT "src/"
 
@@ -25,125 +26,110 @@ template<typename T> std::vector<T> generateRandomPoints(std::vector<T> lb, std:
 //currently the only command line arguments are to select device/vendor type ("--device cpu/gpu/accel", "--vendor amd/intel/nvidia")
 int main(int argc, char **argv)
 {
- 	#if defined(WIN32)||defined(_WIN64)
- 		_putenv_s("CUDA_CACHE_DISABLE", "1");
- 	#else
- 		setenv("CUDA_CACHE_DISABLE", "1", 1);
- 	#endif
 	try 
 	{
-		
-	cl_int nPts=2;
-	bool CLSinglePrecision=false;
+ 	cl_int nPts=32;
+	bool CLSinglePrecision=true;
 	
 	ProblemInfo prob;
-    prob.clRHSfilename="samples/lactotroph.cl";
-		
-	prob.nVar=4;
-	prob.nPar=3;
+	prob.clRHSfilename="test/test.cl";
+	prob.nVar=8;
+	prob.nPar=18;
 	prob.nAux=1;
 	prob.nWiener=1;
+	prob.varNames.assign({"V", "n", "m", "b", "h", "h_T", "h_Na", "c"});
+	prob.parNames.assign({"g_CaL", "g_CaT", "g_K", "g_SK", "g_Kir", "g_BK", "g_NaV", "g_A", "g_leak", "C_m", "E_leak","tau_m", "tau_ht", "tau_n", "tau_BK", "tau_h", "tau_hNa", "k_c"});
+	prob.auxNames.assign({"i_noise"});
 	
-    std::string stepper="euler";
+	std::string stepper="rk4";
 	
 	//parameters for solver and objective function
+	
 	std::vector<double> tspan({0.0,1000.0});
-	
 	int nReps=1;
-	
+
 	SolverParams<double> sp;
 	sp.dt=0.1;
 	sp.dtmax=1.00;
 	sp.abstol=1e-6;
 	sp.reltol=1e-3;
-	sp.max_steps=100000;
-	sp.max_store=100000;
-	sp.nout=100;
+	sp.max_steps=10000000;
+	sp.max_store=10000000;
+	sp.nout=50;
 	
 	int mySeed=1;
-	
+
 	//default pars
-	std::vector<double> p({1.0,5.0,0.0}); 
+	std::vector<double> p({1.4, 0, 5, 0, 0, 0, 0, 0, 0.2, 10, -50, 1, 1, 39, 1, 1, 1, 0.03}); 
 	
-	//Parameter sets will be sampled uniformly from [lb,ub] for each parameter
-	std::vector<double> lb({1.0,5.0,0.0});
-	std::vector<double> ub({1.0,5.0,0.0});
-	std::vector<double> pars=generateRandomPoints(lb, ub, nPts);
-	
+	// repeat the parameters nPts times: pack each paramater contiguously
+	std::vector<double> pars(nPts, p[0]);
+	for (int i=1; i<18; ++i)
+		pars.insert(pars.end(), nPts, p[i]);
+
 	//initial values: all zeros
 	std::vector<double> x0(nPts*prob.nVar, 0.0);
 	
-	
-//initialize opencl (several device selection options are commented out below)
-	
-	// Default constructor: selects first OpenCL device found
-	//~ OpenCLResource opencl;
-	
+	std::string observer = "thresh2";
+	ObserverParams<double> op;
+	op.eVarIx=0;
+	op.fVarIx=0;
+	op.maxEventCount=100;
+	op.minXamp=1;
+	op.nHoodRadius=0.01;
+	op.xUpThresh=0.3;
+	op.xDownThresh=0.2;
+	op.dxUpThresh=0;
+	op.dxDownThresh=0;
+	op.eps_dx=1e-7;
+
 	// Select device type and/or vendor using command line flags ("--device cpu/gpu/accel", "--vendor amd/intel/nvidia")
 	OpenCLResource opencl( argc, argv);
-	
-	// Select device type/vendor programmatically
-	//~ cl_device_type deviceType=CL_DEVICE_TYPE_DEFAULT;
-	//~ cl_device_type deviceType=CL_DEVICE_TYPE_CPU;
-	//~ cl_device_type deviceType=CL_DEVICE_TYPE_GPU;
-	//~ cl_device_type deviceType=CL_DEVICE_TYPE_ACCELERATOR;
-	//~ cl_device_type deviceType=CL_DEVICE_TYPE_ALL;
-	
-	//~ cl_vendor vendor=VENDOR_ANY;
-	//~ cl_vendor vendor=VENDOR_AMD;
-	//~ cl_vendor vendor=VENDOR_INTEL;
-	//~ cl_vendor vendor=VENDOR_NVIDIA;
-	
-	//~ OpenCLResource opencl(deviceType); //default vendor=VENDOR_ANY
-	//~ OpenCLResource opencl(deviceType, vendor);
 	
 	//prep timer and PRNG
 	srand(static_cast <unsigned> (time(0))); 
     std::chrono::time_point<std::chrono::high_resolution_clock> start, end;
 	std::chrono::duration<double, std::milli> elapsed_ms;
 	
-	//test trajectory
-	CLODEtrajectory clo(prob, stepper, CLSinglePrecision, opencl, CLODE_ROOT);
-	clo.initialize(tspan, x0, pars, sp); 
 	
-	clo.seedRNG(mySeed);
+	// create the solver
+	CLODEfeatures clo(prob, stepper, observer, CLSinglePrecision, opencl, CLODE_ROOT);
 	
-	//warm up to pre-set nSteps and nPts
-	clo.transient(); 
+	clo.buildCL();
+	
+	//copy problem data to the device
+	clo.initialize(tspan, x0, pars, sp, op); 
+	
+	// clo.seedRNG(mySeed);
+	
+	//run the simulation 
+	clo.transient();
+	clo.shiftX0();
+	
 	
 	start = std::chrono::high_resolution_clock::now();
+		
+	std::cout<<std::endl;
 	for(int i=0;i<nReps;++i){
-		//~ clo.transient();
-		clo.trajectory();
+		clo.features();
 	}
 	
 	end = std::chrono::high_resolution_clock::now();
 	elapsed_ms += end-start;
 	
 	//retrieve result from device
-    const auto &nStoredVec = clo.getNstored();
-	int nStoreMax=*std::max_element(nStoredVec.begin(), nStoredVec.end());
-	std::vector<double> t=clo.getT();
-	std::vector<double> x=clo.getX();
-	std::vector<double> xf=clo.getX0();
+	std::vector<double> F=clo.getF();
+	tspan=clo.getTspan();
 	
-	int trajIx=0;
-	
-	std::vector<int> nStored=clo.getNstored();
-	std::cout<< "\nt \t xf:"<< "\n";
-	for (int ix=0; ix<nStored[trajIx];++ix){
-		std::cout<<t[ix*nPts+trajIx]<< "\t";
-		
-		for (int i=0; i<prob.nVar; ++i)
-			std::cout << x[ix*nPts*prob.nVar+i*nPts+trajIx]<< " ";
-			
-		std::cout<<std::endl;
-	}
+	std::vector<std::string> fnames=clo.getFeatureNames();
+
+	std::cout<< "\ntf="<< tspan[0] <<std::endl;
+	std::cout<<"Features:"<< "\n";
+	for (int i=0; i<clo.getNFeatures(); ++i)
+		std::cout << " " << fnames[i] << " = " << F[i*nPts] << "\n";
 	
 	std::cout<<std::endl;
-    std::cout<< "Timepoints stored: " << nStored[trajIx] << "/" << nStoreMax << "\n";
 	
-	std::cout<<std::endl;
     std::cout<< "Compute time: " << elapsed_ms.count() << "ms\n";
 	std::cout<<std::endl;
 	

@@ -48,6 +48,19 @@ cc_binary(
 )
 
 cc_binary(
+    name = "testFeatLarge",
+    srcs = ["testFeatures_morevars.cpp"],
+    data = [
+        "//src:opencl",
+        "//test:lactotroph",
+    ],
+    linkstatic = True,
+    deps = [
+        "//src",
+    ],
+)
+
+cc_binary(
     name = "listOpenCL",
     srcs = ["listOpenCL.cpp"],
     data = [

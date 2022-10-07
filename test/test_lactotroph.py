@@ -17,9 +17,9 @@ x0 = [0, 0, 0, 0] * nPts
 clode_features.initialize(tspan, x0, pars, sp, op)
 
 mySeed=1
-clode_features.seed_rng(mySeed);
+clode_features.seed_rng(mySeed)
 clode_features.transient()
-clode_features.shift_x0();
+clode_features.shift_x0()
 
 start_time = time.perf_counter_ns()
 

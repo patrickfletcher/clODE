@@ -17,7 +17,7 @@ class ObserverOutput:
                  variables: list[str],
                  observer_type: Observer,
                  feature_names: list[str]):
-        print(type(observer_params))
+        #print(type(observer_params))
         self._op = observer_params
         self._data = results_array
         self._num_result_features = num_result_features
@@ -36,9 +36,9 @@ class ObserverOutput:
         #     raise NotImplementedError(f"{self._observer_type} not implemented!")
 
         shape = (self._num_result_features, len(results_array) // self._num_result_features)
-        print(f"Results array, {len(results_array)}, foo {shape}, bar {num_result_features}")
+        #print(f"Results array, {len(results_array)}, foo {shape}, bar {num_result_features}")
         self._data = results_array.reshape(shape).transpose()
-        print(self._data[0, :])
+        #print(self._data[0, :])
 
     # def get_var_max(self, var: str):
     #     if self._observer_type == Observer.basic:

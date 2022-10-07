@@ -10,6 +10,7 @@
 
 #include "clODE_struct_defs.cl"
 #include "CLODEfeatures.hpp"
+#include "CLODEtrajectory.hpp"
 
 #include "logging/PythonSink.hpp"
 #include "spdlog/spdlog.h"
@@ -94,4 +95,27 @@ PYBIND11_MODULE(clode, m) {
             .def("shift_tspan", &CLODEfeatures::shiftTspan)
             .def("shift_x0", &CLODEfeatures::shiftX0);
 
+    py::class_<CLODEtrajectory>(m, "clode_trajectory")
+            .def(py::init<ProblemInfo &,
+                    std::string &,
+                    bool,
+                    OpenCLResource &,
+                    std::string &>())
+            .def("initialize", static_cast<void (CLODEtrajectory::*)
+                    (std::vector<double>,
+                     std::vector<double>,
+                     std::vector<double>,
+                     SolverParams<double>)>
+            (&CLODEtrajectory::initialize), "Initialize CLODEtrajectory")
+            .def("seed_rng", static_cast<void (CLODEtrajectory::*)(int)>(&CLODEtrajectory::seedRNG))
+            .def("seed_rng", static_cast<void (CLODEtrajectory::*)()>(&CLODEtrajectory::seedRNG))
+            .def("transient", &CLODEtrajectory::transient)
+            .def("trajectory", &CLODEtrajectory::trajectory)
+            .def("get_t", &CLODEtrajectory::getT)
+            .def("get_x", &CLODEtrajectory::getX)
+            .def("get_x0", &CLODEtrajectory::getX0)
+            .def("get_dx", &CLODEtrajectory::getDx)
+            .def("get_aux", &CLODEtrajectory::getAux)
+            .def("get_n_stored", &CLODEtrajectory::getNstored)
+            .def("shift_x0", &CLODEtrajectory::shiftX0);
 }

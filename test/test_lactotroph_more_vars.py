@@ -13,14 +13,11 @@ observer = "thresh2"
 nReps = 1
 nPts = 4096
 sp = clode.solver_params(0.5, 1.00, 1e-6, 1e-3, 10000000, 10000000, 50)
-op = clode.observer_params(0, 7, 100, 0, 0, 0.01, 0.3, 0.2, 0, 0, 1e-7)
+op = clode.observer_params(0, 0, 100, 1, 1, 0.01, 0.3, 0.2, 0, 0, 1e-7)
 open_cl = clode.opencl_resource()
 clode_features = clode.clode_features(pi, stepper, observer, True, open_cl, "src/")
-tspan = [0.0, 1000.]
-pars = np.array((1.4084463386996062, 0, 8.55369049484889, 0, 0,
-                 0, 0, 0, 0.2038595251374598, 10,
-                 -50, 1, 1, 38.94047412928898, 1,
-                 1, 1, 0.032356304109703186))
+tspan = (0.0, 1000.)
+pars = np.array((1.4, 0, 5, 0, 0, 0, 0, 0, 0.2, 10, -50, 1, 1, 39, 1, 1, 1, 0.03))
 
 pars = np.tile(pars, (nPts, 1)).transpose().flatten()
 
@@ -36,6 +33,8 @@ c = 0.1
 x0 = np.array([V, n, m, b, h, h_T, h_Na, c])
 x0 = np.tile(x0, (nPts, 1)).transpose().flatten()
 print(x0)
+print("Init with x0", x0.transpose().flatten().shape)
+print("Init with pars", pars.transpose().flatten().shape)
 clode_features.initialize(tspan, x0, pars, sp, op)
 
 mySeed = 1

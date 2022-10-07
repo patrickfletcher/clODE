@@ -127,16 +127,22 @@ def pituitary_ori_ode_parameters_Isk_Ibk_Ikir_Icat_Ia_Inav():
 
 def generate_clode_pituitary(parameter_function, dt: float, num_simulations: int):
 
+    tspan = (0.0, 1000.0)
+
     integrator = clode.CLODEFeatures(
         src_file="test/test.cl",
-        variables=["V", "n", "m", "b", "h", "h_T", "h_Na", "c"],
-        parameters=list(default_ode_parameters.keys()),
-        aux=["aux"],
+        variable_names=["V", "n", "m", "b", "h", "h_T", "h_Na", "c"],
+        parameter_names=list(default_ode_parameters.keys()),
+        num_noise=1,
+        aux=["i_noise"],
         event_var="V",
-        feature_var="c",
+        feature_var="V",
         observer=Observer.threshold_2,
-        dt=dt,
-        dtmax=dt
+        stepper=clode.Stepper.rk4,
+        dt=0.1,
+        dtmax=1,
+        tspan=tspan,
+
     )
     #print(list(default_ode_parameters.keys()))
 
@@ -168,15 +174,16 @@ def generate_clode_pituitary(parameter_function, dt: float, num_simulations: int
     # for index in range (len(x0)):
     #     for _ in range(nPts):
     #         x0_v.append(x0[index])
+    num_simulations = 32
 
     x0_v = np.tile(x0, (num_simulations, 1))
 
     abserr = 1.0e-8
     relerr = 1.0e-6
 
-    tspan = [0.0, 10000.0]
 
     pars_v = []
+    pars = ()
     for _ in range(num_simulations):
         parameters = parameter_function()
 
@@ -189,20 +196,27 @@ def generate_clode_pituitary(parameter_function, dt: float, num_simulations: int
 
         # Note - the key order in default_ode_parameters is correct.
         # Disregard the key order in parameters
-        pars = tuple([simulation_parameters[key] for key in default_ode_parameters.keys()])
+        pars = np.array([simulation_parameters[key] for key in default_ode_parameters.keys()])
         pars_v.append(pars)
+        #print(pars)
+        #break
+    pars_v = np.array(pars_v)
+    #pars = np.array((1.4, 0, 5, 0, 0, 0, 0, 0, 0.2, 10, -50, 1, 1, 39, 1, 1, 1, 0.03))
+
+    #pars_v = np.tile(pars, (num_simulations, 1))
     # pars_v = []
     # for index in range (len(pars)):
     #     for _ in range(nPts):
     #         pars_v.append(pars[index])
 
-    pars_v = np.array(pars_v)
+    #pars_v = np.array(pars_v)
     #print(x0_v)
     integrator.initialize(x0_v, pars_v)
 
     integrator.transient()
 
-    integrator.features(initialize_observer=True)
+    #integrator.features(initialize_observer=True)
+    integrator.features()
     simulation_output = integrator.get_final_state()
     observer_output = integrator.get_observer_results()
     # for _ in range(nReps):
@@ -410,17 +424,13 @@ def generate_pitutary_dataframe(parameter_function, sample_id: int, trim_start: 
 
     #print("Period count", observer_output.get_var_count('period'))
     #print("Step count", observer_output.get_var_count('step'))
-    print(np.concatenate([active, bursting, max_period, min_period], axis=1))
+    #print(np.concatenate([active, bursting, max_period, min_period], axis=1))
 
     df_input = np.concatenate([pituitary_simulation, parameters, avg_calcium, classes], axis=1)
     columns = ['V', 'n', 'm', 'b', 'h', 'h_T', 'h_Na', 'c'] + list(default_ode_parameters.keys()) + ['calcium_concentration', 'class']
     df = pd.DataFrame(df_input, columns=columns)
     df.insert(0, 'ID', range(pituitary_simulation.shape[0]))
 
-
-
-
-    print(df)
     return df
 
 
@@ -480,8 +490,6 @@ def generate_pituitary_dataset(parameter_function, num_samples, trim_start: int 
 
     return df
 
-
-print(os.path.dirname(__file__))
 
 df_test = generate_pituitary_dataset(parameter_function=pituitary_ori_ode_parameters_Isk_Ibk_Ikir_Icat_Ia_Inav,
                                      num_samples=100,
