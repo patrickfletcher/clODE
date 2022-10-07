@@ -120,15 +120,13 @@ cc_library(
 cc_binary(
     name = "clode.so",
     srcs = ["CLODEpython.cpp"],
-    copts = [
-        "-I/Library/Frameworks/Python.framework/Versions/Current/Headers/",
-        #"-F/Library/Frameworks/Python.framework",
-        #"-framework",
-        #"Python",
-    ],
+    copts = select({
+        "@platforms//os:osx": ["-I/Library/Frameworks/Python.framework/Versions/Current/Headers/"],
+        "@platforms//os:linux": [],
+        "@platforms//os:windows": [],
+    }),
     includes = [
         ".",
-        #"/Library/Framework/Python.framework/Versions/Current/Headers/",
     ],
     linkshared = True,
     visibility = ["//visibility:public"],

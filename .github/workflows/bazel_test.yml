@@ -3,7 +3,7 @@ name: CI
 on: [push, pull_request]
 
 jobs:
-  test:
+  test_linux:
     # virtual environments: https://github.com/actions/virtual-environments
     runs-on: ubuntu-20.04
 
@@ -12,6 +12,38 @@ jobs:
       # the rest of the steps
       - uses: actions/checkout@v2
 
-      # build
-      - name: Build the code
+      # test
+      - name: Test the code
+        run: bazel test //...
+
+  test_macos:
+    # virtual environments: https://github.com/actions/virtual-environments
+    runs-on: macos-12
+
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, which is the CWD for
+      # the rest of the steps
+      - uses: actions/checkout@v2
+
+      # test
+      - name: Test the code
+        run: bazel test //...
+
+  test_windows:
+    # virtual environments: https://github.com/actions/virtual-environments
+    runs-on: windows-latest
+
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, which is the CWD for
+      # the rest of the steps
+      - uses: actions/checkout@v2
+      - uses: bazelbuild/setup-bazelisk@v2
+      - name: Mount bazel cache  # Optional
+        uses: actions/cache@v3
+        with:
+          path: "~/.cache/bazel"
+          key: bazel
+
+      # test
+      - name: Test the code
         run: bazel test //...
