@@ -277,7 +277,7 @@ void OpenCLResource::buildProgramFromString(std::string sourceStr, std::string b
                 program.getBuildInfo(devices[i], CL_PROGRAM_BUILD_LOG, &buildLog);
                 spdlog::error("OpenCL build log, Device {}:\n", i);
                 spdlog::error("{}\n", buildLog.c_str());
-                spdlog::error(std::__fs::filesystem::current_path().c_str());
+                //spdlog::error(std::__fs::filesystem::current_path().c_str());
             }
         }
         throw er;

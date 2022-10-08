@@ -73,7 +73,7 @@ jobs:
 
       # Until we have wheel install as a Bazel action
       - name: Install pip wheel
-        run: pip install bazel-out/darwin_arm64-fastbuild/bin/pyclode/clode-0.0.2-py3-none-any.whl
+        run: pip install bazel-out/darwin-fastbuild/bin/pyclode/clode-0.0.2-py3-none-any.whl
 
       - name: Run bazel tests
         run: bazel.exe test //...
