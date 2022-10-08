@@ -1,3 +1,6 @@
+# Borrowed from
+# https://github.com/grpc/grpc/blob/afc040b07a8dcab704fdcab248c8f8b764fafd6c/third_party/py/variety.tpl
+
 package(default_visibility=["//visibility:public"])
 
 # To build Python C/C++ extension on Windows, we need to link to python import library pythonXY.lib

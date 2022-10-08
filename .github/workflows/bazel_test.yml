@@ -20,14 +20,14 @@ jobs:
 
       # test
       - name: Build the code
-        run: bazel build //... --sandbox_debug
+        run: bazel build //... --subcommands
 
       # Until we have wheel install as a Bazel action
       - name: Install pip wheel
-        run: pip install bazel-out/linux_arm64-fastbuild/bin/pyclode/clode-0.0.2-py3-none-any.whl
+        run: pip install bazel-out/k8-fastbuild/bin/pyclode/clode-0.0.2-py3-none-any.whl
 
       - name: Run bazel tests
-        run: bazel test //...
+        run: bazel test --test_output=errors //...
 
   test_macos:
     # virtual environments: https://github.com/actions/virtual-environments
@@ -53,7 +53,7 @@ jobs:
         run: pip3 install bazel-out/darwin-fastbuild/bin/pyclode/clode-0.0.2-py3-none-any.whl
 
       - name: Run bazel tests
-        run: bazel test //...
+        run: bazel test --test_output=errors //...
 
   test_windows:
     # virtual environments: https://github.com/actions/virtual-environments
@@ -76,4 +76,4 @@ jobs:
         run: pip install bazel-out/darwin-fastbuild/bin/pyclode/clode-0.0.2-py3-none-any.whl
 
       - name: Run bazel tests
-        run: bazel.exe test //...
+        run: bazel.exe test --test_output=errors //...
