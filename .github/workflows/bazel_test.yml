@@ -15,8 +15,8 @@ jobs:
       - name: Update system
         run: sudo apt update
 
-      - name: Install OpenCL
-        run: sudo apt install ocl-icd-opencl-dev
+      - name: Install Dependencies
+        run: sudo apt install ocl-icd-opencl-dev python3-dev
 
       # test
       - name: Test the code
@@ -33,7 +33,7 @@ jobs:
 
       # test
       - name: Test the code
-        run: bazel test //...
+        run: bazel test //... --subcommands
 
   test_windows:
     # virtual environments: https://github.com/actions/virtual-environments
@@ -43,13 +43,10 @@ jobs:
       # Checks-out your repository under $GITHUB_WORKSPACE, which is the CWD for
       # the rest of the steps
       - uses: actions/checkout@v2
-      - uses: bazelbuild/setup-bazelisk@v2
-#      - name: Mount bazel cache  # Optional
-#        uses: actions/cache@v3
-#        with:
-#          path: "~/.cache/bazel"
-#          key: bazel
+
+      - name: Setup Bazel
+        uses: abhinavsingh/setup-bazel@v3
 
       # test
       - name: Test the code
-        run: bazel test //...
+        run: ./bazel.exe test //...
