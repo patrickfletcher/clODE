@@ -19,7 +19,14 @@ jobs:
         run: sudo apt install ocl-icd-opencl-dev python3-dev
 
       # test
-      - name: Test the code
+      - name: Build the code
+        run: bazel build //...
+
+      # Until we have wheel install as a Bazel action
+      - name: Install pip wheel
+        run: pip install bazel-out/linux_arm64-fastbuild/bin/pyclode/clode-0.0.2-py3-none-any.whl
+
+      - name: Run bazel tests
         run: bazel test //...
 
   test_macos:
@@ -32,8 +39,15 @@ jobs:
       - uses: actions/checkout@v2
 
       # test
-      - name: Test the code
-        run: bazel test //... --subcommands
+      - name: Build the code
+        run: bazel build //...
+
+      # Until we have wheel install as a Bazel action
+      - name: Install pip wheel
+        run: pip install bazel-out/darwin_arm64-fastbuild/bin/pyclode/clode-0.0.2-py3-none-any.whl
+
+      - name: Run bazel tests
+        run: bazel test //...
 
   test_windows:
     # virtual environments: https://github.com/actions/virtual-environments
@@ -44,9 +58,13 @@ jobs:
       # the rest of the steps
       - uses: actions/checkout@v2
 
-      - name: Setup Bazel
-        uses: abhinavsingh/setup-bazel@v3
-
       # test
-      - name: Test the code
-        run: ./bazel.exe test //...
+      - name: Build the code
+        run: bazel.exe build //...
+
+      # Until we have wheel install as a Bazel action
+      - name: Install pip wheel
+        run: pip install bazel-out/darwin_arm64-fastbuild/bin/pyclode/clode-0.0.2-py3-none-any.whl
+
+      - name: Run bazel tests
+        run: bazel.exe test //...

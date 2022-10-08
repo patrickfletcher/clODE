@@ -17,14 +17,14 @@ http_archive(
     url = "https://github.com/bazelbuild/rules_apple/releases/download/1.1.2/rules_apple.1.1.2.tar.gz",
 )
 
-load("@rules_python//python:repositories.bzl", "python_register_toolchains")
+#load("@rules_python//python:repositories.bzl", "python_register_toolchains")
 
-python_register_toolchains(
-    name = "python3_9",
-    # Available versions are listed in @rules_python//python:versions.bzl.
-    # We recommend using the same version your team is already standardized on.
-    python_version = "3.9",
-)
+#python_register_toolchains(
+#    name = "python3_9",
+#    # Available versions are listed in @rules_python//python:versions.bzl.
+#    # We recommend using the same version your team is already standardized on.
+#    python_version = "3.9",
+#)
 #
 #load("@python3_9//:defs.bzl", "interpreter")
 #load("@rules_python//python:pip.bzl", "pip_parse")

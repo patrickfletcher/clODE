@@ -233,8 +233,10 @@ def _get_python_include(repository_ctx, python_bin):
             python_bin,
             "-c",
             "from __future__ import print_function;" +
-            "from distutils import sysconfig;" +
-            "print(sysconfig.get_python_inc())",
+            #"from distutils import sysconfig;" +
+            "import sysconfig;" +
+            #"print(sysconfig.get_python_inc())",
+            "print(sysconfig.get_path('include'))",
         ],
         error_msg = "Problem getting python include path for {}.".format(python_bin),
         error_details = (
