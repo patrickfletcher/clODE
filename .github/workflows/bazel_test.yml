@@ -20,7 +20,7 @@ jobs:
 
       # test
       - name: Build the code
-        run: bazel build //...
+        run: bazel build //... --sandbox_debug
 
       # Until we have wheel install as a Bazel action
       - name: Install pip wheel
@@ -42,9 +42,15 @@ jobs:
       - name: Build the code
         run: bazel build //...
 
+      - name: List files
+        run: ls bazel-out
+
+      - name: List files 2
+        run: ls bazel-out/darwin_arm64-fastbuild/bin/pyclode/
+
       # Until we have wheel install as a Bazel action
       - name: Install pip wheel
-        run: pip install bazel-out/darwin_arm64-fastbuild/bin/pyclode/clode-0.0.2-py3-none-any.whl
+        run: pip3 install bazel-out/darwin_arm64-fastbuild/bin/pyclode/clode-0.0.2-py3-none-any.whl
 
       - name: Run bazel tests
         run: bazel test //...
@@ -57,6 +63,9 @@ jobs:
       # Checks-out your repository under $GITHUB_WORKSPACE, which is the CWD for
       # the rest of the steps
       - uses: actions/checkout@v2
+
+      - name: Python version check
+        run: python --version
 
       # test
       - name: Build the code
