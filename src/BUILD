@@ -117,25 +117,45 @@ cc_library(
     ],
 )
 
+#apple_dynamic_framework_import(
+#    name = "Python_H",
+#    framework_imports = glob(["Python.framework/**"]),
+#)
+
 cc_binary(
     name = "clode.so",
     srcs = ["CLODEpython.cpp"],
-    copts = select({
-        "@platforms//os:osx": ["-I/Library/Frameworks/Python.framework/Versions/Current/Headers/"],
-        "@platforms//os:linux": [],
-        "@platforms//os:windows": [],
-    }),
+    #    copts = select({
+    #        #"@platforms//os:osx": ["-I/Library/Frameworks/Python.framework/Versions/Current/Headers/"],
+    #        "@platforms//os:osx": [
+    #            "-F/Library/Frameworks",
+    #            "-framework Python",
+    #        ],
+    #        "@platforms//os:linux": [],
+    #        "@platforms//os:windows": [],
+    #    }),
     includes = [
         ".",
     ],
+    #    linkopts = select({
+    #        #"@platforms//os:osx": ["-I/Library/Frameworks/Python.framework/Versions/Current/Headers/"],
+    #        "@platforms//os:osx": [
+    #            "-F/Library/Frameworks",
+    #            "-framework Python",
+    #        ],
+    #        "@platforms//os:linux": [],
+    #        "@platforms//os:windows": [],
+    #    }),
     linkshared = True,
     visibility = ["//visibility:public"],
     deps = [
+        #":Python_H",
         ":clode",
         ":clode_features",
         ":clode_trajectory",
-        "@com_github_pybind_pybind11//:pybind11",
         "//src/logging:python_sink",
+        "@com_github_pybind_pybind11//:pybind11",
+        "@local_config_python//:python_headers",
         #"@org_python_ftp//:python",
     ],
 )

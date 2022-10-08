@@ -49,7 +49,10 @@ cc_library(
     #        "Modules/**/*.h",
     #    ]),
     includes =
-        ["/Library/Framework/Python.framework/Versions/Current/Headers/"],
+        #glob(["Include", "PC", "Modules"]),
+        #glob(["Include", "PC", "Modules", "Modules/**/*"]),
+        ["Include", "PC", "Modules", "Modules/_decimal/libmpdec", "Include/cpython"],
+    #["/Library/Framework/Python.framework/Versions/Current/Headers/"],
     deps = ["python-internal"],
     visibility = ["//visibility:public"],
 )

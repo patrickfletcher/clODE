@@ -56,3 +56,13 @@ def _com_github_pybind11_pybind():
         name = "pybind11",
         actual = "@com_github_pybind_pybind11//:pybind11",
     )
+
+#def _com_github_grpc_grpc():
+#    external_http_archive(
+#        name = "com_github_grpc_grpc",
+#        build_file = "//bazel/external:grpc.BUILD",
+#    )
+#    native.bind(
+#        name = "grpc",
+#        actual = "@com_github_grpc_grpc//:grpc",
+#    )
