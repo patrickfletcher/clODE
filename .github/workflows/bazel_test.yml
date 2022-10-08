@@ -5,12 +5,18 @@ on: [push, pull_request]
 jobs:
   test_linux:
     # virtual environments: https://github.com/actions/virtual-environments
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
 
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, which is the CWD for
       # the rest of the steps
       - uses: actions/checkout@v2
+
+      - name: Update system
+        run: sudo apt update
+
+      - name: Install OpenCL
+        run: sudo apt install ocl-icd-opencl-dev
 
       # test
       - name: Test the code
@@ -38,11 +44,11 @@ jobs:
       # the rest of the steps
       - uses: actions/checkout@v2
       - uses: bazelbuild/setup-bazelisk@v2
-      - name: Mount bazel cache  # Optional
-        uses: actions/cache@v3
-        with:
-          path: "~/.cache/bazel"
-          key: bazel
+#      - name: Mount bazel cache  # Optional
+#        uses: actions/cache@v3
+#        with:
+#          path: "~/.cache/bazel"
+#          key: bazel
 
       # test
       - name: Test the code
