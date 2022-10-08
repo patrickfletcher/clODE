@@ -17,6 +17,78 @@ _HEADERS_HELP = (
     "on Redhat-based systems."
 )
 
+def raw_exec(repository_ctx, cmdline):
+    """Executes a command via repository_ctx.execute() and returns the result.
+    This method is useful for debugging purposes. For example, to print all
+    commands executed as well as their return code.
+    Args:
+      repository_ctx: the repository_ctx
+      cmdline: the list of args
+    Returns:
+      The 'exec_result' of repository_ctx.execute().
+    """
+    return repository_ctx.execute(cmdline)
+
+def tf_execute(
+        repository_ctx,
+        cmdline,
+        error_msg = None,
+        error_details = None,
+        allow_failure = False):
+    """Executes an arbitrary shell command.
+    Args:
+      repository_ctx: the repository_ctx object
+      cmdline: list of strings, the command to execute
+      error_msg: string, a summary of the error if the command fails
+      error_details: string, details about the error or steps to fix it
+      allow_failure: bool, if True, an empty stdout result or output to stderr
+        is fine, otherwise either of these is an error
+    Returns:
+      The result of repository_ctx.execute(cmdline)
+    """
+    result = raw_exec(repository_ctx, cmdline)
+    if (result.stderr or not result.stdout) and not allow_failure:
+        fail(
+            "\n".join([
+                error_msg.strip() if error_msg else "Repository command failed",
+                result.stderr.strip(),
+                error_details if error_details else "",
+                "command: " + " ".join(cmdline),
+            ]),
+        )
+    return result
+
+def _which(repository_ctx, program_name, allow_failure = False):
+    """Returns the full path to a program on the execution platform.
+    Args:
+      repository_ctx: the repository_ctx
+      program_name: name of the program on the PATH
+    Returns:
+      The full path to a program on the execution platform.
+    """
+
+    #https://github.com/tensorflow/tensorflow/blob/master/third_party/remote_config/common.bzl
+    if _is_windows(repository_ctx):
+        if not program_name.endswith(".exe"):
+            program_name = program_name + ".exe"
+        out = tf_execute(
+            repository_ctx,
+            ["C:\\Windows\\System32\\where.exe", program_name],
+            allow_failure = allow_failure,
+        ).stdout
+        if out != None:
+            out = out.replace("\\", "\\\\").rstrip()
+        return out
+
+    out = tf_execute(
+        repository_ctx,
+        ["which", program_name],
+        allow_failure = allow_failure,
+    ).stdout
+    if out != None:
+        out = out.replace("\\", "\\\\").rstrip()
+    return out
+
 def _tpl(repository_ctx, tpl, substitutions = {}, out = None):
     if not out:
         out = tpl
@@ -151,7 +223,7 @@ def _get_python_bin(repository_ctx, bin_path_key, default_bin_path, allow_absent
     python_bin = repository_ctx.os.environ.get(bin_path_key, default_bin_path)
     if not repository_ctx.path(python_bin).exists:
         # It's a command, use 'which' to find its path.
-        python_bin_path = repository_ctx.which(python_bin)
+        python_bin_path = _which(repository_ctx, python_bin, allow_failure = True)
     else:
         # It's a path, use it as it is.
         python_bin_path = python_bin
