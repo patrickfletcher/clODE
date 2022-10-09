@@ -50,7 +50,7 @@ jobs:
         run: pip3 install bazel-out/darwin-fastbuild/bin/pyclode/clode-0.0.2-py3-none-any.whl
 
       - name: Install test dependencies
-        run: pip install numpy
+        run: pip3 install numpy
 
       - name: Run bazel tests
         run: bazel test --test_output=errors //...

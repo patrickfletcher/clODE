@@ -354,12 +354,16 @@ def _create_single_version_package(
         variety_name,
         bin_path_key,
         default_bin_path,
+        fallback_bin_path,
         lib_path_key,
         allow_absent):
     """Creates the repository containing files set up to build with Python."""
     empty_include_rule = "filegroup(\n  name=\"{}_include\",\n  srcs=[],\n)".format(variety_name)
 
-    python_bin = _get_python_bin(repository_ctx, bin_path_key, default_bin_path, allow_absent)
+    python_bin = _get_python_bin(repository_ctx, bin_path_key, default_bin_path, True)
+    if python_bin == None and fallback_bin_path != None:
+        python_bin = _get_python_bin(repository_ctx, bin_path_key, default_bin_path, allow_absent)
+
     if (python_bin == None or
         _check_python_bin(
             repository_ctx,
@@ -383,6 +387,8 @@ def _create_single_version_package(
     # To build Python C/C++ extension on Windows, we need to link to python import library pythonXY.lib
     # See https://docs.python.org/3/extending/windows.html
     if _is_windows(repository_ctx):
+        if python_include_rule == empty_include_rule:
+            return
         python_include = _normalize_path(python_include)
         python_import_lib_name = _get_python_import_lib_name(
             repository_ctx,
@@ -419,6 +425,7 @@ def _python_autoconf_impl(repository_ctx):
         "_python2",
         _PYTHON2_BIN_PATH,
         "python2",
+        None,
         _PYTHON2_LIB_PATH,
         True,
     )
@@ -427,6 +434,7 @@ def _python_autoconf_impl(repository_ctx):
         "_python3",
         _PYTHON3_BIN_PATH,
         "python3",
+        "python",
         _PYTHON3_LIB_PATH,
         False,
     )

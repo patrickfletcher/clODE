@@ -137,15 +137,11 @@ cc_binary(
     includes = [
         ".",
     ],
-    #    linkopts = select({
-    #        #"@platforms//os:osx": ["-I/Library/Frameworks/Python.framework/Versions/Current/Headers/"],
-    #        "@platforms//os:osx": [
-    #            "-F/Library/Frameworks",
-    #            "-framework Python",
-    #        ],
-    #        "@platforms//os:linux": [],
-    #        "@platforms//os:windows": [],
-    #    }),
+    linkopts = select({
+        "@platforms//os:osx": [],
+        "@platforms//os:linux": ["-lOpenCL"],
+        "@platforms//os:windows": [],
+    }),
     linkshared = True,
     visibility = ["//visibility:public"],
     deps = [
