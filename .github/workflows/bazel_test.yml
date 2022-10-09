@@ -16,6 +16,12 @@ jobs:
         run: sudo apt update
 
       - name: Install Dependencies
+        run: sudo apt install ocl-icd-libopencl1 clinfo beignet
+
+      - name: Test OpenCL
+        run: clinfo
+
+      - name: Install Dev Dependencies
         run: sudo apt install ocl-icd-opencl-dev python3-dev
 
       # test
