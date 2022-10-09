@@ -139,7 +139,7 @@ cc_binary(
     ],
     linkopts = select({
         "@platforms//os:osx": [],
-        "@platforms//os:linux": ["-lOpenCL"],
+        "@platforms//os:linux": ["-lOpenCL", "-static"],
         "@platforms//os:windows": [],
     }),
     linkshared = True,
