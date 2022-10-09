@@ -56,8 +56,6 @@ int main(int argc, char **argv)
 	sp.max_steps=10000000;
 	sp.max_store=10000000;
 	sp.nout=50;
-	
-	int mySeed=1;
 
 	//default pars
 	std::vector<double> p({1.4, 0, 5, 0, 0, 0, 0, 0, 0.2, 10, -50, 1, 1, 39, 1, 1, 1, 0.03}); 

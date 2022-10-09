@@ -1,0 +1,63 @@
+v(0)=-60.00
+n(0)=0.0
+f(0)=0.0
+c(0)=0.1
+
+p gcal=1.5000
+p gsk=3.0
+p gbk=1.0
+n gk=2.0
+n gl=0.05
+n kc=0.2
+n vca=60, vk=-75, vl=-50
+n Cm=10.0
+n vn=-5
+n vm=-20
+n vf=-20
+n sn=10
+n sm=12
+n sf=2
+n taun=30.0
+n taubk=8.0
+n ff=0.01
+n alpha=0.0015
+n ks=0.4
+
+c2=c*c
+vkdrive = v-vk
+
+minf=1/(1+exp((vm-v)/sm))
+ninf=1/(1+exp((vn-v)/sn))
+
+ica=gcal*minf*(v-vca)
+isk=gsk*c2/(c2+ks*ks)*vkdrive
+ibk=gbk*f*vkdrive
+ik=gk*n*vkdrive
+il=gl*(v-vl)
+
+p sig=2
+wiener w
+inoise=sig*w
+itot=ica+ isk + ibk + ik + il +inoise
+
+v'= -itot/Cm
+n'= (ninf - n)/taun
+f'= (1/(1+exp((vf-v)/sf)) - f)/taubk
+c' = -ff*(alpha*ica+kc*c)
+
+aux ica=ica
+
+@ dt=0.5
+@ total=3000
+
+@ maxstor=20000000
+@ bounds=10000000
+@ xp=t
+@ yp=v
+@ xlo=0
+@ xhi=5000
+@ ylo=-75
+@ yhi=0
+@ method=Runge
+@ bell=0
+done

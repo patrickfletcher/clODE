@@ -25,45 +25,28 @@ template<typename T> std::vector<T> generateRandomPoints(std::vector<T> lb, std:
 //currently the only command line arguments are to select device/vendor type ("--device cpu/gpu/accel", "--vendor amd/intel/nvidia")
 int main(int argc, char **argv)
 {
- 	#if defined(WIN32)||defined(_WIN64)
- 		_putenv_s("CUDA_CACHE_DISABLE", "1");
- 	#else
- 		setenv("CUDA_CACHE_DISABLE", "1", 1);
- 	#endif
 	try 
 	{
-		
-	cl_int nPts=4096;
+ 	cl_int nPts=32;
 	bool CLSinglePrecision=true;
 	
 	ProblemInfo prob;
-
-	prob.clRHSfilename="samples/lactotroph.cl";
-		
+    prob.clRHSfilename="samples/lactotroph.cl";;
 	prob.nVar=4;
 	prob.nPar=3;
 	prob.nAux=1;
-	prob.nWiener=1;
-
-    prob.varNames.push_back("a");
-    prob.varNames.push_back("b");
-    prob.varNames.push_back("c");
-    prob.varNames.push_back("d");
-
-    prob.parNames.push_back("aa");
-    prob.parNames.push_back("bb");
-    prob.parNames.push_back("cc");
-
-    prob.auxNames.push_back("dd");
-
-
-	std::string stepper="euler";
+	prob.nWiener=0;
+	prob.varNames.assign({"v","n","f","c"});
+	prob.parNames.assign({"gcal","gsk","gbk"});
+	prob.auxNames.assign({"ical"});
+	
+	std::string stepper="rk4";
 	
 	//parameters for solver and objective function
+	
 	std::vector<double> tspan({0.0,1000.0});
-	
 	int nReps=1;
-	
+
 	SolverParams<double> sp;
 	sp.dt=0.1;
 	sp.dtmax=1.00;
@@ -72,9 +55,26 @@ int main(int argc, char **argv)
 	sp.max_steps=10000000;
 	sp.max_store=10000000;
 	sp.nout=50;
+
+	int mySeed=1;
+
+	//default pars
+	std::vector<double> p({1.5,3.0,1.0});
 	
-	std::string observer="thresh2";
+	// repeat the parameters nPts times: pack each paramater contiguously
+	std::vector<double> pars(nPts, p[0]);
+	pars.insert(pars.end(), nPts, p[1]);
+	pars.insert(pars.end(), nPts, p[2]);
+
+	// //Parameter sets will be sampled uniformly from [lb,ub] for each parameter
+	// std::vector<double> lb({1.0,5.0,1.0});
+	// std::vector<double> ub({1.0,5.0,1.0});
+	// std::vector<double> pars=generateRandomPoints(lb, ub, nPts);
 	
+	//initial values: all zeros
+	std::vector<double> x0(nPts*prob.nVar, 0.0);
+	
+	std::string observer = "thresh2";
 	ObserverParams<double> op;
 	op.eVarIx=0;
 	op.fVarIx=0;
@@ -86,20 +86,6 @@ int main(int argc, char **argv)
 	op.dxUpThresh=0;
 	op.dxDownThresh=0;
 	op.eps_dx=1e-7;
-	
-	
-	int mySeed=1;
-	
-	//default pars
-	std::vector<double> p({1.0,5.0,1.0}); 
-	
-	//Parameter sets will be sampled uniformly from [lb,ub] for each parameter
-	std::vector<double> lb({1.0,5.0,1.0});
-	std::vector<double> ub({1.0,5.0,1.0});
-	std::vector<double> pars=generateRandomPoints(lb, ub, nPts);
-	
-	//initial values: all zeros
-	std::vector<double> x0(nPts*prob.nVar, 0.0);
 
 	
 	// Select device type and/or vendor using command line flags ("--device cpu/gpu/accel", "--vendor amd/intel/nvidia")
@@ -109,7 +95,6 @@ int main(int argc, char **argv)
 	srand(static_cast <unsigned> (time(0))); 
     std::chrono::time_point<std::chrono::high_resolution_clock> start, end;
 	std::chrono::duration<double, std::milli> elapsed_ms;
-
 
 	// create the simulator
 	CLODEfeatures clo(prob, stepper, observer, CLSinglePrecision, opencl, CLODE_ROOT);
@@ -125,7 +110,7 @@ int main(int argc, char **argv)
 	clo.transient();
     clo.shiftX0();
 
-		
+
 	start = std::chrono::high_resolution_clock::now();
 		
 	std::cout<<std::endl;
@@ -139,9 +124,13 @@ int main(int argc, char **argv)
 	//retrieve result from device
 	std::vector<double> F=clo.getF();
 	tspan=clo.getTspan();
-	std::cout<< "\ntf="<< tspan[0] <<", F:"<< "\n";
+	
+	std::vector<std::string> fnames=clo.getFeatureNames();
+
+	std::cout<< "\ntf="<< tspan[0] <<std::endl;
+	std::cout<<"Features:"<< "\n";
 	for (int i=0; i<clo.getNFeatures(); ++i)
-		std::cout<< " " << F[i*nPts];
+		std::cout << " " << fnames[i] << " = " << F[i*nPts] << "\n";
 	
 	std::cout<<std::endl;
 	

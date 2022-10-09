@@ -1528,6 +1528,8 @@ classdef gridtool < handle %matlab.mixin.SetGet
                 opts.nGrid=[32,32]
                 opts.nClick=3
                 opts.tscale=1
+                opts.grid_device="GPU"
+                opts.traj_device="CPU"
             end
             
             app.createControlFig();
@@ -1538,8 +1540,9 @@ classdef gridtool < handle %matlab.mixin.SetGet
                         
             %auto select first GPU for grid, fastest clock for traj
             app.devices=queryOpenCL();
-            app.grid_device=find({app.devices(:).type}=="GPU",1,'first');
-            [~,app.traj_device]=max([app.devices(:).maxClock]);
+            app.grid_device=find({app.devices(:).type}==opts.grid_device,1,'first');
+            app.traj_device=find({app.devices(:).type}==opts.traj_device,1,'first');
+%             [~,app.traj_device]=max([app.devices(:).maxClock]);
             
             app.gridDeviceDropDown.Items={app.devices(:).name};
             app.gridDeviceDropDown.ItemsData=1:length(app.devices);

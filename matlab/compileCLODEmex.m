@@ -26,8 +26,8 @@ elseif isunix % Code to run on Linux plaform
     
 elseif ispc % Code to run on Windows platform 
 %     opencl_include_dir = pwd; %cl.hpp
-    opencl_include_dir = 'C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v11.2/include'; %cl.hpp
-    opencl_lib_dir = 'C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v11.2/lib/x64';  %OpenCL.lib
+    opencl_include_dir = 'C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v11.5/include'; %cl.hpp
+    opencl_lib_dir = 'C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v11.5/lib/x64';  %OpenCL.lib
     libopencl='-lOpenCL';
     compflags='COMPFLAGS="$COMPFLAGS /std:c++latest"';
 %     compflags='COMPFLAGS="$COMPFLAGS -Wall"';
@@ -42,7 +42,7 @@ end
 cd ../src/
 clode_path=[pwd filesep]; 
 cd ../matlab/
-clode_path=strrep(clode_path,'\','/'); %stupid windows backslash filesep
+clode_path=strrep(clode_path,'\','/'); 
 
 debugchar='';
 % debugchar='-g';

@@ -30,7 +30,7 @@ int main(int argc, char **argv)
 	try 
 	{
 		
-	cl_int nPts=4096;
+	cl_int nPts=32;
 	bool CLSinglePrecision=true;
 	
 	ProblemInfo prob;
@@ -38,79 +38,85 @@ int main(int argc, char **argv)
 	prob.nVar=4;
 	prob.nPar=3;
 	prob.nAux=1;
-	prob.nWiener=1;
+	prob.nWiener=0;
+	prob.varNames.assign({"v","n","f","c"});
+	prob.parNames.assign({"gcal","gsk","gbk"});
+	prob.auxNames.assign({"ical"});
 	
 	std::string stepper="rk4";
 	
 	//parameters for solver and objective function
+	
 	std::vector<double> tspan({0.0,1000.0});
-	
 	int nReps=1;
-	
-	SolverParams<double> sp {
-        .dt=0.1,
-        .dtmax=1.00,
-        .abstol=1e-6,
-        .reltol=1e-3,
-        .max_steps=10000000,
-        .max_store=10000000,
-        .nout=50,
-    };
-	
-	int mySeed=1;
-	
+
+	SolverParams<double> sp;
+	sp.dt=0.1;
+	sp.dtmax=1.00;
+	sp.abstol=1e-6;
+	sp.reltol=1e-3;
+	sp.max_steps=10000000;
+	sp.max_store=10000000;
+	sp.nout=50;
+
 	//default pars
-	std::vector<double> p({1.0,5.0,1.0}); 
+	std::vector<double> p({1.5,3.0,1.0}); 
 	
-	//Parameter sets will be sampled uniformly from [lb,ub] for each parameter
-	std::vector<double> lb({1.0,5.0,1.0});
-	std::vector<double> ub({1.0,5.0,1.0});
-	std::vector<double> pars=generateRandomPoints(lb, ub, nPts);
+	// repeat the parameters nPts times: pack each paramater contiguously
+	std::vector<double> pars(nPts, p[0]);
+	pars.insert(pars.end(), nPts, p[1]);
+	pars.insert(pars.end(), nPts, p[2]);
+
+	// //Parameter sets will be sampled uniformly from [lb,ub] for each parameter
+	// std::vector<double> lb({1.0,5.0,1.0});
+	// std::vector<double> ub({1.0,5.0,1.0});
+	// std::vector<double> pars=generateRandomPoints(lb, ub, nPts);
 	
 	//initial values: all zeros
 	std::vector<double> x0(nPts*prob.nVar, 0.0);
 
+	// Select device type and/or vendor using command line flags ("--device cpu/gpu/accel", "--vendor amd/intel/nvidia")
 	OpenCLResource opencl( argc, argv);
-	
+
+
 	//prep timer and PRNG
 	srand(static_cast <unsigned> (time(0))); 
     std::chrono::time_point<std::chrono::high_resolution_clock> start, end;
 	std::chrono::duration<double, std::milli> elapsed_ms;
 	
-	
+
 	// create the simulator
-	//~ CLODE clo(prob);
 	CLODE clo(prob, stepper, CLSinglePrecision, opencl, CLODE_ROOT);
-	
+
 	//copy problem data to the device
 	clo.initialize(tspan, x0, pars, sp); 
 	
-	//~ std::cout<<"here"<<std::endl;
-	clo.seedRNG(mySeed);
+	// std::cout<<"here"<<std::endl;
+	// clo.seedRNG(mySeed);
 	
 	//run the simulation 
 	clo.transient();
 	
-	//~ clo.initialize(tspan, x0, pars, sp); 
-	//~ clo.initializeProblem(tspan, x0, pars); 
+	// clo.initialize(tspan, x0, pars, sp); 
+	// clo.initializeProblem(tspan, x0, pars); 
 	
-	//~ clo.transient(); 
-	//~ clo.transient(pars);
-	//~ clo.transient(tspan, x0);
-	//~ clo.transient(tspan, x0, pars);
+	// clo.transient(); 
+	// clo.transient(pars);
+	// clo.transient(tspan, x0);
+	// clo.transient(tspan, x0, pars);
 	
 	
 	std::cout<<std::endl;
 	start = std::chrono::high_resolution_clock::now();
 	
-	for(int i=0;i<nReps;++i){
+	for(int i=0; i<nReps; ++i){
 		clo.transient();
-		//~ xf=clo.getX0();
-		//~ std::cout<<clo.getT0();
-		//~ for (int i=0; i<prob.nVar; ++i)
-			//~ std::cout<< " " << xf[i];
-			//~ 
-		//~ std::cout<<std::endl;
+		// xf=clo.getX0();
+		// std::cout<<clo.getT0();
+		// for (int i=0; i<prob.nVar; ++i)
+			// std::cout<< " " << xf[i];
+			// 
+		// std::cout<<std::endl;
 	}
 	
 	end = std::chrono::high_resolution_clock::now();
@@ -119,7 +125,9 @@ int main(int argc, char **argv)
 	//retrieve result from device
 	std::vector<double> xf=clo.getXf();
 	tspan=clo.getTspan();
-	std::cout<< "\ntf="<< tspan[0] <<", xf:"<< "\n";
+	
+	std::cout<< "\ntf="<< tspan[1] << std::endl;
+	std::cout<< "xf:" << "\n";
 	for (int i=0; i<prob.nVar; ++i)
 		std::cout<< " " << xf[i*nPts];
 
@@ -136,7 +144,6 @@ int main(int argc, char **argv)
     
 	return 0;
 }
-
 
 //Generate random points within given bounds. Pack coordinates contiguously: all x1, then x2, etc.
 template<typename T> std::vector<T> generateRandomPoints(std::vector<T> lb, std::vector<T> ub, int nPts)
