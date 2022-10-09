@@ -16,7 +16,7 @@ jobs:
         run: sudo apt update
 
       - name: Install Dependencies
-        run: sudo apt install ocl-icd-libopencl1 clinfo beignet
+        run: sudo apt install ocl-icd-libopencl1 clinfo
 
       - name: Test OpenCL
         run: clinfo
@@ -72,6 +72,9 @@ jobs:
 
       - name: Python version check
         run: python --version
+
+      - name: Python library check
+        run:   python bazel/get_python_libs.py
 
       # test
       - name: Build the code
