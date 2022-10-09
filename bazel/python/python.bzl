@@ -368,7 +368,6 @@ def _create_single_version_package(
             allow_absent,
         ) == None) and allow_absent:
         python_include_rule = empty_include_rule
-        python_include = ""
     else:
         python_lib = _get_python_lib(repository_ctx, python_bin, lib_path_key)
         _check_python_lib(repository_ctx, python_lib)

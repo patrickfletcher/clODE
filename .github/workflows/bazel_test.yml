@@ -26,6 +26,9 @@ jobs:
       - name: Install pip wheel
         run: pip install bazel-out/k8-fastbuild/bin/pyclode/clode-0.0.2-py3-none-any.whl
 
+      - name: Install test dependencies
+        run: pip install numpy
+
       - name: Run bazel tests
         run: bazel test --test_output=errors //...
 
@@ -42,15 +45,12 @@ jobs:
       - name: Build the code
         run: bazel build //...
 
-      - name: List files
-        run: ls bazel-out
-
-      - name: List files 2
-        run: ls bazel-out/darwin-fastbuild/bin/pyclode/
-
       # Until we have wheel install as a Bazel action
       - name: Install pip wheel
         run: pip3 install bazel-out/darwin-fastbuild/bin/pyclode/clode-0.0.2-py3-none-any.whl
+
+      - name: Install test dependencies
+        run: pip install numpy
 
       - name: Run bazel tests
         run: bazel test --test_output=errors //...
