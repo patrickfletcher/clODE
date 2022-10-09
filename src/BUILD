@@ -139,10 +139,17 @@ cc_binary(
     ],
     linkopts = select({
         "@platforms//os:osx": [],
-        "@platforms//os:linux": ["-lOpenCL", "-static"],
+        "@platforms//os:linux": [
+            "-lOpenCL",
+        ],
         "@platforms//os:windows": [],
     }),
     linkshared = True,
+    linkstatic = select({
+        "@platforms//os:osx": False,
+        "@platforms//os:linux": True,
+        "@platforms//os:windows": False,
+    }),
     visibility = ["//visibility:public"],
     deps = [
         #":Python_H",

@@ -19,6 +19,8 @@ py_test(
 
 py_test(
     name = "test_lactotroph_more_vars",
+    size = "large",
+    timeout = "short",
     srcs = ["test_lactotroph_more_vars.py"],
     data = [":test.cl"],
     deps = ["//src:py_clode"],
@@ -36,6 +38,8 @@ py_test(
 
 py_test(
     name = "pituitary",
+    size = "large",
+    timeout = "short",
     srcs = ["pituitary.py"],
     data = [":test.cl"],
     deps = ["//src:py_clode"],

@@ -30,7 +30,7 @@ jobs:
         run: pip install numpy
 
       - name: Run bazel tests
-        run: bazel test --test_output=errors //...
+        run: bazel test --test_output=errors //... --test_size_filters=medium
 
   test_macos:
     # virtual environments: https://github.com/actions/virtual-environments
@@ -53,7 +53,7 @@ jobs:
         run: pip3 install numpy
 
       - name: Run bazel tests
-        run: bazel test --test_output=errors //...
+        run: bazel test --test_output=errors //... --test_size_filters=medium
 
   test_windows:
     # virtual environments: https://github.com/actions/virtual-environments
@@ -76,4 +76,4 @@ jobs:
         run: pip install bazel-out/darwin-fastbuild/bin/pyclode/clode-0.0.2-py3-none-any.whl
 
       - name: Run bazel tests
-        run: bazel.exe test --test_output=errors //...
+        run: bazel.exe test --test_output=errors //... --test_size_filters=medium

@@ -372,6 +372,7 @@ def _create_single_version_package(
             allow_absent,
         ) == None) and allow_absent:
         python_include_rule = empty_include_rule
+        no_python_include = True
     else:
         python_lib = _get_python_lib(repository_ctx, python_bin, lib_path_key)
         _check_python_lib(repository_ctx, python_lib)
@@ -382,11 +383,12 @@ def _create_single_version_package(
             "{}_include".format(variety_name),
             "{}_include".format(variety_name),
         )
+        no_python_include = False
     python_import_lib_genrule = ""
 
     # To build Python C/C++ extension on Windows, we need to link to python import library pythonXY.lib
     # See https://docs.python.org/3/extending/windows.html
-    if _is_windows(repository_ctx):  # and python_include_rule != empty_include_rule):
+    if _is_windows(repository_ctx) and not no_python_include:
         python_include = _normalize_path(python_include)
         python_import_lib_name = _get_python_import_lib_name(
             repository_ctx,
