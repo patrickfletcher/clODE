@@ -75,6 +75,9 @@ class ObserverOutput:
     #     #     offset = 3 +
     #     raise NotImplementedError(f"{self._observer_type} not implemented!")
 
+    def get_feature_names(self):
+        return self._feature_names
+
     def _get_var(self, var: str, op: str):
         try:
             index = self._feature_names.index(f"{op} {var}")

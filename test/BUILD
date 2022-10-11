@@ -44,3 +44,13 @@ py_test(
     data = [":test.cl"],
     deps = ["//src:py_clode"],
 )
+
+py_test(
+    name = "test_vdp",
+    srcs = ["test_vdp.py"],
+    data = [":van_der_pol_oscillator.cl"],
+    deps = [
+        "//pyclode:clode_init",
+        "//src:py_clode",
+    ],
+)

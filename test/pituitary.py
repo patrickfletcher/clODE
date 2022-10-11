@@ -142,7 +142,6 @@ def generate_clode_pituitary(parameter_function, dt: float, num_simulations: int
         dt=0.1,
         dtmax=1,
         tspan=tspan,
-
     )
     #print(list(default_ode_parameters.keys()))
 

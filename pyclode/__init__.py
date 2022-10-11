@@ -20,6 +20,7 @@ def _get_runtime():
 class Stepper(Enum):
     euler = "euler"
     rk4 = "rk4"
+    dormand_prince = "dopri5"
 
 
 class ProblemInfo:
