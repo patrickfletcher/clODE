@@ -32,6 +32,7 @@ tspan = (0.0, 1000.)
 # x0 = np.tile(x0, (nPts, 1)).transpose().flatten()
 pars = [1.0, 5.0, 0.0] * nPts
 x0 = [0, 0, 0, 0] * nPts
+clode_trajectory.build_cl()
 clode_trajectory.initialize(tspan, x0, pars, sp)
 
 mySeed = 1

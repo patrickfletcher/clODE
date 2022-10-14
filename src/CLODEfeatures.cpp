@@ -81,8 +81,6 @@ void CLODEfeatures::initialize(std::vector<cl_double> newTspan, std::vector<cl_d
 {
 	clInitialized = false;
 
-    buildCL();
-
 	//at the time of initialize, make sure observerDataSize and nFeatures are up to date (for d_F, d_odata)
 	updateObserverDefineMap();
 

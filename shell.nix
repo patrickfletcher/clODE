@@ -7,8 +7,4 @@ packages = [
 ];
 
 inputsFrom = [ pkgs.hello pkgs.gnutar ];
-#
-#shellHook = ''
-# bazel build //pyclode
-#'';
 }

@@ -35,6 +35,7 @@ x0 = np.tile(x0, (nPts, 1)).transpose().flatten()
 print(x0)
 print("Init with x0", x0.transpose().flatten().shape)
 print("Init with pars", pars.transpose().flatten().shape)
+clode_features.build_cl()
 clode_features.initialize(tspan, x0, pars, sp, op)
 
 mySeed = 1

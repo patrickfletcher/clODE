@@ -196,8 +196,6 @@ void CLODE::initialize(std::vector<cl_double> newTspan, std::vector<cl_double> n
 {
 	clInitialized = false;
 
-    buildCL();
-
 	setTspan(newTspan);
 	setProblemData(newX0, newPars); //will call setNpts
 	setSolverParams(newSp);

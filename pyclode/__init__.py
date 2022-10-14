@@ -152,6 +152,7 @@ class CLODEFeatures:
         #print("Init with x0", x0.transpose().flatten().shape)
         #print("Init with pars", parameters.transpose().flatten().shape)
         #print(x0.transpose().flatten())
+        self._features.build_cl()
         self._features.initialize(self.tspan,
                                   x0.transpose().flatten(),
                                   parameters.transpose().flatten(),

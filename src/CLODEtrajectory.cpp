@@ -60,8 +60,6 @@ void CLODEtrajectory::initialize(std::vector<cl_double> newTspan, std::vector<cl
 {
 
 	clInitialized = false;
-    
-    buildCL();
 
 	setTspan(newTspan);
 	setProblemData(newX0, newPars); //will set nPts

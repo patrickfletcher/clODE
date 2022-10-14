@@ -14,6 +14,7 @@ clode_features = clode.clode_features(pi, stepper, observer, True, open_cl, "src
 tspan = [0.0, 1000.0]
 pars = [1.0, 5.0, 1.0] * nPts
 x0 = [0, 0, 0, 0] * nPts
+clode_features.build_cl()
 clode_features.initialize(tspan, x0, pars, sp, op)
 
 mySeed=1

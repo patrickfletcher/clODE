@@ -37,12 +37,15 @@ py_test(
 )
 
 py_test(
-    name = "pituitary",
+    name = "test_pituitary",
     size = "large",
     timeout = "short",
-    srcs = ["pituitary.py"],
+    srcs = ["test_pituitary.py"],
     data = [":test.cl"],
-    deps = ["//src:py_clode"],
+    deps = [
+        "//pyclode:clode_init",
+        "//src:py_clode",
+    ],
 )
 
 py_test(

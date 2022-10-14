@@ -102,6 +102,7 @@ int main(int argc, char **argv)
 	//~ std::cout<<"here"<<std::endl;
 	//copy problem data to the device
 
+    clo.buildCL();
 	clo.initialize(tspan, x0, pars, sp, op);
 
 	clo.seedRNG(mySeed);
