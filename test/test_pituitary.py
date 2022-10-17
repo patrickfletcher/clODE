@@ -135,7 +135,7 @@ def generate_clode_pituitary(parameter_function, dt: float, num_simulations: int
         event_var="V",
         feature_var="V",
         observer=Observer.threshold_2,
-        stepper=clode.Stepper.rk4,
+        stepper=clode.stepper.Stepper.rk4,
         dt=0.1,
         dtmax=1,
         tspan=tspan,

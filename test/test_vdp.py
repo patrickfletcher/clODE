@@ -34,7 +34,7 @@ def vdp_dormand_prince(end: int):
         parameter_names=["mu"],
         num_noise=0,
         observer=pyclode.Observer.threshold_2,
-        stepper=pyclode.Stepper.dormand_prince,
+        stepper=pyclode.stepper.Stepper.dormand_prince,
         tspan=tspan,
     )
 

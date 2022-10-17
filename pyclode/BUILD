@@ -4,7 +4,12 @@ py_library(
     name = "clode_init",
     srcs = [
         "__init__.py",
+        "features.py",
         "observer.py",
+        "problem_info.py",
+        "runtime.py",
+        "solver_params.py",
+        "stepper.py",
     ],
     visibility = ["//visibility:public"],
     deps = ["//src:py_clode"],
