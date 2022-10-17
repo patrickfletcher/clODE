@@ -81,8 +81,9 @@ int main(int argc, char **argv)
 
     clo.buildCL();
     clo.initialize(tspan, x0, pars, sp);
-	
-	// clo.seedRNG(mySeed);
+
+    int mySeed = 1;
+    clo.seedRNG(mySeed);
 	
 	//warm up to pre-set nSteps and nPts
 	clo.transient(); 

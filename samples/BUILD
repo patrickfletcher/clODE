@@ -28,7 +28,7 @@ cc_test(
     name = "testTraj",
     srcs = ["testTrajectory.cpp"],
     data = [
-        "lactotroph.cl",
+        "lactotroph",
         "//src:cl_definitions",
         "//src:clode_cl_api",
         "//src:opencl",

@@ -16,7 +16,7 @@ jobs:
         run: sudo apt update
 
       - name: Install Dependencies
-        run: sudo apt install ocl-icd-libopencl1 clinfo
+        run: sudo apt install ocl-icd-libopencl1 clinfo intel-opencl-icd
 
       - name: Test OpenCL
         run: clinfo
@@ -33,7 +33,7 @@ jobs:
         run: pip install bazel-out/k8-fastbuild/bin/pyclode/clode-0.0.2-py3-none-any.whl
 
       - name: Install test dependencies
-        run: pip install numpy
+        run: pip install numpy pytest
 
       - name: Run bazel tests
         run: bazel test --test_output=errors //... --test_size_filters=medium
@@ -56,7 +56,7 @@ jobs:
         run: pip3 install bazel-out/darwin-fastbuild/bin/pyclode/clode-0.0.2-py3-none-any.whl
 
       - name: Install test dependencies
-        run: pip3 install numpy
+        run: pip3 install numpy pytest
 
       - name: Run bazel tests
         run: bazel test --test_output=errors //... --test_size_filters=medium

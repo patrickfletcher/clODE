@@ -7,11 +7,11 @@ import numpy as np
 #                         ['g_CaL', 'g_CaT', 'g_K', 'g_SK', 'g_Kir', 'g_BK', 'g_NaV', 'g_A', 'g_leak', 'C_m', 'E_leak',
 #                          'tau_m', 'tau_ht', 'tau_n', 'tau_BK', 'tau_h', 'tau_hNa', 'k_c']
 #                         , ['aux'])
-pi = clode.problem_info("samples/lactotroph.cl", 4, 3, 1, 1, ["a", "b", "c", "d"], ["aa", "bb", "cc"], ["dd"])
-stepper = "euler"
+pi = clode.problem_info("samples/lactotroph.cl", 4, 3, 1, 0, ["v", "n", "f", "c"], ["gcal", "gsk", "gbk"], ["ical"])
+stepper = "dopri5"
 nReps = 1
 nPts = 2
-sp = clode.solver_params(0.1, 1.00, 1e-6, 1e-3, 100000, 100000, 100)
+sp = clode.solver_params(0.5, 100.0, 1e-6, 1e-3, 1000000, 100000, 1)
 open_cl = clode.opencl_resource()
 clode_trajectory = clode.clode_trajectory(pi, stepper, True, open_cl, "src/")
 tspan = (0.0, 1000.)
@@ -30,7 +30,7 @@ tspan = (0.0, 1000.)
 #
 # x0 = np.array([V, n, m, b, h, h_T, h_Na, c])
 # x0 = np.tile(x0, (nPts, 1)).transpose().flatten()
-pars = [1.0, 5.0, 0.0] * nPts
+pars = [1.5] * nPts + [3.0] * nPts + [1.0] * nPts
 x0 = [0, 0, 0, 0] * nPts
 clode_trajectory.build_cl()
 clode_trajectory.initialize(tspan, x0, pars, sp)
@@ -46,7 +46,6 @@ for _ in range(nReps):
     clode_trajectory.trajectory()
 
 end_time = time.perf_counter_ns()
-
 
 # const auto &nStoredVec = clo.getNstored();
 # int nStoreMax=*std::max_element(nStoredVec.begin(), nStoredVec.end());
@@ -80,7 +79,7 @@ for ii in range(n_stored[trajIx]):
 
     print()
 
-#std::cout<< "Timepoints stored: " << nStored[trajIx] << "/" << nStoreMax << "\n";
+# std::cout<< "Timepoints stored: " << nStored[trajIx] << "/" << nStoreMax << "\n";
 print(f"Timepoints stored: {n_stored[trajIx]}/{max(n_stored)}")
 
 elapsed_time = round((end_time - start_time) / 10 ** 6, 3)
