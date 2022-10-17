@@ -1,9 +1,9 @@
 import src.clode as _clode
 import os
 
-
 _runtime = None
-_clode_root_dir: str = os.path.join(os.path.dirname(os.path.dirname(__file__)), "src", "")
+_clode_root_dir: str = os.path.join(os.path.dirname(os.path.dirname(__file__)),
+                                    "src", "")
 
 
 def _get_runtime():

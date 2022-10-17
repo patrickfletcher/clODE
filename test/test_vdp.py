@@ -9,7 +9,7 @@ import pyclode
 
 
 def cuberoot(x):
-    return x ** (1 / 3.)
+    return x**(1 / 3.)
 
 
 def approximate_vdp_period(mu):
@@ -18,9 +18,9 @@ def approximate_vdp_period(mu):
     if mu < 0:
         period = 0
     elif 0 <= mu < 2:
-        period = 2 * pi * (1 + mu ** 2 / 16)
+        period = 2 * pi * (1 + mu**2 / 16)
     else:
-        period = min(2 * pi * (1 + mu ** 2 / 16),
+        period = min(2 * pi * (1 + mu**2 / 16),
                      (3 - 2 * log(2)) * mu + 3 * 2.2338 / cuberoot(mu))
     return period
 

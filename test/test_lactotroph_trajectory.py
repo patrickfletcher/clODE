@@ -7,7 +7,8 @@ import numpy as np
 #                         ['g_CaL', 'g_CaT', 'g_K', 'g_SK', 'g_Kir', 'g_BK', 'g_NaV', 'g_A', 'g_leak', 'C_m', 'E_leak',
 #                          'tau_m', 'tau_ht', 'tau_n', 'tau_BK', 'tau_h', 'tau_hNa', 'k_c']
 #                         , ['aux'])
-pi = clode.problem_info("samples/lactotroph.cl", 4, 3, 1, 0, ["v", "n", "f", "c"], ["gcal", "gsk", "gbk"], ["ical"])
+pi = clode.problem_info("samples/lactotroph.cl", 4, 3, 1, 0,
+                        ["v", "n", "f", "c"], ["gcal", "gsk", "gbk"], ["ical"])
 stepper = "dopri5"
 nReps = 1
 nPts = 2
@@ -82,5 +83,5 @@ for ii in range(n_stored[trajIx]):
 # std::cout<< "Timepoints stored: " << nStored[trajIx] << "/" << nStoreMax << "\n";
 print(f"Timepoints stored: {n_stored[trajIx]}/{max(n_stored)}")
 
-elapsed_time = round((end_time - start_time) / 10 ** 6, 3)
+elapsed_time = round((end_time - start_time) / 10**6, 3)
 print(f"Compute time: {elapsed_time}ms")

@@ -15,25 +15,15 @@ peakutils = None
 
 #  OrderedDict remembers the key order. Required for python<3.9
 default_ode_parameters = OrderedDict([
-    ('g_CaL', (0, 4, 0)),
-    ('g_CaT', (0, 4, 0)),
-    ('g_K', (0, 10, 0)),
-    ('g_SK', (0.05, 3.5, 0)),
-    ('g_Kir', (0, 2, 0)),
-    ('g_BK', (0, 4, 0)),
-    ('g_NaV', (6, 16, 0)),
-    ('g_A', (0, 100, 0)),
-    ('g_leak', (0.05, 0.4, 0)),
+    ('g_CaL', (0, 4, 0)), ('g_CaT', (0, 4, 0)), ('g_K', (0, 10, 0)),
+    ('g_SK', (0.05, 3.5, 0)), ('g_Kir', (0, 2, 0)), ('g_BK', (0, 4, 0)),
+    ('g_NaV', (6, 16, 0)), ('g_A', (0, 100, 0)), ('g_leak', (0.05, 0.4, 0)),
     ('C_m', (4, 12, 10)),
-    ('E_leak', (-75, -10, -50)),
-    ('tau_m', (0.7, 1.3, 1)),
-    ('tau_ht', (.7, 1.3, 1)),
-    ('tau_n', (20, 40, 20)),
-    ('tau_BK', (2, 10, 1)),
-    ('tau_h', (10, 30, 1)),
-    ('tau_hNa', (1.4, 2.6, 1)),
-    ('k_c', (0.03, 0.21, 0.15))]
-)
+    ('E_leak', (-75, -10, -50)), ('tau_m', (0.7, 1.3, 1)),
+    ('tau_ht', (.7, 1.3, 1)), ('tau_n', (20, 40, 20)), ('tau_BK', (2, 10, 1)),
+    ('tau_h', (10, 30, 1)), ('tau_hNa', (1.4, 2.6, 1)),
+    ('k_c', (0.03, 0.21, 0.15))
+])
 
 
 def pituitary_ori_ode_parameters():
@@ -123,7 +113,8 @@ def pituitary_ori_ode_parameters_Isk_Ibk_Ikir_Icat_Ia_Inav():
     return parameters
 
 
-def generate_clode_pituitary(parameter_function, dt: float, num_simulations: int):
+def generate_clode_pituitary(parameter_function, dt: float,
+                             num_simulations: int):
     tspan = (0.0, 1000.0)
 
     integrator = clode.CLODEFeatures(
@@ -191,7 +182,10 @@ def generate_clode_pituitary(parameter_function, dt: float, num_simulations: int
 
         # Note - the key order in default_ode_parameters is correct.
         # Disregard the key order in parameters
-        pars = np.array([simulation_parameters[key] for key in default_ode_parameters.keys()])
+        pars = np.array([
+            simulation_parameters[key]
+            for key in default_ode_parameters.keys()
+        ])
         pars_v.append(pars)
         # print(pars)
         # break
@@ -233,10 +227,13 @@ def generate_clode_pituitary(parameter_function, dt: float, num_simulations: int
     return simulation_output, pars_v, observer_output
 
 
-def find_pituitary_activation_event(wsol_trimmed, V_threshold, dV_max_threshold, dV_min_threshold, dVs):
-    below_event_end_threshold = np.all(np.stack((wsol_trimmed[1:] < V_threshold, dVs > dV_min_threshold), axis=-1),
+def find_pituitary_activation_event(wsol_trimmed, V_threshold,
+                                    dV_max_threshold, dV_min_threshold, dVs):
+    below_event_end_threshold = np.all(np.stack(
+        (wsol_trimmed[1:] < V_threshold, dVs > dV_min_threshold), axis=-1),
                                        axis=1)
-    above_event_start_threshold = np.all(np.stack((wsol_trimmed[1:] > V_threshold, dVs > dV_max_threshold), axis=-1),
+    above_event_start_threshold = np.all(np.stack(
+        (wsol_trimmed[1:] > V_threshold, dVs > dV_max_threshold), axis=-1),
                                          axis=1)
     # Skip to the end of an event
     first_event_end_index = np.argmax(below_event_end_threshold)
@@ -245,13 +242,16 @@ def find_pituitary_activation_event(wsol_trimmed, V_threshold, dV_max_threshold,
         return 0, 20000
 
     # Skip to the start of the next event
-    event_start_index = np.argmax(above_event_start_threshold[first_event_end_index:]) + first_event_end_index
+    event_start_index = np.argmax(
+        above_event_start_threshold[first_event_end_index:]
+    ) + first_event_end_index
 
     if event_start_index >= 20000:
         return 0, 20000
 
     # Skip to the end of the next event
-    event_end_index = np.argmax(below_event_end_threshold[event_start_index:]) + event_start_index
+    event_end_index = np.argmax(
+        below_event_end_threshold[event_start_index:]) + event_start_index
 
     if event_end_index >= 20000:
         return 0, 20000
@@ -307,8 +307,8 @@ def classify_pituitary_ode(wsol, dt, recognise_one_burst_spiking=False):
         else:
             stride = 1
 
-        event_start, event_end = find_pituitary_activation_event(wsol_trimmed, V_threshold, dV_max_threshold,
-                                                                 dV_min_threshold, dVs)
+        event_start, event_end = find_pituitary_activation_event(
+            wsol_trimmed, V_threshold, dV_max_threshold, dV_min_threshold, dVs)
         # Error handling
         if event_end >= 20000:
             return 0, (19000, 19500)
@@ -320,7 +320,10 @@ def classify_pituitary_ode(wsol, dt, recognise_one_burst_spiking=False):
             min_dist = min_distance
 
         try:
-            nearby_peaks = peakutils.indexes(wsol_trimmed[event_start:event_end], thres=0.3, min_dist=min_dist)
+            nearby_peaks = peakutils.indexes(
+                wsol_trimmed[event_start:event_end],
+                thres=0.3,
+                min_dist=min_dist)
         except ValueError:
             # A small number of sequences generate ValueErrors.
             # Since there are only a few, we will suppress it.
@@ -330,9 +333,12 @@ def classify_pituitary_ode(wsol, dt, recognise_one_burst_spiking=False):
             return 3, (event_start, event_end)
 
         else:
-            event_amplitude = np.max(wsol_trimmed[event_start:event_end]) - np.min(wsol_trimmed[event_start:event_end])
+            event_amplitude = np.max(
+                wsol_trimmed[event_start:event_end]) - np.min(
+                    wsol_trimmed[event_start:event_end])
 
-            V_area = np.sum(wsol_trimmed[event_start:event_end]) - V_threshold * (event_end - event_start)
+            V_area = np.sum(wsol_trimmed[event_start:event_end]
+                            ) - V_threshold * (event_end - event_start)
             if V_area > 3000 / dt and event_amplitude > 30:
                 if recognise_one_burst_spiking:
                     return 4, (event_start, event_end)
@@ -348,17 +354,19 @@ def classify_pituitary_ode(wsol, dt, recognise_one_burst_spiking=False):
             return 0, (19000, 20000)
 
 
-def generate_pitutary_dataframe(parameter_function, sample_id: int, trim_start: int, downsample_rate: int,
-                                classify: bool, recognise_one_burst_spiking: bool, retain_trajectories: bool,
-                                add_timesteps: bool,
+def generate_pitutary_dataframe(parameter_function, sample_id: int,
+                                trim_start: int, downsample_rate: int,
+                                classify: bool,
+                                recognise_one_burst_spiking: bool,
+                                retain_trajectories: bool, add_timesteps: bool,
                                 compute_calcium_concentration: bool):
     # if not classify and not retain_trajectories:
     #    raise ValueError("Error! Generated samples will have no class and no trajectory!")
 
     dt = 0.5
     num_simulations = 100
-    pituitary_simulation, parameters, observer_output = generate_clode_pituitary(parameter_function, dt,
-                                                                                 num_simulations=num_simulations)
+    pituitary_simulation, parameters, observer_output = generate_clode_pituitary(
+        parameter_function, dt, num_simulations=num_simulations)
     # if retain_trajectories:
     #     df = pd.DataFrame(pituitary_simulation, columns=['V', 'n', 'm', 'b', 'h', 'h_T', 'h_Na', 'c'])
     # else:
@@ -421,18 +429,24 @@ def generate_pitutary_dataframe(parameter_function, sample_id: int, trim_start: 
     # print("Step count", observer_output.get_var_count('step'))
     # print(np.concatenate([active, bursting, max_period, min_period], axis=1))
 
-    df_input = np.concatenate([pituitary_simulation, parameters, avg_calcium, classes], axis=1)
-    columns = ['V', 'n', 'm', 'b', 'h', 'h_T', 'h_Na', 'c'] + list(default_ode_parameters.keys()) + [
-        'calcium_concentration', 'class']
+    df_input = np.concatenate(
+        [pituitary_simulation, parameters, avg_calcium, classes], axis=1)
+    columns = ['V', 'n', 'm', 'b', 'h', 'h_T', 'h_Na', 'c'] + list(
+        default_ode_parameters.keys()) + ['calcium_concentration', 'class']
     df = pd.DataFrame(df_input, columns=columns)
     df.insert(0, 'ID', range(pituitary_simulation.shape[0]))
 
     return df
 
 
-def generate_pituitary_dataset(parameter_function, num_samples, trim_start: int = 10000, downsample_rate: int = 20,
-                               classify: bool = False, recognise_one_burst_spiking: bool = False,
-                               retain_trajectories: bool = False, add_timesteps: bool = False,
+def generate_pituitary_dataset(parameter_function,
+                               num_samples,
+                               trim_start: int = 10000,
+                               downsample_rate: int = 20,
+                               classify: bool = False,
+                               recognise_one_burst_spiking: bool = False,
+                               retain_trajectories: bool = False,
+                               add_timesteps: bool = False,
                                compute_calcium_concentration: bool = False):
     """
     Computes a dataset of Traja dataframes representing
@@ -475,21 +489,29 @@ def generate_pituitary_dataset(parameter_function, num_samples, trim_start: int 
             in the dataframe. Defaults to false.
     """
     if recognise_one_burst_spiking and not classify:
-        warnings.warn("Classification not requested but a classification option is set." +
-                      "This is likely a mistake - please check the training options")
+        warnings.warn(
+            "Classification not requested but a classification option is set."
+            + "This is likely a mistake - please check the training options")
 
-    df = generate_pitutary_dataframe(parameter_function, sample_id=0, trim_start=trim_start,
-                                     downsample_rate=downsample_rate, classify=classify,
-                                     recognise_one_burst_spiking=recognise_one_burst_spiking,
-                                     retain_trajectories=retain_trajectories, add_timesteps=add_timesteps,
-                                     compute_calcium_concentration=compute_calcium_concentration)
+    df = generate_pitutary_dataframe(
+        parameter_function,
+        sample_id=0,
+        trim_start=trim_start,
+        downsample_rate=downsample_rate,
+        classify=classify,
+        recognise_one_burst_spiking=recognise_one_burst_spiking,
+        retain_trajectories=retain_trajectories,
+        add_timesteps=add_timesteps,
+        compute_calcium_concentration=compute_calcium_concentration)
 
     return df
 
 
 if __name__ == "__main__":
-    df_test = generate_pituitary_dataset(parameter_function=pituitary_ori_ode_parameters_Isk_Ibk_Ikir_Icat_Ia_Inav,
-                                         num_samples=100,
-                                         classify=True,
-                                         retain_trajectories=False,
-                                         compute_calcium_concentration=True)
+    df_test = generate_pituitary_dataset(
+        parameter_function=
+        pituitary_ori_ode_parameters_Isk_Ibk_Ikir_Icat_Ia_Inav,
+        num_samples=100,
+        classify=True,
+        retain_trajectories=False,
+        compute_calcium_concentration=True)

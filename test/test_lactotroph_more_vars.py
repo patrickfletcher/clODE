@@ -2,11 +2,13 @@ import clode
 import time
 import numpy as np
 
-pi = clode.problem_info("test/test.cl", 8, 18, 1, 1,
-                        ["V", "n", "m", "b", "h", "h_T", "h_Na", "c"],
-                        ['g_CaL', 'g_CaT', 'g_K', 'g_SK', 'g_Kir', 'g_BK', 'g_NaV', 'g_A', 'g_leak', 'C_m', 'E_leak',
-                         'tau_m', 'tau_ht', 'tau_n', 'tau_BK', 'tau_h', 'tau_hNa', 'k_c']
-                        , ['aux'])
+pi = clode.problem_info(
+    "test/test.cl", 8, 18, 1, 1, ["V", "n", "m", "b", "h", "h_T", "h_Na", "c"],
+    [
+        'g_CaL', 'g_CaT', 'g_K', 'g_SK', 'g_Kir', 'g_BK', 'g_NaV', 'g_A',
+        'g_leak', 'C_m', 'E_leak', 'tau_m', 'tau_ht', 'tau_n', 'tau_BK',
+        'tau_h', 'tau_hNa', 'k_c'
+    ], ['aux'])
 # pi = clode.problem_info("research/clODE/samples/lactotroph.cl", 4, 3, 1, 1, ["a", "b", "c", "d"], ["aa", "bb", "cc"], ["dd"])
 stepper = "rk4"
 observer = "thresh2"
@@ -15,9 +17,11 @@ nPts = 4096
 sp = clode.solver_params(0.5, 1.00, 1e-6, 1e-3, 10000000, 10000000, 50)
 op = clode.observer_params(0, 0, 100, 1, 1, 0.01, 0.3, 0.2, 0, 0, 1e-7)
 open_cl = clode.opencl_resource()
-clode_features = clode.clode_features(pi, stepper, observer, True, open_cl, "src/")
+clode_features = clode.clode_features(pi, stepper, observer, True, open_cl,
+                                      "src/")
 tspan = (0.0, 1000.)
-pars = np.array((1.4, 0, 5, 0, 0, 0, 0, 0, 0.2, 10, -50, 1, 1, 39, 1, 1, 1, 0.03))
+pars = np.array(
+    (1.4, 0, 5, 0, 0, 0, 0, 0, 0.2, 10, -50, 1, 1, 39, 1, 1, 1, 0.03))
 
 pars = np.tile(pars, (nPts, 1)).transpose().flatten()
 
@@ -59,5 +63,5 @@ for i in range(clode_features.get_n_features()):
 
 print()
 
-elapsed_time = round((end_time - start_time) / 10 ** 6, 3)
+elapsed_time = round((end_time - start_time) / 10**6, 3)
 print(f"Compute time: {elapsed_time}ms")
