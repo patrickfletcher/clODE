@@ -57,3 +57,18 @@ py_test(
         "//src:py_clode",
     ],
 )
+
+py_test(
+    name = "test_vdp_long",
+    size = "large",
+    timeout = "short",
+    srcs = [
+        "test_vdp.py",
+        "test_vdp_long.py",
+    ],
+    data = [":van_der_pol_oscillator.cl"],
+    deps = [
+        "//pyclode:clode_init",
+        "//src:py_clode",
+    ],
+)

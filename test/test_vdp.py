@@ -25,7 +25,7 @@ def approximate_vdp_period(mu):
     return period
 
 
-def test_vdp_dormand_prince():
+def vdp_dormand_prince(end: int):
     tspan = (0.0, 1000.0)
 
     integrator = pyclode.CLODEFeatures(
@@ -39,7 +39,7 @@ def test_vdp_dormand_prince():
     )
 
     parameters = [-1, 0, 0.01, 0.1, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0] + \
-                 list(range(5, 101))
+                 list(range(5, end))
 
     x0 = np.tile([1, 1], (len(parameters), 1))
 
@@ -59,6 +59,10 @@ def test_vdp_dormand_prince():
         assert np.isclose(period, expected_period, rtol=rtol, atol=1), \
             f"Period {period} not close to expected {expected_period}" + \
             f"for mu {mu}"
+
+
+def test_vdp_dormand_prince():
+    vdp_dormand_prince(end=7)
 
 
 # if using 'bazel test ...'

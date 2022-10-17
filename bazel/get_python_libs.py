@@ -21,3 +21,4 @@ if os.getenv('PYTHONPATH') is not None:
     if len(paths) >= 1:
         print(paths[0])
     print(paths)
+print(os.getenv('PYTHONPATH'))
