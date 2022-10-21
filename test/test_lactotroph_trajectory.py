@@ -48,24 +48,6 @@ for _ in range(nReps):
 
 end_time = time.perf_counter_ns()
 
-# const auto &nStoredVec = clo.getNstored();
-# int nStoreMax=*std::max_element(nStoredVec.begin(), nStoredVec.end());
-# std::vector<double> t=clo.getT();
-# std::vector<double> x=clo.getX();
-# std::vector<double> xf=clo.getX0();
-#
-# int trajIx=0;
-#
-# std::vector<int> nStored=clo.getNstored();
-# std::cout<< "\nt \t xf:"<< "\n";
-# for (int ix=0; ix<nStored[trajIx];++ix){
-#     std::cout<<t[ix*nPts+trajIx]<< "\t";
-#
-# for (int i=0; i<prob.nVar; ++i)
-# std::cout << x[ix*nPts*prob.nVar+i*nPts+trajIx]<< " ";
-#
-# std::cout<<std::endl;
-
 n_stored = clode_trajectory.get_n_stored()
 tt = clode_trajectory.get_t()
 xx = clode_trajectory.get_x()

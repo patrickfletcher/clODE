@@ -72,3 +72,17 @@ py_test(
         "//src:py_clode",
     ],
 )
+
+py_test(
+    name = "test_ornl_thompson_a1",
+    #size = "large",
+    #timeout = "short",
+    srcs = [
+        "test_ornl_thompson_a1.py",
+    ],
+    data = [":ornl_thompson_a1.cl"],
+    deps = [
+        "//pyclode:clode_init",
+        "//src:py_clode",
+    ],
+)

@@ -103,7 +103,6 @@ int main(int argc, char **argv)
 	std::vector<double> xf=clo.getX0();
 	
 	int trajIx=0;
-	
 	std::vector<int> nStored=clo.getNstored();
 	std::cout<< "\nt \t xf:"<< "\n";
 	for (int ix=0; ix<nStored[trajIx];++ix){

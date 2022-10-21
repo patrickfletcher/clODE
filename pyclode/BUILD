@@ -10,6 +10,7 @@ py_library(
         "runtime.py",
         "solver_params.py",
         "stepper.py",
+        "trajectory.py",
     ],
     visibility = ["//visibility:public"],
     deps = ["//src:py_clode"],
