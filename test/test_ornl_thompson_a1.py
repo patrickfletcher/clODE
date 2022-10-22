@@ -31,6 +31,7 @@ def test_ornl_thompson_a1():
         aux=["g1"],
         num_noise=0,
         dt=0.001,
+        dtmax=0.001,
         stepper=pyclode.stepper.Stepper.rk4,
         tspan=tspan,
     )
