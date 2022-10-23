@@ -3,7 +3,7 @@ import typing
 from .stepper import Stepper
 from .runtime import _get_runtime
 from .runtime import _clode_root_dir
-import src.clode as _clode
+import clode.cpp.clode_cpp_wrapper as _clode
 import numpy as np
 
 
@@ -99,7 +99,7 @@ class CLODETrajectory:
         self._initial_conditions = self._trajectory.get_x0()
 
     def get_time_steps(self):
-        return self._time_steps
+        return np.array(self._time_steps[:self._n_stored[0]])
 
     def get_trajectory(self, simulation_id: int = 0):
         if simulation_id >= self._number_of_simulations:

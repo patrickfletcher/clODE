@@ -18,7 +18,7 @@
 
 #include "spdlog/spdlog.h"
 
-#define CLODE_ROOT "src/"
+#define CLODE_ROOT "clode/cpp/"
 
 //Generate random points within given bounds
 template<typename T> std::vector<T> generateRandomPoints(std::vector<T> lb, std::vector<T> ub, int nPts);

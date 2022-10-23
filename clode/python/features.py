@@ -4,7 +4,7 @@ from .stepper import Stepper
 from .observer import Observer, ObserverOutput
 from .runtime import _get_runtime
 from .runtime import _clode_root_dir
-import src.clode as _clode
+import clode.cpp.clode_cpp_wrapper as _clode
 import numpy as np
 
 

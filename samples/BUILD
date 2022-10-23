@@ -9,9 +9,9 @@ cc_test(
     srcs = ["testTransient.cpp"],
     data = [
         "lactotroph.cl",
-        "//src:cl_definitions",
-        "//src:clode_cl_api",
-        "//src:opencl",
+        "//clode/cpp:cl_definitions",
+        "//clode/cpp:clode_cl_api",
+        "//clode/cpp:opencl",
     ],
     linkopts = select({
         "@platforms//os:osx": [],
@@ -20,7 +20,7 @@ cc_test(
     }),
     linkstatic = True,
     deps = [
-        "//src",
+        "//clode/cpp",
     ],
 )
 
@@ -29,9 +29,9 @@ cc_test(
     srcs = ["testTrajectory.cpp"],
     data = [
         "lactotroph",
-        "//src:cl_definitions",
-        "//src:clode_cl_api",
-        "//src:opencl",
+        #        "//clode/cpp:cl_definitions",
+        #        "//clode/cpp:clode_cl_api",
+        "//clode/cpp:opencl",
     ],
     linkopts = select({
         "@platforms//os:osx": [],
@@ -40,7 +40,7 @@ cc_test(
     }),
     linkstatic = True,
     deps = [
-        "//src",
+        "//clode/cpp",
     ],
 )
 
@@ -49,7 +49,7 @@ cc_test(
     srcs = ["testFeatures.cpp"],
     data = [
         "lactotroph.cl",
-        "//src:opencl",
+        "//clode/cpp:opencl",
     ],
     linkopts = select({
         "@platforms//os:osx": [],
@@ -58,7 +58,7 @@ cc_test(
     }),
     linkstatic = True,
     deps = [
-        "//src",
+        "//clode/cpp",
     ],
 )
 
@@ -66,7 +66,7 @@ cc_test(
     name = "testFeatLarge",
     srcs = ["testFeatures_morevars.cpp"],
     data = [
-        "//src:opencl",
+        "//clode/cpp:opencl",
         "//test:lactotroph",
     ],
     linkopts = select({
@@ -76,7 +76,7 @@ cc_test(
     }),
     linkstatic = True,
     deps = [
-        "//src",
+        "//clode/cpp",
     ],
 )
 
@@ -84,7 +84,7 @@ cc_test(
     name = "listOpenCL",
     srcs = ["listOpenCL.cpp"],
     data = [
-        "//src:opencl",
+        "//clode/cpp:opencl",
     ],
     linkopts = select({
         "@platforms//os:osx": [],
@@ -93,6 +93,6 @@ cc_test(
     }),
     linkstatic = True,
     deps = [
-        "//src",
+        "//clode/cpp",
     ],
 )

@@ -1,4 +1,4 @@
-import clode
+import clode.cpp.clode_cpp_wrapper as clode
 import time
 import numpy as np
 
@@ -14,7 +14,7 @@ nReps = 1
 nPts = 2
 sp = clode.solver_params(0.5, 100.0, 1e-6, 1e-3, 1000000, 100000, 1)
 open_cl = clode.opencl_resource()
-clode_trajectory = clode.clode_trajectory(pi, stepper, True, open_cl, "src/")
+clode_trajectory = clode.clode_trajectory(pi, stepper, True, open_cl, "clode/cpp/")
 tspan = (0.0, 1000.)
 # pars = np.array((1.4, 0, 5, 0, 0, 0, 0, 0, 0.2, 10, -50, 1, 1, 39, 1, 1, 1, 0.03))
 #

@@ -1,5 +1,4 @@
-import typing
-import src.clode as _clode
+import clode.cpp.clode_cpp_wrapper as _clode
 import numpy as np
 from enum import Enum
 

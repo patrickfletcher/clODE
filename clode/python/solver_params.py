@@ -1,4 +1,4 @@
-import src.clode as _clode
+import clode.cpp.clode_cpp_wrapper as _clode
 
 
 class SolverParams:

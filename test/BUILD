@@ -1,10 +1,3 @@
-#py_library(
-#    name = "clode_pylib",
-#    data = ["//src:clode.so"],
-#    imports = ["."],
-#    visibility = ["//visibility:private"],
-#)
-
 filegroup(
     name = "lactotroph",
     srcs = ["test.cl"],
@@ -14,7 +7,9 @@ filegroup(
 py_test(
     name = "test_lactotroph",
     srcs = ["test_lactotroph.py"],
-    deps = ["//src:py_clode"],
+    deps = [
+        "//clode/python:clode_all_sources",
+    ],
 )
 
 py_test(
@@ -23,7 +18,9 @@ py_test(
     timeout = "short",
     srcs = ["test_lactotroph_more_vars.py"],
     data = [":test.cl"],
-    deps = ["//src:py_clode"],
+    deps = [
+        "//clode/python:clode_all_sources",
+    ],
 )
 
 py_test(
@@ -33,7 +30,9 @@ py_test(
         ":test.cl",
         "//samples:lactotroph",
     ],
-    deps = ["//src:py_clode"],
+    deps = [
+        "//clode/python:clode_all_sources",
+    ],
 )
 
 py_test(
@@ -43,8 +42,7 @@ py_test(
     srcs = ["test_pituitary.py"],
     data = [":test.cl"],
     deps = [
-        "//pyclode:clode_init",
-        "//src:py_clode",
+        "//clode/python:clode_all_sources",
     ],
 )
 
@@ -53,8 +51,7 @@ py_test(
     srcs = ["test_vdp.py"],
     data = [":van_der_pol_oscillator.cl"],
     deps = [
-        "//pyclode:clode_init",
-        "//src:py_clode",
+        "//clode/python:clode_all_sources",
     ],
 )
 
@@ -68,8 +65,7 @@ py_test(
     ],
     data = [":van_der_pol_oscillator.cl"],
     deps = [
-        "//pyclode:clode_init",
-        "//src:py_clode",
+        "//clode/python:clode_all_sources",
     ],
 )
 
@@ -82,7 +78,6 @@ py_test(
     ],
     data = [":ornl_thompson_a1.cl"],
     deps = [
-        "//pyclode:clode_init",
-        "//src:py_clode",
+        "//clode/python:clode_all_sources",
     ],
 )

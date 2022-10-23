@@ -31,6 +31,6 @@ cc_library(
         "fixed_explicit_stochastic_Euler.clh",
     ],
     deps = [
-        "//src:cl_definitions",
+        "//clode/cpp:cl_definitions",
     ],
 )

@@ -4,7 +4,7 @@ cc_library(
     hdrs = ["OpenCLResource.hpp"],
     visibility = ["//visibility:public"],
     deps = [
-        "//src/OpenCL",
+        "//clode/cpp/OpenCL",
         "@com_github_gabime_spdlog//:spdlog",
     ],
 )
@@ -30,7 +30,7 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         ":cl_definitions",
-        "//src/OpenCL",
+        "//clode/cpp/OpenCL",
     ],
 )
 
@@ -43,7 +43,7 @@ cc_library(
     deps = [
         ":cl_definitions",
         ":clode_cl_api",
-        "//src/OpenCL",
+        "//clode/cpp/OpenCL",
     ],
 )
 
@@ -54,7 +54,7 @@ cc_library(
     deps = [
         ":clode_api",
         ":opencl_resources",
-        "//src/OpenCL",
+        "//clode/cpp/OpenCL",
         "@com_github_gabime_spdlog//:spdlog",
     ],
 )
@@ -67,8 +67,8 @@ cc_library(
         ":clode",
         ":clode_api",
         ":opencl_resources",
-        "//src/OpenCL",
-        "//src/observers",
+        "//clode/cpp/OpenCL",
+        "//clode/cpp/observers",
         "@com_github_gabime_spdlog//:spdlog",
     ],
 )
@@ -81,7 +81,7 @@ cc_library(
         ":clode",
         ":clode_api",
         ":opencl_resources",
-        "//src/OpenCL",
+        "//clode/cpp/OpenCL",
         "@com_github_gabime_spdlog//:spdlog",
     ],
 )
@@ -100,14 +100,14 @@ filegroup(
         "steppers.cl",
         "trajectory.cl",
         "transient.cl",
-        "//src/observers:cl",
-        "//src/steppers:cl",
+        "//clode/cpp/observers:cl",
+        "//clode/cpp/steppers:cl",
     ],
     visibility = ["//visibility:public"],
 )
 
 cc_library(
-    name = "src",
+    name = "cpp",
     includes = ["."],
     visibility = ["//visibility:public"],
     deps = [
@@ -123,7 +123,7 @@ cc_library(
 #)
 
 cc_binary(
-    name = "clode.so",
+    name = "clode_cpp_wrapper.so",
     srcs = ["CLODEpython.cpp"],
     #    copts = select({
     #        #"@platforms//os:osx": ["-I/Library/Frameworks/Python.framework/Versions/Current/Headers/"],
@@ -156,17 +156,18 @@ cc_binary(
         ":clode",
         ":clode_features",
         ":clode_trajectory",
-        "//src/logging:python_sink",
+        "//clode/cpp/logging:python_sink",
         "@com_github_pybind_pybind11//:pybind11",
         "@local_config_python//:python_headers",
         #"@org_python_ftp//:python",
     ],
 )
 
+# This wrapper exists to expose the clode.so binary to python
 py_library(
     name = "py_clode",
     data = [
-        ":clode.so",
+        ":clode_cpp_wrapper.so",
         ":opencl",
         "//samples:lactotroph",
     ],

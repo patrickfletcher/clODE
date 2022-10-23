@@ -2,7 +2,7 @@
 #define CLODE_STRUCT_DEFS_H_
 
 //TODO: bounds param (like XPP) to catch numerical instability/blow up in finite time?
-#include "src/realtype.cl"
+#include "clode/cpp/realtype.cl"
 
 #ifdef __cplusplus
 template <typename realtype>
