@@ -188,7 +188,7 @@ void OpenCLResource::getPlatformAndDevices(cl_deviceType type, cl_vendor vendor)
             tempID = i;
             break;
         }
-        catch (cl::Error e)
+        catch (cl::Error &e)
         {
             continue;
         }
