@@ -901,7 +901,8 @@ classdef gridtool < handle %matlab.mixin.SetGet
                         app.makeGridData(); %prep for next integration
 %                         app.integrateGrid('transient')
 %                         app.integrateGrid('random')
-                        app.integrateGrid('point')
+%                         app.integrateGrid('point')
+                        app.integrateGrid('pointgo')
                     end
                     
                 case 'subtract' % increment z by -dz, transient
@@ -911,7 +912,8 @@ classdef gridtool < handle %matlab.mixin.SetGet
                         app.makeGridData(); %prep for next integration
 %                         app.integrateGrid('transient')
 %                         app.integrateGrid('random')
-                        app.integrateGrid('point')
+%                         app.integrateGrid('point')
+                        app.integrateGrid('pointgo')
                     end
             end
         end
@@ -959,6 +961,14 @@ classdef gridtool < handle %matlab.mixin.SetGet
                     newX0=repmat(app.gridvars.val(app.gridvars.type=="ic")',app.nPts,1);
                     app.clo_g.setX0(newX0);
                     app.clo_g.transient();
+
+                case 'pointgo'
+                    newX0=repmat(app.gridvars.val(app.gridvars.type=="ic")',app.nPts,1);
+                    app.clo_g.setX0(newX0);
+                    app.clo_g.transient();
+                    app.clo_g.shiftX0();
+                    app.clo_g.features(1);
+                    app.clo_g.getF();
                     
                 case 'random'
                     x0lb=app.gridvars.lb(app.gridvars.type=="ic")';
@@ -976,7 +986,7 @@ classdef gridtool < handle %matlab.mixin.SetGet
             
             % call for plot update (use listener to SOL properties?)
             switch action
-                case {'continue','go'}
+                case {'continue','go','pointgo'}
                     app.updateGridPlot('feature')
                 case {'random','transient','point'}
                     app.updateGridPlot('transient')
@@ -1578,8 +1588,12 @@ classdef gridtool < handle %matlab.mixin.SetGet
             app.SolverParTable.Data=sptable;
 
             %solver opts from ODE file
-            %dtmax, abstol/reltol, nout, maxstore?
+            % needs check for presence
             app.SolverParTable.Data{'dt',:}=app.prob.opt.dt;
+            app.SolverParTable.Data{'dtmax',:}=app.prob.opt.dtmax;
+            app.SolverParTable.Data{'max_store',:}=app.prob.opt.maxstor;
+            app.SolverParTable.Data{'abstol',:}=app.prob.opt.atoler;
+            app.SolverParTable.Data{'reltol',:}=app.prob.opt.toler;
             
             defaultop=clODEfeatures.defaultObserverParams(); %app.clo_g.op
             optable=table('RowNames',fieldnames(defaultop));
@@ -2006,7 +2020,7 @@ classdef gridtool < handle %matlab.mixin.SetGet
             app.axGrid.YDir='normal';
             axis(app.axGrid,'tight');
             app.gridCBar=colorbar('northoutside');
-            colormap(app.axGrid,'turbo')
+            colormap(app.axGrid,[0.85*[1,1,1];turbo])
 
             app.markerP0=line(app.axGrid,nan,nan,'color','k','marker','o','linestyle','none');
             app.markerP0.ButtonDownFcn=@app.clickP0;  %p0 marker is clickable
