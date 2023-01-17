@@ -1,4 +1,4 @@
-classdef clODE < cppclass & matlab.mixin.SetGet
+classdef clODE < cppclass
     % clODE(prob, stepper=rk4, clSinglePrecision=true, cl_vendor=any, cl_deviceType=default)
     
     %TODO: Using set/get mixin causes setters to be called during
@@ -28,7 +28,7 @@ classdef clODE < cppclass & matlab.mixin.SetGet
         clInitialized=false
         
         tscale=1 %should go in IVP  
-        tunits='';
+        tunits=''
     end
     
     properties (Access = private)

@@ -198,6 +198,264 @@ classdef gridtool < handle %matlab.mixin.SetGet
 %         HelpTab                 matlab.ui.container.Tab
     end
     
+    
+    methods (Access = public)
+        %constructor
+        function app=gridtool(odefile, opts)
+            arguments
+                odefile=[]
+                opts.observer='basicall'
+                opts.stepper='dopri5'
+                opts.precision='single'
+                opts.nGrid=[32,32]
+                opts.nClick=3
+                opts.tscale=1
+                opts.grid_device="GPU"
+                opts.traj_device="CPU"
+            end
+            
+            app.createControlFig();
+            app.createGridFig();
+            app.createTrajP0Fig();
+            app.createTrajClickFig();
+            app.attachListeners();
+                        
+            %auto select first GPU for grid, fastest clock for traj
+            app.devices=queryOpenCL();
+            app.grid_device=find({app.devices(:).type}==opts.grid_device,1,'first');
+            app.traj_device=find({app.devices(:).type}==opts.traj_device,1,'first');
+%             [~,app.traj_device]=max([app.devices(:).maxClock]);
+            
+            app.gridDeviceDropDown.Items={app.devices(:).name};
+            app.gridDeviceDropDown.ItemsData=1:length(app.devices);
+            app.gridDeviceDropDown.Value=app.grid_device;
+            app.trajDeviceDropDown.Items={app.devices(:).name};
+            app.trajDeviceDropDown.ItemsData=1:length(app.devices);
+            app.trajDeviceDropDown.Value=app.traj_device;
+
+            app.nGrid=opts.nGrid;
+            app.nClick=opts.nClick;
+            app.tscale=opts.tscale;
+            app.tscaleEditField.Value=opts.tscale;
+
+            app.loadNewProblem(odefile)
+
+            app.clo_g=clODEfeatures(app.prob, opts.precision, app.grid_device, opts.stepper, opts.observer);
+            app.clo_t=clODEtrajectory(app.prob, opts.precision, app.traj_device, opts.stepper);
+
+            app.processNewProblem()
+
+            app.gridObserverDropDown.Items=app.clo_g.observerNames;
+            app.gridObserverDropDown.Value=opts.observer;
+            app.gridStepperDropDown.Items=app.clo_g.getAvailableSteppers();
+            app.gridStepperDropDown.Value=opts.stepper;
+            app.trajStepperDropDown.Items=app.clo_t.getAvailableSteppers();
+            app.trajStepperDropDown.Value=opts.stepper;
+            
+            defaultsp=clODE.defaultSolverParams(); %app.clo_g.sp
+            spvalues=cell2mat(struct2cell(defaultsp));
+            sptable=table('RowNames',fieldnames(defaultsp));
+            sptable.grid=spvalues;
+            sptable.traj=spvalues;
+            app.SolverParTable.Data=sptable;
+
+            %solver opts from ODE file
+            % needs check for presence
+            app.SolverParTable.Data{'dt',:}=app.prob.opt.dt;
+            app.SolverParTable.Data{'dtmax',:}=app.prob.opt.dtmax;
+            app.SolverParTable.Data{'max_store',:}=app.prob.opt.maxstor;
+            app.SolverParTable.Data{'abstol',:}=app.prob.opt.atoler;
+            app.SolverParTable.Data{'reltol',:}=app.prob.opt.toler;
+            
+            defaultop=clODEfeatures.defaultObserverParams(); %app.clo_g.op
+            optable=table('RowNames',fieldnames(defaultop));
+            optable.value=cell2mat(struct2cell(defaultop));
+            app.gridObserverParTable.Data=optable;
+            app.gridObserverParTable.RowName=fieldnames(defaultop);
+
+            %             if nargout==0
+            %                 clear app
+            %             end
+            
+        end
+        
+        % Copy current parameter set into an XPP file (requires
+        % ChangeXPPodeFile and packagePars4XPP)
+        function savePars(app,~,~)
+            
+            [fileToWrite,path]=uiputfile('*.ode','Save parameters to ODE file', app.odefile);
+            
+            fileToWrite=fullfile(path,fileToWrite);
+            
+            if ~exist(fileToWrite,'file')
+                copyfile(app.odefile,fileToWrite)
+            end
+            
+            ChangeXPPodeFile(fileToWrite,package4XPP(app.prob.parNames, app.p0, app.prob.varNames, app.x0));
+        end
+        
+        function loadNewProblem(app,odefile)
+            [~,app.prob]=ode2cl(odefile);
+            app.odefile=app.prob.name+".ode";
+        end
+        
+        function processNewProblem(app)
+            
+            if app.prob.nPar+app.prob.nVar<2
+                error('Not enough parameters and variables for a 2D grid!')
+            end
+            
+            app.currentFileLabel.Text=app.prob.name+".ode";
+            
+            if isempty(app.clo_g)
+                
+            else %to avoid reverting to default sp and op:
+                app.clo_g.setNewProblem(app.prob);
+                app.clo_t.setNewProblem(app.prob);
+                
+                %remove grid.name to allow new grid to be set below
+                app.listenerGrid.Enabled=0;
+                app.grid.name={'';''};
+                app.listenerGrid.Enabled=1;
+                app.clo_g.F=[]; %to allow new nVar
+                app.clo_g.Xf=[]; %to allow new nVar
+            end        
+            
+            app.fscale=1;
+            app.XF=[]; %to allow new nVar
+                
+            %tspan
+            t0=app.prob.opt.t0;
+            tf=app.prob.opt.total;
+            app.clo_g.tspan=[t0,tf];
+            app.clo_t.tspan=[t0,tf];
+            app.gridTspan=[t0,tf];
+            app.trajTspan=[t0,tf];
+            
+            tspan=table;
+            tspan.t0=[t0;t0];
+            tspan.tf=[tf;tf];
+%             tspan.trans=[tf;tf];
+            app.tspanTable.Data=tspan;
+            
+            %valid grid variables
+            icNames=strcat(app.prob.varNames(:),'0');
+            newGridvars=table;
+            newGridvars.name=[app.prob.parNames(:);icNames(:)];
+            newGridvars.val=[app.prob.p0(:);app.prob.x0(:)];
+            newGridvars.lb=[[app.prob.par.lb]';[app.prob.var.lb]'];
+            newGridvars.ub=[[app.prob.par.ub]';[app.prob.var.ub]'];
+            newGridvars.type=categorical([ones(app.prob.nPar,1);2*ones(app.prob.nVar,1)],[1,2],{'par','ic'});
+            newGridvars.ix=[(1:app.prob.nPar)';(1:app.prob.nVar)'];
+            newGridvars.Properties.RowNames=newGridvars.name;
+            
+            const_bounds=newGridvars.lb==newGridvars.ub;
+            const_vals=newGridvars.val(const_bounds);
+            newGridvars.lb(const_bounds)=const_vals-abs(const_vals)*0.05;
+            newGridvars.ub(const_bounds)=const_vals+abs(const_vals)*0.05;
+            
+            %set grid to first two names
+            app.grid.name=newGridvars.name(1:2);
+            
+            % specify Z for +/- incrementing
+            app.z=newGridvars(3,:);
+            app.dz=(app.z.ub-app.z.lb)/10;
+            app.gridZDropDown.Items=newGridvars.name;
+            app.gridZDropDown.Value=app.z.name;
+            app.dzEditField.Value=app.dz;
+            app.zValueEditField.Value=app.z.val;
+            
+            app.gridvars=newGridvars; %triggers postSet listener
+
+            %set up selectable gridTable name
+            app.gridTable.ColumnFormat={app.gridvars.name',[],[],[],[]};
+            
+            % trajectory variables
+            app.trajvars=[app.prob.varNames(:);app.prob.auxNames(:);...
+                strcat('d',app.prob.varNames(:),'/dt')];
+            
+            %trajectory plot variables
+            app.trajXDropDown.Items=[{'t'};app.trajvars];
+            app.trajYDropDown.Items=app.trajvars;
+            app.trajZDropDown.Items=[{'none'};app.trajvars];
+            
+            yyaxis(app.axyyTrajP0,'left');
+            xlabel(app.axyyTrajP0,app.trajXDropDown.Value);
+            ylabel(app.axyyTrajP0,app.trajYDropDown.Value);
+            yyaxis(app.axyyTrajClick(end),'left');
+            xlabel(app.axyyTrajClick(end),app.trajXDropDown.Value);
+            ylabel(app.axyyTrajClick(end),app.trajYDropDown.Value);
+           
+            app.buildCL('grid');
+            app.buildCL('traj');
+            
+            figure(app.figControl)
+        end
+    
+        
+        function buildCL(app,which_clo)
+            switch which_clo
+                case 'grid'
+                    app.clo_g.buildCL();
+                    app.updateFeatureNames();
+                    app.clo_g.Xf=app.X0;
+                    app.makeGridData();
+                    app.clo_g.initialize();
+                    app.gridCLIsBuiltButton.Value = 1;
+                    app.gridCLIsBuiltButton.Text = 'CL ready';
+                    app.gridCLIsBuiltButton.BackgroundColor=[0.7,1,0.7];
+                case 'traj'
+                    app.clo_t.buildCL();
+                    app.clo_t.P=app.p0;
+                    app.clo_t.X0=app.x0;
+                    app.clo_t.Xf=app.x0;
+                    app.makeTrajData(); %p0: no clickCoords
+                    app.clo_t.initialize();
+                    app.trajCLIsBuiltButton.Value = 1;
+                    app.trajCLIsBuiltButton.Text = 'CL ready';
+                    app.trajCLIsBuiltButton.BackgroundColor=[0.7,1,0.7];
+            end
+        end
+        
+        function updateFeatureNames(app)
+            app.clo_g.getNFeatures(); %update features (nVar may affect)
+            app.clo_g.featureNames();
+            fNames=app.clo_g.featureNames();
+            ampvars=fNames(startsWith(fNames,'max')); %same as trajvars
+            ampvars=split(ampvars);
+            ampvars=ampvars(:,2);
+            f=containers.Map;
+            fNamesPlus=string();
+            for i=1:length(ampvars)
+                var=ampvars{i};
+                f(var+" max")=@(F)F(:,fNames=="max "+var);
+                fNamesPlus(end+1,1)=var+" max";
+                f(var+" min")=@(F)F(:,fNames=="min "+var);
+                fNamesPlus(end+1,1)=var+" min";
+                if any(fNames=="mean "+var)
+                    f(var+" mean")=@(F)F(:,fNames=="mean "+var);
+                    fNamesPlus(end+1,1)=var+" mean";
+                end
+                f(var+" range")=@(F)F(:,fNames=="max "+var)-F(:,fNames=="min "+var);
+                fNamesPlus(end+1,1)=var+" range";
+            end
+            extraF=fNames(contains(fNames,'count'));
+            for i=1:length(extraF)
+                thisF=string(extraF{i});
+                f(thisF)=@(F)F(:,fNames==thisF);
+            end
+            fNamesPlus(1)=[];
+            fNamesPlus=[fNamesPlus;fNames(contains(fNames,'count'))];
+            app.feature=f;
+            app.featureDropDown.Items=fNamesPlus;
+            app.featureDropDown.Value=fNamesPlus(1);
+            title(app.gridCBar,app.featureDropDown.Value);
+        end
+            
+    end
+
+
+
     % Callbacks that handle component events
     methods (Access = private)
         
@@ -1365,264 +1623,8 @@ classdef gridtool < handle %matlab.mixin.SetGet
             figure(fig)
         end
 
-        function loadNewProblem(app,odefile)
-            [~,app.prob]=ode2cl(odefile);
-            app.odefile=app.prob.name+".ode";
-        end
-        
-        function processNewProblem(app)
-            
-            if app.prob.nPar+app.prob.nVar<2
-                error('Not enough parameters and variables for a 2D grid!')
-            end
-            
-            app.currentFileLabel.Text=app.prob.name+".ode";
-            
-            if isempty(app.clo_g)
-                
-            else %to avoid reverting to default sp and op:
-                app.clo_g.setNewProblem(app.prob);
-                app.clo_t.setNewProblem(app.prob);
-                
-                %remove grid.name to allow new grid to be set below
-                app.listenerGrid.Enabled=0;
-                app.grid.name={'';''};
-                app.listenerGrid.Enabled=1;
-                app.clo_g.F=[]; %to allow new nVar
-                app.clo_g.Xf=[]; %to allow new nVar
-            end        
-            
-            app.fscale=1;
-            app.XF=[]; %to allow new nVar
-                
-            %tspan
-            t0=app.prob.opt.t0;
-            tf=app.prob.opt.total;
-            app.clo_g.tspan=[t0,tf];
-            app.clo_t.tspan=[t0,tf];
-            app.gridTspan=[t0,tf];
-            app.trajTspan=[t0,tf];
-            
-            tspan=table;
-            tspan.t0=[t0;t0];
-            tspan.tf=[tf;tf];
-%             tspan.trans=[tf;tf];
-            app.tspanTable.Data=tspan;
-            
-            %valid grid variables
-            icNames=strcat(app.prob.varNames(:),'0');
-            newGridvars=table;
-            newGridvars.name=[app.prob.parNames(:);icNames(:)];
-            newGridvars.val=[app.prob.p0(:);app.prob.x0(:)];
-            newGridvars.lb=[[app.prob.par.lb]';[app.prob.var.lb]'];
-            newGridvars.ub=[[app.prob.par.ub]';[app.prob.var.ub]'];
-            newGridvars.type=categorical([ones(app.prob.nPar,1);2*ones(app.prob.nVar,1)],[1,2],{'par','ic'});
-            newGridvars.ix=[(1:app.prob.nPar)';(1:app.prob.nVar)'];
-            newGridvars.Properties.RowNames=newGridvars.name;
-            
-            const_bounds=newGridvars.lb==newGridvars.ub;
-            const_vals=newGridvars.val(const_bounds);
-            newGridvars.lb(const_bounds)=const_vals-abs(const_vals)*0.05;
-            newGridvars.ub(const_bounds)=const_vals+abs(const_vals)*0.05;
-            
-            %set grid to first two names
-            app.grid.name=newGridvars.name(1:2);
-            
-            % specify Z for +/- incrementing
-            app.z=newGridvars(3,:);
-            app.dz=(app.z.ub-app.z.lb)/10;
-            app.gridZDropDown.Items=newGridvars.name;
-            app.gridZDropDown.Value=app.z.name;
-            app.dzEditField.Value=app.dz;
-            app.zValueEditField.Value=app.z.val;
-            
-            app.gridvars=newGridvars; %triggers postSet listener
-
-            %set up selectable gridTable name
-            app.gridTable.ColumnFormat={app.gridvars.name',[],[],[],[]};
-            
-            % trajectory variables
-            app.trajvars=[app.prob.varNames(:);app.prob.auxNames(:);...
-                strcat('d',app.prob.varNames(:),'/dt')];
-            
-            %trajectory plot variables
-            app.trajXDropDown.Items=[{'t'};app.trajvars];
-            app.trajYDropDown.Items=app.trajvars;
-            app.trajZDropDown.Items=[{'none'};app.trajvars];
-            
-            yyaxis(app.axyyTrajP0,'left');
-            xlabel(app.axyyTrajP0,app.trajXDropDown.Value);
-            ylabel(app.axyyTrajP0,app.trajYDropDown.Value);
-            yyaxis(app.axyyTrajClick(end),'left');
-            xlabel(app.axyyTrajClick(end),app.trajXDropDown.Value);
-            ylabel(app.axyyTrajClick(end),app.trajYDropDown.Value);
-           
-            app.buildCL('grid');
-            app.buildCL('traj');
-            
-            figure(app.figControl)
-        end
-    
-        
-        function buildCL(app,which_clo)
-            switch which_clo
-                case 'grid'
-                    app.clo_g.buildCL();
-                    app.updateFeatureNames();
-                    app.clo_g.Xf=app.X0;
-                    app.makeGridData();
-                    app.clo_g.initialize();
-                    app.gridCLIsBuiltButton.Value = 1;
-                    app.gridCLIsBuiltButton.Text = 'CL ready';
-                    app.gridCLIsBuiltButton.BackgroundColor=[0.7,1,0.7];
-                case 'traj'
-                    app.clo_t.buildCL();
-                    app.clo_t.P=app.p0;
-                    app.clo_t.X0=app.x0;
-                    app.clo_t.Xf=app.x0;
-                    app.makeTrajData(); %p0: no clickCoords
-                    app.clo_t.initialize();
-                    app.trajCLIsBuiltButton.Value = 1;
-                    app.trajCLIsBuiltButton.Text = 'CL ready';
-                    app.trajCLIsBuiltButton.BackgroundColor=[0.7,1,0.7];
-            end
-        end
-        
-        function updateFeatureNames(app)
-            app.clo_g.getNFeatures(); %update features (nVar may affect)
-            app.clo_g.featureNames();
-            fNames=app.clo_g.featureNames();
-            ampvars=fNames(startsWith(fNames,'max')); %same as trajvars
-            ampvars=split(ampvars);
-            ampvars=ampvars(:,2);
-            f=containers.Map;
-            fNamesPlus=string();
-            for i=1:length(ampvars)
-                var=ampvars{i};
-                f(var+" max")=@(F)F(:,fNames=="max "+var);
-                fNamesPlus(end+1,1)=var+" max";
-                f(var+" min")=@(F)F(:,fNames=="min "+var);
-                fNamesPlus(end+1,1)=var+" min";
-                if any(fNames=="mean "+var)
-                    f(var+" mean")=@(F)F(:,fNames=="mean "+var);
-                    fNamesPlus(end+1,1)=var+" mean";
-                end
-                f(var+" range")=@(F)F(:,fNames=="max "+var)-F(:,fNames=="min "+var);
-                fNamesPlus(end+1,1)=var+" range";
-            end
-            extraF=fNames(contains(fNames,'count'));
-            for i=1:length(extraF)
-                thisF=string(extraF{i});
-                f(thisF)=@(F)F(:,fNames==thisF);
-            end
-            fNamesPlus(1)=[];
-            fNamesPlus=[fNamesPlus;fNames(contains(fNames,'count'))];
-            app.feature=f;
-            app.featureDropDown.Items=fNamesPlus;
-            app.featureDropDown.Value=fNamesPlus(1);
-            title(app.gridCBar,app.featureDropDown.Value);
-        end
-            
     end
-    
 
-    
-    methods (Access = public)
-        %constructor
-        function app=gridtool(odefile, opts)
-            arguments
-                odefile=[]
-                opts.observer='basicall'
-                opts.stepper='dopri5'
-                opts.precision='single'
-                opts.nGrid=[32,32]
-                opts.nClick=3
-                opts.tscale=1
-                opts.grid_device="GPU"
-                opts.traj_device="CPU"
-            end
-            
-            app.createControlFig();
-            app.createGridFig();
-            app.createTrajP0Fig();
-            app.createTrajClickFig();
-            app.attachListeners();
-                        
-            %auto select first GPU for grid, fastest clock for traj
-            app.devices=queryOpenCL();
-            app.grid_device=find({app.devices(:).type}==opts.grid_device,1,'first');
-            app.traj_device=find({app.devices(:).type}==opts.traj_device,1,'first');
-%             [~,app.traj_device]=max([app.devices(:).maxClock]);
-            
-            app.gridDeviceDropDown.Items={app.devices(:).name};
-            app.gridDeviceDropDown.ItemsData=1:length(app.devices);
-            app.gridDeviceDropDown.Value=app.grid_device;
-            app.trajDeviceDropDown.Items={app.devices(:).name};
-            app.trajDeviceDropDown.ItemsData=1:length(app.devices);
-            app.trajDeviceDropDown.Value=app.traj_device;
-
-            app.nGrid=opts.nGrid;
-            app.nClick=opts.nClick;
-            app.tscale=opts.tscale;
-            app.tscaleEditField.Value=opts.tscale;
-
-            app.loadNewProblem(odefile)
-
-            app.clo_g=clODEfeatures(app.prob, opts.precision, app.grid_device, opts.stepper, opts.observer);
-            app.clo_t=clODEtrajectory(app.prob, opts.precision, app.traj_device, opts.stepper);
-
-            app.processNewProblem()
-
-            app.gridObserverDropDown.Items=app.clo_g.observerNames;
-            app.gridObserverDropDown.Value=opts.observer;
-            app.gridStepperDropDown.Items=app.clo_g.getAvailableSteppers();
-            app.gridStepperDropDown.Value=opts.stepper;
-            app.trajStepperDropDown.Items=app.clo_t.getAvailableSteppers();
-            app.trajStepperDropDown.Value=opts.stepper;
-            
-            defaultsp=clODE.defaultSolverParams(); %app.clo_g.sp
-            spvalues=cell2mat(struct2cell(defaultsp));
-            sptable=table('RowNames',fieldnames(defaultsp));
-            sptable.grid=spvalues;
-            sptable.traj=spvalues;
-            app.SolverParTable.Data=sptable;
-
-            %solver opts from ODE file
-            % needs check for presence
-            app.SolverParTable.Data{'dt',:}=app.prob.opt.dt;
-            app.SolverParTable.Data{'dtmax',:}=app.prob.opt.dtmax;
-            app.SolverParTable.Data{'max_store',:}=app.prob.opt.maxstor;
-            app.SolverParTable.Data{'abstol',:}=app.prob.opt.atoler;
-            app.SolverParTable.Data{'reltol',:}=app.prob.opt.toler;
-            
-            defaultop=clODEfeatures.defaultObserverParams(); %app.clo_g.op
-            optable=table('RowNames',fieldnames(defaultop));
-            optable.value=cell2mat(struct2cell(defaultop));
-            app.gridObserverParTable.Data=optable;
-            app.gridObserverParTable.RowName=fieldnames(defaultop);
-
-            %             if nargout==0
-            %                 clear app
-            %             end
-            
-        end
-        
-        % Copy current parameter set into an XPP file (requires
-        % ChangeXPPodeFile and packagePars4XPP)
-        function savePars(app,~,~)
-            
-            [fileToWrite,path]=uiputfile('*.ode','Save parameters to ODE file', app.odefile);
-            
-            fileToWrite=fullfile(path,fileToWrite);
-            
-            if ~exist(fileToWrite,'file')
-                copyfile(app.odefile,fileToWrite)
-            end
-            
-            ChangeXPPodeFile(fileToWrite,package4XPP(app.prob.parNames, app.p0, app.prob.varNames, app.x0));
-        end
-        
-    end
     
     
     % Component initialization
