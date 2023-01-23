@@ -353,9 +353,18 @@ classdef GridSimulation < handle
                 opts.fig = []
                 opts.ax = []
                 opts.colormap = [0.9*[1,1,1];turbo]
+                opts.cbgap = 0.025
+                opts.cbdims = [0.3,0.05]
+                opts.cbloc = "east"
+                opts.cbjust = "midhi"
+                opts.FontSize = 8
+                opts.transform = @(F)F
             end
 
             F = self.getFeature(featureName, opts.fScale);
+            F = opts.transform(F);
+
+            F(F>1e10|F<-1e10) = nan;
 
 %             fh = opts.fig;
 %             if isempty(fh)
@@ -373,17 +382,23 @@ classdef GridSimulation < handle
             hi=imagesc(ax, self.gridx, self.gridy, F);
             hi.HitTest='off';
             ax.YDir='normal';
-            hcb=colorbar('northoutside');
             xlabel(self.grid.label(1));
             ylabel(self.grid.label(2));
-            title(hcb,featureLabel,'Interpreter','none')
-            axis square
+%             axis(ax,'square')
             
+%             hcb=colorbar('northoutside');
+            [hcb, cblab] = makeCB(ax, ax.Position,opts.cbgap,opts.cbdims,opts.cbloc,opts.cbjust,featureLabel);
+%             title(hcb,featureLabel,'Interpreter','none')
+
             colormap(ax,opts.colormap)
+
+            ax.FontSize = opts.FontSize;
+            hcb.FontSize = opts.FontSize;
 
             hIm.ax = ax;
             hIm.hi = hi;
             hIm.hcb = hcb;
+            hIm.cblab = cblab;
         end
 
     end
