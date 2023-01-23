@@ -62,7 +62,7 @@ classdef gridtool < handle %matlab.mixin.SetGet
     properties (SetObservable = true)
         
         gridvars %table of possible grid vars (par+var) with values
-        grid=table('Size',[2,6], 'VariableTypes',...
+        gridtab=table('Size',[2,6], 'VariableTypes',...
             {'cellstr','double','double','double','categorical','double'},...
             'VariableNames',{'name','val','lb','ub','type','ix'},...
             'RowNames',{'x','y'}) %table specifying grid x, y info
@@ -315,7 +315,7 @@ classdef gridtool < handle %matlab.mixin.SetGet
                 
                 %remove grid.name to allow new grid to be set below
                 app.listenerGrid.Enabled=0;
-                app.grid.name={'';''};
+                app.gridtab.name={'';''};
                 app.listenerGrid.Enabled=1;
                 app.clo_g.F=[]; %to allow new nVar
                 app.clo_g.Xf=[]; %to allow new nVar
@@ -351,11 +351,11 @@ classdef gridtool < handle %matlab.mixin.SetGet
             
             const_bounds=newGridvars.lb==newGridvars.ub;
             const_vals=newGridvars.val(const_bounds);
-            newGridvars.lb(const_bounds)=const_vals-abs(const_vals)*0.05;
-            newGridvars.ub(const_bounds)=const_vals+abs(const_vals)*0.05;
+            newGridvars.lb(const_bounds)=const_vals-abs(const_vals)*0.25;
+            newGridvars.ub(const_bounds)=const_vals+abs(const_vals)*0.25;
             
             %set grid to first two names
-            app.grid.name=newGridvars.name(1:2);
+            app.gridtab.name=newGridvars.name(1:2);
             
             % specify Z for +/- incrementing
             app.z=newGridvars(3,:);
@@ -636,15 +636,15 @@ classdef gridtool < handle %matlab.mixin.SetGet
             prop=src.ColumnName{indices(2)};
             switch prop
                 case 'name'
-                    app.grid(vix,:)=app.gridvars(newData,:);
-                    newGridDisplayData=app.grid(vix,{'name','val','lb','ub'});
+                    app.gridtab(vix,:)=app.gridvars(newData,:);
+                    newGridDisplayData=app.gridtab(vix,{'name','val','lb','ub'});
                     newGridDisplayData.N=app.nGrid(vix);
                     app.gridTable.Data(vix,:)=table2cell(newGridDisplayData);
                     app.updateGridPlot('nosol');
                     app.makeGridData(); %prep for next integration
                     
                 case {'val', 'lb', 'ub'}
-                    app.gridvars{app.grid.name(vix),prop}=newData; %sync gridvars table
+                    app.gridvars{app.gridtab.name(vix),prop}=newData; %sync gridvars table
                     
                 case 'N'
                     app.nGrid(indices(1))=newData;
@@ -1006,11 +1006,11 @@ classdef gridtool < handle %matlab.mixin.SetGet
         end
         
         function gridx=get.gridx(app)
-            gridx=linspace(app.grid.lb(1),app.grid.ub(1),app.nGrid(1));
+            gridx=linspace(app.gridtab.lb(1),app.gridtab.ub(1),app.nGrid(1));
         end
         
         function gridy=get.gridy(app)
-            gridy=linspace(app.grid.lb(2),app.grid.ub(2),app.nGrid(2));
+            gridy=linspace(app.gridtab.lb(2),app.gridtab.ub(2),app.nGrid(2));
         end
     end
     
@@ -1027,7 +1027,7 @@ classdef gridtool < handle %matlab.mixin.SetGet
     methods (Static = true)
 %         function gridUpdate(~,eventData)
 %             app = eventData.AffectedObject;
-%             newGridDisplayData=app.grid(:,{'name','val','lb','ub'});
+%             newGridDisplayData=app.gridtab(:,{'name','val','lb','ub'});
 %             newGridDisplayData.N=app.nGrid(:);
 %             app.gridTable.Data=table2cell(newGridDisplayData);
 %             app.updateGridPlot('nosol');
@@ -1037,31 +1037,31 @@ classdef gridtool < handle %matlab.mixin.SetGet
         function gridvarUpdate(~,eventData)
             app = eventData.AffectedObject;
             %update grid
-%             if isempty(app.grid.name{1})
+%             if isempty(app.gridtab.name{1})
 %                 vars=app.gridvars.name(1:2);
 %             else
-                vars=app.grid.name;
+                vars=app.gridtab.name;
 %             end
             newGrid=app.gridvars(vars,:);
             newGrid.Row={'x';'y'};
             
-            nameChange=~strcmp(newGrid{:,'name'},app.grid{:,'name'});
-            boundChange=newGrid{:,{'lb','ub'}}~=app.grid{:,{'lb','ub'}};
+            nameChange=~strcmp(newGrid{:,'name'},app.gridtab{:,'name'});
+            boundChange=newGrid{:,{'lb','ub'}}~=app.gridtab{:,{'lb','ub'}};
             if any(nameChange(:))||any(boundChange(:)) %grid solution is invalidated
-                app.grid=newGrid; 
-                newGridDisplayData=app.grid(:,{'name','val','lb','ub'});
+                app.gridtab=newGrid; 
+                newGridDisplayData=app.gridtab(:,{'name','val','lb','ub'});
                 newGridDisplayData.N=app.nGrid(:);
                 app.gridTable.Data=table2cell(newGridDisplayData);
                 app.updateGridPlot('nosol');
                 app.makeGridData(); %prep for next integration
             end
             
-            p0change=newGrid{:,'val'}~=app.grid{:,'val'};
+            p0change=newGrid{:,'val'}~=app.gridtab{:,'val'};
             if any(p0change(:))
-                app.grid{:,'val'}=newGrid{:,'val'};
+                app.gridtab{:,'val'}=newGrid{:,'val'};
                 app.gridTable.Data(:,2)=num2cell(newGrid{:,'val'});
-                app.markerP0.XData=app.grid{'x','val'};
-                app.markerP0.YData=app.grid{'y','val'};
+                app.markerP0.XData=app.gridtab{'x','val'};
+                app.markerP0.YData=app.gridtab{'y','val'};
             end
             
             newZ=app.gridvars(app.z.name,:); %zname doesn't change, but val/lb/ub might
@@ -1125,32 +1125,32 @@ classdef gridtool < handle %matlab.mixin.SetGet
                 case 't' %'transient'
                     app.integrateGrid('transient')
 
-%                 case 'z' %zoom grid
-%                     tmp=get(app.figGrid,'KeyPressFcn'); %
-%                     set(app.figGrid,'KeyPressFcn',[]); %temporarily turn off clicktrajectory
-%                     
-%                     k=waitforbuttonpress;
-%                     if k==0
-%                         point1 = app.figGrid.CurrentPoint;    % location when mouse clicked
-%                         rbbox;                 % rubberbox
-%                         point2 = app.figGrid.CurrentPoint;    % location when mouse released
-%                         point1 = point1(1,1:2);            % extract x and y
-%                         point2 = point2(1,1:2);
-%                         lb = min(point1,point2);           % calculate bounds
-%                         ub = max(point1,point2);           % calculate bounds
-%             
-%                         if all(ub-lb>0)
-%                             app.gridvars{app.grid.name(1:2),'lb'}=lb;
-%                             app.gridvars{app.grid.name(1:2),'ub'}=ub;
-%                             app.makeGridData();
-%                         else
-%                             disp('Try selecting new bounds more slowly...')
-%                         end
-%                     else
-%                         disp('Window Zoom-in canceled by keypress')
-%                     end
-%                     
-%                     set(app.figGrid,'KeyPressFcn',tmp);
+                case 'z' %zoom grid
+                    tmp=get(app.figGrid,'KeyPressFcn'); %
+                    set(app.figGrid,'KeyPressFcn',[]); %temporarily turn off clicktrajectory
+                    
+                    k=waitforbuttonpress;
+                    if k==0
+                        point1 = app.figGrid.CurrentPoint;    % location when mouse clicked
+                        rbbox;                 % rubberbox
+                        point2 = app.figGrid.CurrentPoint;    % location when mouse released
+                        point1 = point1(1,1:2);            % extract x and y
+                        point2 = point2(1,1:2);
+                        lb = min(point1,point2);           % calculate bounds
+                        ub = max(point1,point2);           % calculate bounds
+            
+                        if all(ub-lb>0)
+                            app.gridvars{app.gridtab.name(1:2),'lb'}=lb;
+                            app.gridvars{app.gridtab.name(1:2),'ub'}=ub;
+                            app.makeGridData();
+                        else
+                            disp('Try selecting new bounds more slowly...')
+                        end
+                    else
+                        disp('Window Zoom-in canceled by keypress')
+                    end
+                    
+                    set(app.figGrid,'KeyPressFcn',tmp);
                     
                 case 'add' % increment z by +dz, transient
                     newZ=min(app.z.val+app.dz, app.z.ub);
@@ -1184,15 +1184,15 @@ classdef gridtool < handle %matlab.mixin.SetGet
             newX0=app.XF; %defaults to using most recent final state
             [X,Y]=ndgrid(app.gridx, app.gridy);
             
-            if app.grid{'x','type'}=="par"
-                newP(:,app.grid{'x','ix'})=X(:);
+            if app.gridtab{'x','type'}=="par"
+                newP(:,app.gridtab{'x','ix'})=X(:);
             else
-                newX0(:,app.grid{'x','ix'})=X(:);
+                newX0(:,app.gridtab{'x','ix'})=X(:);
             end
-            if app.grid{'y','type'}=="par"
-                newP(:,app.grid{'y','ix'})=Y(:);
+            if app.gridtab{'y','type'}=="par"
+                newP(:,app.gridtab{'y','ix'})=Y(:);
             else
-                newX0(:,app.grid{'y','ix'})=Y(:);
+                newX0(:,app.gridtab{'y','ix'})=Y(:);
             end
             
             app.clo_g.setProblemData(newX0, newP);
@@ -1256,10 +1256,10 @@ classdef gridtool < handle %matlab.mixin.SetGet
                 app.createGridFig();
                 app.imGrid.XData=app.gridx;
                 app.imGrid.YData=app.gridy;
-                app.markerP0.XData=app.grid{'x','val'};
-                app.markerP0.YData=app.grid{'y','val'};
-                xlabel(app.axGrid,app.grid{'x','name'});
-                ylabel(app.axGrid,app.grid{'y','name'});
+                app.markerP0.XData=app.gridtab{'x','val'};
+                app.markerP0.YData=app.gridtab{'y','val'};
+                xlabel(app.axGrid,app.gridtab{'x','name'});
+                ylabel(app.axGrid,app.gridtab{'y','name'});
                 title(app.gridCBar,app.featureDropDown.Value,'Interpreter','none')
             end
             switch type
@@ -1283,13 +1283,13 @@ classdef gridtool < handle %matlab.mixin.SetGet
                     app.imGrid.XData=app.gridx;
                     app.imGrid.YData=app.gridy;
                     app.imGrid.CData=zeros(app.nGrid(1),app.nGrid(2));
-                    app.markerP0.XData=app.grid{'x','val'};
-                    app.markerP0.YData=app.grid{'y','val'};
+                    app.markerP0.XData=app.gridtab{'x','val'};
+                    app.markerP0.YData=app.gridtab{'y','val'};
                     for i=1:app.nClick
                         app.markerPquery(i).Visible='off';
                     end
-                    xlabel(app.axGrid,app.grid{'x','name'});
-                    ylabel(app.axGrid,app.grid{'y','name'});
+                    xlabel(app.axGrid,app.gridtab{'x','name'});
+                    ylabel(app.axGrid,app.gridtab{'y','name'});
                     title(app.gridCBar,app.featureDropDown.Value,'Interpreter','none')
             end
             
@@ -1332,7 +1332,7 @@ classdef gridtool < handle %matlab.mixin.SetGet
         function clickP0(app,src,event)
             disp('clickP0')
             [px,py]=ginput(1);
-            app.gridvars{app.grid.name(1:2),'val'}=[px;py];
+            app.gridvars{app.gridtab.name(1:2),'val'}=[px;py];
             app.makeTrajData();
             app.integrateTraj('go','p0')
         end
@@ -1356,7 +1356,7 @@ classdef gridtool < handle %matlab.mixin.SetGet
         function makeTrajData(app, coords)
             isP0=false;
             if ~exist('coords','var') %p0
-                coords=app.grid.val';
+                coords=app.gridtab.val';
                 isP0=true;
             end
             
@@ -1369,15 +1369,15 @@ classdef gridtool < handle %matlab.mixin.SetGet
             newX0=app.XF(pix(:),:);
             
             %now overwrite relevant coords
-            if app.grid{'x','type'}=="par"
-                newP(:,app.grid.ix(1))=coords(:,1);
+            if app.gridtab{'x','type'}=="par"
+                newP(:,app.gridtab.ix(1))=coords(:,1);
             else
-                newX0(:,app.grid.ix(1))=coords(:,1);
+                newX0(:,app.gridtab.ix(1))=coords(:,1);
             end
-            if app.grid{'y','type'}=="par"
-                newP(:,app.grid.ix(2))=coords(:,2);
+            if app.gridtab{'y','type'}=="par"
+                newP(:,app.gridtab.ix(2))=coords(:,2);
             else
-                newX0(:,app.grid.ix(2))=coords(:,2);
+                newX0(:,app.gridtab.ix(2))=coords(:,2);
             end
             
             %store the new p0/x0: will load the appropriate one in
@@ -1406,7 +1406,6 @@ classdef gridtool < handle %matlab.mixin.SetGet
             
             tic
             append=false;
-            app.clo_t.settspan(app.trajTspan);
             switch action
                 case 'continue'
                     if isempty(traj(1).t) %only works if prior trajectory available
@@ -1415,18 +1414,27 @@ classdef gridtool < handle %matlab.mixin.SetGet
                     %NOTE: non-autonomous needs time shift!
 %                     tspan=app.trajTspan + traj(1).t(end);
 %                     app.clo_t.settspan(tspan);
+                    app.clo_t.shiftTspan();
                     for i=1:length(traj)
                         newX0(i,:)=traj(i).x(end,1:app.prob.nVar);
                     end
                     append=true;
                     
+                case 'point' %no prep
+                    app.clo_t.settspan(app.trajTspan);
+                    for i=1:length(traj)
+                        newX0(i,:)=app.gridvars.val(app.gridvars.type=="ic")';
+                    end
+
                 case 'go' %no prep
-                    newX0=cat(1,traj(:).x0);
+                    app.clo_t.settspan(app.trajTspan);
+                    newX0 = cat(1,traj(:).x0);
                     
                 case 'last'
                     if isempty(traj(1).t) %only works if prior trajectory available
                         return
                     end
+                    app.clo_t.settspan(app.trajTspan);
                     for i=1:length(traj)
                         newX0(i,:)=traj(i).x(end,1:app.prob.nVar);
                     end
@@ -1435,8 +1443,9 @@ classdef gridtool < handle %matlab.mixin.SetGet
                     if isempty(traj(1).t) %only works if prior trajectory available
                         return
                     end
-                    tspan=app.trajTspan + traj(1).t(end);
-                    app.clo_t.settspan(tspan);
+%                     tspan=app.trajTspan + traj(1).t(end)
+%                     app.clo_t.settspan(tspan);
+                    app.clo_t.shiftTspan();
                     for i=1:length(traj)
                         newX0(i,:)=traj(i).x(end,1:app.prob.nVar);
                     end
@@ -1444,6 +1453,7 @@ classdef gridtool < handle %matlab.mixin.SetGet
                 case 'random'
                     x0lb=app.gridvars.lb(app.gridvars.type=="ic")';
                     x0ub=app.gridvars.ub(app.gridvars.type=="ic")';
+                    app.clo_t.settspan(app.trajTspan);
                     for i=1:length(traj)
                         newX0(i,:)=x0lb+rand(1, length(x0lb)).*(x0ub-x0lb);
                     end
@@ -1474,7 +1484,7 @@ classdef gridtool < handle %matlab.mixin.SetGet
                     aux(1:nStored(i),:,i),...
                     dx(1:nStored(i),:,i)];
                 if append
-                    newt=[traj(i).t; newt+traj(i).t(end)];
+                    newt=[traj(i).t; newt];
                     newx=[traj(i).x; newx];
                 end
                 traj(i).t=newt;
@@ -1634,7 +1644,7 @@ classdef gridtool < handle %matlab.mixin.SetGet
             %TODO: normalized position units, relative to screen size?
             
             % Create figControl and hide until all components are created
-            app.figControl = uifigure();
+            app.figControl = uifigure(1982);
             app.figControl.Visible = 'off';
             app.figControl.Position = [50 400 300 650];
             app.figControl.Name = 'controls';
@@ -2004,7 +2014,7 @@ classdef gridtool < handle %matlab.mixin.SetGet
         
         function createGridFig(app)
             % Create figGrid and hide until all components are created
-            app.figGrid = figure();
+            app.figGrid = figure(1983);
             app.figGrid.Visible = 'off';
             app.figGrid.Position = [375 400 600 600];
             app.figGrid.Name = 'grid';
@@ -2022,7 +2032,8 @@ classdef gridtool < handle %matlab.mixin.SetGet
             app.axGrid.YDir='normal';
             axis(app.axGrid,'tight');
             app.gridCBar=colorbar('northoutside');
-            colormap(app.axGrid,[0.85*[1,1,1];turbo])
+            colormap(app.axGrid,turbo)
+%             colormap(app.axGrid,[0.85*[1,1,1];turbo])
 
             app.markerP0=line(app.axGrid,nan,nan,'color','k','marker','o','linestyle','none');
             app.markerP0.ButtonDownFcn=@app.clickP0;  %p0 marker is clickable
@@ -2038,11 +2049,12 @@ classdef gridtool < handle %matlab.mixin.SetGet
             app.axGrid.ButtonDownFcn = @app.clickTraj; %axis is clickable
             app.figGrid.KeyPressFcn = @app.commonKeyPress;
             app.figGrid.Visible = 'on';
+            grid(app.axGrid,"on")
         end
         
         function createTrajP0Fig(app)
             % Create figTraj and hide until all components are created
-            app.figTrajP0 = figure();
+            app.figTrajP0 = figure(1984);
             app.figTrajP0.Visible = 'off';
             app.figTrajP0.Position = [375 100 600 200];
             app.figTrajP0.Name = 'p0';
@@ -2081,7 +2093,7 @@ classdef gridtool < handle %matlab.mixin.SetGet
         
         function createTrajClickFig(app)
             % Create figTraj and hide until all components are created
-            app.figTrajClick = figure();
+            app.figTrajClick = figure(1985);
             app.figTrajClick.Visible = 'off';
             app.figTrajClick.Position = [1000 100 900 900];
             app.figTrajClick.Name = 'click trajectories';
