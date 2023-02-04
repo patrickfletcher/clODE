@@ -33,6 +33,8 @@ classdef gridtool < handle %matlab.mixin.SetGet
         gridTspan
         trajTspan
         
+        doContours=false
+
 %         gridSol=struct('x',[],'y',[],'F',[]);
         %mechanism to cache F(:,:,z) values - for rapidly scanning z post compute
         
@@ -100,6 +102,10 @@ classdef gridtool < handle %matlab.mixin.SetGet
         markerP0                matlab.graphics.primitive.Line
         markerPquery            matlab.graphics.primitive.Line
         
+        gridContours            matlab.graphics.chart.primitive.Contour
+        gridColormap
+        cLevs = 7
+
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %figure with p0 trajectory
         figTrajP0                 matlab.ui.Figure
@@ -212,8 +218,11 @@ classdef gridtool < handle %matlab.mixin.SetGet
                 opts.tscale=1
                 opts.grid_device="GPU"
                 opts.traj_device="CPU"
+                opts.colormap = [0.9*[1,1,1];turbo]
             end
             
+            app.gridColormap=opts.colormap;
+
             app.createControlFig();
             app.createGridFig();
             app.createTrajP0Fig();
@@ -349,10 +358,12 @@ classdef gridtool < handle %matlab.mixin.SetGet
             newGridvars.ix=[(1:app.prob.nPar)';(1:app.prob.nVar)'];
             newGridvars.Properties.RowNames=newGridvars.name;
             
+            %autobounds - should make this a button
             const_bounds=newGridvars.lb==newGridvars.ub;
+%             const_bounds=const_bounds & newGridvars.type=="par"; %don't do ic?
             const_vals=newGridvars.val(const_bounds);
-            newGridvars.lb(const_bounds)=const_vals-abs(const_vals)*0.25;
-            newGridvars.ub(const_bounds)=const_vals+abs(const_vals)*0.25;
+            newGridvars.lb(const_bounds)=const_vals-abs(const_vals)*0.5;
+            newGridvars.ub(const_bounds)=const_vals+abs(const_vals)*0.5;
             
             %set grid to first two names
             app.gridtab.name=newGridvars.name(1:2);
@@ -1262,6 +1273,7 @@ classdef gridtool < handle %matlab.mixin.SetGet
                 ylabel(app.axGrid,app.gridtab{'y','name'});
                 title(app.gridCBar,app.featureDropDown.Value,'Interpreter','none')
             end
+            app.gridContours.Visible='off';
             switch type
                 case 'transient'
                     %handle XF plotting selection
@@ -1278,6 +1290,21 @@ classdef gridtool < handle %matlab.mixin.SetGet
                     C(C<-1e10|C>1e10)=nan; %hack to prevent display of bad values
                     app.imGrid.CData=C;
                     title(app.gridCBar,app.featureDropDown.Value,'Interpreter','none')
+
+                    if app.doContours && ~sum(C(:))==0
+%                         levels = app.gridCBar.Ticks;
+                        levels = linspace(round(min(C(:)),1,"significant"), round(max(C(:)),1,"significant"), app.cLevs);
+                        app.gridContours.XData = app.gridx;
+                        app.gridContours.YData = app.gridy;
+                        app.gridContours.ZData = C;
+                        app.gridContours.ShowText="on";
+                        app.gridContours.LevelList=levels;
+%                         hold on
+%                         [~,app.gridContours] = contour(app.gridx, app.gridy, C,levels,ShowText="on");
+%                         hold off
+                        app.gridContours.Visible='on';
+                    end
+                        
                     
                 case 'nosol'  %setup plotting elements when grid is changed
                     app.imGrid.XData=app.gridx;
@@ -1484,7 +1511,7 @@ classdef gridtool < handle %matlab.mixin.SetGet
                     aux(1:nStored(i),:,i),...
                     dx(1:nStored(i),:,i)];
                 if append
-                    newt=[traj(i).t; newt];
+                    newt=[traj(i).t; newt-(newt(1)-traj(i).t(end))];
                     newx=[traj(i).x; newx];
                 end
                 traj(i).t=newt;
@@ -1513,7 +1540,7 @@ classdef gridtool < handle %matlab.mixin.SetGet
             if isempty(traj(1).t)
                 return
             end
-            nTraj=length(traj);
+            nTraj=length(traj)
             for i=1:nTraj
                 %extract the plotting data
                 xname=app.trajXDropDown.Value;
@@ -1624,9 +1651,9 @@ classdef gridtool < handle %matlab.mixin.SetGet
                 end
                 
                 yyaxis(axyy(i),'left'); %bring focus back to left
+                ylabel(axyy(i), yname);
             end
             xlabel(axyy(end), xname);
-            ylabel(axyy(end), yname);
             if app.linkAxesButton.Value
                 app.setLinkedLims();
             end
@@ -1644,7 +1671,7 @@ classdef gridtool < handle %matlab.mixin.SetGet
             %TODO: normalized position units, relative to screen size?
             
             % Create figControl and hide until all components are created
-            app.figControl = uifigure(1982);
+            app.figControl = uifigure();
             app.figControl.Visible = 'off';
             app.figControl.Position = [50 400 300 650];
             app.figControl.Name = 'controls';
@@ -2029,19 +2056,17 @@ classdef gridtool < handle %matlab.mixin.SetGet
             app.imGrid=imagesc(app.axGrid,0, 0, 0);
             app.imGrid.HitTest='off';  %not clickable
             
+            hold on
+            [~,app.gridContours] = contour(app.axGrid, [0,1], [0,1], [0,0;0,1],ShowText="on");
+            app.gridContours.EdgeColor=0.5*[1,1,1];
+            app.gridContours.Visible="off";
+            hold off
+
             app.axGrid.YDir='normal';
             axis(app.axGrid,'tight');
             app.gridCBar=colorbar('northoutside');
-            colormap(app.axGrid,turbo)
+            colormap(app.axGrid, app.gridColormap)
 %             colormap(app.axGrid,[0.85*[1,1,1];turbo])
-
-            app.markerP0=line(app.axGrid,nan,nan,'color','k','marker','o','linestyle','none');
-            app.markerP0.ButtonDownFcn=@app.clickP0;  %p0 marker is clickable
-            markers='sdp^v';
-            for i=1:app.nClick
-                app.markerPquery(i)=line(app.axGrid,nan,nan,'color','k','marker',markers(i),'linestyle','none');
-                app.markerPquery(i).HitTest='off'; %not clickable
-            end
             
             xlabel(app.axGrid,'x')
             ylabel(app.axGrid,'y')
@@ -2060,6 +2085,7 @@ classdef gridtool < handle %matlab.mixin.SetGet
             app.figTrajP0.Name = 'p0';
             app.figTrajP0.NumberTitle='off';
             
+
             t=tiledlayout(app.figTrajP0,1,1);
             t.TileSpacing = 'compact';
             t.Padding = 'compact';
@@ -2089,6 +2115,9 @@ classdef gridtool < handle %matlab.mixin.SetGet
             app.ax3DTrajP0.Visible='off'; %start in yyaxis mode
             app.figTrajP0.KeyPressFcn = @app.commonKeyPress;
             app.figTrajP0.Visible = 'on';
+
+            app.markerP0=line(app.axGrid,nan,nan,'color','k','marker','o','linestyle','none');
+            app.markerP0.ButtonDownFcn=@app.clickP0;  %p0 marker is clickable
         end
         
         function createTrajClickFig(app)
@@ -2140,6 +2169,12 @@ classdef gridtool < handle %matlab.mixin.SetGet
             
             app.figTrajClick.KeyPressFcn = @app.commonKeyPress;
             app.figTrajClick.Visible = 'on';
+
+            markers='sdp^v';
+            for i=1:app.nClick
+                app.markerPquery(i)=line(app.axGrid,nan,nan,'color','k','marker',markers(i),'linestyle','none');
+                app.markerPquery(i).HitTest='off'; %not clickable
+            end
         end
     end
     
