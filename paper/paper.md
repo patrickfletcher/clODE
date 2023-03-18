@@ -18,6 +18,7 @@ affiliations:
       index: 2
 date: 2023-03-14
 bibliography: paper.bib
+---
 
 # Summary
 
@@ -49,4 +50,17 @@ for large-scale simulations with millions of ODEs. This lets researchers
 run experiments on typical desktop hardware, without requiring dedicated
 HPC clusters.
 
-# Citations
+# Overview of the Library
+
+CLODE contains two main components; an ODE feature observer, that
+extracts features from the simulation on the fly, and a trajectory
+simulator, that returns the explicit trajectory of a solution. The
+feature observer is very memory efficient and can simulate [TODO FIND OUT HOW MANY] ODEs
+simultaneously. The trajectory simulator is less memory efficient,
+since it needs to retain the entire trajectory of each ODE, but it
+is still much more performant than Scipy's `odeint`.
+
+# Feature Observer
+
+The feature observer can be initialised from Python and C++.
+It supports several observers

@@ -6,6 +6,7 @@ filegroup(
 
 cc_test(
     name = "testTrans",
+    size = "large",
     srcs = ["testTransient.cpp"],
     data = [
         "lactotroph.cl",
