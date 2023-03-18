@@ -54,13 +54,13 @@ jobs:
         run: bazel test --test_output=errors //... --test_size_filters=medium
 
       - name: Setup venv
-        run: make install
+        run: PYTHON=python3 make install
 
       - name: Install pip wheel
-        run: make install_clode
+        run: PYTHON=python3 make install_clode
 
       - name: Run python tests
-        run: make test
+        run: PYTHON=python3 make test
 
 #  test_windows:
 #    # virtual environments: https://github.com/actions/virtual-environments
