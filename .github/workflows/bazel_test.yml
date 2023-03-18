@@ -43,7 +43,7 @@ jobs:
       # the rest of the steps
       - uses: actions/checkout@v2
 
-      # test
+        # test
       - name: Build the code
         run: bazel build //...
 

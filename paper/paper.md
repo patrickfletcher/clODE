@@ -1,23 +1,30 @@
+
 ---
 title: 'CLODE: A Python/C++ package for large-scale ODE simulation'
+
 tags:
-    - Python
-    - C++
-    - OpenCL
-    - ODE
-    - GPU
+- Python
+- C++
+- OpenCL
+- ODE
+- GPU
+- 
 authors:
     - name: Patrick Fletcher
       affiliation: 1
     - name: Wolf Byttner
       affiliation: 2
+
 affiliations:
     - name: National Institute of Health, USA
       index: 1
     - name: University of Exeter, UK
       index: 2
+
 date: 2023-03-14
+
 bibliography: paper.bib
+
 ---
 
 # Summary

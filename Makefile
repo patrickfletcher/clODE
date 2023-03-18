@@ -5,7 +5,7 @@ PYTESTFILES=$(shell find test -name "*.py")
 venv:
 	python -m venv venv
 
-install: venv
+install:
 	. venv/bin/activate && pip install --upgrade pip && \
 	python -m pip install -r requirements.txt
 
