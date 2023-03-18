@@ -29,6 +29,9 @@ jobs:
         run: bazel build //... --subcommands
 
       - name: Setup venv
+        run: make venv
+
+      - name: Install requirements
         run: make install
 
       - name: Install pip wheel
