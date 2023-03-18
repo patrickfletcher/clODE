@@ -21,6 +21,9 @@ format:
 test: install install_clode
 	$(PYTHON) -m pytest $(PYTESTFILES)
 
+test_short: install install_clode
+	$(PYTHON) -m pytest $(PYTESTFILES) -m "not long"
+
 run: install
 	. venv/bin/activate && PYTHONPATH=$(PYTHONPATH) python main.py
 

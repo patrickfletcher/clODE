@@ -60,7 +60,7 @@ jobs:
         run: PYTHON=python3 make install_clode
 
       - name: Run python tests
-        run: PYTHON=python3 make test
+        run: PYTHON=python3 make test_short
 
 #  test_windows:
 #    # virtual environments: https://github.com/actions/virtual-environments
