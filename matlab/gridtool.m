@@ -33,6 +33,8 @@ classdef gridtool < handle %matlab.mixin.SetGet
         gridTspan
         trajTspan
         
+        doContours=false
+
 %         gridSol=struct('x',[],'y',[],'F',[]);
         %mechanism to cache F(:,:,z) values - for rapidly scanning z post compute
         
@@ -62,7 +64,7 @@ classdef gridtool < handle %matlab.mixin.SetGet
     properties (SetObservable = true)
         
         gridvars %table of possible grid vars (par+var) with values
-        grid=table('Size',[2,6], 'VariableTypes',...
+        gridtab=table('Size',[2,6], 'VariableTypes',...
             {'cellstr','double','double','double','categorical','double'},...
             'VariableNames',{'name','val','lb','ub','type','ix'},...
             'RowNames',{'x','y'}) %table specifying grid x, y info
@@ -100,6 +102,10 @@ classdef gridtool < handle %matlab.mixin.SetGet
         markerP0                matlab.graphics.primitive.Line
         markerPquery            matlab.graphics.primitive.Line
         
+        gridContours            matlab.graphics.chart.primitive.Contour
+        gridColormap
+        cLevs = 7
+
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %figure with p0 trajectory
         figTrajP0                 matlab.ui.Figure
@@ -198,6 +204,269 @@ classdef gridtool < handle %matlab.mixin.SetGet
 %         HelpTab                 matlab.ui.container.Tab
     end
     
+    
+    methods (Access = public)
+        %constructor
+        function app=gridtool(odefile, opts)
+            arguments
+                odefile=[]
+                opts.observer='basicall'
+                opts.stepper='dopri5'
+                opts.precision='single'
+                opts.nGrid=[32,32]
+                opts.nClick=3
+                opts.tscale=1
+                opts.grid_device="GPU"
+                opts.traj_device="CPU"
+                opts.colormap = [0.9*[1,1,1];turbo]
+            end
+            
+            app.gridColormap=opts.colormap;
+
+            app.createControlFig();
+            app.createGridFig();
+            app.createTrajP0Fig();
+            app.createTrajClickFig();
+            app.attachListeners();
+                        
+            %auto select first GPU for grid, fastest clock for traj
+            app.devices=queryOpenCL();
+            app.grid_device=find({app.devices(:).type}==opts.grid_device,1,'first');
+            app.traj_device=find({app.devices(:).type}==opts.traj_device,1,'first');
+%             [~,app.traj_device]=max([app.devices(:).maxClock]);
+            
+            app.gridDeviceDropDown.Items={app.devices(:).name};
+            app.gridDeviceDropDown.ItemsData=1:length(app.devices);
+            app.gridDeviceDropDown.Value=app.grid_device;
+            app.trajDeviceDropDown.Items={app.devices(:).name};
+            app.trajDeviceDropDown.ItemsData=1:length(app.devices);
+            app.trajDeviceDropDown.Value=app.traj_device;
+
+            app.nGrid=opts.nGrid;
+            app.nClick=opts.nClick;
+            app.tscale=opts.tscale;
+            app.tscaleEditField.Value=opts.tscale;
+
+            app.loadNewProblem(odefile)
+
+            app.clo_g=clODEfeatures(app.prob, opts.precision, app.grid_device, opts.stepper, opts.observer);
+            app.clo_t=clODEtrajectory(app.prob, opts.precision, app.traj_device, opts.stepper);
+
+            app.processNewProblem()
+
+            app.gridObserverDropDown.Items=app.clo_g.observerNames;
+            app.gridObserverDropDown.Value=opts.observer;
+            app.gridStepperDropDown.Items=app.clo_g.getAvailableSteppers();
+            app.gridStepperDropDown.Value=opts.stepper;
+            app.trajStepperDropDown.Items=app.clo_t.getAvailableSteppers();
+            app.trajStepperDropDown.Value=opts.stepper;
+            
+            defaultsp=clODE.defaultSolverParams(); %app.clo_g.sp
+            spvalues=cell2mat(struct2cell(defaultsp));
+            sptable=table('RowNames',fieldnames(defaultsp));
+            sptable.grid=spvalues;
+            sptable.traj=spvalues;
+            app.SolverParTable.Data=sptable;
+
+            %solver opts from ODE file
+            % needs check for presence
+            app.SolverParTable.Data{'dt',:}=app.prob.opt.dt;
+            app.SolverParTable.Data{'dtmax',:}=app.prob.opt.dtmax;
+            app.SolverParTable.Data{'max_store',:}=app.prob.opt.maxstor;
+            app.SolverParTable.Data{'abstol',:}=app.prob.opt.atoler;
+            app.SolverParTable.Data{'reltol',:}=app.prob.opt.toler;
+            
+            defaultop=clODEfeatures.defaultObserverParams(); %app.clo_g.op
+            optable=table('RowNames',fieldnames(defaultop));
+            optable.value=cell2mat(struct2cell(defaultop));
+            app.gridObserverParTable.Data=optable;
+            app.gridObserverParTable.RowName=fieldnames(defaultop);
+
+            %             if nargout==0
+            %                 clear app
+            %             end
+            
+        end
+        
+        % Copy current parameter set into an XPP file (requires
+        % ChangeXPPodeFile and packagePars4XPP)
+        function savePars(app,~,~)
+            
+            [fileToWrite,path]=uiputfile('*.ode','Save parameters to ODE file', app.odefile);
+            
+            fileToWrite=fullfile(path,fileToWrite);
+            
+            if ~exist(fileToWrite,'file')
+                copyfile(app.odefile,fileToWrite)
+            end
+            
+            ChangeXPPodeFile(fileToWrite,package4XPP(app.prob.parNames, app.p0, app.prob.varNames, app.x0));
+        end
+        
+        function loadNewProblem(app,odefile)
+            [~,app.prob]=ode2cl(odefile);
+            app.odefile=app.prob.name+".ode";
+        end
+        
+        function processNewProblem(app)
+            
+            if app.prob.nPar+app.prob.nVar<2
+                error('Not enough parameters and variables for a 2D grid!')
+            end
+            
+            app.currentFileLabel.Text=app.prob.name+".ode";
+            
+            if isempty(app.clo_g)
+                
+            else %to avoid reverting to default sp and op:
+                app.clo_g.setNewProblem(app.prob);
+                app.clo_t.setNewProblem(app.prob);
+                
+                %remove grid.name to allow new grid to be set below
+                app.listenerGrid.Enabled=0;
+                app.gridtab.name={'';''};
+                app.listenerGrid.Enabled=1;
+                app.clo_g.F=[]; %to allow new nVar
+                app.clo_g.Xf=[]; %to allow new nVar
+            end        
+            
+            app.fscale=1;
+            app.XF=[]; %to allow new nVar
+                
+            %tspan
+            t0=app.prob.opt.t0;
+            tf=app.prob.opt.total;
+            app.clo_g.tspan=[t0,tf];
+            app.clo_t.tspan=[t0,tf];
+            app.gridTspan=[t0,tf];
+            app.trajTspan=[t0,tf];
+            
+            tspan=table;
+            tspan.t0=[t0;t0];
+            tspan.tf=[tf;tf];
+%             tspan.trans=[tf;tf];
+            app.tspanTable.Data=tspan;
+            
+            %valid grid variables
+            icNames=strcat(app.prob.varNames(:),'0');
+            newGridvars=table;
+            newGridvars.name=[app.prob.parNames(:);icNames(:)];
+            newGridvars.val=[app.prob.p0(:);app.prob.x0(:)];
+            newGridvars.lb=[[app.prob.par.lb]';[app.prob.var.lb]'];
+            newGridvars.ub=[[app.prob.par.ub]';[app.prob.var.ub]'];
+            newGridvars.type=categorical([ones(app.prob.nPar,1);2*ones(app.prob.nVar,1)],[1,2],{'par','ic'});
+            newGridvars.ix=[(1:app.prob.nPar)';(1:app.prob.nVar)'];
+            newGridvars.Properties.RowNames=newGridvars.name;
+            
+            %autobounds - should make this a button
+            const_bounds=newGridvars.lb==newGridvars.ub;
+%             const_bounds=const_bounds & newGridvars.type=="par"; %don't do ic?
+            const_vals=newGridvars.val(const_bounds);
+            newGridvars.lb(const_bounds)=const_vals-abs(const_vals)*0.5;
+            newGridvars.ub(const_bounds)=const_vals+abs(const_vals)*0.5;
+            
+            %set grid to first two names
+            app.gridtab.name=newGridvars.name(1:2);
+            
+            % specify Z for +/- incrementing
+            app.z=newGridvars(3,:);
+            app.dz=(app.z.ub-app.z.lb)/10;
+            app.gridZDropDown.Items=newGridvars.name;
+            app.gridZDropDown.Value=app.z.name;
+            app.dzEditField.Value=app.dz;
+            app.zValueEditField.Value=app.z.val;
+            
+            app.gridvars=newGridvars; %triggers postSet listener
+
+            %set up selectable gridTable name
+            app.gridTable.ColumnFormat={app.gridvars.name',[],[],[],[]};
+            
+            % trajectory variables
+            app.trajvars=[app.prob.varNames(:);app.prob.auxNames(:);...
+                strcat('d',app.prob.varNames(:),'/dt')];
+            
+            %trajectory plot variables
+            app.trajXDropDown.Items=[{'t'};app.trajvars];
+            app.trajYDropDown.Items=app.trajvars;
+            app.trajZDropDown.Items=[{'none'};app.trajvars];
+            
+            yyaxis(app.axyyTrajP0,'left');
+            xlabel(app.axyyTrajP0,app.trajXDropDown.Value);
+            ylabel(app.axyyTrajP0,app.trajYDropDown.Value);
+            yyaxis(app.axyyTrajClick(end),'left');
+            xlabel(app.axyyTrajClick(end),app.trajXDropDown.Value);
+            ylabel(app.axyyTrajClick(end),app.trajYDropDown.Value);
+           
+            app.buildCL('grid');
+            app.buildCL('traj');
+            
+            figure(app.figControl)
+        end
+    
+        
+        function buildCL(app,which_clo)
+            switch which_clo
+                case 'grid'
+                    app.clo_g.buildCL();
+                    app.updateFeatureNames();
+                    app.clo_g.Xf=app.X0;
+                    app.makeGridData();
+                    app.clo_g.initialize();
+                    app.gridCLIsBuiltButton.Value = 1;
+                    app.gridCLIsBuiltButton.Text = 'CL ready';
+                    app.gridCLIsBuiltButton.BackgroundColor=[0.7,1,0.7];
+                case 'traj'
+                    app.clo_t.buildCL();
+                    app.clo_t.P=app.p0;
+                    app.clo_t.X0=app.x0;
+                    app.clo_t.Xf=app.x0;
+                    app.makeTrajData(); %p0: no clickCoords
+                    app.clo_t.initialize();
+                    app.trajCLIsBuiltButton.Value = 1;
+                    app.trajCLIsBuiltButton.Text = 'CL ready';
+                    app.trajCLIsBuiltButton.BackgroundColor=[0.7,1,0.7];
+            end
+        end
+        
+        function updateFeatureNames(app)
+            app.clo_g.getNFeatures(); %update features (nVar may affect)
+            app.clo_g.featureNames();
+            fNames=app.clo_g.featureNames();
+            ampvars=fNames(startsWith(fNames,'max')); %same as trajvars
+            ampvars=split(ampvars);
+            ampvars=ampvars(:,2);
+            f=containers.Map;
+            fNamesPlus=string();
+            for i=1:length(ampvars)
+                var=ampvars{i};
+                f(var+" max")=@(F)F(:,fNames=="max "+var);
+                fNamesPlus(end+1,1)=var+" max";
+                f(var+" min")=@(F)F(:,fNames=="min "+var);
+                fNamesPlus(end+1,1)=var+" min";
+                if any(fNames=="mean "+var)
+                    f(var+" mean")=@(F)F(:,fNames=="mean "+var);
+                    fNamesPlus(end+1,1)=var+" mean";
+                end
+                f(var+" range")=@(F)F(:,fNames=="max "+var)-F(:,fNames=="min "+var);
+                fNamesPlus(end+1,1)=var+" range";
+            end
+            extraF=fNames(contains(fNames,'count'));
+            for i=1:length(extraF)
+                thisF=string(extraF{i});
+                f(thisF)=@(F)F(:,fNames==thisF);
+            end
+            fNamesPlus(1)=[];
+            fNamesPlus=[fNamesPlus;fNames(contains(fNames,'count'))];
+            app.feature=f;
+            app.featureDropDown.Items=fNamesPlus;
+            app.featureDropDown.Value=fNamesPlus(1);
+            title(app.gridCBar,app.featureDropDown.Value);
+        end
+            
+    end
+
+
+
     % Callbacks that handle component events
     methods (Access = private)
         
@@ -378,15 +647,15 @@ classdef gridtool < handle %matlab.mixin.SetGet
             prop=src.ColumnName{indices(2)};
             switch prop
                 case 'name'
-                    app.grid(vix,:)=app.gridvars(newData,:);
-                    newGridDisplayData=app.grid(vix,{'name','val','lb','ub'});
+                    app.gridtab(vix,:)=app.gridvars(newData,:);
+                    newGridDisplayData=app.gridtab(vix,{'name','val','lb','ub'});
                     newGridDisplayData.N=app.nGrid(vix);
                     app.gridTable.Data(vix,:)=table2cell(newGridDisplayData);
                     app.updateGridPlot('nosol');
                     app.makeGridData(); %prep for next integration
                     
                 case {'val', 'lb', 'ub'}
-                    app.gridvars{app.grid.name(vix),prop}=newData; %sync gridvars table
+                    app.gridvars{app.gridtab.name(vix),prop}=newData; %sync gridvars table
                     
                 case 'N'
                     app.nGrid(indices(1))=newData;
@@ -748,11 +1017,11 @@ classdef gridtool < handle %matlab.mixin.SetGet
         end
         
         function gridx=get.gridx(app)
-            gridx=linspace(app.grid.lb(1),app.grid.ub(1),app.nGrid(1));
+            gridx=linspace(app.gridtab.lb(1),app.gridtab.ub(1),app.nGrid(1));
         end
         
         function gridy=get.gridy(app)
-            gridy=linspace(app.grid.lb(2),app.grid.ub(2),app.nGrid(2));
+            gridy=linspace(app.gridtab.lb(2),app.gridtab.ub(2),app.nGrid(2));
         end
     end
     
@@ -769,7 +1038,7 @@ classdef gridtool < handle %matlab.mixin.SetGet
     methods (Static = true)
 %         function gridUpdate(~,eventData)
 %             app = eventData.AffectedObject;
-%             newGridDisplayData=app.grid(:,{'name','val','lb','ub'});
+%             newGridDisplayData=app.gridtab(:,{'name','val','lb','ub'});
 %             newGridDisplayData.N=app.nGrid(:);
 %             app.gridTable.Data=table2cell(newGridDisplayData);
 %             app.updateGridPlot('nosol');
@@ -779,31 +1048,31 @@ classdef gridtool < handle %matlab.mixin.SetGet
         function gridvarUpdate(~,eventData)
             app = eventData.AffectedObject;
             %update grid
-%             if isempty(app.grid.name{1})
+%             if isempty(app.gridtab.name{1})
 %                 vars=app.gridvars.name(1:2);
 %             else
-                vars=app.grid.name;
+                vars=app.gridtab.name;
 %             end
             newGrid=app.gridvars(vars,:);
             newGrid.Row={'x';'y'};
             
-            nameChange=~strcmp(newGrid{:,'name'},app.grid{:,'name'});
-            boundChange=newGrid{:,{'lb','ub'}}~=app.grid{:,{'lb','ub'}};
+            nameChange=~strcmp(newGrid{:,'name'},app.gridtab{:,'name'});
+            boundChange=newGrid{:,{'lb','ub'}}~=app.gridtab{:,{'lb','ub'}};
             if any(nameChange(:))||any(boundChange(:)) %grid solution is invalidated
-                app.grid=newGrid; 
-                newGridDisplayData=app.grid(:,{'name','val','lb','ub'});
+                app.gridtab=newGrid; 
+                newGridDisplayData=app.gridtab(:,{'name','val','lb','ub'});
                 newGridDisplayData.N=app.nGrid(:);
                 app.gridTable.Data=table2cell(newGridDisplayData);
                 app.updateGridPlot('nosol');
                 app.makeGridData(); %prep for next integration
             end
             
-            p0change=newGrid{:,'val'}~=app.grid{:,'val'};
+            p0change=newGrid{:,'val'}~=app.gridtab{:,'val'};
             if any(p0change(:))
-                app.grid{:,'val'}=newGrid{:,'val'};
+                app.gridtab{:,'val'}=newGrid{:,'val'};
                 app.gridTable.Data(:,2)=num2cell(newGrid{:,'val'});
-                app.markerP0.XData=app.grid{'x','val'};
-                app.markerP0.YData=app.grid{'y','val'};
+                app.markerP0.XData=app.gridtab{'x','val'};
+                app.markerP0.YData=app.gridtab{'y','val'};
             end
             
             newZ=app.gridvars(app.z.name,:); %zname doesn't change, but val/lb/ub might
@@ -867,32 +1136,32 @@ classdef gridtool < handle %matlab.mixin.SetGet
                 case 't' %'transient'
                     app.integrateGrid('transient')
 
-%                 case 'z' %zoom grid
-%                     tmp=get(app.figGrid,'KeyPressFcn'); %
-%                     set(app.figGrid,'KeyPressFcn',[]); %temporarily turn off clicktrajectory
-%                     
-%                     k=waitforbuttonpress;
-%                     if k==0
-%                         point1 = app.figGrid.CurrentPoint;    % location when mouse clicked
-%                         rbbox;                 % rubberbox
-%                         point2 = app.figGrid.CurrentPoint;    % location when mouse released
-%                         point1 = point1(1,1:2);            % extract x and y
-%                         point2 = point2(1,1:2);
-%                         lb = min(point1,point2);           % calculate bounds
-%                         ub = max(point1,point2);           % calculate bounds
-%             
-%                         if all(ub-lb>0)
-%                             app.gridvars{app.grid.name(1:2),'lb'}=lb;
-%                             app.gridvars{app.grid.name(1:2),'ub'}=ub;
-%                             app.makeGridData();
-%                         else
-%                             disp('Try selecting new bounds more slowly...')
-%                         end
-%                     else
-%                         disp('Window Zoom-in canceled by keypress')
-%                     end
-%                     
-%                     set(app.figGrid,'KeyPressFcn',tmp);
+                case 'z' %zoom grid
+                    tmp=get(app.figGrid,'KeyPressFcn'); %
+                    set(app.figGrid,'KeyPressFcn',[]); %temporarily turn off clicktrajectory
+                    
+                    k=waitforbuttonpress;
+                    if k==0
+                        point1 = app.figGrid.CurrentPoint;    % location when mouse clicked
+                        rbbox;                 % rubberbox
+                        point2 = app.figGrid.CurrentPoint;    % location when mouse released
+                        point1 = point1(1,1:2);            % extract x and y
+                        point2 = point2(1,1:2);
+                        lb = min(point1,point2);           % calculate bounds
+                        ub = max(point1,point2);           % calculate bounds
+            
+                        if all(ub-lb>0)
+                            app.gridvars{app.gridtab.name(1:2),'lb'}=lb;
+                            app.gridvars{app.gridtab.name(1:2),'ub'}=ub;
+                            app.makeGridData();
+                        else
+                            disp('Try selecting new bounds more slowly...')
+                        end
+                    else
+                        disp('Window Zoom-in canceled by keypress')
+                    end
+                    
+                    set(app.figGrid,'KeyPressFcn',tmp);
                     
                 case 'add' % increment z by +dz, transient
                     newZ=min(app.z.val+app.dz, app.z.ub);
@@ -901,7 +1170,8 @@ classdef gridtool < handle %matlab.mixin.SetGet
                         app.makeGridData(); %prep for next integration
 %                         app.integrateGrid('transient')
 %                         app.integrateGrid('random')
-                        app.integrateGrid('point')
+%                         app.integrateGrid('point')
+                        app.integrateGrid('pointgo')
                     end
                     
                 case 'subtract' % increment z by -dz, transient
@@ -911,7 +1181,8 @@ classdef gridtool < handle %matlab.mixin.SetGet
                         app.makeGridData(); %prep for next integration
 %                         app.integrateGrid('transient')
 %                         app.integrateGrid('random')
-                        app.integrateGrid('point')
+%                         app.integrateGrid('point')
+                        app.integrateGrid('pointgo')
                     end
             end
         end
@@ -924,15 +1195,15 @@ classdef gridtool < handle %matlab.mixin.SetGet
             newX0=app.XF; %defaults to using most recent final state
             [X,Y]=ndgrid(app.gridx, app.gridy);
             
-            if app.grid{'x','type'}=="par"
-                newP(:,app.grid{'x','ix'})=X(:);
+            if app.gridtab{'x','type'}=="par"
+                newP(:,app.gridtab{'x','ix'})=X(:);
             else
-                newX0(:,app.grid{'x','ix'})=X(:);
+                newX0(:,app.gridtab{'x','ix'})=X(:);
             end
-            if app.grid{'y','type'}=="par"
-                newP(:,app.grid{'y','ix'})=Y(:);
+            if app.gridtab{'y','type'}=="par"
+                newP(:,app.gridtab{'y','ix'})=Y(:);
             else
-                newX0(:,app.grid{'y','ix'})=Y(:);
+                newX0(:,app.gridtab{'y','ix'})=Y(:);
             end
             
             app.clo_g.setProblemData(newX0, newP);
@@ -959,6 +1230,14 @@ classdef gridtool < handle %matlab.mixin.SetGet
                     newX0=repmat(app.gridvars.val(app.gridvars.type=="ic")',app.nPts,1);
                     app.clo_g.setX0(newX0);
                     app.clo_g.transient();
+
+                case 'pointgo'
+                    newX0=repmat(app.gridvars.val(app.gridvars.type=="ic")',app.nPts,1);
+                    app.clo_g.setX0(newX0);
+                    app.clo_g.transient();
+                    app.clo_g.shiftX0();
+                    app.clo_g.features(1);
+                    app.clo_g.getF();
                     
                 case 'random'
                     x0lb=app.gridvars.lb(app.gridvars.type=="ic")';
@@ -976,7 +1255,7 @@ classdef gridtool < handle %matlab.mixin.SetGet
             
             % call for plot update (use listener to SOL properties?)
             switch action
-                case {'continue','go'}
+                case {'continue','go','pointgo'}
                     app.updateGridPlot('feature')
                 case {'random','transient','point'}
                     app.updateGridPlot('transient')
@@ -988,12 +1267,13 @@ classdef gridtool < handle %matlab.mixin.SetGet
                 app.createGridFig();
                 app.imGrid.XData=app.gridx;
                 app.imGrid.YData=app.gridy;
-                app.markerP0.XData=app.grid{'x','val'};
-                app.markerP0.YData=app.grid{'y','val'};
-                xlabel(app.axGrid,app.grid{'x','name'});
-                ylabel(app.axGrid,app.grid{'y','name'});
+                app.markerP0.XData=app.gridtab{'x','val'};
+                app.markerP0.YData=app.gridtab{'y','val'};
+                xlabel(app.axGrid,app.gridtab{'x','name'});
+                ylabel(app.axGrid,app.gridtab{'y','name'});
                 title(app.gridCBar,app.featureDropDown.Value,'Interpreter','none')
             end
+            app.gridContours.Visible='off';
             switch type
                 case 'transient'
                     %handle XF plotting selection
@@ -1010,18 +1290,33 @@ classdef gridtool < handle %matlab.mixin.SetGet
                     C(C<-1e10|C>1e10)=nan; %hack to prevent display of bad values
                     app.imGrid.CData=C;
                     title(app.gridCBar,app.featureDropDown.Value,'Interpreter','none')
+
+                    if app.doContours && ~sum(C(:))==0
+%                         levels = app.gridCBar.Ticks;
+                        levels = linspace(round(min(C(:)),1,"significant"), round(max(C(:)),1,"significant"), app.cLevs);
+                        app.gridContours.XData = app.gridx;
+                        app.gridContours.YData = app.gridy;
+                        app.gridContours.ZData = C;
+                        app.gridContours.ShowText="on";
+                        app.gridContours.LevelList=levels;
+%                         hold on
+%                         [~,app.gridContours] = contour(app.gridx, app.gridy, C,levels,ShowText="on");
+%                         hold off
+                        app.gridContours.Visible='on';
+                    end
+                        
                     
                 case 'nosol'  %setup plotting elements when grid is changed
                     app.imGrid.XData=app.gridx;
                     app.imGrid.YData=app.gridy;
                     app.imGrid.CData=zeros(app.nGrid(1),app.nGrid(2));
-                    app.markerP0.XData=app.grid{'x','val'};
-                    app.markerP0.YData=app.grid{'y','val'};
+                    app.markerP0.XData=app.gridtab{'x','val'};
+                    app.markerP0.YData=app.gridtab{'y','val'};
                     for i=1:app.nClick
                         app.markerPquery(i).Visible='off';
                     end
-                    xlabel(app.axGrid,app.grid{'x','name'});
-                    ylabel(app.axGrid,app.grid{'y','name'});
+                    xlabel(app.axGrid,app.gridtab{'x','name'});
+                    ylabel(app.axGrid,app.gridtab{'y','name'});
                     title(app.gridCBar,app.featureDropDown.Value,'Interpreter','none')
             end
             
@@ -1064,7 +1359,7 @@ classdef gridtool < handle %matlab.mixin.SetGet
         function clickP0(app,src,event)
             disp('clickP0')
             [px,py]=ginput(1);
-            app.gridvars{app.grid.name(1:2),'val'}=[px;py];
+            app.gridvars{app.gridtab.name(1:2),'val'}=[px;py];
             app.makeTrajData();
             app.integrateTraj('go','p0')
         end
@@ -1088,7 +1383,7 @@ classdef gridtool < handle %matlab.mixin.SetGet
         function makeTrajData(app, coords)
             isP0=false;
             if ~exist('coords','var') %p0
-                coords=app.grid.val';
+                coords=app.gridtab.val';
                 isP0=true;
             end
             
@@ -1101,15 +1396,15 @@ classdef gridtool < handle %matlab.mixin.SetGet
             newX0=app.XF(pix(:),:);
             
             %now overwrite relevant coords
-            if app.grid{'x','type'}=="par"
-                newP(:,app.grid.ix(1))=coords(:,1);
+            if app.gridtab{'x','type'}=="par"
+                newP(:,app.gridtab.ix(1))=coords(:,1);
             else
-                newX0(:,app.grid.ix(1))=coords(:,1);
+                newX0(:,app.gridtab.ix(1))=coords(:,1);
             end
-            if app.grid{'y','type'}=="par"
-                newP(:,app.grid.ix(2))=coords(:,2);
+            if app.gridtab{'y','type'}=="par"
+                newP(:,app.gridtab.ix(2))=coords(:,2);
             else
-                newX0(:,app.grid.ix(2))=coords(:,2);
+                newX0(:,app.gridtab.ix(2))=coords(:,2);
             end
             
             %store the new p0/x0: will load the appropriate one in
@@ -1138,7 +1433,6 @@ classdef gridtool < handle %matlab.mixin.SetGet
             
             tic
             append=false;
-            app.clo_t.settspan(app.trajTspan);
             switch action
                 case 'continue'
                     if isempty(traj(1).t) %only works if prior trajectory available
@@ -1147,18 +1441,27 @@ classdef gridtool < handle %matlab.mixin.SetGet
                     %NOTE: non-autonomous needs time shift!
 %                     tspan=app.trajTspan + traj(1).t(end);
 %                     app.clo_t.settspan(tspan);
+                    app.clo_t.shiftTspan();
                     for i=1:length(traj)
                         newX0(i,:)=traj(i).x(end,1:app.prob.nVar);
                     end
                     append=true;
                     
+                case 'point' %no prep
+                    app.clo_t.settspan(app.trajTspan);
+                    for i=1:length(traj)
+                        newX0(i,:)=app.gridvars.val(app.gridvars.type=="ic")';
+                    end
+
                 case 'go' %no prep
-                    newX0=cat(1,traj(:).x0);
+                    app.clo_t.settspan(app.trajTspan);
+                    newX0 = cat(1,traj(:).x0);
                     
                 case 'last'
                     if isempty(traj(1).t) %only works if prior trajectory available
                         return
                     end
+                    app.clo_t.settspan(app.trajTspan);
                     for i=1:length(traj)
                         newX0(i,:)=traj(i).x(end,1:app.prob.nVar);
                     end
@@ -1167,8 +1470,9 @@ classdef gridtool < handle %matlab.mixin.SetGet
                     if isempty(traj(1).t) %only works if prior trajectory available
                         return
                     end
-                    tspan=app.trajTspan + traj(1).t(end);
-                    app.clo_t.settspan(tspan);
+%                     tspan=app.trajTspan + traj(1).t(end)
+%                     app.clo_t.settspan(tspan);
+                    app.clo_t.shiftTspan();
                     for i=1:length(traj)
                         newX0(i,:)=traj(i).x(end,1:app.prob.nVar);
                     end
@@ -1176,6 +1480,7 @@ classdef gridtool < handle %matlab.mixin.SetGet
                 case 'random'
                     x0lb=app.gridvars.lb(app.gridvars.type=="ic")';
                     x0ub=app.gridvars.ub(app.gridvars.type=="ic")';
+                    app.clo_t.settspan(app.trajTspan);
                     for i=1:length(traj)
                         newX0(i,:)=x0lb+rand(1, length(x0lb)).*(x0ub-x0lb);
                     end
@@ -1206,7 +1511,7 @@ classdef gridtool < handle %matlab.mixin.SetGet
                     aux(1:nStored(i),:,i),...
                     dx(1:nStored(i),:,i)];
                 if append
-                    newt=[traj(i).t; newt+traj(i).t(end)];
+                    newt=[traj(i).t; newt-(newt(1)-traj(i).t(end))];
                     newx=[traj(i).x; newx];
                 end
                 traj(i).t=newt;
@@ -1235,7 +1540,7 @@ classdef gridtool < handle %matlab.mixin.SetGet
             if isempty(traj(1).t)
                 return
             end
-            nTraj=length(traj);
+            nTraj=length(traj)
             for i=1:nTraj
                 %extract the plotting data
                 xname=app.trajXDropDown.Value;
@@ -1346,269 +1651,17 @@ classdef gridtool < handle %matlab.mixin.SetGet
                 end
                 
                 yyaxis(axyy(i),'left'); %bring focus back to left
+                ylabel(axyy(i), yname);
             end
             xlabel(axyy(end), xname);
-            ylabel(axyy(end), yname);
             if app.linkAxesButton.Value
                 app.setLinkedLims();
             end
             figure(fig)
         end
 
-        function loadNewProblem(app,odefile)
-            [~,app.prob]=ode2cl(odefile);
-            app.odefile=app.prob.name+".ode";
-        end
-        
-        function processNewProblem(app)
-            
-            if app.prob.nPar+app.prob.nVar<2
-                error('Not enough parameters and variables for a 2D grid!')
-            end
-            
-            app.currentFileLabel.Text=app.prob.name+".ode";
-            
-            if isempty(app.clo_g)
-                
-            else %to avoid reverting to default sp and op:
-                app.clo_g.setNewProblem(app.prob);
-                app.clo_t.setNewProblem(app.prob);
-                
-                %remove grid.name to allow new grid to be set below
-                app.listenerGrid.Enabled=0;
-                app.grid.name={'';''};
-                app.listenerGrid.Enabled=1;
-                app.clo_g.F=[]; %to allow new nVar
-                app.clo_g.Xf=[]; %to allow new nVar
-            end        
-            
-            app.fscale=1;
-            app.XF=[]; %to allow new nVar
-                
-            %tspan
-            t0=app.prob.opt.t0;
-            tf=app.prob.opt.total;
-            app.clo_g.tspan=[t0,tf];
-            app.clo_t.tspan=[t0,tf];
-            app.gridTspan=[t0,tf];
-            app.trajTspan=[t0,tf];
-            
-            tspan=table;
-            tspan.t0=[t0;t0];
-            tspan.tf=[tf;tf];
-%             tspan.trans=[tf;tf];
-            app.tspanTable.Data=tspan;
-            
-            %valid grid variables
-            icNames=strcat(app.prob.varNames(:),'0');
-            newGridvars=table;
-            newGridvars.name=[app.prob.parNames(:);icNames(:)];
-            newGridvars.val=[app.prob.p0(:);app.prob.x0(:)];
-            newGridvars.lb=[[app.prob.par.lb]';[app.prob.var.lb]'];
-            newGridvars.ub=[[app.prob.par.ub]';[app.prob.var.ub]'];
-            newGridvars.type=categorical([ones(app.prob.nPar,1);2*ones(app.prob.nVar,1)],[1,2],{'par','ic'});
-            newGridvars.ix=[(1:app.prob.nPar)';(1:app.prob.nVar)'];
-            newGridvars.Properties.RowNames=newGridvars.name;
-            
-            const_bounds=newGridvars.lb==newGridvars.ub;
-            const_vals=newGridvars.val(const_bounds);
-            newGridvars.lb(const_bounds)=const_vals-abs(const_vals)*0.05;
-            newGridvars.ub(const_bounds)=const_vals+abs(const_vals)*0.05;
-            
-            %set grid to first two names
-            app.grid.name=newGridvars.name(1:2);
-            
-            % specify Z for +/- incrementing
-            app.z=newGridvars(3,:);
-            app.dz=(app.z.ub-app.z.lb)/10;
-            app.gridZDropDown.Items=newGridvars.name;
-            app.gridZDropDown.Value=app.z.name;
-            app.dzEditField.Value=app.dz;
-            app.zValueEditField.Value=app.z.val;
-            
-            app.gridvars=newGridvars; %triggers postSet listener
-
-            %set up selectable gridTable name
-            app.gridTable.ColumnFormat={app.gridvars.name',[],[],[],[]};
-            
-            % trajectory variables
-            app.trajvars=[app.prob.varNames(:);app.prob.auxNames(:);...
-                strcat('d',app.prob.varNames(:),'/dt')];
-            
-            %trajectory plot variables
-            app.trajXDropDown.Items=[{'t'};app.trajvars];
-            app.trajYDropDown.Items=app.trajvars;
-            app.trajZDropDown.Items=[{'none'};app.trajvars];
-            
-            yyaxis(app.axyyTrajP0,'left');
-            xlabel(app.axyyTrajP0,app.trajXDropDown.Value);
-            ylabel(app.axyyTrajP0,app.trajYDropDown.Value);
-            yyaxis(app.axyyTrajClick(end),'left');
-            xlabel(app.axyyTrajClick(end),app.trajXDropDown.Value);
-            ylabel(app.axyyTrajClick(end),app.trajYDropDown.Value);
-           
-            app.buildCL('grid');
-            app.buildCL('traj');
-            
-            figure(app.figControl)
-        end
-    
-        
-        function buildCL(app,which_clo)
-            switch which_clo
-                case 'grid'
-                    app.clo_g.buildCL();
-                    app.updateFeatureNames();
-                    app.clo_g.Xf=app.X0;
-                    app.makeGridData();
-                    app.clo_g.initialize();
-                    app.gridCLIsBuiltButton.Value = 1;
-                    app.gridCLIsBuiltButton.Text = 'CL ready';
-                    app.gridCLIsBuiltButton.BackgroundColor=[0.7,1,0.7];
-                case 'traj'
-                    app.clo_t.buildCL();
-                    app.clo_t.P=app.p0;
-                    app.clo_t.X0=app.x0;
-                    app.clo_t.Xf=app.x0;
-                    app.makeTrajData(); %p0: no clickCoords
-                    app.clo_t.initialize();
-                    app.trajCLIsBuiltButton.Value = 1;
-                    app.trajCLIsBuiltButton.Text = 'CL ready';
-                    app.trajCLIsBuiltButton.BackgroundColor=[0.7,1,0.7];
-            end
-        end
-        
-        function updateFeatureNames(app)
-            app.clo_g.getNFeatures(); %update features (nVar may affect)
-            app.clo_g.featureNames();
-            fNames=app.clo_g.featureNames();
-            ampvars=fNames(startsWith(fNames,'max')); %same as trajvars
-            ampvars=split(ampvars);
-            ampvars=ampvars(:,2);
-            f=containers.Map;
-            fNamesPlus=string();
-            for i=1:length(ampvars)
-                var=ampvars{i};
-                f(var+" max")=@(F)F(:,fNames=="max "+var);
-                fNamesPlus(end+1,1)=var+" max";
-                f(var+" min")=@(F)F(:,fNames=="min "+var);
-                fNamesPlus(end+1,1)=var+" min";
-                if any(fNames=="mean "+var)
-                    f(var+" mean")=@(F)F(:,fNames=="mean "+var);
-                    fNamesPlus(end+1,1)=var+" mean";
-                end
-                f(var+" range")=@(F)F(:,fNames=="max "+var)-F(:,fNames=="min "+var);
-                fNamesPlus(end+1,1)=var+" range";
-            end
-            extraF=fNames(contains(fNames,'count'));
-            for i=1:length(extraF)
-                thisF=string(extraF{i});
-                f(thisF)=@(F)F(:,fNames==thisF);
-            end
-            fNamesPlus(1)=[];
-            fNamesPlus=[fNamesPlus;fNames(contains(fNames,'count'))];
-            app.feature=f;
-            app.featureDropDown.Items=fNamesPlus;
-            app.featureDropDown.Value=fNamesPlus(1);
-            title(app.gridCBar,app.featureDropDown.Value);
-        end
-            
     end
-    
 
-    
-    methods (Access = public)
-        %constructor
-        function app=gridtool(odefile, opts)
-            arguments
-                odefile=[]
-                opts.observer='basicall'
-                opts.stepper='dopri5'
-                opts.precision='single'
-                opts.nGrid=[32,32]
-                opts.nClick=3
-                opts.tscale=1
-                opts.grid_device="GPU"
-                opts.traj_device="CPU"
-            end
-            
-            app.createControlFig();
-            app.createGridFig();
-            app.createTrajP0Fig();
-            app.createTrajClickFig();
-            app.attachListeners();
-                        
-            %auto select first GPU for grid, fastest clock for traj
-            app.devices=queryOpenCL();
-            app.grid_device=find({app.devices(:).type}==opts.grid_device,1,'first');
-            app.traj_device=find({app.devices(:).type}==opts.traj_device,1,'first');
-%             [~,app.traj_device]=max([app.devices(:).maxClock]);
-            
-            app.gridDeviceDropDown.Items={app.devices(:).name};
-            app.gridDeviceDropDown.ItemsData=1:length(app.devices);
-            app.gridDeviceDropDown.Value=app.grid_device;
-            app.trajDeviceDropDown.Items={app.devices(:).name};
-            app.trajDeviceDropDown.ItemsData=1:length(app.devices);
-            app.trajDeviceDropDown.Value=app.traj_device;
-
-            app.nGrid=opts.nGrid;
-            app.nClick=opts.nClick;
-            app.tscale=opts.tscale;
-            app.tscaleEditField.Value=opts.tscale;
-
-            app.loadNewProblem(odefile)
-
-            app.clo_g=clODEfeatures(app.prob, opts.precision, app.grid_device, opts.stepper, opts.observer);
-            app.clo_t=clODEtrajectory(app.prob, opts.precision, app.traj_device, opts.stepper);
-
-            app.processNewProblem()
-
-            app.gridObserverDropDown.Items=app.clo_g.observerNames;
-            app.gridObserverDropDown.Value=opts.observer;
-            app.gridStepperDropDown.Items=app.clo_g.getAvailableSteppers();
-            app.gridStepperDropDown.Value=opts.stepper;
-            app.trajStepperDropDown.Items=app.clo_t.getAvailableSteppers();
-            app.trajStepperDropDown.Value=opts.stepper;
-            
-            defaultsp=clODE.defaultSolverParams(); %app.clo_g.sp
-            spvalues=cell2mat(struct2cell(defaultsp));
-            sptable=table('RowNames',fieldnames(defaultsp));
-            sptable.grid=spvalues;
-            sptable.traj=spvalues;
-            app.SolverParTable.Data=sptable;
-
-            %solver opts from ODE file
-            %dtmax, abstol/reltol, nout, maxstore?
-            app.SolverParTable.Data{'dt',:}=app.prob.opt.dt;
-            
-            defaultop=clODEfeatures.defaultObserverParams(); %app.clo_g.op
-            optable=table('RowNames',fieldnames(defaultop));
-            optable.value=cell2mat(struct2cell(defaultop));
-            app.gridObserverParTable.Data=optable;
-            app.gridObserverParTable.RowName=fieldnames(defaultop);
-
-            %             if nargout==0
-            %                 clear app
-            %             end
-            
-        end
-        
-        % Copy current parameter set into an XPP file (requires
-        % ChangeXPPodeFile and packagePars4XPP)
-        function savePars(app,~,~)
-            
-            [fileToWrite,path]=uiputfile('*.ode','Save parameters to ODE file', app.odefile);
-            
-            fileToWrite=fullfile(path,fileToWrite);
-            
-            if ~exist(fileToWrite,'file')
-                copyfile(app.odefile,fileToWrite)
-            end
-            
-            ChangeXPPodeFile(fileToWrite,package4XPP(app.prob.parNames, app.p0, app.prob.varNames, app.x0));
-        end
-        
-    end
     
     
     % Component initialization
@@ -1988,7 +2041,7 @@ classdef gridtool < handle %matlab.mixin.SetGet
         
         function createGridFig(app)
             % Create figGrid and hide until all components are created
-            app.figGrid = figure();
+            app.figGrid = figure(1983);
             app.figGrid.Visible = 'off';
             app.figGrid.Position = [375 400 600 600];
             app.figGrid.Name = 'grid';
@@ -2003,18 +2056,17 @@ classdef gridtool < handle %matlab.mixin.SetGet
             app.imGrid=imagesc(app.axGrid,0, 0, 0);
             app.imGrid.HitTest='off';  %not clickable
             
+            hold on
+            [~,app.gridContours] = contour(app.axGrid, [0,1], [0,1], [0,0;0,1],ShowText="on");
+            app.gridContours.EdgeColor=0.5*[1,1,1];
+            app.gridContours.Visible="off";
+            hold off
+
             app.axGrid.YDir='normal';
             axis(app.axGrid,'tight');
             app.gridCBar=colorbar('northoutside');
-            colormap(app.axGrid,'turbo')
-
-            app.markerP0=line(app.axGrid,nan,nan,'color','k','marker','o','linestyle','none');
-            app.markerP0.ButtonDownFcn=@app.clickP0;  %p0 marker is clickable
-            markers='sdp^v';
-            for i=1:app.nClick
-                app.markerPquery(i)=line(app.axGrid,nan,nan,'color','k','marker',markers(i),'linestyle','none');
-                app.markerPquery(i).HitTest='off'; %not clickable
-            end
+            colormap(app.axGrid, app.gridColormap)
+%             colormap(app.axGrid,[0.85*[1,1,1];turbo])
             
             xlabel(app.axGrid,'x')
             ylabel(app.axGrid,'y')
@@ -2022,16 +2074,18 @@ classdef gridtool < handle %matlab.mixin.SetGet
             app.axGrid.ButtonDownFcn = @app.clickTraj; %axis is clickable
             app.figGrid.KeyPressFcn = @app.commonKeyPress;
             app.figGrid.Visible = 'on';
+            grid(app.axGrid,"on")
         end
         
         function createTrajP0Fig(app)
             % Create figTraj and hide until all components are created
-            app.figTrajP0 = figure();
+            app.figTrajP0 = figure(1984);
             app.figTrajP0.Visible = 'off';
             app.figTrajP0.Position = [375 100 600 200];
             app.figTrajP0.Name = 'p0';
             app.figTrajP0.NumberTitle='off';
             
+
             t=tiledlayout(app.figTrajP0,1,1);
             t.TileSpacing = 'compact';
             t.Padding = 'compact';
@@ -2061,11 +2115,14 @@ classdef gridtool < handle %matlab.mixin.SetGet
             app.ax3DTrajP0.Visible='off'; %start in yyaxis mode
             app.figTrajP0.KeyPressFcn = @app.commonKeyPress;
             app.figTrajP0.Visible = 'on';
+
+            app.markerP0=line(app.axGrid,nan,nan,'color','k','marker','o','linestyle','none');
+            app.markerP0.ButtonDownFcn=@app.clickP0;  %p0 marker is clickable
         end
         
         function createTrajClickFig(app)
             % Create figTraj and hide until all components are created
-            app.figTrajClick = figure();
+            app.figTrajClick = figure(1985);
             app.figTrajClick.Visible = 'off';
             app.figTrajClick.Position = [1000 100 900 900];
             app.figTrajClick.Name = 'click trajectories';
@@ -2112,6 +2169,12 @@ classdef gridtool < handle %matlab.mixin.SetGet
             
             app.figTrajClick.KeyPressFcn = @app.commonKeyPress;
             app.figTrajClick.Visible = 'on';
+
+            markers='sdp^v';
+            for i=1:app.nClick
+                app.markerPquery(i)=line(app.axGrid,nan,nan,'color','k','marker',markers(i),'linestyle','none');
+                app.markerPquery(i).HitTest='off'; %not clickable
+            end
         end
     end
     

@@ -1,4 +1,4 @@
-classdef clODEfeatures<clODE & matlab.mixin.SetGet
+classdef clODEfeatures < clODE
  
     %TODO: support post-processing functions for F - add amplitude etc
     %      [newF, newNames]=processFeatures(F, fNames);
@@ -17,6 +17,8 @@ classdef clODEfeatures<clODE & matlab.mixin.SetGet
 %     clSinglePrecision
 %     cl_vendor
 %     cl_deviceType
+%         clBuilt=false
+%         clInitialized=false
 %     
 %     nPts
 %     P
