@@ -29,8 +29,6 @@ cc_test(
     srcs = ["testTrajectory.cpp"],
     data = [
         "lactotroph",
-        #        "//clode/cpp:cl_definitions",
-        #        "//clode/cpp:clode_cl_api",
         "//clode/cpp:opencl",
     ],
     linkopts = select({
@@ -66,8 +64,8 @@ cc_test(
     name = "testFeatLarge",
     srcs = ["testFeatures_morevars.cpp"],
     data = [
+        ":lactotroph",
         "//clode/cpp:opencl",
-        "//test:lactotroph",
     ],
     linkopts = select({
         "@platforms//os:osx": [],

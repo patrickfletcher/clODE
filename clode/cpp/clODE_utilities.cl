@@ -3,7 +3,7 @@
 #ifndef CL_UTILITIES_H_
 #define CL_UTILITIES_H_
 
-#include "clode/cpp/realtype.cl"
+#include "realtype.cl"
 
 //computation done by preprocessor:
 #define MIN(a, b) ((a) < (b) ? (a) : (b)) //TODO: use builtin fmin/fmax (just make sure to not mix arg type)

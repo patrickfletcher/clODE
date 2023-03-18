@@ -2,14 +2,142 @@ import typing
 
 from .stepper import Stepper
 from .observer import Observer, ObserverOutput
-from .runtime import _get_runtime
-from .runtime import _clode_root_dir
-import clode.cpp.clode_cpp_wrapper as _clode
+from .runtime import _get_clode, _get_runtime, _clode_root_dir
 import numpy as np
+
+_clode = _get_clode()
 
 
 class CLODEFeatures:
+    """
+    A class for computing features from a CLODE model.
 
+    Parameters
+    ----------
+    src_file : str
+        Path to the CLODE model source file.
+    variable_names : list[str]
+        List of variable names in the model.
+    parameter_names : list[str]
+        List of parameter names in the model.
+    aux : list[str], optional
+        List of auxiliary variable names in the model, by default None
+    num_noise : int, optional
+        Number of noise variables in the model, by default 1
+    event_var : str, optional
+        Name of the variable to use for event detection, by default ""
+    feature_var : str, optional
+        Name of the variable to use for feature detection, by default ""
+    observer_max_event_count : int, optional
+        Maximum number of events to detect, by default 100
+    observer_min_x_amp : float, optional
+        Minimum amplitude of the feature variable to detect, by default 1.0
+    observer_min_imi : float, optional
+        Minimum inter-event interval to detect, by default 1
+    observer_neighbourhood_radius : float, optional
+        Radius of the neighbourhood to use for event detection, by default 0.01
+    observer_x_up_thresh : float, optional
+        Threshold for detecting an event when the feature variable crosses the
+        upper threshold, by default 0.3
+    observer_x_down_thresh : float, optional
+        Threshold for detecting an event when the feature variable crosses the
+        lower threshold, by default 0.2
+    observer_dx_up_thresh : float, optional
+        Threshold for detecting an event when the feature variable crosses the
+        upper threshold, by default 0
+    observer_dx_down_thresh : float, optional
+        Threshold for detecting an event when the feature variable crosses the
+        lower threshold, by default 0
+    observer_eps_dx : float, optional
+        Threshold for detecting an event when the feature variable crosses the
+        lower threshold, by default 1e-7
+    tspan : tuple[float, float], optional
+        Time span for the simulation, by default (0.0, 1000.0)
+    stepper : Stepper, optional
+        Stepper to use for the simulation, by default Stepper.euler
+    single_precision : bool, optional
+        Whether to use single precision for the simulation, by default False
+    dt : float, optional
+        Time step for the simulation, by default 0.1
+    dtmax : float, optional
+        Maximum time step for the simulation, by default 1.0
+    atol : float, optional
+        Absolute tolerance for the simulation, by default 1e-6
+    rtol : float, optional
+        Relative tolerance for the simulation, by default 1e-6
+    max_steps : int, optional
+        Maximum number of steps for the simulation, by default 100000
+    max_error : float, optional
+        Maximum error for the simulation, by default 1e-3
+    max_num_events : int, optional
+        Maximum number of events to detect, by default 100
+    min_x_amp : float, optional
+        Minimum amplitude of the feature variable to detect, by default 1.0
+    min_imi : float, optional
+        Minimum inter-event interval to detect, by default 1
+    neighbourhood_radius : float, optional
+        Radius of the neighbourhood to use for event detection, by default 0.01
+    x_up_thresh : float, optional
+        Threshold for detecting an event when the feature variable crosses the
+        upper threshold, by default 0.3
+    x_down_thresh : float, optional
+        Threshold for detecting an event when the feature variable crosses the
+        lower threshold, by default 0.2
+    dx_up_thresh : float, optional
+        Threshold for detecting an event when the feature variable crosses the
+        upper threshold, by default 0
+    dx_down_thresh : float, optional
+        Threshold for detecting an event when the feature variable crosses the
+        lower threshold, by default 0
+    eps_dx : float, optional
+        Threshold for detecting an event when the feature variable crosses the
+        lower threshold, by default 1e-7
+    max_event_count : int, optional
+        Maximum number of events to detect, by default 100
+    min_x_amp : float, optional
+        Minimum amplitude of the feature variable to detect, by default 1.0
+    min_imi : float, optional
+        Minimum inter-event interval to detect, by default 1
+    neighbourhood_radius : float, optional
+        Radius of the neighbourhood to use for event detection, by default 0.01
+    x_up_thresh : float, optional
+        Threshold for detecting an event when the feature variable crosses the
+        upper threshold, by default 0.3
+    x_down_thresh : float, optional
+        Threshold for detecting an event when the feature variable crosses the
+        lower threshold, by default 0.2
+    dx_up_thresh : float, optional
+        Threshold for detecting an event when the feature variable crosses the
+        upper threshold, by default 0
+    dx_down_thresh : float, optional
+        Threshold for detecting an event when the feature variable crosses the
+        lower threshold, by default 0
+    eps_dx : float, optional
+        Threshold for detecting an event when the feature variable crosses the
+        lower threshold, by default 1e-7
+
+    Returns:
+    --------
+    CLODEFeatures
+        A CLODEFeatures object.
+
+    Examples
+    --------
+    >>> import clode
+    >>> import numpy as np
+    >>> import matplotlib.pyplot as plt
+    >>> model = clode.CLODEFeatures(
+    ...     src_file="examples/lorenz96.c",
+    ...     variable_names=["x"],
+    ...     parameter_names=["F"],
+
+    ... )
+    >>> model.set_parameter_values({"F": 8.0})
+    >>> model.set_initial_values({"x": np.random.rand(40)})
+    >>> model.simulate()
+    >>> model.plot()
+    >>> plt.show()
+"""
     def __init__(
         self,
         src_file: str,

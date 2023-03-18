@@ -3,8 +3,10 @@ import typing
 from .stepper import Stepper
 from .runtime import _get_runtime
 from .runtime import _clode_root_dir
-import clode.cpp.clode_cpp_wrapper as _clode
 import numpy as np
+from .runtime import _get_clode
+
+_clode = _get_clode()
 
 
 class CLODETrajectory:

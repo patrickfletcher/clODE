@@ -138,7 +138,7 @@ void CLODE::setCLbuildOpts(std::string extraBuildOpts)
 
 	//include folder for CLODE
 	buildOptions += " -I" + clodeRoot;
-    buildOptions += " -I" + clodeRoot + "../../";
+    //buildOptions += " -I" + clodeRoot + "../../";
 
     spdlog::debug("OpenCL build options {}", buildOptions);
 

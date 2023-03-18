@@ -4,7 +4,6 @@ import clode
 
 import numpy as np
 
-
 def ornl_thompson_a1_exact(t: float):
     y1 = 4 * (t + 1 / 8 * exp(-8 * t) - 1 / 8)
     y2 = 4 * (1 - exp(-8 * t))

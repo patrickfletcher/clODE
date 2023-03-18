@@ -1,4 +1,6 @@
-import clode.cpp.clode_cpp_wrapper as _clode
+from .runtime import _get_clode
+
+_clode = _get_clode()
 
 
 class ProblemInfo:

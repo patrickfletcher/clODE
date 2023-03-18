@@ -1,5 +1,6 @@
-import clode.cpp.clode_cpp_wrapper as _clode
+import runtime
 
+_clode = runtime._get_clode()
 
 class SolverParams:
 

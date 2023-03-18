@@ -20,7 +20,7 @@ py_library(
     name = "clode_all_sources",
     visibility = ["//visibility:public"],
     deps = [
-        "//clode:clode_init",
+        #"//clode:clode_init",
         "//clode/cpp:py_clode",
         "//clode/python:clode_init",
     ],
@@ -35,7 +35,7 @@ py_package(
         ":clode_all_sources",
     ],
 )
-
+#
 #py_wheel(
 #    name = "pyclode",
 #    # Package data. We're building "example_minimal_package-0.0.1-py3-none-any.whl"

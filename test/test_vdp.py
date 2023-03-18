@@ -1,5 +1,4 @@
 import sys
-import os
 import pytest
 import numpy as np
 from math import log, pi
