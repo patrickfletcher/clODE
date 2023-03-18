@@ -32,7 +32,7 @@ int main(int argc, char **argv)
 	bool CLSinglePrecision=true;
 	
 	ProblemInfo prob;
-	prob.clRHSfilename="test/test.cl";
+	prob.clRHSfilename="samples/lactotroph.cl";
 	prob.nVar=8;
 	prob.nPar=18;
 	prob.nAux=1;
