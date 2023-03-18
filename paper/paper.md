@@ -8,7 +8,7 @@ tags:
 - OpenCL
 - ODE
 - GPU
-- 
+
 authors:
     - name: Patrick Fletcher
       affiliation: 1
@@ -57,17 +57,17 @@ for large-scale simulations with millions of ODEs. This lets researchers
 run experiments on typical desktop hardware, without requiring dedicated
 HPC clusters.
 
-# Overview of the Library
+# Current applications and future work
 
-CLODE contains two main components; an ODE feature observer, that
-extracts features from the simulation on the fly, and a trajectory
-simulator, that returns the explicit trajectory of a solution. The
-feature observer is very memory efficient and can simulate [TODO FIND OUT HOW MANY] ODEs
-simultaneously. The trajectory simulator is less memory efficient,
-since it needs to retain the entire trajectory of each ODE, but it
-is still much more performant than Scipy's `odeint`.
+CLODE is currently being used to study the dynamics of the
+pituitary gland, a complex endocrine organ that controls
+hormone secretion.
 
-# Feature Observer
+The code base is currently being extended to support
+XPPAUT files in Python. XPPAUT is a dynamical systems modeling
+program that is widely used in ODE research.
 
-The feature observer can be initialised from Python and C++.
-It supports several observers
+# Acknowledgements
+
+We would like to thank Joel Tabak and Richard Bertram for extensively testing
+CLODE. We would also like to thank the reviewers for their helpful comments.

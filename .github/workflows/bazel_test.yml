@@ -53,7 +53,7 @@ jobs:
       - name: Run bazel tests
         run: bazel test --test_output=errors //... --test_size_filters=medium
 
-      - name: Setup venv
+      - name: Install dependencies
         run: PYTHON=python3 make install
 
       - name: Install pip wheel
