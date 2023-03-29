@@ -17,9 +17,9 @@
 
 namespace py = pybind11;
 
-PYBIND11_MODULE(clode, m) {
+PYBIND11_MODULE(clode_cpp_wrapper, m) {
 
-    m.doc() = "CLODE Python interface"; // optional module docstring
+    m.doc() = "CLODE C++/Python interface"; // optional module docstring
 
     auto python_sink = std::make_shared<PythonSink_mt>();
     auto python_logger = std::make_shared<spdlog::logger>("python", python_sink);

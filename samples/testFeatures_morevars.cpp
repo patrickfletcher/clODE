@@ -18,7 +18,7 @@
 #include "CLODEfeatures.hpp"
 #include "observers.cl"
 
-#define CLODE_ROOT "src/"
+#define CLODE_ROOT "clode/cpp/"
 
 //Generate random points within given bounds
 template<typename T> std::vector<T> generateRandomPoints(std::vector<T> lb, std::vector<T> ub, int nPts);
@@ -32,7 +32,7 @@ int main(int argc, char **argv)
 	bool CLSinglePrecision=true;
 	
 	ProblemInfo prob;
-	prob.clRHSfilename="test/test.cl";
+	prob.clRHSfilename="samples/lactotroph.cl";
 	prob.nVar=8;
 	prob.nPar=18;
 	prob.nAux=1;

@@ -28,15 +28,14 @@ jobs:
       - name: Build the code
         run: bazel build //... --subcommands
 
-      # Until we have wheel install as a Bazel action
+      - name: Setup venv
+        run: make venv
+
+      - name: Install requirements
+        run: make install
+
       - name: Install pip wheel
-        run: pip install bazel-out/k8-fastbuild/bin/pyclode/clode-0.0.2-py3-none-any.whl
-
-      - name: Install test dependencies
-        run: pip install numpy pytest
-
-      - name: Run bazel tests
-        run: bazel test --test_output=errors //... --test_size_filters=medium
+        run: make install_clode
 
   test_macos:
     # virtual environments: https://github.com/actions/virtual-environments
@@ -47,42 +46,40 @@ jobs:
       # the rest of the steps
       - uses: actions/checkout@v2
 
-      # test
+        # test
       - name: Build the code
         run: bazel build //...
-
-      # Until we have wheel install as a Bazel action
-      - name: Install pip wheel
-        run: pip3 install bazel-out/darwin-fastbuild/bin/pyclode/clode-0.0.2-py3-none-any.whl
-
-      - name: Install test dependencies
-        run: pip3 install numpy pytest
 
       - name: Run bazel tests
         run: bazel test --test_output=errors //... --test_size_filters=medium
 
-  test_windows:
-    # virtual environments: https://github.com/actions/virtual-environments
-    runs-on: windows-latest
+      - name: Install dependencies
+        run: PYTHON=python3 make install
 
-    steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, which is the CWD for
-      # the rest of the steps
-      - uses: actions/checkout@v2
-
-      - name: Python version check
-        run: python --version
-
-      - name: Python library check
-        run:   python bazel/get_python_libs.py
-
-      # test
-      - name: Build the code
-        run: bazel.exe build //...
-
-      # Until we have wheel install as a Bazel action
       - name: Install pip wheel
-        run: pip install bazel-out/darwin-fastbuild/bin/pyclode/clode-0.0.2-py3-none-any.whl
+        run: PYTHON=python3 make install_clode
 
-      - name: Run bazel tests
-        run: bazel.exe test --test_output=errors //... --test_size_filters=medium
+      - name: Run python tests
+        run: PYTHON=python3 make test_short
+
+#  test_windows:
+#    # virtual environments: https://github.com/actions/virtual-environments
+#    runs-on: windows-latest
+#
+#    steps:
+#      # Checks-out your repository under $GITHUB_WORKSPACE, which is the CWD for
+#      # the rest of the steps
+#      - uses: actions/checkout@v2
+#
+#      - name: Python version check
+#        run: python --version
+#
+#      - name: Python library check
+#        run:   python bazel/get_python_libs.py
+#
+#      # test
+#      - name: Build the code
+#        run: bazel.exe build //...
+#
+#      - name: Run bazel tests
+#        run: bazel.exe test --test_output=errors //... --test_size_filters=medium

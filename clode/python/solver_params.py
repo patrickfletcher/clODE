@@ -1,5 +1,6 @@
-import src.clode as _clode
+import runtime
 
+_clode = runtime._get_clode()
 
 class SolverParams:
 

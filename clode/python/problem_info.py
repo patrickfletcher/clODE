@@ -1,4 +1,6 @@
-import src.clode as _clode
+from .runtime import _get_clode
+
+_clode = _get_clode()
 
 
 class ProblemInfo:

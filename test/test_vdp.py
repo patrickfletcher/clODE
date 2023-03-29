@@ -1,11 +1,9 @@
 import sys
-import os
 import pytest
 import numpy as np
-from math import log, pi, log10
+from math import log, pi
 
-sys.path.append(os.path.join(os.getcwd()))
-import pyclode
+import clode
 
 
 def cuberoot(x):
@@ -28,13 +26,13 @@ def approximate_vdp_period(mu):
 def vdp_dormand_prince(end: int):
     tspan = (0.0, 1000.0)
 
-    integrator = pyclode.CLODEFeatures(
+    integrator = clode.CLODEFeatures(
         src_file="test/van_der_pol_oscillator.cl",
         variable_names=["x", "y"],
         parameter_names=["mu"],
         num_noise=0,
-        observer=pyclode.Observer.threshold_2,
-        stepper=pyclode.stepper.Stepper.dormand_prince,
+        observer=clode.Observer.threshold_2,
+        stepper=clode.Stepper.dormand_prince,
         tspan=tspan,
     )
 
@@ -67,4 +65,5 @@ def test_vdp_dormand_prince():
 
 # if using 'bazel test ...'
 if __name__ == "__main__":
+    print(clode)
     sys.exit(pytest.main(sys.argv[1:]))

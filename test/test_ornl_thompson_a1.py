@@ -1,12 +1,8 @@
 from math import exp
 
-import pyclode
-import pyclode.stepper
+import clode
 
 import numpy as np
-import sys
-import pytest
-
 
 def ornl_thompson_a1_exact(t: float):
     y1 = 4 * (t + 1 / 8 * exp(-8 * t) - 1 / 8)
@@ -24,7 +20,7 @@ def test_ornl_thompson_a1():
 
     tspan = (0.0, H / 2.)
 
-    integrator = pyclode.CLODETrajectory(
+    integrator = clode.CLODETrajectory(
         src_file="test/ornl_thompson_a1.cl",
         variable_names=["y1", "y2"],
         parameter_names=["m", "w", "k", "H"],
@@ -32,7 +28,7 @@ def test_ornl_thompson_a1():
         num_noise=0,
         dt=0.001,
         dtmax=0.001,
-        stepper=pyclode.stepper.Stepper.rk4,
+        stepper=clode.Stepper.rk4,
         tspan=tspan,
     )
 

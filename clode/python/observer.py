@@ -1,8 +1,8 @@
-import typing
-import src.clode as _clode
 import numpy as np
 from enum import Enum
+from .runtime import _get_clode
 
+_clode = _get_clode()
 
 class Observer(Enum):
     basic = "basic"

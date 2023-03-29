@@ -138,6 +138,7 @@ void CLODE::setCLbuildOpts(std::string extraBuildOpts)
 
 	//include folder for CLODE
 	buildOptions += " -I" + clodeRoot;
+    //buildOptions += " -I" + clodeRoot + "../../";
 
     spdlog::debug("OpenCL build options {}", buildOptions);
 
@@ -160,6 +161,8 @@ void CLODE::buildProgram(std::string extraBuildOpts)
 
 	//now build
 
+    spdlog::debug(clprogramstring + ODEsystemsource);
+    spdlog::debug(buildOptions);
 	opencl.buildProgramFromString(clprogramstring + ODEsystemsource, buildOptions);
 
 	// printStatus();

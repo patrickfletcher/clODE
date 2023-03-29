@@ -1,7 +1,7 @@
 #ifndef CLODE_RANDOM_H_
 #define CLODE_RANDOM_H_
 
-#include "src/realtype.cl"
+#include "realtype.cl"
 
 // A private stream of PRNs will be generated, since the whole ODE solver is per work item.
 // Seed can be created as global array. final state of RNG can be returned to global
@@ -37,7 +37,7 @@ static inline ulong rotl(const ulong x, int k)
 	return (x << k) | (x >> (64 - k));
 }
 
-ulong next(ulong s[])
+ulong next(__private rngstatetype s[])
 {
 	const ulong s0 = s[0];
 	ulong s1 = s[1];
@@ -81,7 +81,7 @@ typedef struct rngData
 } rngData;
 
 //return uniform pseudorandom number in [0,1)
-inline realtype rand(rngstatetype *state)
+inline realtype rand(__private rngstatetype *state)
 {
 	rngstatetype result = next(state);
 	return result * RNGNORM;
@@ -89,7 +89,7 @@ inline realtype rand(rngstatetype *state)
 
 //return normally distributed pseudorandom number N(0,1)
 //polar method, generates two at a time requiring  external storage of useLast switch and y2.... ugly! but no access to work-item private static vars..
-inline realtype randn(rngData *rd)
+inline realtype randn(__private rngData *rd)
 {
 
 	realtype x1, x2, w, y1;

@@ -85,3 +85,5 @@ bazel-*
 
 
 *__pycache__
+venv
+paper
