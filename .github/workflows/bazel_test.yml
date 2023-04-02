@@ -78,10 +78,10 @@ jobs:
         run:   python bazel/get_python_libs.py
 
       - name: Create OpenCL Headers directory
-        run: mkdir -p C:\Program Files\OpenCL Headers\include\CL
+        run: mkdir "C:\Program Files\OpenCL Headers\include\CL"
 
       - name: Download cl.h from GitHub
-        run: curl -L https://raw.githubusercontent.com/KhronosGroup/OpenCL-Headers/master/CL/cl.h -o C:\Program Files\OpenCL Headers\include\CL\cl.h
+        run: curl -L https://raw.githubusercontent.com/KhronosGroup/OpenCL-Headers/master/CL/cl.h -o "C:\Program Files\OpenCL Headers\include\CL\cl.h"
 
       - name: Add OpenCL headers to MSVC include path
         run: echo "C:\Program Files\OpenCL Headers\include" >> $env:INCLUDE
