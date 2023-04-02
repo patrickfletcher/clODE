@@ -78,32 +78,32 @@ jobs:
         run:   python bazel/get_python_libs.py
 
       - name: Create OpenCL Headers directory
-        run: mkdir "C:\Program Files\OpenCL Headers\include\CL"
+        run: mkdir "C:\OpenCLHeaders\include\CL"
 
       - name: Download cl.h from GitHub
-        run: curl -L https://raw.githubusercontent.com/KhronosGroup/OpenCL-Headers/master/CL/cl.h -o "C:\Program Files\OpenCL Headers\include\CL\cl.h"
+        run: curl -L https://raw.githubusercontent.com/KhronosGroup/OpenCL-Headers/master/CL/cl.h -o "C:\OpenCLHeaders\include\CL\cl.h"
 
       - name: Download opencl.h from GitHub
-        run: curl -L https://raw.githubusercontent.com/KhronosGroup/OpenCL-Headers/master/CL/opencl.h -o "C:\Program Files\OpenCL Headers\include\CL\opencl.h"
+        run: curl -L https://raw.githubusercontent.com/KhronosGroup/OpenCL-Headers/master/CL/opencl.h -o "C:\OpenCLHeaders\include\CL\opencl.h"
 
       - name: Download cl_gl.h from GitHub
-        run: curl -L https://raw.githubusercontent.com/KhronosGroup/OpenCL-Headers/master/CL/cl_gl.h -o "C:\Program Files\OpenCL Headers\include\CL\cl_gl.h"
+        run: curl -L https://raw.githubusercontent.com/KhronosGroup/OpenCL-Headers/master/CL/cl_gl.h -o "C:\OpenCLHeaders\include\CL\cl_gl.h"
 
       - name: Download cl_ext.h from GitHub
-        run: curl -L https://raw.githubusercontent.com/KhronosGroup/OpenCL-Headers/master/CL/cl_ext.h -o "C:\Program Files\OpenCL Headers\include\CL\cl_ext.h"
+        run: curl -L https://raw.githubusercontent.com/KhronosGroup/OpenCL-Headers/master/CL/cl_ext.h -o "C:\OpenCLHeaders\include\CL\cl_ext.h"
 
       - name: Download cl_platform.h from GitHub
-        run: curl -L https://raw.githubusercontent.com/KhronosGroup/OpenCL-Headers/master/CL/cl_platform.h -o "C:\Program Files\OpenCL Headers\include\CL\cl_platform.h"
+        run: curl -L https://raw.githubusercontent.com/KhronosGroup/OpenCL-Headers/master/CL/cl_platform.h -o "C:\OpenCLHeaders\include\CL\cl_platform.h"
 
       - name: Download cl_version.h from GitHub
-        run: curl -L https://raw.githubusercontent.com/KhronosGroup/OpenCL-Headers/master/CL/cl_version.h -o "C:\Program Files\OpenCL Headers\include\CL\cl_version.h"
+        run: curl -L https://raw.githubusercontent.com/KhronosGroup/OpenCL-Headers/master/CL/cl_version.h -o "C:\OpenCLHeaders\include\CL\cl_version.h"
 
       - name: Add OpenCL headers to MSVC include path
-        run: set INCLUDE="C:\Program Files\OpenCL Headers\include"
+        run: set INCLUDE="C:\OpenCLHeaders\include"
 
       # test
       - name: Build the code
-        run: bazel.exe build //... --action_env=INCLUDE
+        run: bazel.exe build //... --action_env=INCLUDE --copt="/IC:\OpenCLHeaders\include"
 #
 #      - name: Run bazel tests
 #        run: bazel.exe test --test_output=errors //... --test_size_filters=medium
