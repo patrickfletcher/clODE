@@ -122,7 +122,11 @@ cc_binary(
     srcs = ["CLODEpython.cpp"],
     includes = [
         ".",
-    ],
+    ] + select({
+        "@platforms//os:osx": [],
+        "@platforms//os:linux": [],
+        "@platforms//os:windows": ["external/com_github_khronosgroup_opencl"],
+    }),
     linkopts = select({
         "@platforms//os:osx": [],
         "@platforms//os:linux": [
