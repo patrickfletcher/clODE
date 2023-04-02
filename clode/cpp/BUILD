@@ -6,11 +6,8 @@ cc_library(
     deps = [
         "//clode/cpp/OpenCL",
         "@com_github_gabime_spdlog//:spdlog",
-    ] + select({
-        "@platforms//os:osx": [],
-        "@platforms//os:linux": [],
-        "@platforms//os:windows": ["@com_github_khronosgroup_opencl//:opencl_headers"],
-    }),
+        "@com_github_khronosgroup_opencl//:opencl_headers"
+    ]
 )
 
 cc_library(
