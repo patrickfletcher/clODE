@@ -57,6 +57,16 @@ def _com_github_pybind11_pybind():
         actual = "@com_github_pybind_pybind11//:pybind11",
     )
 
+def _com_github_KhronosGroup_OpenCLHeaders():
+    external_http_archive(
+        name = "com_github_KhronosGroup_OpenCLHeaders",
+        build_file = "//bazel/external:opencl_headers.BUILD",
+    )
+    native.bind(
+        name = "pybind11",
+        actual = "@com_github_khronosgroup_opencl//:opencl_headers",
+    )
+
 #def _com_github_grpc_grpc():
 #    external_http_archive(
 #        name = "com_github_grpc_grpc",

@@ -138,14 +138,17 @@ cc_binary(
     }),
     visibility = ["//visibility:public"],
     deps = [
-        #":Python_H",
         ":clode",
         ":clode_features",
         ":clode_trajectory",
         "//clode/cpp/logging:python_sink",
         "@com_github_pybind_pybind11//:pybind11",
         "@local_config_python//:python_headers",
-    ],
+    ] + select({
+        "@platforms//os:osx": [],
+        "@platforms//os:linux": [],
+        "@platforms//os:windows": ["@com_github_khronosgroup_opencl//:opencl_headers"],
+    }),
 )
 
 # This wrapper exists to expose the clode.so binary to python

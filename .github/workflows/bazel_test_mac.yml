@@ -1,0 +1,24 @@
+test_macos:
+  # virtual environments: https://github.com/actions/virtual-environments
+  runs-on: macos-12
+
+  steps:
+    # Checks-out your repository under $GITHUB_WORKSPACE, which is the CWD for
+    # the rest of the steps
+    - uses: actions/checkout@v2
+
+      # test
+    - name: Build the code
+      run: bazel build //...
+
+    - name: Run bazel tests
+      run: bazel test --test_output=errors //... --test_size_filters=medium
+
+    - name: Install dependencies
+      run: PYTHON=python3 make install
+
+    - name: Install pip wheel
+      run: PYTHON=python3 make install_clode
+
+    - name: Run python tests
+      run: PYTHON=python3 make test_short
