@@ -1,3 +1,7 @@
+name: CI
+
+on: [push, pull_request]
+
 test_macos:
   # virtual environments: https://github.com/actions/virtual-environments
   runs-on: macos-12

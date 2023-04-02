@@ -1,3 +1,7 @@
+name: CI
+
+on: [push, pull_request]
+
 test_windows:
   # virtual environments: https://github.com/actions/virtual-environments
   runs-on: windows-latest
