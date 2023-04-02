@@ -29,6 +29,8 @@ users run over 100,000 simulations per second. The package is
 designed to work with XPPAUT files, but can also be used as
 a standalone solver with OpenCL-defined right-hand side equations.
 
+CLODE was developed to study populations of ODEs in [@fletcher:2016].
+
 # Statement of need
 
 A large number of research questions concern ODEs, and scientists often
