@@ -18,6 +18,11 @@ config_setting(
 
 cc_library(
     name = "OpenCL",
+    includes = select({
+        "@platforms//os:osx": [],
+        "@platforms//os:linux": [],
+        "@platforms//os:windows": ["external/com_github_khronosgroup_opencl"],
+    }),
     linkopts = select({
         ":macos_opencl": ["-framework OpenCL"],
         "//conditions:default": [],
@@ -26,16 +31,9 @@ cc_library(
     deps = [
         ":cl",
         ":cl2",
-    ],
-    #    deps = select({
-    #        ":linux_opencl": [
-    #            ":cl",
-    #            "cl2",
-    #        ],
-    #        ":macos_opencl": [],
-    #        "//conditions:default": [
-    #            ":cl",
-    #            "cl2",
-    #        ],
-    #    }),
+    ] + select({
+        "@platforms//os:osx": [],
+        "@platforms//os:linux": [],
+        "@platforms//os:windows": ["@com_github_khronosgroup_opencl//:opencl_headers"],
+    }),
 )

@@ -122,11 +122,7 @@ cc_binary(
     srcs = ["CLODEpython.cpp"],
     includes = [
         ".",
-    ] + select({
-        "@platforms//os:osx": [],
-        "@platforms//os:linux": [],
-        "@platforms//os:windows": ["external/com_github_khronosgroup_opencl"],
-    }),
+    ],
     linkopts = select({
         "@platforms//os:osx": [],
         "@platforms//os:linux": [
@@ -148,11 +144,7 @@ cc_binary(
         "//clode/cpp/logging:python_sink",
         "@com_github_pybind_pybind11//:pybind11",
         "@local_config_python//:python_headers",
-    ] + select({
-        "@platforms//os:osx": [],
-        "@platforms//os:linux": [],
-        "@platforms//os:windows": ["@com_github_khronosgroup_opencl//:opencl_headers"],
-    }),
+    ],
 )
 
 # This wrapper exists to expose the clode.so binary to python
