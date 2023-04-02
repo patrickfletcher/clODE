@@ -103,7 +103,7 @@ jobs:
 
       # test
       - name: Build the code
-        run: bazel.exe build //...
+        run: bazel.exe build //... --action_env=INCLUDE
 #
 #      - name: Run bazel tests
 #        run: bazel.exe test --test_output=errors //... --test_size_filters=medium
