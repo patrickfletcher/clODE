@@ -22,7 +22,11 @@ cc_test(
     linkstatic = True,
     deps = [
         "//clode/cpp",
-    ],
+    ] + select({
+        "@platforms//os:osx": [],
+        "@platforms//os:linux": [],
+        "@platforms//os:windows": ["@com_github_khronosgroup_opencl//:opencl_headers"],
+    }),
 )
 
 cc_test(
@@ -40,7 +44,11 @@ cc_test(
     linkstatic = True,
     deps = [
         "//clode/cpp",
-    ],
+    ] + select({
+        "@platforms//os:osx": [],
+        "@platforms//os:linux": [],
+        "@platforms//os:windows": ["@com_github_khronosgroup_opencl//:opencl_headers"],
+    }),
 )
 
 cc_test(
@@ -58,7 +66,11 @@ cc_test(
     linkstatic = True,
     deps = [
         "//clode/cpp",
-    ],
+    ] + select({
+        "@platforms//os:osx": [],
+        "@platforms//os:linux": [],
+        "@platforms//os:windows": ["@com_github_khronosgroup_opencl//:opencl_headers"],
+    }),
 )
 
 cc_test(
@@ -76,7 +88,11 @@ cc_test(
     linkstatic = True,
     deps = [
         "//clode/cpp",
-    ],
+    ] + select({
+        "@platforms//os:osx": [],
+        "@platforms//os:linux": [],
+        "@platforms//os:windows": ["@com_github_khronosgroup_opencl//:opencl_headers"],
+    }),
 )
 
 cc_test(
@@ -93,5 +109,9 @@ cc_test(
     linkstatic = True,
     deps = [
         "//clode/cpp",
-    ],
+    ] + select({
+        "@platforms//os:osx": [],
+        "@platforms//os:linux": [],
+        "@platforms//os:windows": ["@com_github_khronosgroup_opencl//:opencl_headers"],
+    }),
 )

@@ -19,8 +19,17 @@ jobs:
         run:   python bazel/get_python_libs.py
 
       # test
-      - name: Build the code
-        run: bazel.exe build //... --subcommands
+      - name: Build the source
+        run: bazel.exe build //clode/... --subcommands
+
+      - name: Install dependencies
+        run: PYTHON=python make install
+
+      - name: Install pip wheel
+        run: PYTHON=python make install_clode
+
+      - name: Build samples
+        run: bazel.exe build //samples/... --subcommands
   #
   #      - name: Run bazel tests
   #        run: bazel.exe test --test_output=errors //... --test_size_filters=medium
