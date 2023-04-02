@@ -47,4 +47,16 @@ REPOSITORY_LOCATIONS_SPEC = dict(
         release_date = "2022-07-16",
         cpe = "N/A",
     ),
+    com_github_tensorflow_tensorflow = dict(
+        project_name = "tensorflow",
+        project_desc = "an end-to-end open source platform for machine learning.",
+        project_url = "https://github.com/pybind/pybind11",
+        version = "2.10.0",
+        sha256 = "225df6e6dea7cea7c5754d4ed954e9ca7c43947b849b3795f87cb56437f1bd19",
+        strip_prefix = "pybind11-{version}",
+        urls = ["https://github.com/pybind/pybind11/archive/refs/tags/v{version}.zip"],
+        use_category = ["dataplane_core", "controlplane"],
+        release_date = "2022-07-16",
+        cpe = "N/A",
+    ),
 )

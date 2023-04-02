@@ -1,4 +1,3 @@
-#load("@com_github_grpc_grpc//third_party/py:python_configure.bzl", "python_configure")
 load(":python.bzl", "python_configure")
 
 def clode_python_deps():

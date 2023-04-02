@@ -17,52 +17,6 @@ http_archive(
     url = "https://github.com/bazelbuild/rules_apple/releases/download/1.1.2/rules_apple.1.1.2.tar.gz",
 )
 
-#load("@rules_python//python:repositories.bzl", "python_register_toolchains")
-
-#python_register_toolchains(
-#    name = "python3_9",
-#    # Available versions are listed in @rules_python//python:versions.bzl.
-#    # We recommend using the same version your team is already standardized on.
-#    python_version = "3.9",
-#)
-#
-#load("@python3_9//:defs.bzl", "interpreter")
-#load("@rules_python//python:pip.bzl", "pip_parse")
-
-#pip_parse(
-#    ...
-#    python_interpreter_target = interpreter,
-#    ...
-#)
-
-#load(
-#    "@build_bazel_rules_apple//apple:repositories.bzl",
-#    "apple_rules_dependencies",
-#)
-#
-#apple_rules_dependencies()
-#
-#load(
-#    "@build_bazel_rules_swift//swift:repositories.bzl",
-#    "swift_rules_dependencies",
-#)
-#
-#swift_rules_dependencies()
-#
-#load(
-#    "@build_bazel_rules_swift//swift:extras.bzl",
-#    "swift_rules_extra_dependencies",
-#)
-#
-#swift_rules_extra_dependencies()
-#
-#load(
-#    "@build_bazel_apple_support//lib:repositories.bzl",
-#    "apple_support_dependencies",
-#)
-#
-#apple_support_dependencies()
-
 load("//bazel/python:python_native.bzl", "clode_python_deps")
 
 clode_python_deps()
