@@ -84,7 +84,7 @@ jobs:
         run: curl -L https://raw.githubusercontent.com/KhronosGroup/OpenCL-Headers/master/CL/cl.h -o "C:\Program Files\OpenCL Headers\include\CL\cl.h"
 
       - name: Add OpenCL headers to MSVC include path
-        run: echo "C:\Program Files\OpenCL Headers\include" >> $env:INCLUDE
+        run: set INCLUDE=C:\Program Files\OpenCL Headers\include;%INCLUDE%
 
       # test
       - name: Build the code
