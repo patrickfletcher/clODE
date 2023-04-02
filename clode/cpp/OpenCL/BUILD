@@ -34,6 +34,6 @@ cc_library(
     ] + select({
         "@platforms//os:osx": [],
         "@platforms//os:linux": [],
-        "@platforms//os:windows": ["@com_github_khronosgroup_opencl//:opencl_headers"],
+        "@platforms//os:windows": ["@com_github_khronosgroup_opencl_windows//:opencl_windows"],
     }),
 )

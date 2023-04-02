@@ -22,7 +22,7 @@ cc_test(
     linkstatic = True,
     deps = [
         "//clode/cpp",
-    ]
+    ],
 )
 
 cc_test(
@@ -40,7 +40,7 @@ cc_test(
     linkstatic = True,
     deps = [
         "//clode/cpp",
-    ]
+    ],
 )
 
 cc_test(
@@ -58,7 +58,7 @@ cc_test(
     linkstatic = True,
     deps = [
         "//clode/cpp",
-    ]
+    ],
 )
 
 cc_test(
@@ -76,7 +76,7 @@ cc_test(
     linkstatic = True,
     deps = [
         "//clode/cpp",
-    ]
+    ],
 )
 
 cc_test(
@@ -93,5 +93,5 @@ cc_test(
     linkstatic = True,
     deps = [
         "//clode/cpp",
-    ]
+    ],
 )

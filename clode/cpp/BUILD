@@ -56,7 +56,7 @@ cc_library(
         ":opencl_resources",
         "//clode/cpp/OpenCL",
         "@com_github_gabime_spdlog//:spdlog",
-    ]
+    ],
 )
 
 cc_library(
@@ -70,7 +70,7 @@ cc_library(
         "//clode/cpp/OpenCL",
         "//clode/cpp/observers",
         "@com_github_gabime_spdlog//:spdlog",
-    ]
+    ],
 )
 
 cc_library(
@@ -83,7 +83,7 @@ cc_library(
         ":opencl_resources",
         "//clode/cpp/OpenCL",
         "@com_github_gabime_spdlog//:spdlog",
-    ]
+    ],
 )
 
 filegroup(
@@ -144,7 +144,7 @@ cc_binary(
         "//clode/cpp/logging:python_sink",
         "@com_github_pybind_pybind11//:pybind11",
         "@local_config_python//:python_headers",
-    ]
+    ],
 )
 
 # This wrapper exists to expose the clode.so binary to python

@@ -16,7 +16,7 @@ def clode_dependencies(skip_targets = []):
     _com_github_gabime_spdlog()
     _org_python_ftp()
     _com_github_pybind11_pybind()
-    _com_github_khronosgroup_opencl()
+    _com_github_khronosgroup_opencl_windows()
 
 def _com_github_fmtlib_fmt():
     external_http_archive(
@@ -58,14 +58,14 @@ def _com_github_pybind11_pybind():
         actual = "@com_github_pybind_pybind11//:pybind11",
     )
 
-def _com_github_khronosgroup_opencl():
+def _com_github_khronosgroup_opencl_windows():
     external_http_archive(
-        name = "com_github_khronosgroup_opencl",
-        build_file = "//bazel/external:opencl_headers.BUILD",
+        name = "com_github_khronosgroup_opencl_windows",
+        build_file = "//bazel/external:opencl_windows.BUILD",
     )
     native.bind(
-        name = "opencl_headers",
-        actual = "@com_github_khronosgroup_opencl//:opencl_headers",
+        name = "opencl_windows",
+        actual = "@com_github_khronosgroup_opencl_windows//:opencl_windows",
     )
 
 #def _com_github_grpc_grpc():
