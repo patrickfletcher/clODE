@@ -17,7 +17,7 @@ affiliations:
   - name: University of Exeter, UK
     index: 2
 date: 2023-03-14
-bibliography: paper/paper.bib
+bibliography: paper.bib
 ---
 
 # Summary
