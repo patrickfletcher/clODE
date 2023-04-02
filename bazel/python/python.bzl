@@ -183,21 +183,6 @@ def _get_python_import_lib_name(repository_ctx, python_bin):
     )
     return result.stdout.splitlines()[0]
 
-def _get_numpy_include(repository_ctx, python_bin):
-    """Gets the numpy include path."""
-    return execute(
-        repository_ctx,
-        [
-            python_bin,
-            "-c",
-            "from __future__ import print_function;" +
-            "import numpy;" +
-            " print(numpy.get_include());",
-        ],
-        error_msg = "Problem getting numpy include path.",
-        error_details = "Is numpy installed?",
-    ).stdout.splitlines()[0]
-
 def _create_local_python_repository(repository_ctx):
     """Creates the repository containing files set up to build with Python."""
 
@@ -214,7 +199,6 @@ def _create_local_python_repository(repository_ctx):
         _check_python_bin(repository_ctx, python_bin)
         _check_python_lib(repository_ctx, python_lib)
     python_include = _get_python_include(repository_ctx, python_bin)
-    numpy_include = _get_numpy_include(repository_ctx, python_bin) + "/numpy"
     python_include_rule = _symlink_genrule_for_dir(
         repository_ctx,
         python_include,
@@ -238,12 +222,6 @@ def _create_local_python_repository(repository_ctx):
             [python_import_lib_src],
             [python_import_lib_name],
         )
-    numpy_include_rule = _symlink_genrule_for_dir(
-        repository_ctx,
-        numpy_include,
-        "numpy_include/numpy",
-        "numpy_include",
-    )
 
     platform_constraint = ""
     if repository_ctx.attr.platform_constraint:
@@ -252,7 +230,6 @@ def _create_local_python_repository(repository_ctx):
         "%{PYTHON_BIN_PATH}": python_bin,
         "%{PYTHON_INCLUDE_GENRULE}": python_include_rule,
         "%{PYTHON_IMPORT_LIB_GENRULE}": python_import_lib_genrule,
-        "%{NUMPY_INCLUDE_GENRULE}": numpy_include_rule,
         "%{PLATFORM_CONSTRAINT}": platform_constraint,
     })
 

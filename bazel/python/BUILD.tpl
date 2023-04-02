@@ -65,12 +65,6 @@ alias(
     actual = ":python_headers",
 )
 
-cc_library(
-    name = "numpy_headers",
-    hdrs = [":numpy_include"],
-    includes = ["numpy_include"],
-)
-
 config_setting(
     name = "windows",
     values = {"cpu": "x64_windows"},
@@ -78,5 +72,4 @@ config_setting(
 )
 
 %{PYTHON_INCLUDE_GENRULE}
-%{NUMPY_INCLUDE_GENRULE}
 %{PYTHON_IMPORT_LIB_GENRULE}
