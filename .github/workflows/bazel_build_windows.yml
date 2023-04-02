@@ -1,25 +1,26 @@
-name: CI
+name: CI Windows
 
 on: [push, pull_request]
 
-test_windows:
-  # virtual environments: https://github.com/actions/virtual-environments
-  runs-on: windows-latest
+jobs:
+  test_windows:
+    # virtual environments: https://github.com/actions/virtual-environments
+    runs-on: windows-latest
 
-  steps:
-    # Checks-out your repository under $GITHUB_WORKSPACE, which is the CWD for
-    # the rest of the steps
-    - uses: actions/checkout@v2
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, which is the CWD for
+      # the rest of the steps
+      - uses: actions/checkout@v2
 
-    - name: Python version check
-      run: python --version
+      - name: Python version check
+        run: python --version
 
-    - name: Python library check
-      run:   python bazel/get_python_libs.py
+      - name: Python library check
+        run:   python bazel/get_python_libs.py
 
-    # test
-    - name: Build the code
-      run: bazel.exe build //...
-#
-#      - name: Run bazel tests
-#        run: bazel.exe test --test_output=errors //... --test_size_filters=medium
+      # test
+      - name: Build the code
+        run: bazel.exe build //...
+  #
+  #      - name: Run bazel tests
+  #        run: bazel.exe test --test_output=errors //... --test_size_filters=medium
