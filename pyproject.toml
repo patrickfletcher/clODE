@@ -1,6 +1,11 @@
 [project]
 name = "clode"
+description="A Python package for solving ordinary differential equations on the GPU using OpenCL"
 dynamic = ["version"]
+authors = [
+    {name="Patrick Fletcher", email="patrick.allen.fletcher@gmail.com"},
+    {name="Wolf Byttner", email="wolf@byttner.org"},
+]
 
 [tool.setuptools.dynamic]
 version = {attr = "clode.__version__"}
