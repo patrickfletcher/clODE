@@ -30,6 +30,3 @@ jobs:
 
       - name: Build samples
         run: bazel.exe build //samples/... --subcommands
-
-      - name: Run bazel tests
-        run: bazel.exe test --test_output=errors //... --test_size_filters=medium

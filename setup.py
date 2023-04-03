@@ -21,6 +21,7 @@ This invokes bazel via the included `bazelisk.py` wrapper script.
 """
 
 import sys
+import platform
 if sys.version_info < (3, 8):
     print('Python >= 3.8 is required to build')
     sys.exit(1)
@@ -224,8 +225,9 @@ class BuildExtCommand(setuptools.command.build_ext.build_ext):
 
                 self.spawn(build_command)
                 suffix = '.dll' if os.name == 'nt' else '.so'
+                prefix = 'lib' if platform.system() == 'Linux' else ''
                 built_ext_path = os.path.join(
-                    'bazel-bin/clode/cpp/clode_cpp_wrapper' + suffix)
+                    f'bazel-bin/clode/cpp/{prefix}clode_cpp_wrapper{suffix}')
             else:
                 # If `CLODE_PREBUILT_DIR` is set, the extension module is assumed
                 # to have already been built a prior call to `build_ext -b
@@ -269,7 +271,7 @@ setuptools.setup(
         'version_scheme': 'no-guess-dev',
         # Test PyPI does not support local versions.
         'local_scheme': 'no-local-version',
-        'fallback_version': '0.2.0',
+        'fallback_version': '0.0.0',
     },
     description='Read and write large, multi-dimensional arrays',
     long_description=long_description,
@@ -277,7 +279,7 @@ setuptools.setup(
     author='Patrick Fletcher, Wolf Byttner',
     author_email='patrick.allen.fletcher@gmail.com',
     url='https://github.com/patrickfletcher/clODE',
-    license='Apache License 2.0',
+    license='MIT License',
     python_requires='>=3.8',
     packages=["clode", 'clode.cpp'],
     package_dir={'clode': 'clode/python', 'clode.cpp': 'clode/cpp'},

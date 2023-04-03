@@ -1,4 +1,9 @@
-version = "0.2.0"
+[project]
+name = "clode"
+dynamic = ["version"]
+
+[tool.setuptools.dynamic]
+version = {attr = "clode.__version__"}
 
 [build-system]
 requires = [

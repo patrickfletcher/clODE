@@ -1,0 +1,17 @@
+Metadata-Version: 2.1
+Name: clode
+Version: 0.2.0
+Summary: Read and write large, multi-dimensional arrays
+Home-page: https://github.com/patrickfletcher/clODE
+Author: Patrick Fletcher, Wolf Byttner
+Author-email: patrick.allen.fletcher@gmail.com
+License: MIT License
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+License-File: LICENSE
+
+# clODE - an OpenCL based tool for solving ordinary differential equations (ODEs)
+
+clODE solves many instances of the same ODE system given different input paramter values and/or initial conditions. It is written in C++ and OpenCL, and a Matlab MEX interface is provided. 
+
+
