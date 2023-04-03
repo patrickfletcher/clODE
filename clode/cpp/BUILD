@@ -41,6 +41,7 @@ cc_library(
     ],
     visibility = ["//visibility:public"],
     deps = [
+        "opencl_resources",
         ":cl_definitions",
         ":clode_cl_api",
         "//clode/cpp/OpenCL",
@@ -50,6 +51,12 @@ cc_library(
 cc_library(
     name = "clode",
     srcs = ["CLODE.cpp"],
+    copts = select({
+        "@platforms//os:osx": [],
+        "@platforms//os:linux": [
+        ],
+        "@platforms//os:windows": ["/DCOMPILING_DLL"],
+    }),
     visibility = ["//visibility:public"],
     deps = [
         ":clode_api",
@@ -63,6 +70,12 @@ cc_library(
     name = "clode_features",
     srcs = ["CLODEfeatures.cpp"],
     hdrs = ["CLODEfeatures.hpp"],
+    copts = select({
+        "@platforms//os:osx": [],
+        "@platforms//os:linux": [
+        ],
+        "@platforms//os:windows": ["/DCOMPILING_DLL"],
+    }),
     deps = [
         ":clode",
         ":clode_api",
@@ -77,6 +90,12 @@ cc_library(
     name = "clode_trajectory",
     srcs = ["CLODEtrajectory.cpp"],
     hdrs = ["CLODEtrajectory.hpp"],
+    copts = select({
+        "@platforms//os:osx": [],
+        "@platforms//os:linux": [
+        ],
+        "@platforms//os:windows": ["/DCOMPILING_DLL"],
+    }),
     deps = [
         ":clode",
         ":clode_api",
@@ -134,7 +153,7 @@ cc_binary(
     linkstatic = select({
         "@platforms//os:osx": False,
         "@platforms//os:linux": True,
-        "@platforms//os:windows": False,
+        "@platforms//os:windows": True,
     }),
     visibility = ["//visibility:public"],
     deps = [
