@@ -224,8 +224,15 @@ class BuildExtCommand(setuptools.command.build_ext.build_ext):
                     build_command += ['--copt=-fvisibility=hidden']
 
                 self.spawn(build_command)
-                suffix = '.dll' if os.name == 'nt' else '.so'
-                prefix = 'lib' if platform.system() == 'Linux' else ''
+                if os.name == 'nt':
+                    suffix = '.dll'
+                    prefix = ''
+                else:
+                    prefix = 'lib'
+                    if platform.system() == 'Darwin':
+                        suffix = '.dylib'
+                    else:
+                        suffix = '.so'
                 built_ext_path = os.path.join(
                     f'bazel-bin/clode/cpp/{prefix}clode_cpp_wrapper{suffix}')
             else:
