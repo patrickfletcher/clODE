@@ -279,7 +279,7 @@ setuptools.setup(
     url='https://github.com/patrickfletcher/clODE',
     license='Apache License 2.0',
     python_requires='>=3.8',
-    packages=["clode", 'clode.cpp'],#setuptools.find_packages('clode'),
+    packages=["clode", 'clode.cpp'],
     package_dir={'clode': 'clode/python', 'clode.cpp': 'clode/cpp'},
     ext_modules=[setuptools.Extension('clode/clode_cpp_wrapper', sources=[])],
     setup_requires=['setuptools_scm'],

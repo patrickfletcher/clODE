@@ -20,7 +20,7 @@ jobs:
 
       # test
       - name: Build the source
-        run: bazel.exe build //clode/... --subcommands
+        run: bazel.exe build //clode/...
 
       - name: Install dependencies
         run: make install

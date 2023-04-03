@@ -123,7 +123,7 @@ def _get_python_lib(repository_ctx, python_bin):
         cmd += "f.write(\"%s\" + linesep);" % line
     cmd += "f.close();"
     cmd += "from subprocess import call;"
-    cmd += "call([\"%s\", \"script.py\"]);" % python_bin
+    cmd += "call([r\"%s\", \"script.py\"]);" % python_bin
 
     result = execute(repository_ctx, [python_bin, "-c", cmd])
     return result.stdout.strip()
