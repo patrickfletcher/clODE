@@ -38,7 +38,6 @@ import shlex
 import shutil
 import sysconfig
 import tempfile
-import itertools
 
 import pkg_resources
 import setuptools.command.build_ext
@@ -224,7 +223,7 @@ class BuildExtCommand(setuptools.command.build_ext.build_ext):
                     build_command += ['--copt=-fvisibility=hidden']
 
                 self.spawn(build_command)
-                suffix = '.pyd' if os.name == 'nt' else '.so'
+                suffix = '.dll' if os.name == 'nt' else '.so'
                 built_ext_path = os.path.join(
                     'bazel-bin/clode/cpp/clode_cpp_wrapper' + suffix)
             else:
@@ -242,6 +241,7 @@ class BuildExtCommand(setuptools.command.build_ext.build_ext):
                                               os.path.basename(ext_full_path))
 
             os.makedirs(os.path.dirname(ext_full_path), exist_ok=True)
+            print(f'Built output files: {os.listdir(os.path.dirname(built_ext_path))}')
             print('Copying extension %s -> %s' % (
                 built_ext_path,
                 ext_full_path,
@@ -269,7 +269,7 @@ setuptools.setup(
         'version_scheme': 'no-guess-dev',
         # Test PyPI does not support local versions.
         'local_scheme': 'no-local-version',
-        'fallback_version': '0.0.0',
+        'fallback_version': '0.2.0',
     },
     description='Read and write large, multi-dimensional arrays',
     long_description=long_description,

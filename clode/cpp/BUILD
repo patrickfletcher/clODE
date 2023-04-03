@@ -137,7 +137,7 @@ cc_library(
 )
 
 cc_binary(
-    name = "clode_cpp_wrapper.so",
+    name = "clode_cpp_wrapper",
     srcs = ["CLODEpython.cpp"],
     includes = [
         ".",
@@ -170,7 +170,7 @@ cc_binary(
 py_library(
     name = "py_clode",
     data = [
-        ":clode_cpp_wrapper.so",
+        ":clode_cpp_wrapper",
         ":opencl",
         "//samples:lactotroph",
     ],
