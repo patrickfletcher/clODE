@@ -1227,13 +1227,18 @@ classdef gridtool < handle %matlab.mixin.SetGet
                     
 %                 case 'shift'
                 case 'point'
-                    newX0=repmat(app.gridvars.val(app.gridvars.type=="ic")',app.nPts,1);
-                    app.clo_g.setX0(newX0);
+                    if app.gridtab{'x','type'}=="par" && app.gridtab{'y','type'}=="par"
+                        newX0=repmat(app.gridvars.val(app.gridvars.type=="ic")',app.nPts,1);
+                        app.clo_g.setX0(newX0);
+                    end
                     app.clo_g.transient();
 
                 case 'pointgo'
-                    newX0=repmat(app.gridvars.val(app.gridvars.type=="ic")',app.nPts,1);
-                    app.clo_g.setX0(newX0);
+                    if app.gridtab{'x','type'}=="par" && app.gridtab{'y','type'}=="par"
+                        newX0=repmat(app.gridvars.val(app.gridvars.type=="ic")',app.nPts,1);
+                        app.clo_g.setX0(newX0);
+                    end
+%                     app.clo_g.shiftX0();
                     app.clo_g.transient();
                     app.clo_g.shiftX0();
                     app.clo_g.features(1);
