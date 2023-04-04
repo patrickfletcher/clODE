@@ -31,6 +31,9 @@ jobs:
       - name: Build samples
         run: bazel.exe build //samples/...
 
+      - name: Build wheel
+        run: make wheel
+
       - name: Publish to PyPI test
         env:
           TWINE_USERNAME: __token__

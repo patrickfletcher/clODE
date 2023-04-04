@@ -8,12 +8,11 @@ venv:
 	$(PYTHON) -m venv venv
 
 install:
-	. venv/bin/activate && \
-		$(PYTHON) -m pip install --upgrade pip && \
+	$(PYTHON) -m pip install --upgrade pip && \
 		$(PYTHON) -m pip install -r requirements.txt
 
 install_clode:
-	. venv/bin/activate && $(PYTHON) -m pip install .
+	$(PYTHON) -m pip install .
 
 format:
 	isort $(PYFILES) $(PYTESTFILES) && \
@@ -34,7 +33,10 @@ lint: install
 		mypy $(PYFILES) $(PYTESTFILES)
 
 wheel:
-	. venv/bin/activate && $(PYTHON) -m build .
+	$(PYTHON) -m build .
 
-upload: wheel
-	. venv/bin/activate && $(PYTHON) -m twine upload --repository testpypi dist/*
+sdist:
+	$(PYTHON) -m build . --sdist
+
+upload:
+	$(PYTHON) -m twine upload --repository testpypi dist/*

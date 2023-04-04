@@ -28,6 +28,9 @@ jobs:
       - name: Run python tests
         run: PYTHON=python3 make test_short
 
+      - name: Build wheel
+        run: PYTHON=python3 make wheel
+
       - name: Publish to PyPI test
         env:
           TWINE_USERNAME: __token__
