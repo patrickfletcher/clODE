@@ -39,4 +39,4 @@ sdist:
 	$(PYTHON) -m build . --sdist
 
 upload:
-	$(PYTHON) -m twine upload --repository testpypi dist/*
+	$(PYTHON) -m twine upload --repository testpypi dist/* --skip-existing
