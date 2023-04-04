@@ -278,20 +278,15 @@ setuptools.setup(
         'local_scheme': 'no-local-version',
         'fallback_version': '0.0.0',
     },
-    python_requires='>=3.8',
     packages=["clode", 'clode.cpp'],
     package_dir={'clode': 'clode/python', 'clode.cpp': 'clode/cpp'},
     ext_modules=[setuptools.Extension('clode/clode_cpp_wrapper', sources=[])],
     setup_requires=['setuptools_scm'],
     cmdclass={
-        'sdist': SdistCommand,
         'build': BuildCommand,
         'build_py': BuildPyCommand,
         'build_ext': BuildExtCommand,
         'install': InstallCommand,
     },
-    install_requires=[
-        'numpy>=1.16.0',
-    ],
     package_data={'clode.cpp': ['*.cl', 'observers/*.clh', 'steppers/*.clh']},
 )

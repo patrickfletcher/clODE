@@ -6,7 +6,7 @@ py_wheel(
     distribution = "clode",
     python_tag = "py3",
     stamp = 0,
-    version = "0.2.0",
+    version = "",
     deps = [
         "//clode/python:clode_pkg",
     ],

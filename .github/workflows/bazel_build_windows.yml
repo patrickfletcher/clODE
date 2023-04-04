@@ -16,7 +16,7 @@ jobs:
         run: python --version
 
       - name: Python library check
-        run:   python bazel/get_python_libs.py
+        run: python bazel/get_python_libs.py
 
       # test
       - name: Build the source
@@ -29,4 +29,11 @@ jobs:
         run: python -m pip install --verbose .
 
       - name: Build samples
-        run: bazel.exe build //samples/... --subcommands
+        run: bazel.exe build //samples/...
+
+      - name: Publish to PyPI test
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_TEST_TOKEN }}
+        run: |
+          make upload

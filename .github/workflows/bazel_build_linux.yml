@@ -36,3 +36,10 @@ jobs:
 
       - name: Install pip wheel
         run: make install_clode
+
+      - name: Publish to PyPI test
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_TEST_TOKEN }}
+        run: |
+          make upload

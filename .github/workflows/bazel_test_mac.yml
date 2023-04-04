@@ -27,3 +27,10 @@ jobs:
 
       - name: Run python tests
         run: PYTHON=python3 make test_short
+
+      - name: Publish to PyPI test
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_TEST_TOKEN }}
+        run: |
+          make upload

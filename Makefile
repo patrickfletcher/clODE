@@ -8,11 +8,12 @@ venv:
 	$(PYTHON) -m venv venv
 
 install:
-	$(PYTHON) -m pip install --upgrade pip && \
+	. venv/bin/activate && \
+		$(PYTHON) -m pip install --upgrade pip && \
 		$(PYTHON) -m pip install -r requirements.txt
 
 install_clode:
-	$(PYTHON) -m pip install .
+	. venv/bin/activate && $(PYTHON) -m pip install .
 
 format:
 	isort $(PYFILES) $(PYTESTFILES) && \
@@ -25,9 +26,15 @@ test_short: install install_clode
 	$(PYTHON) -m pytest $(PYTESTFILES) -m "not long"
 
 run: install
-	. venv/bin/activate && PYTHONPATH=$(PYTHONPATH) python main.py
+	. venv/bin/activate && PYTHONPATH=$(PYTHONPATH) $(PYTHON) main.py
 
 lint: install
 	vulture $(PYFILES) $(PYTESTFILES) && \
 		$(PYTHON) -m pylint $(PYFILES) $(PYTESTFILES) && \
 		mypy $(PYFILES) $(PYTESTFILES)
+
+wheel:
+	. venv/bin/activate && $(PYTHON) -m build .
+
+upload: wheel
+	. venv/bin/activate && $(PYTHON) -m twine upload --repository testpypi dist/*
