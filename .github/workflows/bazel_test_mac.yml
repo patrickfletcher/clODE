@@ -36,4 +36,4 @@ jobs:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.PYPI_TEST_TOKEN }}
         run: |
-          make upload
+          PYTHON=python3 make upload
