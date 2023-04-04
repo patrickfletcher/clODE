@@ -31,12 +31,3 @@ classifiers = [
 
 [tool.setuptools.dynamic]
 version = {attr = "clode.__version__"}
-
-
-[build-system]
-requires = [
-    "setuptools>=30.3.0",
-    "wheel",
-    "setuptools_scm",
-    "oldest-supported-numpy",
-]
