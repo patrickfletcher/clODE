@@ -37,4 +37,5 @@ version = {attr = "clode.__version__"}
 requires = [
     "setuptools",
     "wheel",
+    "setuptools_scm"
 ]
