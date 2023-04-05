@@ -1,5 +1,6 @@
 import typing
 
+from .xpp_parser import convert_xpp_file
 from .stepper import Stepper
 from .runtime import _get_runtime
 from .runtime import _clode_root_dir
@@ -31,6 +32,11 @@ class CLODETrajectory:
         max_store: int = 10000000,
         nout: int = 50,
     ):
+        if src_file.endswith(".xpp"):
+            input_file = convert_xpp_file(src_file)
+        else:
+            input_file = src_file
+
         self._data = None
         self._output_trajectories = None
         self._time_steps = None
@@ -44,7 +50,7 @@ class CLODETrajectory:
         self.vars = variable_names
         self.pars = parameter_names
         self.aux_variables = aux
-        self._pi = _clode.problem_info(src_file, len(variable_names),
+        self._pi = _clode.problem_info(input_file, len(variable_names),
                                        len(parameter_names), len(aux),
                                        num_noise, variable_names,
                                        parameter_names, aux)

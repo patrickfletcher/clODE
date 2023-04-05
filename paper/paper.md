@@ -30,6 +30,7 @@ designed to work with XPPAUT files, but can also be used as
 a standalone solver with OpenCL-defined right-hand side equations.
 
 CLODE was developed to study populations of ODEs in [@fletcher:2016].
+The Python interface was developed using [@pybind11].
 
 # Statement of need
 

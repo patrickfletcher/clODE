@@ -9,3 +9,7 @@ clODE is written in C++ and OpenCL, and has a Python interface.
 The right-hand-side (RHS) function is written in OpenCL,
 and is relatively simple in structure. The library is compiled
 using bazel and bazelisk, and it runs on Linux, Windows and MacOS.
+
+## Source
+
+The source code is available on [GitHub](https://github.com/patrickfletcher/clODE).

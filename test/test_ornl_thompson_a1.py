@@ -52,5 +52,4 @@ def test_ornl_thompson_a1():
 
 # if using 'bazel test ...'
 if __name__ == "__main__":
-    #sys.exit(pytest.main(sys.argv[1:]))
     test_ornl_thompson_a1()

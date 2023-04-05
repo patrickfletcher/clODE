@@ -157,6 +157,9 @@ public:
     std::vector<std::string> getAvailableSteppers() { return availableSteppers; };
 
     void printStatus();
+
+    // Getters
+    const ProblemInfo getProblemInfo() const { return prob; };
 };
 
 #endif //CLODE_HPP_

@@ -40,3 +40,10 @@ jobs:
           TWINE_PASSWORD: ${{ secrets.PYPI_TEST_TOKEN }}
         run: |
           make upload
+
+      - name: Publish to PyPI
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
+        run: |
+          make upload_prod

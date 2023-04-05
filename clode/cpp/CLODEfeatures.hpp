@@ -64,6 +64,7 @@ protected:
     void resizeFeaturesVariables(); //d_odata and d_F depend on nPts. nPts change invalidates d_odata
 
 public:
+
     CLODEfeatures(ProblemInfo prob, std::string stepper, std::string observer, bool clSinglePrecision, OpenCLResource opencl, const std::string clodeRoot);
     CLODEfeatures(ProblemInfo prob, std::string stepper, std::string observer, bool clSinglePrecision, unsigned int platformID, unsigned int deviceID, const std::string clodeRoot);
     virtual ~CLODEfeatures();
@@ -91,11 +92,12 @@ public:
     // void features(bool newDoObserverInitFlag, std::vector<cl_double> newTspan, std::vector<cl_double> newX0, std::vector<cl_double> newPars, SolverParams<cl_double> newSp);
 
     //Get functions
-    std::string getProgramString();
-    std::vector<cl_double> getF();
-    int getNFeatures() { return nFeatures; };
-    std::vector<std::string> getFeatureNames(){return featureNames;};
-    std::vector<std::string> getAvailableObservers(){return availableObserverNames;};
+    const std::string getObserverName() const { return observerName; }
+    const std::string getProgramString();
+    const std::vector<cl_double> getF();
+    const int getNFeatures() const { return nFeatures; };
+    const std::vector<std::string> getFeatureNames() const { return featureNames;};
+    const std::vector<std::string> getAvailableObservers() const { return availableObserverNames;};
 };
 
 #endif //CLODE_FEATURES_HPP_

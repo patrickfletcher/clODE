@@ -6,8 +6,11 @@ _clode = _get_clode()
 
 class Observer(Enum):
     basic = "basic"
+    basic_all_variables = "basicall"
+    local_max = "localmax"
+    neighbourhood_1 = "nhood1"
+    neighbourhood_2 = "nhood2"
     threshold_2 = "thresh2"
-
 
 class ObserverOutput:
 

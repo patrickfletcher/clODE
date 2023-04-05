@@ -4,10 +4,14 @@ description="A Python package for solving ordinary differential equations on the
 dynamic = ["version"]
 authors = [
     {name="Patrick Fletcher", email="patrick.allen.fletcher@gmail.com"},
-    {name="Wolf Byttner", email="wolf@byttner.org"},
 ]
 requires-python = ">=3.8"
 readme = "README.md"
+
+maintainers = [
+    {name="Patrick Fletcher", email="patrick.allen.fletcher@gmail.com"},
+    {name="Wolf Byttner", email="wolf@byttner.org"},
+]
 
 classifiers = [
     "Development Status :: 3 - Alpha",

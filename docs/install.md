@@ -42,3 +42,9 @@ bazel/repository_locations.bzl.
 
 # License
 This project is licensed under the MIT License - see the [LICENSE](../LICENSE) file for details
+
+# Verifying the installation
+
+To verify that the installation was successful, you can run the following command:
+
+    python -c "import clode; print(clode.print_opencl())"

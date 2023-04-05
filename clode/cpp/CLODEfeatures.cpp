@@ -65,7 +65,7 @@ void CLODEfeatures::buildCL()
 }
 
 
-std::string CLODEfeatures::getProgramString() 
+const std::string CLODEfeatures::getProgramString()
 {
 	observerBuildOpts=" -D" + observerDefineMap.at(observer).define;
 	setCLbuildOpts(observerBuildOpts);
@@ -317,7 +317,7 @@ void CLODEfeatures::features()
 	}
 }
 
-std::vector<cl_double> CLODEfeatures::getF()
+const std::vector<cl_double> CLODEfeatures::getF()
 {
 
 	if (clSinglePrecision)

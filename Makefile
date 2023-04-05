@@ -40,3 +40,6 @@ sdist:
 
 upload:
 	$(PYTHON) -m twine upload --repository testpypi dist/* --skip-existing
+
+upload_prod:
+	$(PYTHON) -m twine upload dist/* --skip-existing

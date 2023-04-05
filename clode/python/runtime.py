@@ -13,3 +13,6 @@ def _get_runtime():
 
 def _get_clode():
     return _clode
+
+def print_devices():
+    return _get_runtime().print_open_cl()

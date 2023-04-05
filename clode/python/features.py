@@ -1,5 +1,6 @@
 import typing
 
+from .xpp_parser import convert_xpp_file
 from .stepper import Stepper
 from .observer import Observer, ObserverOutput
 from .runtime import _get_clode, _get_runtime, _clode_root_dir
@@ -168,6 +169,11 @@ class CLODEFeatures:
         max_store: int = 10000000,
         nout: int = 50,
     ):
+        if src_file.endswith(".xpp"):
+            input_file = convert_xpp_file(src_file)
+        else:
+            input_file = src_file
+
         self._final_state = None
         self._num_result_features = None
         self._result_features = None
@@ -177,7 +183,7 @@ class CLODEFeatures:
         self.vars = variable_names
         self.pars = parameter_names
         self.aux_variables = aux
-        self._pi = _clode.problem_info(src_file, len(variable_names),
+        self._pi = _clode.problem_info(input_file, len(variable_names),
                                        len(parameter_names), len(aux),
                                        num_noise, variable_names,
                                        parameter_names, aux)
