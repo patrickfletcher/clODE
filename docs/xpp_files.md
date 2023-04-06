@@ -6,11 +6,10 @@ To use this functionality, you must have the Python library installed.
 Simply send your .xpp file to the functions
 clode_features or clode_trajectory.
 
-
 ## Example
+
 You can also use the clode functions `read_ode_parameters`
 and `format_opencl_rhs`.
-
 
 ### Converting an XPP string to OpenCL
 
@@ -37,8 +36,7 @@ import clode
 # The file will be named van_der_pol_oscillator.cl
 # and you can find it in the same directory as the .xpp file
 clode_cl_filename = clode.convert_xpp_file("van_der_pol_oscillator.xpp")
-``` 
-
+```
 
 ## Example
 
@@ -50,4 +48,5 @@ The XPP converter is not perfect. It is not guaranteed to work for all XPP files
 Formatting will not be preserved.
 
 The following features are partially supported:
+
 * exponents

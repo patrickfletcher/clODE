@@ -1,4 +1,4 @@
-# Querying the machine OpenCL capabilities
+# Querying system OpenCL capabilities
 
 clODE can query the OpenCL capabilities of your machine. This is useful for debugging and for finding the best OpenCL device for your application.
 
@@ -10,7 +10,7 @@ import clode
 print(clode.print_opencl())
 ```
 
-## Output
+### Output
 
 ```
 [2023-04-05 17:19:48.614] [info] 
@@ -43,15 +43,15 @@ Device 0. --------------------
 import clode
 
 platforms = clode.query_opencl()
+print(platforms)
+print(clode.query_open_cl()[0].device_info)
 ```
 
-## Output
+### Output
 
 ```
->>> clode.query_open_cl()
 [<platform_info(name=Apple, vendor=Apple, version=OpenCL 1.2 (Nov  4 2022 20:34:31), device_count=1)>]
 
->>> clode.query_open_cl()[0].device_info
 [<device_info(name=Apple M1 Pro, vendor=Apple, version=OpenCL 1.2 , device_type=GPU, compute_units=16, max_clock=1000, max_work_group_size=256, device_memory_size=11453251584, max_memory_alloc_size=2147483648, extensions=cl_APPLE_SetMemObjectDestructor cl_APPLE_ContextLoggingFunctions cl_APPLE_clut cl_APPLE_query_kernel_names cl_APPLE_gl_sharing cl_khr_gl_event cl_khr_byte_addressable_store cl_khr_global_int32_base_atomics cl_khr_global_int32_extended_atomics cl_khr_local_int32_base_atomics cl_khr_local_int32_extended_atomics cl_khr_3d_image_writes cl_khr_image2d_from_buffer cl_khr_depth_images , double_support=0, device_available=1)>]
 
 ```
