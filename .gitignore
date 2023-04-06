@@ -73,3 +73,18 @@ ehthumbs.db
 Thumbs.db
 
 .vscode
+
+# Bazel #
+#########
+bazel-*
+
+# IntelliJ #
+#########
+.idea
+.clwb
+
+
+*__pycache__
+venv
+clode.egg-info/
+dist/

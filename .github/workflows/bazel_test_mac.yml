@@ -1,0 +1,46 @@
+name: CI Mac
+
+on: [push, pull_request]
+
+jobs:
+  test_macos:
+    # virtual environments: https://github.com/actions/virtual-environments
+    runs-on: macos-12
+
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, which is the CWD for
+      # the rest of the steps
+      - uses: actions/checkout@v3
+
+        # test
+      - name: Build the code
+        run: bazel build //...
+
+      - name: Run bazel tests
+        run: bazel test --test_output=errors //... --test_size_filters=medium
+
+      - name: Install dependencies
+        run: PYTHON=python3 make install
+
+      - name: Install pip wheel
+        run: PYTHON=python3 make install_clode
+
+      - name: Run python tests
+        run: PYTHON=python3 make test_short
+
+      - name: Build wheel
+        run: PYTHON=python3 make wheel
+
+      - name: Publish to PyPI test
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_TEST_TOKEN }}
+        run: |
+          PYTHON=python3 make upload
+
+      - name: Publish to PyPI
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
+        run: |
+          PYTHON=python3 make upload_prod

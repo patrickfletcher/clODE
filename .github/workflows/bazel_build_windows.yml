@@ -1,0 +1,49 @@
+name: CI Windows
+
+on: [push, pull_request]
+
+jobs:
+  test_windows:
+    # virtual environments: https://github.com/actions/virtual-environments
+    runs-on: windows-latest
+
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, which is the CWD for
+      # the rest of the steps
+      - uses: actions/checkout@v3
+
+      - name: Python version check
+        run: python --version
+
+      - name: Python library check
+        run: python bazel/get_python_libs.py
+
+      # test
+      - name: Build the source
+        run: bazel.exe build //clode/...
+
+      - name: Install dependencies
+        run: make install
+
+      - name: Install pip wheel
+        run: python -m pip install --verbose .
+
+      - name: Build samples
+        run: bazel.exe build //samples/...
+
+      - name: Build wheel
+        run: make wheel
+
+      - name: Publish to PyPI test
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_TEST_TOKEN }}
+        run: |
+          make upload
+
+      - name: Publish to PyPI
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
+        run: |
+          make upload_prod
