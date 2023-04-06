@@ -1,0 +1,19 @@
+init x = 0.1 y = 0.1
+
+par mu = 0.1
+
+% This comment will be preserved
+aux x2 = x^2
+aux x3 = x^3
+aux y4 = y^4
+aux x5 = x^5
+aux negx = x ^ -2 negy = y ^ -1.5
+
+
+y' = mu * (1 - x*x) * y - x
+x' = y
+
+@ dt=0.05, total=5000, maxstor=20000000
+@ bounds=10000000, xp=t, yp=v
+@ xlo=0, xhi=5000, ylo=-75, yhi=0
+@ method=Euler

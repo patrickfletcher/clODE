@@ -1,0 +1,55 @@
+name: CI Linux
+
+on: [push, pull_request]
+
+jobs:
+  test_linux:
+    # virtual environments: https://github.com/actions/virtual-environments
+    runs-on: ubuntu-22.04
+
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, which is the CWD for
+      # the rest of the steps
+      - uses: actions/checkout@v3
+
+      - name: Update system
+        run: sudo apt update
+
+      - name: Install Dependencies
+        run: sudo apt install ocl-icd-libopencl1 clinfo intel-opencl-icd
+
+      - name: Test OpenCL
+        run: clinfo
+
+      - name: Install Dev Dependencies
+        run: sudo apt install ocl-icd-opencl-dev python3-dev
+
+      # test
+      - name: Build the code
+        run: bazel build //... --subcommands
+
+      - name: Setup venv
+        run: make venv
+
+      - name: Install requirements
+        run: make install
+
+      - name: Install pip wheel
+        run: make install_clode
+
+      - name: make sdist
+        run: make sdist
+
+      - name: Publish to PyPI test
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_TEST_TOKEN }}
+        run: |
+          make upload
+
+      - name: Publish to PyPI
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
+        run: |
+          make upload_prod

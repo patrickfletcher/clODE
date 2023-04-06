@@ -1,0 +1,3 @@
+include clode/cpp/*.cl
+include clode/cpp/observers/*.clh
+include clode/cpp/steppers/*.clh

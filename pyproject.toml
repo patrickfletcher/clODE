@@ -1,0 +1,45 @@
+[project]
+name = "clode"
+description="A Python package for solving ordinary differential equations on the GPU using OpenCL"
+dynamic = ["version"]
+authors = [
+    {name="Patrick Fletcher", email="patrick.allen.fletcher@gmail.com"},
+]
+requires-python = ">=3.8"
+readme = "README.md"
+
+maintainers = [
+    {name="Patrick Fletcher", email="patrick.allen.fletcher@gmail.com"},
+    {name="Wolf Byttner", email="wolf@byttner.org"},
+]
+
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: MacOS :: MacOS X",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX",
+    "Environment :: GPU",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: C++",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Mathematics",
+    "Topic :: Scientific/Engineering :: Physics",
+    "Topic :: Software Development :: Libraries",
+]
+
+
+[tool.setuptools.dynamic]
+version = {attr = "clode.__version__"}
+
+
+[build-system]
+requires = [
+    "setuptools",
+    "wheel",
+    "setuptools_scm"
+]

@@ -16,7 +16,9 @@
 #include "OpenCLResource.hpp"
 #include "CLODE.hpp"
 
+#include "spdlog/spdlog.h"
 
+#define CLODE_ROOT "clode/cpp/"
 
 //Generate random points within given bounds
 template<typename T> std::vector<T> generateRandomPoints(std::vector<T> lb, std::vector<T> ub, int nPts);
@@ -24,6 +26,7 @@ template<typename T> std::vector<T> generateRandomPoints(std::vector<T> lb, std:
 //currently the only command line arguments are to select device/vendor type ("--device cpu/gpu/accel", "--vendor amd/intel/nvidia")
 int main(int argc, char **argv)
 {
+    spdlog::set_level(spdlog::level::debug);
 	try 
 	{
 		
@@ -31,7 +34,7 @@ int main(int argc, char **argv)
 	bool CLSinglePrecision=true;
 	
 	ProblemInfo prob;
-	prob.clRHSfilename="C:/Users/fletcherpa/Documents/GitHub/clODE/samples/lactotroph.cl";
+	prob.clRHSfilename="samples/lactotroph.cl";
 	prob.nVar=4;
 	prob.nPar=3;
 	prob.nAux=1;
@@ -55,8 +58,6 @@ int main(int argc, char **argv)
 	sp.max_steps=10000000;
 	sp.max_store=10000000;
 	sp.nout=50;
-	
-	int mySeed=1;
 
 	//default pars
 	std::vector<double> p({1.5,3.0,1.0}); 
@@ -73,48 +74,23 @@ int main(int argc, char **argv)
 	
 	//initial values: all zeros
 	std::vector<double> x0(nPts*prob.nVar, 0.0);
-	
-	
-//initialize opencl (several device selection options are commented out below)
-	// unsigned int platformid = 0;
-	// unsigned int deviceid = 0;
-	
-	// Default constructor: selects first OpenCL device found
-	// OpenCLResource opencl;
-	
+
 	// Select device type and/or vendor using command line flags ("--device cpu/gpu/accel", "--vendor amd/intel/nvidia")
 	OpenCLResource opencl( argc, argv);
 
-	// Select device type/vendor programmatically
-	// cl_device_type deviceType=CL_DEVICE_TYPE_DEFAULT;
-	// cl_device_type deviceType=CL_DEVICE_TYPE_CPU;
-	// cl_device_type deviceType=CL_DEVICE_TYPE_GPU;
-	// cl_device_type deviceType=CL_DEVICE_TYPE_ACCELERATOR;
-	// cl_device_type deviceType=CL_DEVICE_TYPE_ALL;
-	
-	// cl_vendor vendor=VENDOR_ANY;
-	// cl_vendor vendor=VENDOR_AMD;
-	// cl_vendor vendor=VENDOR_INTEL;
-	// cl_vendor vendor=VENDOR_NVIDIA;
-	
-	// OpenCLResource opencl(deviceType); //default vendor=VENDOR_ANY
-	// OpenCLResource opencl(deviceType, vendor);
-	
-	// OpenCLResource opencl(platformid, deviceid);
 
 	//prep timer and PRNG
 	srand(static_cast <unsigned> (time(0))); 
     std::chrono::time_point<std::chrono::high_resolution_clock> start, end;
 	std::chrono::duration<double, std::milli> elapsed_ms;
 	
-	
-	// create the solver
-	// CLODE clo(prob, stepper, CLSinglePrecision, platformid, deviceid);
-	CLODE clo(prob, stepper, CLSinglePrecision, opencl);
-	
-	clo.buildCL();
 
-	//copy problem data to the device
+	// create the simulator
+	CLODE clo(prob, stepper, CLSinglePrecision, opencl, CLODE_ROOT);
+
+    clo.buildCL();
+
+    //copy problem data to the device
 	clo.initialize(tspan, x0, pars, sp); 
 	
 	// std::cout<<"here"<<std::endl;
