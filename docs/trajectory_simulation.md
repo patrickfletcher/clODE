@@ -6,9 +6,9 @@ CLODE can simulate ODE trajectories using the CLODETrajectory class.
 
 The following example simulates the Van der Pol oscillator using the dormand_prince45 integrator.
 
-### XPP
+### OpenCL RHS function
 
-```xpp
+```c
 void getRHS(const realtype t,
             const realtype var[],
             const realtype par[],
@@ -30,16 +30,13 @@ void getRHS(const realtype t,
     derivatives[1] = dy2;
     aux[0] = y1 - H;
 }
-
 ```
 
 ### Python
 
 ```python
 import clode
-
 import numpy as np
-
 
 def ornl_thompson_a1():
     num_simulations = 1
@@ -74,5 +71,4 @@ def ornl_thompson_a1():
 
     time_steps = integrator.get_time_steps()
     return integrator.get_trajectory()
-
 ```

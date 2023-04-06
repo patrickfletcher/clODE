@@ -12,10 +12,10 @@ and thresholds.
 ## Observers
 
 CLODE's observers are highly configurable. You can choose the following:
+
 * basic - Captures one variable
 * basic_all_variables - Captures all variables
 * local_max - Captures local maxima
-* neighbourhood_1
 * neighbourhood_2
 * threshold_2 - Captures all values above a threshold
 
@@ -24,8 +24,8 @@ CLODE's observers are highly configurable. You can choose the following:
 The following example extracts features from the Van der Pol oscillator
 using the dormand_prince45 integrator.
 
-
 ### XPP
+
 ```xpp
 init x = 0.1 y = 0.1
 
@@ -40,8 +40,8 @@ x' = y
 
 ```
 
-
 ### Python
+
 ```python
 import numpy as np
 
