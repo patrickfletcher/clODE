@@ -355,7 +355,7 @@ void CLODE::setX0(std::vector<cl_double> newX0)
 	}
 	else
 	{
-		spdlog::info("Invalid initial condition vector: Expected {}*{} elements, recieved {}}\n", nPts, nVar, newX0.size());
+		// spdlog::info("Invalid initial condition vector: Expected {}*{} elements, recieved {}}\n", nPts, nVar, newX0.size());
 		spdlog::info("...Initial conditions were not updated!\n");
 		//~ throw std::invalid_argument("Initial Condition vector has incorrect size.");
 	}

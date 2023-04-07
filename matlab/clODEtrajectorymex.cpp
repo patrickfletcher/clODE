@@ -172,7 +172,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
 
 		// OpenCLResource opencl(platformID, deviceID);
 		// insResult = instanceTab.insert(indPtrPair_type(newHandle, std::make_shared<class_type>(newProblem,stepper,clSinglePrecision, opencl)));
-		insResult = instanceTab.insert(indPtrPair_type(newHandle, std::make_shared<class_type>(newProblem,stepper,clSinglePrecision, platformID, deviceID)));
+		insResult = instanceTab.insert(indPtrPair_type(newHandle, std::make_shared<class_type>(newProblem,stepper,clSinglePrecision, platformID, deviceID, CLODE_ROOT)));
 
         if (!insResult.second) // sanity check
             mexPrintf("Oh, bad news.  Tried to add an existing handle."); // shouldn't ever happen
