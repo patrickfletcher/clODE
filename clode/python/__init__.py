@@ -8,4 +8,4 @@ from .problem_info import ProblemInfo
 from .clode_cpp_wrapper import query_opencl, print_opencl  # type: ignore
 from .xpp_parser import read_ode_parameters, format_opencl_rhs, convert_xpp_file
 
-__version__ = "0.3.1"
+__version__ = "0.3.2"
