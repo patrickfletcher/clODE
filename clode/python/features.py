@@ -1,12 +1,13 @@
 import typing
 
-from .xpp_parser import convert_xpp_file
-from .stepper import Stepper
-from .observer import Observer, ObserverOutput
-from .runtime import _get_clode, _get_runtime, _clode_root_dir
 import numpy as np
 
-_clode = _get_clode()
+from .observer import Observer, ObserverOutput
+from .runtime import _clode_root_dir, get_cpp, get_runtime
+from .stepper import Stepper
+from .xpp_parser import convert_xpp_file
+
+_clode = get_cpp()
 
 
 class CLODEFeatures:
@@ -137,8 +138,8 @@ class CLODEFeatures:
     >>> model.set_initial_values({"x": np.random.rand(40)})
     >>> model.simulate()
     >>> model.plot()
-    >>> plt.show()
-"""
+    >>> plt.show()"""
+
     def __init__(
         self,
         src_file: str,
@@ -183,29 +184,45 @@ class CLODEFeatures:
         self.vars = variable_names
         self.pars = parameter_names
         self.aux_variables = aux
-        self._pi = _clode.problem_info(input_file, len(variable_names),
-                                       len(parameter_names), len(aux),
-                                       num_noise, variable_names,
-                                       parameter_names, aux)
-        self._sp = _clode.solver_params(dt, dtmax, abstol, reltol, max_steps,
-                                        max_store, nout)
+        self._pi = _clode.problem_info(
+            input_file,
+            len(variable_names),
+            len(parameter_names),
+            len(aux),
+            num_noise,
+            variable_names,
+            parameter_names,
+            aux,
+        )
+        self._sp = _clode.solver_params(
+            dt, dtmax, abstol, reltol, max_steps, max_store, nout
+        )
 
-        event_var_idx = variable_names.index(
-            event_var) if event_var != "" else 0
-        feature_var_idx = variable_names.index(
-            feature_var) if feature_var != "" else 0
+        event_var_idx = variable_names.index(event_var) if event_var != "" else 0
+        feature_var_idx = variable_names.index(feature_var) if feature_var != "" else 0
 
         self._op = _clode.observer_params(
-            event_var_idx, feature_var_idx, observer_max_event_count,
-            observer_min_x_amp, observer_min_imi,
-            observer_neighbourhood_radius, observer_x_up_thresh,
-            observer_x_down_thresh, observer_dx_up_thresh,
-            observer_dx_down_thresh, observer_eps_dx)
+            event_var_idx,
+            feature_var_idx,
+            observer_max_event_count,
+            observer_min_x_amp,
+            observer_min_imi,
+            observer_neighbourhood_radius,
+            observer_x_up_thresh,
+            observer_x_down_thresh,
+            observer_dx_up_thresh,
+            observer_dx_down_thresh,
+            observer_eps_dx,
+        )
 
-        self._features = _clode.clode_features(self._pi, stepper.value,
-                                               observer.value,
-                                               single_precision,
-                                               _get_runtime(), _clode_root_dir)
+        self._features = _clode.clode_features(
+            self._pi,
+            stepper.value,
+            observer.value,
+            single_precision,
+            get_runtime(),
+            _clode_root_dir,
+        )
 
         self.tspan = tspan
         self._observer_type = observer
@@ -218,7 +235,8 @@ class CLODEFeatures:
         if x0.shape[1] != len(self.vars):
             raise ValueError(
                 f"Length of initial condition vector {len(x0.shape[1])}"
-                f" does not match number of variables {len(self.vars)}")
+                f" does not match number of variables {len(self.vars)}"
+            )
 
         if len(parameters.shape) != 2:
             raise ValueError("Most provide rows of parameters")
@@ -226,13 +244,17 @@ class CLODEFeatures:
         if parameters.shape[1] != len(self.pars):
             raise ValueError(
                 f"Length of parameters vector {parameters.shape[1]}"
-                f" does not match number of parameters {len(self.pars)}")
+                f" does not match number of parameters {len(self.pars)}"
+            )
 
         self._features.build_cl()
-        self._features.initialize(self.tspan,
-                                  x0.transpose().flatten(),
-                                  parameters.transpose().flatten(), self._sp,
-                                  self._op)
+        self._features.initialize(
+            self.tspan,
+            x0.transpose().flatten(),
+            parameters.transpose().flatten(),
+            self._sp,
+            self._op,
+        )
         self._features.seed_rng(1)
 
     def transient(self, update_x0=True):
@@ -254,12 +276,17 @@ class CLODEFeatures:
         self._final_state = self._features.getXf()
 
     def get_observer_results(self):
-        return ObserverOutput(self._op, np.array(self._result_features),
-                              self._num_result_features, self.vars,
-                              self._observer_type,
-                              self._features.get_feature_names())
+        return ObserverOutput(
+            self._op,
+            np.array(self._result_features),
+            self._num_result_features,
+            self.vars,
+            self._observer_type,
+            self._features.get_feature_names(),
+        )
 
     def get_final_state(self):
         final_state = np.array(self._final_state)
         return final_state.reshape(
-            (len(self.vars), len(final_state) // len(self.vars))).transpose()
+            (len(self.vars), len(final_state) // len(self.vars))
+        ).transpose()

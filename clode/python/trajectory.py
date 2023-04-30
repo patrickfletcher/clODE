@@ -1,17 +1,15 @@
 import typing
 
-from .xpp_parser import convert_xpp_file
-from .stepper import Stepper
-from .runtime import _get_runtime
-from .runtime import _clode_root_dir
 import numpy as np
-from .runtime import _get_clode
 
-_clode = _get_clode()
+from .runtime import _clode_root_dir, get_cpp, get_runtime
+from .stepper import Stepper
+from .xpp_parser import convert_xpp_file
+
+_clode = get_cpp()
 
 
 class CLODETrajectory:
-
     def __init__(
         self,
         src_file: str,
@@ -50,17 +48,23 @@ class CLODETrajectory:
         self.vars = variable_names
         self.pars = parameter_names
         self.aux_variables = aux
-        self._pi = _clode.problem_info(input_file, len(variable_names),
-                                       len(parameter_names), len(aux),
-                                       num_noise, variable_names,
-                                       parameter_names, aux)
-        self._sp = _clode.solver_params(dt, dtmax, abstol, reltol, max_steps,
-                                        max_store, nout)
+        self._pi = _clode.problem_info(
+            input_file,
+            len(variable_names),
+            len(parameter_names),
+            len(aux),
+            num_noise,
+            variable_names,
+            parameter_names,
+            aux,
+        )
+        self._sp = _clode.solver_params(
+            dt, dtmax, abstol, reltol, max_steps, max_store, nout
+        )
 
-        self._trajectory = _clode.clode_trajectory(self._pi, stepper.value,
-                                                   single_precision,
-                                                   _get_runtime(),
-                                                   _clode_root_dir)
+        self._trajectory = _clode.clode_trajectory(
+            self._pi, stepper.value, single_precision, get_runtime(), _clode_root_dir
+        )
 
         self.tspan = tspan
 
@@ -72,7 +76,8 @@ class CLODETrajectory:
         if x0.shape[1] != len(self.vars):
             raise ValueError(
                 f"Length of initial condition vector {len(x0.shape[1])}"
-                f" does not match number of variables {len(self.vars)}")
+                f" does not match number of variables {len(self.vars)}"
+            )
 
         if len(parameters.shape) != 2:
             raise ValueError("Most provide rows of parameters")
@@ -80,15 +85,19 @@ class CLODETrajectory:
         if parameters.shape[1] != len(self.pars):
             raise ValueError(
                 f"Length of parameters vector {parameters.shape[1]}"
-                f" does not match number of parameters {len(self.pars)}")
+                f" does not match number of parameters {len(self.pars)}"
+            )
 
         self._data = None
         self._number_of_simulations = parameters.shape[0]
 
         self._trajectory.build_cl()
-        self._trajectory.initialize(self.tspan,
-                                    x0.transpose().flatten(),
-                                    parameters.transpose().flatten(), self._sp)
+        self._trajectory.initialize(
+            self.tspan,
+            x0.transpose().flatten(),
+            parameters.transpose().flatten(),
+            self._sp,
+        )
         self._trajectory.seed_rng(1)
 
     def transient(self, update_x0=False):
@@ -107,13 +116,14 @@ class CLODETrajectory:
         self._initial_conditions = self._trajectory.get_x0()
 
     def get_time_steps(self):
-        return np.array(self._time_steps[:self._n_stored[0]])
+        return np.array(self._time_steps[: self._n_stored[0]])
 
     def get_trajectory(self, simulation_id: int = 0):
         if simulation_id >= self._number_of_simulations:
             raise ValueError(
-                f"Only {self._number_of_simulations} simulations were run, " +
-                f"simulation id {simulation_id} not valid")
+                f"Only {self._number_of_simulations} simulations were run, "
+                + f"simulation id {simulation_id} not valid"
+            )
         if self._data is not None:
             return self._data
 
@@ -123,6 +133,6 @@ class CLODETrajectory:
             return np.array()
 
         shape = (self._number_of_simulations, len(self.vars), n_stored)
-        arr = np.array(self._output_trajectories[:np.prod(shape)])
+        arr = np.array(self._output_trajectories[: np.prod(shape)])
         self._data = arr.reshape(shape, order="F").transpose((0, 2, 1))
         return self._data

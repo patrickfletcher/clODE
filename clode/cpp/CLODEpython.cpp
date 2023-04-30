@@ -28,6 +28,18 @@ PYBIND11_MODULE(clode_cpp_wrapper, m) {
     auto python_logger = std::make_shared<spdlog::logger>("python", python_sink);
     spdlog::register_logger(python_logger);
 
+    py::enum_<spdlog::level::level_enum>(m, "log_level")
+            .value("trace", spdlog::level::trace)
+            .value("debug", spdlog::level::debug)
+            .value("info", spdlog::level::info)
+            .value("warn", spdlog::level::warn)
+            .value("err", spdlog::level::err)
+            .value("critical", spdlog::level::critical)
+            .value("off", spdlog::level::off)
+            .export_values();
+    m.def("set_log_level", &spdlog::set_level);
+    m.def("set_log_pattern", &spdlog::set_pattern);
+
     py::class_<ProblemInfo>(m, "problem_info")
             .def(py::init<const std::string &,
                  int,
@@ -82,52 +94,86 @@ PYBIND11_MODULE(clode_cpp_wrapper, m) {
                ")>";
     });
 
+    py::enum_<cl_vendor>(m, "cl_vendor")
+        .value("VENDOR_ANY", VENDOR_ANY)
+        .value("VENDOR_NVIDIA", VENDOR_NVIDIA)
+        .value("VENDOR_AMD", VENDOR_AMD)
+        .value("VENDOR_INTEL", VENDOR_INTEL)
+        .export_values();
+
+    enum cl_device_type_wrapper {
+        DEVICE_TYPE_ALL = CL_DEVICE_TYPE_ALL,
+        DEVICE_TYPE_CPU = CL_DEVICE_TYPE_CPU,
+        DEVICE_TYPE_GPU = CL_DEVICE_TYPE_GPU,
+        DEVICE_TYPE_ACCELERATOR = CL_DEVICE_TYPE_ACCELERATOR,
+        DEVICE_TYPE_DEFAULT = CL_DEVICE_TYPE_DEFAULT,
+        DEVICE_TYPE_CUSTOM = CL_DEVICE_TYPE_CUSTOM
+    };
+
+    py::enum_<cl_device_type_wrapper>(m, "cl_device_type")
+        .value("DEVICE_TYPE_ALL", DEVICE_TYPE_ALL)
+        .value("DEVICE_TYPE_CPU", DEVICE_TYPE_CPU)
+        .value("DEVICE_TYPE_GPU", DEVICE_TYPE_GPU)
+        .value("DEVICE_TYPE_ACCELERATOR", DEVICE_TYPE_ACCELERATOR)
+        .value("DEVICE_TYPE_DEFAULT", DEVICE_TYPE_DEFAULT)
+        .value("DEVICE_TYPE_CUSTOM", DEVICE_TYPE_CUSTOM)
+        .export_values();
+
     py::class_<OpenCLResource>(m, "opencl_resource")
-    .def(py::init<>());
+        .def(py::init<>())
+        .def(py::init<cl_device_type>())
+        .def(py::init<cl_vendor>())
+        .def(py::init<cl_device_type, cl_vendor>())
+        .def(py::init<unsigned int, unsigned int>())
+        .def(py::init<unsigned int, std::vector<unsigned int>>())
+        .def("get_double_support", &OpenCLResource::getDoubleSupport, "Get double support")
+        .def("get_max_memory_alloc_size", &OpenCLResource::getMaxMemAllocSize, "Get max memory alloc size")
+        .def("get_device_cl_version", &OpenCLResource::getDeviceCLVersion, "Get device CL version")
+        .def("print", &OpenCLResource::print, "Print device info to log");
 
     py::class_<deviceInfo>(m, "device_info")
-    .def_readwrite("name", &deviceInfo::name)
-    .def_readwrite("vendor", &deviceInfo::vendor)
-    .def_readwrite("version", &deviceInfo::version)
-    .def_readwrite("device_type", &deviceInfo::devType)
-    .def_readwrite("device_type_str", &deviceInfo::devTypeStr)
-    .def_readwrite("compute_units", &deviceInfo::computeUnits)
-    .def_readwrite("max_clock", &deviceInfo::maxClock)
-    .def_readwrite("max_work_group_size", &deviceInfo::maxWorkGroupSize)
-    .def_readwrite("device_memory_size", &deviceInfo::deviceMemSize)
-    .def_readwrite("max_memory_alloc_size", &deviceInfo::maxMemAllocSize)
-    .def_readwrite("extensions", &deviceInfo::extensions)
-    .def_readwrite("double_support", &deviceInfo::doubleSupport)
-    .def_readwrite("device_available", &deviceInfo::deviceAvailable)
-    .def("__repr__", [](const deviceInfo &d) {
-        return "<device_info(name=" + d.name +
-               ", vendor=" + d.vendor +
-               ", version=" + d.version +
-               ", device_type=" + d.devTypeStr +
-               ", compute_units=" + std::to_string(d.computeUnits) +
-               ", max_clock=" + std::to_string(d.maxClock) +
-               ", max_work_group_size=" + std::to_string(d.maxWorkGroupSize) +
-               ", device_memory_size=" + std::to_string(d.deviceMemSize) +
-               ", max_memory_alloc_size=" + std::to_string(d.maxMemAllocSize) +
-               ", extensions=" + d.extensions +
-               ", double_support=" + std::to_string(d.doubleSupport) +
-               ", device_available=" + std::to_string(d.deviceAvailable) +
-               ")>";
-    }, "Device info string representation");
+        .def_readwrite("name", &deviceInfo::name)
+        .def_readwrite("vendor", &deviceInfo::vendor)
+        .def_readwrite("version", &deviceInfo::version)
+        .def_readwrite("device_type", &deviceInfo::devType)
+        .def_readwrite("device_type_str", &deviceInfo::devTypeStr)
+        .def_readwrite("compute_units", &deviceInfo::computeUnits)
+        .def_readwrite("max_clock", &deviceInfo::maxClock)
+        .def_readwrite("max_work_group_size", &deviceInfo::maxWorkGroupSize)
+        .def_readwrite("device_memory_size", &deviceInfo::deviceMemSize)
+        .def_readwrite("max_memory_alloc_size", &deviceInfo::maxMemAllocSize)
+        .def_readwrite("extensions", &deviceInfo::extensions)
+        .def_readwrite("double_support", &deviceInfo::doubleSupport)
+        .def_readwrite("device_available", &deviceInfo::deviceAvailable)
+        .def("__repr__", [](const deviceInfo &d) {
+            return "<device_info(name=" + d.name +
+                   ", vendor=" + d.vendor +
+                   ", version=" + d.version +
+                   ", device_type=" + d.devTypeStr +
+                   ", compute_units=" + std::to_string(d.computeUnits) +
+                   ", max_clock=" + std::to_string(d.maxClock) +
+                   ", max_work_group_size=" + std::to_string(d.maxWorkGroupSize) +
+                   ", device_memory_size=" + std::to_string(d.deviceMemSize) +
+                   ", max_memory_alloc_size=" + std::to_string(d.maxMemAllocSize) +
+                   ", extensions=" + d.extensions +
+                   ", double_support=" + std::to_string(d.doubleSupport) +
+                   ", device_available=" + std::to_string(d.deviceAvailable) +
+                   ")>";
+        }, "Device info string representation");
 
     py::class_<platformInfo>(m, "platform_info")
-    .def_readwrite("name", &platformInfo::name)
-    .def_readwrite("vendor", &platformInfo::vendor)
-    .def_readwrite("version", &platformInfo::version)
-    .def_readwrite("device_info", &platformInfo::device_info)
-    .def_readwrite("device_count", &platformInfo::nDevices)
-    .def("__repr__", [](const platformInfo &p) {
-        return "<platform_info(name=" + p.name +
-               ", vendor=" + p.vendor +
-               ", version=" + p.version +
-               ", device_count=" + std::to_string(p.nDevices) +
-               ")>";
-    }, "Platform info string representation");
+        .def_readwrite("name", &platformInfo::name)
+        .def_readwrite("vendor", &platformInfo::vendor)
+        .def_readwrite("version", &platformInfo::version)
+        .def_readwrite("device_info", &platformInfo::device_info)
+        .def_readwrite("device_count", &platformInfo::nDevices)
+        .def("__repr__", [](const platformInfo &p) {
+            return "<platform_info(name=" + p.name +
+                   ", vendor=" + p.vendor +
+                   ", version=" + p.version +
+                   ", device_count=" + std::to_string(p.nDevices) +
+                   ")>";
+        }, "Platform info string representation");
 
     m.def("query_opencl", &queryOpenCL, "Query OpenCL devices");
     m.def("print_opencl", overload_cast_<>()(&printOpenCL), "Print OpenCL devices");
