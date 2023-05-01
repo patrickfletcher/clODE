@@ -1,6 +1,7 @@
 import os
 
-from . import clode_cpp_wrapper as _clode
+from . import clode_cpp_wrapper as _clode  # type: ignore
+from .clode_cpp_wrapper import log_level, print_opencl, query_opencl  # type: ignore
 
 _runtime = None
 _clode_root_dir: str = os.path.join(os.path.dirname(__file__), "cpp", "")
@@ -53,5 +54,18 @@ def get_cpp():
 def print_devices():
     return get_runtime().print()
 
+
 cl_device_type = _clode.cl_device_type
 cl_vendor = _clode.cl_vendor
+
+
+def get_log_level() -> log_level:
+    return _clode.get_logger().get_log_level()
+
+
+def set_log_level(level: log_level):
+    return _clode.get_logger().set_log_level(level)
+
+
+def set_log_pattern(pattern: str):
+    return _clode.get_logger().set_log_pattern(pattern)

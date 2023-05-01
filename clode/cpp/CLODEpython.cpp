@@ -24,21 +24,54 @@ PYBIND11_MODULE(clode_cpp_wrapper, m) {
 
     m.doc() = "CLODE C++/Python interface"; // optional module docstring
 
-    auto python_sink = std::make_shared<PythonSink_mt>();
-    auto python_logger = std::make_shared<spdlog::logger>("python", python_sink);
-    spdlog::register_logger(python_logger);
-
     py::enum_<spdlog::level::level_enum>(m, "log_level")
-            .value("trace", spdlog::level::trace)
-            .value("debug", spdlog::level::debug)
-            .value("info", spdlog::level::info)
-            .value("warn", spdlog::level::warn)
-            .value("err", spdlog::level::err)
-            .value("critical", spdlog::level::critical)
-            .value("off", spdlog::level::off)
-            .export_values();
-    m.def("set_log_level", &spdlog::set_level);
-    m.def("set_log_pattern", &spdlog::set_pattern);
+        .value("trace", spdlog::level::trace)
+        .value("debug", spdlog::level::debug)
+        .value("info", spdlog::level::info)
+        .value("warn", spdlog::level::warn)
+        .value("err", spdlog::level::err)
+        .value("critical", spdlog::level::critical)
+        .value("off", spdlog::level::off)
+        .export_values();
+
+    struct LoggerSingleton {
+        std::shared_ptr<PythonSink_mt> sink;
+        std::shared_ptr<spdlog::logger> python_logger;
+        LoggerSingleton() {
+            spdlog::set_level(spdlog::level::info);
+            sink = std::make_shared<PythonSink_mt>();
+            python_logger = std::make_shared<spdlog::logger>("python", sink);
+            spdlog::set_default_logger(python_logger);
+        }
+
+        static LoggerSingleton& instance()
+        {
+            static LoggerSingleton just_one;
+            return just_one;
+        }
+
+        void set_log_level(spdlog::level::level_enum level){
+            python_logger->set_level(level);
+        };
+
+        void set_log_pattern(std::string &pattern){
+            python_logger->set_pattern(pattern);
+        };
+
+        spdlog::level::level_enum get_log_level() {
+            return python_logger->level();
+        };
+    };
+
+    py::class_<LoggerSingleton>(m, "LoggerSingleton")
+        .def("set_log_level", &LoggerSingleton::set_log_level)
+        .def("set_log_pattern", &LoggerSingleton::set_log_pattern)
+        .def("get_log_level", &LoggerSingleton::get_log_level);
+
+    m.def("get_logger",
+        &LoggerSingleton::instance,
+        py::return_value_policy::reference,
+        "Get logger singleton instance");
 
     py::class_<ProblemInfo>(m, "problem_info")
             .def(py::init<const std::string &,
