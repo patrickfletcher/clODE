@@ -52,3 +52,6 @@ def get_cpp():
 
 def print_devices():
     return get_runtime().print()
+
+cl_device_type = _clode.cl_device_type
+cl_vendor = _clode.cl_vendor

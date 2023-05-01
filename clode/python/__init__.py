@@ -11,6 +11,8 @@ from .runtime import (
     initialise_runtime_by_platform_id,
     print_devices,
     reset_runtime,
+    cl_device_type,
+    cl_vendor,
 )
 from .stepper import Stepper
 from .trajectory import CLODETrajectory
