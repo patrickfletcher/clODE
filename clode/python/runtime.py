@@ -51,4 +51,4 @@ def get_cpp():
 
 
 def print_devices():
-    return get_runtime().print_open_cl()
+    return get_runtime().print()
