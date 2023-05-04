@@ -1,12 +1,9 @@
 # (Advanced) Initialise runtimes
 
-There are three ways to initialise the clODE runtime.
-These give users fine-grained control over which
-OpenCL devices are used by clODE.
-
-Note: Runtimes are never re_initialised. If you wish to
-change the runtime, you must first reset the runtime
-by calling reset_runtime.
+Each CLODEFeature and CLODETrajectory object
+maintains its own OpenCL runtime. This is so
+that users can initialise multiple runtimes
+across different devices.
 
 ## Automatic initialisation
 
@@ -22,7 +19,8 @@ The default runtime vendor is cl_vendor.ANY.
 
 The second way to initialise the clODE runtime is to specify
 the device and platform by name. This is done by passing
-the `device_type` and `vendor` arguments to initialise_runtime.
+the `device_type` and `vendor` arguments to 
+CLODEFeatures or CLODETrajectory.
 
 You can select from the following devices:
 * cl_device_type.DEVICE_TYPE_DEFAULT
@@ -44,7 +42,19 @@ import clode
 device_type = cl_device_type,DEVICE_TYPE_GPU
 vendor = cl_vendor.AMD
 
-clode.initialise_runtime(device_type=device_type, vendor=vendor)
+input_file: str = "test/van_der_pol_oscillator.cl"
+tspan = (0.0, 1000.0)
+
+trajectory = clode.CLODETrajectory(
+    src_file=input_file,
+    variable_names=["x", "y"],
+    parameter_names=["mu"],
+    num_noise=0,
+    stepper=clode.Stepper.dormand_prince,
+    tspan=tspan,
+    device_type=device_type,
+    vendor=vendor,
+)
 ```
 
 ## Select platform and device by index
@@ -52,22 +62,34 @@ clode.initialise_runtime(device_type=device_type, vendor=vendor)
 The third way to initialise the clODE runtime is to specify
 the platform and device by index. This is done by passing
 the `platformID` and `deviceID` arguments
-to initialise_runtime_by_platform_id.
+to CLODEFeatures or CLODETrajectory.
 
 ```python
 import clode
 
-platformID = 0
-deviceID = 0
+platform_id = 0
+device_id = 0
 
-clode.initialise_runtime_by_platform_id(platformID=platformID, deviceID=deviceID)
+input_file: str = "test/van_der_pol_oscillator.cl"
+tspan = (0.0, 1000.0)
+
+trajectory = clode.CLODETrajectory(
+    src_file=input_file,
+    variable_names=["x", "y"],
+    parameter_names=["mu"],
+    num_noise=0,
+    stepper=clode.Stepper.dormand_prince,
+    tspan=tspan,
+    platform_id=platform_id,
+    device_id=device_id,
+)
 ```
 
 ## Selecting platform and multiple devices
 
 You can also select multiple devices on a single platform.
 This is done by passing the `deviceIDs` argument
-to initialise_runtime_by_device_ids.
+to CLODEFeatures or CLODETrajectory.
 
 ```python
 
@@ -76,16 +98,34 @@ import clode
 platformID = 0
 deviceIDs = [0, 1, 2]
 
-clode.initialise_runtime_by_device_ids(platformID=platformID, deviceIDs=deviceIDs)
+input_file: str = "test/van_der_pol_oscillator.cl"
+tspan = (0.0, 1000.0)
+
+trajectory = clode.CLODETrajectory(
+    src_file=input_file,
+    variable_names=["x", "y"],
+    parameter_names=["mu"],
+    num_noise=0,
+    stepper=clode.Stepper.dormand_prince,
+    tspan=tspan,
+    platform_id=platform_id,
+    device_ids=device_ids,
+)
 ```
 
-## Resetting the runtime
+## Printing the devices
 
-You can reset the runtime by calling reset_runtime.
+You can print the devices that are used
+by calling the print_devices method of
+CLODEFeature or CLODETrajectory objects.
 
 ```python
-
 import clode
 
-clode.reset_runtime()
+features = CLODEFeatures(...)
+trajectory = CLODETrajectory(...)
+
+trajectory.print_devices()
+
+features.print_devices()
 ```

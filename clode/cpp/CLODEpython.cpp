@@ -162,7 +162,7 @@ PYBIND11_MODULE(clode_cpp_wrapper, m) {
         .def("get_double_support", &OpenCLResource::getDoubleSupport, "Get double support")
         .def("get_max_memory_alloc_size", &OpenCLResource::getMaxMemAllocSize, "Get max memory alloc size")
         .def("get_device_cl_version", &OpenCLResource::getDeviceCLVersion, "Get device CL version")
-        .def("print", &OpenCLResource::print, "Print device info to log");
+        .def("print_devices", &OpenCLResource::print, "Print device info to log");
 
     py::class_<deviceInfo>(m, "device_info")
         .def_readwrite("name", &deviceInfo::name)
