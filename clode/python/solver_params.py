@@ -10,8 +10,8 @@ class SolverParams:
         dtmax: float = 1.0,
         abstol: float = 1e-6,
         reltol: float = 1e-3,
-        max_steps: int = 10000000,
-        max_store: int = 10000000,
+        max_steps: int = 1000000,
+        max_store: int = 1000000,
         nout: int = 1,
     ):
         self._sp = _clode.solver_params(

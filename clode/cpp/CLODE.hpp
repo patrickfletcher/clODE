@@ -26,12 +26,6 @@
 #include "clODE_struct_defs.cl"
 #include "OpenCLResource.hpp"
 
-// #define __CL_ENABLE_EXCEPTIONS
-// #if defined(__APPLE__) || defined(__MACOSX)
-// #include "OpenCL/cl.hpp"
-// #else
-// #include <CL/cl.hpp>
-// #endif
 #define CL_HPP_ENABLE_EXCEPTIONS
 #define CL_HPP_MINIMUM_OPENCL_VERSION 120
 #define CL_HPP_TARGET_OPENCL_VERSION 120
@@ -42,7 +36,6 @@
 #include <string>
 #include <vector>
 
-// some utility structs to pass to the OpenCL kernels.  TEMPLATE for float/double after debugging of pure double case.
 struct ProblemInfo
 {
     std::string clRHSfilename;
@@ -59,14 +52,13 @@ class CLODE
 {
 
 protected:
-    //Problem details (from ProblemInfo struct)
+    //Problem details
     ProblemInfo prob;
     std::string clRHSfilename;
     cl_int nVar, nPar, nAux, nWiener;
     cl_int nPts = 1;
 
     //Stepper specification
-    // StepperType stepper;
     std::string stepper;
     std::vector<std::string> availableSteppers;
     std::map<std::string, std::string> stepperDefineMap;
@@ -93,7 +85,7 @@ protected:
     std::string clprogramstring, buildOptions, ODEsystemsource;
     cl::Kernel cl_transient;
 
-    //flag to ensure kernel can be executed
+    //flag to indicate whether kernel can be executed
     bool clInitialized = false;
 
     
@@ -108,26 +100,22 @@ protected:
 
 public:
     //for now, require all arguments. TODO: convenience constructors?
-    // CLODE(); //must follow with all set functions to use
-    // CLODE(unsigned int platformID, unsigned int deviceID); //specify device only
     CLODE(ProblemInfo prob, std::string stepper, bool clSinglePrecision, OpenCLResource opencl, const std::string clodeRoot);
     CLODE(ProblemInfo prob, std::string stepper, bool clSinglePrecision, unsigned int platformID, unsigned int deviceID, const std::string clodeRoot);
-    //~ CLODE(ProblemInfo prob); //set stepper, precision, and opencl
-    //~ CLODE(ProblemInfo prob, StepperType stepper=rungeKutta4, bool clSinglePrecision=true, OpenCLResource opencl=OpenCLResource()); //alt: use defaults?
     virtual ~CLODE();
 
     //Set functions: trigger rebuild etc
-    void setNewProblem(ProblemInfo prob);               //buildCL, pars/vars. Opencl context OK
-    void setStepper(std::string newStepper);            //buildCL. Host + Device data OK
-    void setPrecision(bool clSinglePrecision);          //buildCL, all device vars. Opencl context OK
-    void setOpenCL(OpenCLResource opencl);              //buildCL, all device vars. Host problem data OK
+    void setNewProblem(ProblemInfo prob);               //requires rebuild: pars/vars. Opencl context OK
+    void setStepper(std::string newStepper);            //requires rebuild: Host + Device data OK
+    void setPrecision(bool clSinglePrecision);          //requires rebuild: all device vars. Opencl context OK
+    void setOpenCL(OpenCLResource opencl);              //requires rebuild: all device vars. Host problem data OK
     void setOpenCL(unsigned int platformID, unsigned int deviceID);
     void setClodeRoot(const std::string clodeRoot);
 
     void buildProgram(std::string extraBuildOpts = ""); //build the program object (inherited by subclasses)
     void buildCL(); // build program and create kernel objects - overloaded by subclasses to include any extra kernels
 
-    //build program, set all problem data needed to run
+    // set all problem data needed to run
     virtual void initialize(std::vector<cl_double> newTspan, std::vector<cl_double> newX0, std::vector<cl_double> newPars, SolverParams<cl_double> newSp);
 
     void setNpts(cl_int newNpts); //resizes the nPts-dependent input variables
@@ -140,7 +128,7 @@ public:
     void seedRNG();
     void seedRNG(cl_int mySeed); //overload for setting reproducible seeds
 
-    //simulation routine and overloads
+    //simulation routine. TODO: overloads?
     void transient(); //integrate forward using stored tspan, x0, pars, and solver pars
     // void transient(std::vector<cl_double> newTspan); //integrate forward using stored x0, pars, and solver pars
     // void transient(std::vector<cl_double> newTspan, std::vector<cl_double> newX0); //integrate forward using stored pars, and solver pars

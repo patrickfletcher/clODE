@@ -229,15 +229,22 @@ PYBIND11_MODULE(clode_cpp_wrapper, m) {
             .def("seed_rng", static_cast<void (CLODEfeatures::*)()>(&CLODEfeatures::seedRNG))
             .def("build_cl", &CLODEfeatures::buildCL)
             .def("transient", &CLODEfeatures::transient)
-            .def("features", static_cast<void (CLODEfeatures::*)(bool)>(&CLODEfeatures::features))
-            .def("features", static_cast<void (CLODEfeatures::*)()>(&CLODEfeatures::features))
-            .def("get_tspan", &CLODEfeatures::getTspan)
-            .def("get_f", &CLODEfeatures::getF)
-            .def("get_n_features", &CLODEfeatures::getNFeatures)
-            .def("get_feature_names", &CLODEfeatures::getFeatureNames)
-            .def("getXf", &CLODEfeatures::getXf)
+            .def("set_tspan", static_cast<void (CLODEfeatures::*)(std::vector<double>)>(&CLODEfeatures::setTspan))
+            .def("set_problem_data", static_cast<void (CLODEfeatures::*)(std::vector<double>, std::vector<double>)>(&CLODEfeatures::setProblemData))
+            .def("set_x0", static_cast<void (CLODEfeatures::*)(std::vector<double>)>(&CLODEfeatures::setX0))
+            .def("set_pars", static_cast<void (CLODEfeatures::*)(std::vector<double>)>(&CLODEfeatures::setPars))
+            .def("set_solver_params", static_cast<void (CLODEfeatures::*)(SolverParams<double>)>(&CLODEfeatures::setSolverParams))
             .def("shift_tspan", &CLODEfeatures::shiftTspan)
             .def("shift_x0", &CLODEfeatures::shiftX0)
+            .def("get_tspan", &CLODEfeatures::getTspan)
+            .def("get_x0", &CLODEfeatures::getX0)
+            .def("get_xf", &CLODEfeatures::getXf)
+            .def("get_available_steppers", &CLODEfeatures::getAvailableSteppers)
+            .def("get_problem_info", &CLODEfeatures::getProblemInfo)
+            .def("get_program_string", &CLODEfeatures::getProgramString)
+            .def("print_status", &CLODEfeatures::printStatus)                                      //end of CLODE methods
+            .def("features", static_cast<void (CLODEfeatures::*)(bool)>(&CLODEfeatures::features)) //CLODEfeatures specializations
+            .def("features", static_cast<void (CLODEfeatures::*)()>(&CLODEfeatures::features))
             .def("__repr__", [](const CLODEfeatures &c) {
                 return "<CLODEfeatures (observer="
                 + c.getObserverName()
@@ -245,15 +252,12 @@ PYBIND11_MODULE(clode_cpp_wrapper, m) {
                 + std::to_string(c.getNFeatures())
                 + ")>";
             }, "CLODEfeatures string representation")
+            .def("set_observer_params", static_cast<void (CLODEfeatures::*)(ObserverParams<double>)>(&CLODEfeatures::setObserverParams))
             .def("get_observer_name", &CLODEfeatures::getObserverName)
-            .def("get_num_features", &CLODEfeatures::getNFeatures)
+            .def("get_n_features", &CLODEfeatures::getNFeatures)
             .def("get_feature_names", &CLODEfeatures::getFeatureNames)
-            .def("get_tspan", &CLODEfeatures::getTspan)
-            .def("get_x0", &CLODEfeatures::getX0)
-            .def("get_xf", &CLODEfeatures::getXf)
             .def("get_f", &CLODEfeatures::getF)
-            .def("get_problem_info", &CLODEfeatures::getProblemInfo)
-            .def("get_program_string", &CLODEfeatures::getProgramString);
+            .def("get_available_observers", &CLODEfeatures::getAvailableObservers);
 
     py::class_<CLODEtrajectory>(m, "clode_trajectory")
             .def(py::init<ProblemInfo &,
@@ -271,12 +275,24 @@ PYBIND11_MODULE(clode_cpp_wrapper, m) {
             .def("seed_rng", static_cast<void (CLODEtrajectory::*)()>(&CLODEtrajectory::seedRNG))
             .def("build_cl", &CLODEtrajectory::buildCL)
             .def("transient", &CLODEtrajectory::transient)
-            .def("trajectory", &CLODEtrajectory::trajectory)
+            .def("set_tspan", static_cast<void (CLODEtrajectory::*)(std::vector<double>)>(&CLODEtrajectory::setTspan))
+            .def("set_problem_data", static_cast<void (CLODEtrajectory::*)(std::vector<double>, std::vector<double>)>(&CLODEtrajectory::setProblemData))
+            .def("set_x0", static_cast<void (CLODEtrajectory::*)(std::vector<double>)>(&CLODEtrajectory::setX0))
+            .def("set_pars", static_cast<void (CLODEtrajectory::*)(std::vector<double>)>(&CLODEtrajectory::setPars))
+            .def("set_solver_params", static_cast<void (CLODEtrajectory::*)(SolverParams<double>)>(&CLODEtrajectory::setSolverParams))
+            .def("shift_tspan", &CLODEtrajectory::shiftTspan)
+            .def("shift_x0", &CLODEtrajectory::shiftX0)
+            .def("get_tspan", &CLODEtrajectory::getTspan)
+            .def("get_x0", &CLODEtrajectory::getX0)
+            .def("get_xf", &CLODEtrajectory::getXf)
+            .def("get_available_steppers", &CLODEfeatures::getAvailableSteppers)
+            .def("get_problem_info", &CLODEtrajectory::getProblemInfo)
+            .def("get_program_string", &CLODEtrajectory::getProgramString)
+            .def("print_status", &CLODEtrajectory::printStatus) //end of CLODE methods
+            .def("trajectory", &CLODEtrajectory::trajectory)    //CLODEtrajectory specializations
             .def("get_t", &CLODEtrajectory::getT)
             .def("get_x", &CLODEtrajectory::getX)
-            .def("get_x0", &CLODEtrajectory::getX0)
             .def("get_dx", &CLODEtrajectory::getDx)
             .def("get_aux", &CLODEtrajectory::getAux)
-            .def("get_n_stored", &CLODEtrajectory::getNstored)
-            .def("shift_x0", &CLODEtrajectory::shiftX0);
+            .def("get_n_stored", &CLODEtrajectory::getNstored);
 }

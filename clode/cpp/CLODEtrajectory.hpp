@@ -15,12 +15,6 @@
 #include "clODE_struct_defs.cl"
 #include "OpenCLResource.hpp"
 
-// #define __CL_ENABLE_EXCEPTIONS
-// #if defined(__APPLE__) || defined(__MACOSX)
-// #include "OpenCL/cl.hpp"
-// #else
-// #include <CL/cl.hpp>
-// #endif
 #define CL_HPP_ENABLE_EXCEPTIONS
 #define CL_HPP_MINIMUM_OPENCL_VERSION 120
 #define CL_HPP_TARGET_OPENCL_VERSION 120
@@ -54,7 +48,7 @@ public:
     //build program, set all problem data needed to run
     virtual void initialize(std::vector<cl_double> newTspan, std::vector<cl_double> newX0, std::vector<cl_double> newPars, SolverParams<cl_double> newSp);
 
-    //simulation routine and overloads
+    //simulation routine. TODO: overloads?
     void trajectory(); //integrate forward an interval of duration (tf-t0)
     // void trajectory(std::vector<cl_double> newTspan);
     // void trajectory(std::vector<cl_double> newTspan, std::vector<cl_double> newX0);
