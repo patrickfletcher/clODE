@@ -37,6 +37,7 @@ def vdp_dormand_prince(end: int, input_file: str = "test/van_der_pol_oscillator.
         observer=clode.Observer.threshold_2,
         stepper=clode.Stepper.dormand_prince,
         tspan=tspan,
+        single_precision=False,
     )
 
     parameters = [-1, 0, 0.01, 0.1, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0] + list(
