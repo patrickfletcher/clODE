@@ -39,6 +39,7 @@ jobs:
           PYTHON=python3 make upload
 
       - name: Publish to PyPI
+        if: github.ref == 'refs/heads/main'
         env:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}

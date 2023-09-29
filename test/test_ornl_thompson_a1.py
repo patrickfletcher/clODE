@@ -1,8 +1,9 @@
 from math import exp
 
+import numpy as np
+
 import clode
 
-import numpy as np
 
 def ornl_thompson_a1_exact(t: float):
     y1 = 4 * (t + 1 / 8 * exp(-8 * t) - 1 / 8)
@@ -18,7 +19,7 @@ def test_ornl_thompson_a1():
     k = 2
     H = 10
 
-    tspan = (0.0, H / 2.)
+    tspan = (0.0, H / 2.0)
 
     integrator = clode.CLODETrajectory(
         src_file="test/ornl_thompson_a1.cl",

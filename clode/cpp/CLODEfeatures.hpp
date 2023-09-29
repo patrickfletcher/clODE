@@ -16,12 +16,6 @@
 #include "observers.cl"
 #include "OpenCLResource.hpp"
 
-// #define __CL_ENABLE_EXCEPTIONS
-// #if defined(__APPLE__) || defined(__MACOSX)
-// #include "OpenCL/cl.hpp"
-// #else
-// #include <CL/cl.hpp>
-// #endif
 #define CL_HPP_ENABLE_EXCEPTIONS
 #define CL_HPP_MINIMUM_OPENCL_VERSION 120
 #define CL_HPP_TARGET_OPENCL_VERSION 120
@@ -74,13 +68,13 @@ public:
     virtual void initialize(std::vector<cl_double> newTspan, std::vector<cl_double> newX0, std::vector<cl_double> newPars, SolverParams<cl_double> newSp, ObserverParams<cl_double> newOp);
 
     void setObserverParams(ObserverParams<cl_double> newOp);
-    void setObserver(std::string newObserver); //rebuild: program, kernel, kernel args. Host + Device data OK
+    void setObserver(std::string newObserver); //requires rebuild: program, kernel, kernel args. Host + Device data OK
 
     void buildCL(); // build program and create kernel objects
 
-    //simulation routine and overloads
-    void initializeObserver();                           //integrate forward an interval of duration (tf-t0)
-    void features();                           //integrate forward an interval of duration (tf-t0)//integrate forward using stored tspan, x0, pars, and solver pars
+    //simulation routine. TODO: overloads?
+    void initializeObserver();                 //initialize Observer struct: possibly integrate forward an interval of duration (tf-t0), rewinds to t0
+    void features();                           //integrate forward using stored tspan, x0, pars, and solver pars
     void features(bool newDoObserverInitFlag); //allow manually forcing re-init of observer data
     // void features(std::vector<cl_double> newTspan);
     // void features(std::vector<cl_double> newTspan, std::vector<cl_double> newX0);

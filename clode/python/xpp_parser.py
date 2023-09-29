@@ -20,7 +20,6 @@ def _parse_ode_definition(xpp_line: str) -> list[tuple[str, str]]:
             line = ""
         variable_pairs.append((name, value))
 
-
     return variable_pairs
 
 
@@ -64,12 +63,12 @@ def read_ode_parameters(xpp_string: str):
 
 
 def format_opencl_rhs(
-        parameters: dict[str, str],
-        auxiliaries: dict[str, str],
-        initial_values: dict[str, str],
-        dx: dict[str, str],
-        noise: list[str],
-        statements: list[str],
+    parameters: dict[str, str],
+    auxiliaries: dict[str, str],
+    initial_values: dict[str, str],
+    dx: dict[str, str],
+    noise: list[str],
+    statements: list[str],
 ) -> str:
     cl_file = """void getRHS(const realtype t,
             const realtype x_[],
@@ -132,11 +131,15 @@ def format_opencl_rhs(
 
     cl_file += "}"
 
-    cl_file = re.sub('(\w+)\s*\^\s*2', r'\1*\1', cl_file, flags=re.MULTILINE)
-    cl_file = re.sub('(\w+)\s*\^\s*3', r'\1*\1*\1', cl_file, flags=re.MULTILINE)
-    cl_file = re.sub('(\w+)\s*\^\s*4', r'\1*\1*\1*\1', cl_file, flags=re.MULTILINE)
-    cl_file = re.sub('(\w+)\s*\^\s*([0-9]+)', r'pown(\1, \2)', cl_file, flags=re.MULTILINE)
-    cl_file = re.sub('(\w+)\s*\^\s*([-+]?(\d*\.*\d+))', r'pow(\1, \2)', cl_file, flags=re.MULTILINE)
+    cl_file = re.sub("(\w+)\s*\^\s*2", r"\1*\1", cl_file, flags=re.MULTILINE)
+    cl_file = re.sub("(\w+)\s*\^\s*3", r"\1*\1*\1", cl_file, flags=re.MULTILINE)
+    cl_file = re.sub("(\w+)\s*\^\s*4", r"\1*\1*\1*\1", cl_file, flags=re.MULTILINE)
+    cl_file = re.sub(
+        "(\w+)\s*\^\s*([0-9]+)", r"pown(\1, \2)", cl_file, flags=re.MULTILINE
+    )
+    cl_file = re.sub(
+        "(\w+)\s*\^\s*([-+]?(\d*\.*\d+))", r"pow(\1, \2)", cl_file, flags=re.MULTILINE
+    )
 
     cl_lines = cl_file.split("\n")
 

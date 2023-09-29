@@ -1,7 +1,9 @@
 import sys
-import pytest
-from clode import convert_xpp_file
 from test.test_vdp import vdp_dormand_prince
+
+import pytest
+
+from clode import convert_xpp_file
 
 
 def test_vdp_converter_converts_vdp():

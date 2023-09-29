@@ -200,6 +200,9 @@ void OpenCLResource::getPlatformAndDevices(unsigned int platformID, std::vector<
     if (platforms.size() == 0)
         throw cl::Error(1, "No OpenCL platforms were found");
 
+    spdlog::debug("Found {} OpenCL platforms", platforms.size());
+    spdlog::debug("Using platform {}", platformID);
+
     if (platformID < platforms.size())
     {
         platform = platforms[platformID];
@@ -244,7 +247,7 @@ void OpenCLResource::initializeOpenCL()
         throw er;
     }
 
-    //~ spdlog::info("OpenCLResource Created\n");
+    spdlog::debug("OpenCLResource Created\n");
 }
 
 //attempt to build OpenCL program given as a string, build options empty if not supplied.

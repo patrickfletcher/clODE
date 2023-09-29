@@ -1,8 +1,8 @@
 import sys
+from test.test_vdp import vdp_dormand_prince
 
 import pytest
 
-from test.test_vdp import vdp_dormand_prince
 
 @pytest.mark.long
 def test_vdp_dormand_prince():

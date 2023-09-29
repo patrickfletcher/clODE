@@ -1,11 +1,19 @@
-from .observer import Observer, ObserverOutput
+from . import clode_cpp_wrapper as _clode  # type: ignore
 from .features import CLODEFeatures
-from .trajectory import CLODETrajectory
-from .stepper import Stepper
-from .runtime import _get_clode, _get_runtime
-from .stepper import Stepper
+from .observer import Observer, ObserverOutput
 from .problem_info import ProblemInfo
-from .clode_cpp_wrapper import query_opencl, print_opencl  # type: ignore
-from .xpp_parser import read_ode_parameters, format_opencl_rhs, convert_xpp_file
+from .runtime import (
+    cl_device_type,
+    cl_vendor,
+    get_cpp,
+    get_log_level,
+    initialise_runtime,
+    log_level,
+    set_log_level,
+    set_log_pattern,
+)
+from .stepper import Stepper
+from .trajectory import CLODETrajectory
+from .xpp_parser import convert_xpp_file, format_opencl_rhs, read_ode_parameters
 
-__version__ = "0.3.2"
+__version__ = "0.4.0"
