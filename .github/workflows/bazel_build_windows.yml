@@ -12,8 +12,11 @@ jobs:
       # the rest of the steps
       - uses: actions/checkout@v3
 
+      - name: Python 3 location check
+        run: C:\Windows\System32\where.exe python3.exe
+
       - name: Python location check
-        run: where python3.exe
+        run: C:\Windows\System32\where.exe python.exe
 
       - name: Python version check
         run: python3.exe --version
