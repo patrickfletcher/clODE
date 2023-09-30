@@ -97,7 +97,7 @@ def _get_python_lib(repository_ctx, python_bin):
         "from __future__ import print_function",
         "import site",
         "import os",
-        "python_paths = ['C:\hostedtoolcache\windows\Python\3.9.13\x64\lib\site-packages']",
+        "python_paths = ['C:\\\\hostedtoolcache\\\\windows\\\\Python\\003.9.13d\\\\lib\\\\site-packages']",
         #        "if os.getenv('PYTHONPATH') is not None:",
         #        "  python_paths = os.getenv('PYTHONPATH').split(':')",
         #        "try:",
