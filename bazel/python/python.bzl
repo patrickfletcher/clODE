@@ -110,7 +110,7 @@ def _get_python_lib(repository_ctx, python_bin):
         "for path in all_paths:",
         "  if os.path.isdir(path):",
         "    paths.append(path)",
-        "if len(paths) >=1:",
+        "if len(paths) >= 1:",
         "  print(paths[0])",
     ]
 

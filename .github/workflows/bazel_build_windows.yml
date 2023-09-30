@@ -12,11 +12,14 @@ jobs:
       # the rest of the steps
       - uses: actions/checkout@v3
 
+      - name: Python location check
+        run: where python3.exe
+
       - name: Python version check
-        run: python --version
+        run: python3.exe --version
 
       - name: Python library check
-        run: python bazel/get_python_libs.py
+        run: python3.exe bazel/get_python_libs.py
 
       # test
       - name: Build the source
