@@ -117,13 +117,15 @@ def _get_python_lib(repository_ctx, python_bin):
     # The below script writes the above program to a file
     # and executes it. This is to work around the limitation
     # of not being able to upload files as part of execute.
+    script_file = os.path.join(repository_ctx.path, "script.py")
+
     cmd = "from os import linesep;"
-    cmd += "f = open('script.py', 'w');"
+    cmd += "f = open('%s', 'w');" % script_file
     for line in print_lib:
         cmd += "f.write(\"%s\" + linesep);" % line
     cmd += "f.close();"
     cmd += "from subprocess import call;"
-    cmd += "call([r\"%s\", \"script.py\"]);" % python_bin
+    cmd += "call([r\"%s\", \"%s\"]);" % python_bin, script_file
 
     result = execute(repository_ctx, [python_bin, "-c", cmd])
     return result.stdout.strip()
