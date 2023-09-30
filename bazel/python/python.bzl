@@ -118,12 +118,13 @@ def _get_python_lib(repository_ctx, python_bin):
     # and executes it. This is to work around the limitation
     # of not being able to upload files as part of execute.
     cmd = "from os import linesep;"
-    cmd += "f = open('script.py', 'w');"
-    for line in print_lib:
-        cmd += "f.write(\"%s\" + linesep);" % line
-    cmd += "f.close();"
-#    cmd += "from subprocess import call;"
-#    cmd += "call([r\"%s\", \"script.py\"]);" % python_bin
+#    cmd += "f = open('script.py', 'w');"
+#    for line in print_lib:
+#        cmd += "f.write(\"%s\" + linesep);" % line
+#    cmd += "f.close();"
+
+    #    cmd += "from subprocess import call;"
+    #    cmd += "call([r\"%s\", \"script.py\"]);" % python_bin
     cmd += "print('C:\\\\hostedtoolcache\\\\windows\\\\Python\\003.9.13d\\\\lib\\\\site-packages')"
 
     result = execute(repository_ctx, [python_bin, "-c", cmd])
