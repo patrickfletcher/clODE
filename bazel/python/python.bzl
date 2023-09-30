@@ -119,14 +119,14 @@ def _get_python_lib(repository_ctx, python_bin):
     # of not being able to upload files as part of execute.
     cmd = "from os import linesep;"
     cmd += "f = open('script.py', 'w');"
-    for line in ["print('Hello, world')"]: # print_lib:
+    for line in ["print('Hello, world')"]:  # print_lib:
         cmd += "f.write(\"%s\" + linesep);" % line
     cmd += "f.close();"
     cmd += "from subprocess import call;"
     cmd += "call([r\"%s\", \"script.py\"]);" % python_bin
 
     # result = execute(repository_ctx, [python_bin, "-c", cmd])
-    result = "C:\hostedtoolcache\windows\Python\3.9.13\x64"
+    result = "C:\\hostedtoolcache\\windows\\Python\003.9.13d"
     return result.stdout.strip()
 
 def _check_python_lib(repository_ctx, python_lib):
