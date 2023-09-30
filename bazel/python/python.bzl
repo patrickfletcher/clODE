@@ -97,21 +97,21 @@ def _get_python_lib(repository_ctx, python_bin):
         "from __future__ import print_function",
         "import site",
         "import os",
-        "python_paths = []",
-        "if os.getenv('PYTHONPATH') is not None:",
-        "  python_paths = os.getenv('PYTHONPATH').split(':')",
-        "try:",
-        "  library_paths = site.getsitepackages()",
-        "except AttributeError:",
-        "  from distutils.sysconfig import get_python_lib",
-        "  library_paths = [get_python_lib()]",
-        "all_paths = set(python_paths + library_paths)",
-        "paths = []",
-        "for path in all_paths:",
-        "  if os.path.isdir(path):",
-        "    paths.append(path)",
-        "if len(paths) >= 1:",
-        "  print(paths[0])",
+        "python_paths = ['C:\hostedtoolcache\windows\Python\3.9.13\x64\lib\site-packages']",
+        #        "if os.getenv('PYTHONPATH') is not None:",
+        #        "  python_paths = os.getenv('PYTHONPATH').split(':')",
+        #        "try:",
+        #        "  library_paths = site.getsitepackages()",
+        #        "except AttributeError:",
+        #        "  from distutils.sysconfig import get_python_lib",
+        #        "  library_paths = [get_python_lib()]",
+        #        "all_paths = set(python_paths + library_paths)",
+        #        "paths = []",
+        #        "for path in all_paths:",
+        #        "  if os.path.isdir(path):",
+        #        "    paths.append(path)",
+        #        "if len(paths) >= 1:",
+        #        "  print(paths[0])",
     ]
 
     # The below script writes the above program to a file
@@ -119,14 +119,13 @@ def _get_python_lib(repository_ctx, python_bin):
     # of not being able to upload files as part of execute.
     cmd = "from os import linesep;"
     cmd += "f = open('script.py', 'w');"
-    for line in ["print('Hello, world')"]:  # print_lib:
+    for line in print_lib:
         cmd += "f.write(\"%s\" + linesep);" % line
     cmd += "f.close();"
     cmd += "from subprocess import call;"
     cmd += "call([r\"%s\", \"script.py\"]);" % python_bin
 
-    # result = execute(repository_ctx, [python_bin, "-c", cmd])
-    result = "C:\\hostedtoolcache\\windows\\Python\003.9.13d"
+    result = execute(repository_ctx, [python_bin, "-c", cmd])
     return result.stdout.strip()
 
 def _check_python_lib(repository_ctx, python_lib):
