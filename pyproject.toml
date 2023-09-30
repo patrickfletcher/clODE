@@ -39,7 +39,7 @@ version = {attr = "clode.__version__"}
 
 [build-system]
 requires = [
-    "setuptools",
+    "setuptools>=65.5.1",
     "wheel",
     "setuptools_scm"
 ]

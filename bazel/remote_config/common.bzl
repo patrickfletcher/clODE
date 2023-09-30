@@ -30,7 +30,7 @@ def which(repository_ctx, program_name, allow_failure = False):
             allow_failure = allow_failure,
         ).stdout
         if out != None:
-            out = out.replace("\\", "\\\\").rstrip()
+            out = out.split("\n")[0].replace("\\", "\\\\").rstrip()
         return out
 
     out = execute(
