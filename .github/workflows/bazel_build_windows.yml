@@ -18,6 +18,9 @@ jobs:
       - name: Python version check
         run: python3.exe --version
 
+      - name: Chocolatery Python
+        run: C:\ProgramData\Chocolatey\bin\python3.exe --version
+
       - name: Python library check
         run: python3.exe bazel/get_python_libs.py
 
