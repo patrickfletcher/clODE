@@ -1,6 +1,6 @@
 name: JOSS Paper
 
-on: [pull_request]
+on: [push]
 
 jobs:
   paper:

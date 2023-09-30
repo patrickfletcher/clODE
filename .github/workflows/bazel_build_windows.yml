@@ -12,20 +12,11 @@ jobs:
       # the rest of the steps
       - uses: actions/checkout@v3
 
-      - name: Python 3 location check
-        run: C:\Windows\System32\where.exe python3.exe
-
-      - name: Python location check
-        run: C:\Windows\System32\where.exe python.exe
-
       - name: Python version check
-        run: python3.exe --version
-
-      - name: Chocolatery Python
-        run: C:\ProgramData\Chocolatey\bin\python3.exe --version
+        run: python --version
 
       - name: Python library check
-        run: python3.exe bazel/get_python_libs.py
+        run: python bazel/get_python_libs.py
 
       # test
       - name: Build the source

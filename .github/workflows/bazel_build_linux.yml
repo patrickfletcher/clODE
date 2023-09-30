@@ -1,6 +1,6 @@
 name: CI Linux
 
-on: [pull_request]
+on: [push, pull_request]
 
 jobs:
   test_linux:
