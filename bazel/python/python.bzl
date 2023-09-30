@@ -97,35 +97,34 @@ def _get_python_lib(repository_ctx, python_bin):
         "from __future__ import print_function",
         "import site",
         "import os",
-        "python_paths = ['C:\\\\hostedtoolcache\\\\windows\\\\Python\\003.9.13d\\\\lib\\\\site-packages']",
-        #        "if os.getenv('PYTHONPATH') is not None:",
-        #        "  python_paths = os.getenv('PYTHONPATH').split(':')",
-        #        "try:",
-        #        "  library_paths = site.getsitepackages()",
-        #        "except AttributeError:",
-        #        "  from distutils.sysconfig import get_python_lib",
-        #        "  library_paths = [get_python_lib()]",
-        #        "all_paths = set(python_paths + library_paths)",
-        #        "paths = []",
-        #        "for path in all_paths:",
-        #        "  if os.path.isdir(path):",
-        #        "    paths.append(path)",
-        #        "if len(paths) >= 1:",
-        #        "  print(paths[0])",
+        "python_paths = []",
+        "if os.getenv('PYTHONPATH') is not None:",
+        "  python_paths = os.getenv('PYTHONPATH').split(':')",
+        "try:",
+        "  library_paths = site.getsitepackages()",
+        "except AttributeError:",
+        "  from distutils.sysconfig import get_python_lib",
+        "  library_paths = [get_python_lib()]",
+        "all_paths = set(python_paths + library_paths)",
+        "paths = []",
+        "for path in all_paths:",
+        "  if os.path.isdir(path):",
+        "    paths.append(path)",
+        "if len(paths) >= 1:",
+        "  print(paths[0])",
     ]
 
     # The below script writes the above program to a file
     # and executes it. This is to work around the limitation
     # of not being able to upload files as part of execute.
-    script_file = os.path.join(repository_ctx.path, "script.py")
-
     cmd = "from os import linesep;"
-    cmd += "f = open('%s', 'w');" % script_file
+    cmd += "f = open('script.py', 'w');"
     for line in print_lib:
         cmd += "f.write(\"%s\" + linesep);" % line
     cmd += "f.close();"
-    cmd += "from subprocess import call;"
-    cmd += "call([r\"%s\", \"%s\"]);" % python_bin, script_file
+#    cmd += "from subprocess import call;"
+#    cmd += "call([r\"%s\", \"script.py\"]);" % python_bin
+    cmd += "print('C:\\\\hostedtoolcache\\\\windows\\\\Python\\003.9.13d\\\\lib\\\\site-packages')"
 
     result = execute(repository_ctx, [python_bin, "-c", cmd])
     return result.stdout.strip()
