@@ -45,10 +45,12 @@ class CLODETrajectory:
         self._data = None
         self._output_trajectories = None
         self._time_steps = None
+        self._output_time_steps = None
         self._number_of_simulations = None
         self._initial_conditions = None
         self._var_values = None
         self._n_stored = None
+        self._max_store = max_store
         if aux is None:
             aux = []
 
@@ -111,6 +113,7 @@ class CLODETrajectory:
             )
 
         self._data = None
+        self._time_steps = None
         self._number_of_simulations = parameters.shape[0]
 
         if tspan is not None:
@@ -164,32 +167,37 @@ class CLODETrajectory:
     def trajectory(self):
         self._trajectory.trajectory()
         self._n_stored = self._trajectory.get_n_stored()
-        self._time_steps = self._trajectory.get_t()
+        self._output_time_steps = self._trajectory.get_t()
         self._output_trajectories = self._trajectory.get_x()
         self._initial_conditions = self._trajectory.get_x0()
 
-    def get_time_steps(self):
-        return np.array(self._time_steps[: self._n_stored[0]])
-
-    def get_trajectory(self, simulation_id: int = 0):
-        # TODO: simulation id not implemented?
-        if simulation_id >= self._number_of_simulations:
-            raise ValueError(
-                f"Only {self._number_of_simulations} simulations were run, "
-                + f"simulation id {simulation_id} not valid"
-            )
-        if self._data is not None:
-            return self._data
-
-        n_stored = self._n_stored[simulation_id]
-
-        if n_stored == 0:
+    def get_trajectory(self):
+        # For now just return all the data.
+        # if simulation_id is not None and simulation_id >= self._number_of_simulations:
+        #     raise ValueError(
+        #         f"Only {self._number_of_simulations} simulations were run, "
+        #         + f"simulation id {simulation_id} not valid"
+        #     )
+        
+        if self._time_steps is not None and self._data is not None:
+            return self._time_steps, self._data, self._n_stored
+        
+        max_stored = max(self._n_stored)
+        if max_stored == 0:
             return np.array()
+        
+        # time_steps has one column per simulation (to support adaptive steppers)
+        shape = (self._number_of_simulations, self._max_store)
+        arr = np.array(self._output_time_steps[: np.prod(shape)])
+        self._time_steps = arr.reshape(shape, order="F").transpose((1, 0))
+        self._time_steps = self._time_steps[: max_stored, :]
 
-        shape = (self._number_of_simulations, len(self.vars), n_stored)
+        shape = (self._number_of_simulations, len(self.vars), self._max_store)
         arr = np.array(self._output_trajectories[: np.prod(shape)])
-        self._data = arr.reshape(shape, order="F").transpose((0, 2, 1))
-        return self._data
+        self._data = arr.reshape(shape, order="F").transpose((2, 1, 0))
+        self._data = self._data[: max_stored, :, :]
+
+        return self._time_steps, self._data, self._n_stored
 
     def print_devices(self) -> None:
         self._runtime.print_devices()
