@@ -11,8 +11,8 @@ if os.getenv('PYTHONPATH') is not None:
 try:
     library_paths = site.getsitepackages()
 except AttributeError as e:
-    from distutils.sysconfig import get_python_lib
-    library_paths = [get_python_lib()]
+    import sysconfig
+    library_paths = [sysconfig.get_path('purelib')]
 all_paths = set(python_paths + library_paths)
 paths = []
 for path in all_paths:

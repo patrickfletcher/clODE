@@ -26,14 +26,7 @@ if sys.version_info < (3, 8):
     print('Python >= 3.8 is required to build')
     sys.exit(1)
 
-# Import setuptools before distutils because setuptools monkey patches
-# distutils:
-#
-# https://github.com/pypa/setuptools/commit/bd1102648109c85c782286787e4d5290ae280abe
-import setuptools
-
 import atexit
-import distutils.command.build
 import os
 import shlex
 import shutil
@@ -80,7 +73,7 @@ class SdistCommand(setuptools.command.sdist.sdist):
         super().make_release_tree(base_dir, files)
 
 
-class BuildCommand(distutils.command.build.build):
+class BuildCommand(setuptools.command.build.build):
 
     def finalize_options(self):
         if self.build_base == 'build':
