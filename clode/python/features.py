@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import List, Optional, Tuple
 
 import numpy as np
@@ -243,7 +245,13 @@ class CLODEFeatures:
         self._observer_type = observer
         self._features.build_cl()
 
-    def initialize(self, x0: np.array, parameters: np.array, tspan:Tuple[float, float]|None = None, seed: int|None = None):
+    def initialize(
+        self,
+        x0: np.array,
+        parameters: np.array,
+        tspan: Tuple[float, float] | None = None,
+        seed: int | None = None,
+    ):
 
         if len(x0.shape) != 2:
             raise ValueError("Must provide rows of initial variables")
@@ -262,9 +270,9 @@ class CLODEFeatures:
                 f"Length of parameters vector {parameters.shape[1]}"
                 f" does not match number of parameters {len(self.pars)}"
             )
-        
+
         if tspan is not None:
-            self.tspan=tspan
+            self.tspan = tspan
 
         self._features.initialize(
             self.tspan,
@@ -275,12 +283,12 @@ class CLODEFeatures:
         )
         self.seed_rng(seed)
 
-    def seed_rng(self, seed: int|None = None):
+    def seed_rng(self, seed: int | None = None):
         if seed is not None:
             self._features.seed_rng(seed)
         else:
             self._features.seed_rng()
-        
+
     def set_tspan(self, new_tspan: Tuple[float, float]):
         self.tspan = new_tspan
         self._features.set_tspan(new_tspan)
@@ -289,17 +297,17 @@ class CLODEFeatures:
         self._features.set_problem_data(
             x0.transpose().flatten(),
             parameters.transpose().flatten(),
-            )
-        
+        )
+
     def set_x0(self, x0: np.array):
         self._features.set_x0(
             x0.transpose().flatten(),
-            )
-        
+        )
+
     def set_parameters(self, parameters: np.array):
         self._features.set_pars(
             parameters.transpose().flatten(),
-            )
+        )
 
     def transient(self, update_x0: bool = True):
         self._features.transient()

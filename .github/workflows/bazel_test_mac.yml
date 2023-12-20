@@ -16,6 +16,14 @@ jobs:
       # the rest of the steps
       - uses: actions/checkout@v3
 
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Python version check
+        run: PYTHON=python3 python --version
+
         # test
       - name: Build the code
         run: bazel build //...
