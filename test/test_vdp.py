@@ -58,8 +58,8 @@ def vdp_dormand_prince(end: int, input_file: str = "test/van_der_pol_oscillator.
         period = periods[index, 0]
         expected_period = approximate_vdp_period(mu)
         rtol = 0.01
-        atol = 0.3
-        assert np.isclose(period, expected_period, rtol=rtol, atol=1), (
+        atol = 1
+        assert np.isclose(period, expected_period, rtol=rtol, atol=atol), (
             f"Period {period} not close to expected {expected_period}" + f"for mu {mu}"
         )
 

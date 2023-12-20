@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import List, Optional, Tuple
 
 import numpy as np
@@ -82,7 +84,13 @@ class CLODETrajectory:
         self.tspan = tspan
         self._trajectory.build_cl()
 
-    def initialize(self, x0: np.array, parameters: np.array, tspan:Tuple[float, float]|None = None, seed: int|None = None):
+    def initialize(
+        self,
+        x0: np.array,
+        parameters: np.array,
+        tspan: Tuple[float, float] | None = None,
+        seed: int | None = None,
+    ):
 
         if len(x0.shape) != 2:
             raise ValueError("Must provide rows of initial variables")
@@ -106,7 +114,7 @@ class CLODETrajectory:
         self._number_of_simulations = parameters.shape[0]
 
         if tspan is not None:
-            self.tspan=tspan
+            self.tspan = tspan
 
         self._trajectory.initialize(
             self.tspan,
@@ -115,13 +123,13 @@ class CLODETrajectory:
             self._sp,
         )
         self.seed_rng(seed)
-        
-    def seed_rng(self, seed: int|None = None):
+
+    def seed_rng(self, seed: int | None = None):
         if seed is not None:
             self._trajectory.seed_rng(seed)
         else:
             self._trajectory.seed_rng()
-        
+
     def set_tspan(self, tspan: Tuple[float, float]):
         self.tspan = tspan
         self._trajectory.set_tspan(tspan)
@@ -130,17 +138,17 @@ class CLODETrajectory:
         self._trajectory.set_problem_data(
             x0.transpose().flatten(),
             parameters.transpose().flatten(),
-            )
-        
+        )
+
     def set_x0(self, x0: np.array):
         self._trajectory.set_x0(
             x0.transpose().flatten(),
-            )
-        
+        )
+
     def set_parameters(self, parameters: np.array):
         self._trajectory.set_pars(
             parameters.transpose().flatten(),
-            )
+        )
 
     def transient(self, update_x0: bool = True):
         self._trajectory.transient()
