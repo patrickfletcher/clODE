@@ -44,7 +44,7 @@ def test_ornl_thompson_a1():
 
     time_steps, output_trajectory, n_stored = integrator.get_trajectory()
     time_steps = time_steps[: n_stored[0], 0]
-    output_trajectory = output_trajectory[: n_stored[0], 0]
+    output_trajectory = output_trajectory[: n_stored[0], :, 0]
 
     for tt, (y1, y2) in zip(time_steps, output_trajectory):
         expected_y1, expected_y2 = ornl_thompson_a1_exact(tt)
