@@ -1,7 +1,8 @@
-setuptools~=63.2.0
-packaging~=21.3
+setuptools~=69.0.2
+wheel==0.42.0
+packaging~=23.2
 six~=1.16.0
-numpy~=1.24.2
-pytest~=6.2.5
-build
-twine
+numpy~=1.26.2
+pytest~=7.4.3
+build~=1.0.3
+twine~=4.0.2
