@@ -158,10 +158,6 @@ class CLODETrajectory:
 
     def trajectory(self):
         self._trajectory.trajectory()
-        self._n_stored = self._trajectory.get_n_stored()
-        self._output_time_steps = self._trajectory.get_t()
-        self._output_trajectories = self._trajectory.get_x()
-        self._initial_conditions = self._trajectory.get_x0()
 
     def get_trajectory(self):
         # For now just return all the data.
@@ -170,6 +166,9 @@ class CLODETrajectory:
         #         f"Only {self._number_of_simulations} simulations were run, "
         #         + f"simulation id {simulation_id} not valid"
         #     )
+        self._n_stored = self._trajectory.get_n_stored()
+        self._output_time_steps = self._trajectory.get_t()
+        self._output_trajectories = self._trajectory.get_x()
         
         if self._time_steps is not None and self._data is not None:
             return self._time_steps, self._data, self._n_stored
@@ -190,6 +189,13 @@ class CLODETrajectory:
         self._data = self._data[: max_stored, :, :]
 
         return self._time_steps, self._data, self._n_stored
+
+    def get_final_state(self):
+        self._final_state = self._features.get_xf()
+        final_state = np.array(self._final_state)
+        return final_state.reshape(
+            (len(self.vars), len(final_state) // len(self.vars))
+        ).transpose()
 
     def print_devices(self) -> None:
         self._runtime.print_devices()

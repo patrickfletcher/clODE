@@ -318,11 +318,10 @@ class CLODEFeatures:
             self._features.features(initialize_observer)
         else:
             self._features.features()
-        self._result_features = self._features.get_f()
-        self._num_result_features = self._features.get_n_features()
-        self._final_state = self._features.get_xf()
 
     def get_observer_results(self):
+        self._result_features = self._features.get_f()
+        self._num_result_features = self._features.get_n_features()
         return ObserverOutput(
             self._op,
             np.array(self._result_features),
@@ -333,6 +332,7 @@ class CLODEFeatures:
         )
 
     def get_final_state(self):
+        self._final_state = self._features.get_xf()
         final_state = np.array(self._final_state)
         return final_state.reshape(
             (len(self.vars), len(final_state) // len(self.vars))
