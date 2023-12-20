@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import runtime
 
 _clode = runtime.get_cpp()

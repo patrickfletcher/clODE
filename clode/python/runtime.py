@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 
 from . import clode_cpp_wrapper as _clode  # type: ignore
