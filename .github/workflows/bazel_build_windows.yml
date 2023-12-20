@@ -28,12 +28,12 @@ jobs:
       - name: Python library check
         run: python bazel/get_python_libs.py
 
+      - name: Install dependencies
+        run: make install
+
       # test
       - name: Build the source
         run: bazel.exe build //clode/...
-
-      - name: Install dependencies
-        run: make install
 
       - name: Install pip wheel
         run: python -m pip install --verbose .
