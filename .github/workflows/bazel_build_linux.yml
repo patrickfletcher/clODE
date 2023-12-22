@@ -97,14 +97,17 @@ jobs:
         run: ls site/
 
       - name: Create tar file of site folder
-        run: tar -czvf site.tar.gz site/
+        run: tar -cvf artifact.tar site/
 
       - name: List tar file
-        run: ls site.tar.gz
+        run: ls artifact.tar
+
+      - name: Compress tar file into gzip called github-pages
+        run: gzip -c artifact.tar > github-pages
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v2
         with:
-          name: site
-          path: site.tar.gz
+          name: github-pages
+          path: .
 
