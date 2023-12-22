@@ -49,15 +49,14 @@ This function supports additional use cases not used in this example: ```t``` fo
 Next we will use a python script to define our parameters and set up the numerical simulation. Here we use clODE's feature detection mode - several features of the ODE solution, including the period of oscillation, will be measured "on the fly", without storing the trajectory itself.
 
 ```python
-import clode
-from clode import Stepper, Observer
+from clode import Stepper, Observer, CLODEFeatures
 import numpy as np
 
 # time span for our simulation
 tspan = (0.0, 1000.0)
 
 # Create the clODE feature extractor
-integrator = clode.CLODEFeatures(
+integrator = CLODEFeatures(
     src_file="van_der_pol_oscillator.cl", # This is your source file. 
     variable_names=["x", "y"],            # names for our variables
     parameter_names=["mu"],               # name for our parameters
@@ -94,28 +93,20 @@ For more details, see the API reference [TODO]
 
 ## Trajectories
 
-We can also compute and store full trajectories in parallel. This requires significantly more memory, though, but is important for validating the above feature results.  Using the same example, we next compute and plot a few examples trajectories.
+We can also compute and store full trajectories in parallel. This requires significantly more memory, though, but is important for validating the above feature results.  Continuing the example above, we next compute and plot the trajectories for the four parameters specified.
 
 ```python
-import clode
-from clode import Stepper, Observer
-import numpy as np
+from clode import CLODETrajectory
 import matplotlib.plt as plt
 
-# time span for our simulation
-tspan = (0.0, 1000.0)
-
 # Create the clODE trajectory solver
-integrator = clode.CLODETrajectory(
+integrator = CLODETrajectory(
     src_file="van_der_pol_oscillator.cl", # This is your source file. 
     variable_names=["x", "y"],            # names for our variables
     parameter_names=["mu"],               # name for our parameters
     stepper=Stepper.rk4, # Choose a stepper
     tspan=tspan,
 )
-
-# send the data to the OpenCL device
-integrator.initialize(x0, pars_v)
 
 # send the data to the OpenCL device
 integrator.initialize(x0, P0)
@@ -137,7 +128,7 @@ fig, ax = plt.subplots(4, 1, sharex=True, sharey=True)
 for i, trajectory in enumerate(trajectories):
     ax[i].plot(trajectory["t"], trajectory["X"][:, varix])
 
-ax[1].set_ylabel(var_names[varix])
+ax[1].set_ylabel('x')
 ax[-1].set_xlabel('time')
 plt.show()
 ```
