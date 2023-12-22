@@ -128,14 +128,14 @@ integrator.transient()
 integrator.trajectory()
 
 # get the results, and plot
-T, X, n_stored = integrator.get_trajectory()
+trajectories = integrator.get_trajectory()
 
 # plot
 varix = 0
 fig, ax = plt.subplots(4, 1, sharex=True, sharey=True)
 
-for i in range(nTraj):
-    ax[i].plot(T[: n_stored[i], i], X[: n_stored[i], varix, i])
+for i, trajectory in enumerate(trajectories):
+    ax[i].plot(trajectory["t"], trajectory["X"][:, varix])
 
 ax[1].set_ylabel(var_names[varix])
 ax[-1].set_xlabel('time')
