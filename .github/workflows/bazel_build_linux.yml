@@ -93,12 +93,18 @@ jobs:
       - name: Build docs with mkdocs
         run: mkdocs build --clean
 
+      - name: List sites folder
+        run: ls site/
+
       - name: Create tar file of site folder
         run: tar -czvf site.tar.gz site/
+
+      - name: List tar file
+        run: ls site.tar.gz
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v2
         with:
-          artifact-name: site
+          name: site
           path: site.tar.gz
 
