@@ -127,10 +127,10 @@ class CLODEFeatures:
 
     Examples
     --------
-    >>> import clode
+    >>> import src
     >>> import numpy as np
     >>> import matplotlib.pyplot as plt
-    >>> model = clode.CLODEFeatures(
+    >>> model = src.CLODEFeatures(
     ...     src_file="examples/lorenz96.c",
     ...     variable_names=["x"],
     ...     parameter_names=["F"],

@@ -42,10 +42,9 @@ def test_ornl_thompson_a1():
 
     integrator.trajectory()
 
-    time_steps = integrator.get_time_steps()
-    output_trajectory = integrator.get_trajectory()[0]
+    time_steps, output_trajectory, _ = integrator.get_trajectory()
 
-    for tt, (y1, y2) in zip(time_steps, output_trajectory):
+    for tt, (y1, y2) in zip(time_steps, output_trajectory[:, :, 0]):
         expected_y1, expected_y2 = ornl_thompson_a1_exact(tt)
         np.testing.assert_approx_equal(y1, expected_y1, significant=5)
         np.testing.assert_approx_equal(y2, expected_y2, significant=5)
