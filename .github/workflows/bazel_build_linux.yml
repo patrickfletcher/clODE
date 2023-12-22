@@ -45,12 +45,38 @@ jobs:
       - name: make sdist
         run: make sdist
 
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: build-artifacts-dist
+          path: dist/
+
   deploy_docs:
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/github-pages'
-    needs: test_linux
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v3
+
+      - name: Update system
+        run: sudo apt update
+
+      - name: Install Dependencies
+        run: sudo apt install ocl-icd-libopencl1 clinfo intel-opencl-icd
+
+      - name: Test OpenCL
+        run: clinfo
+
+      - name: Install Dev Dependencies
+        run: sudo apt install ocl-icd-opencl-dev python3-dev
+
+      - name: Setup venv
+        run: make venv
+
+      - name: Install requirements
+        run: make install
+
+      - name: Install pip wheel
+        run: make install_clode
 
       - name: Deploy docs
         uses: mhausenblas/mkdocs-deploy-gh-pages@master
@@ -65,6 +91,12 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      - name: Download build artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: build-artifacts-dist
+          path: dist/
+
       - name: Publish to PyPI test
         env:
           TWINE_USERNAME: __token__
@@ -77,6 +109,12 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v3
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: build-artifacts-dist
+          path: dist/
 
       - name: Publish to PyPI
         env:
