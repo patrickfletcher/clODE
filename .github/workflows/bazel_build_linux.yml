@@ -45,11 +45,20 @@ jobs:
       - name: make sdist
         run: make sdist
 
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v3
-        with:
-          name: build-artifacts-dist
-          path: dist/
+      - name: Publish to PyPI test
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_TEST_TOKEN }}
+        run: |
+          make upload
+
+      - name: Publish to PyPI
+        if: github.ref == 'refs/heads/main'
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
+        run: |
+          make upload_prod
 
   deploy_docs:
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/github-pages'
@@ -78,46 +87,12 @@ jobs:
       - name: Install pip wheel
         run: make install_clode
 
+      - name: activate venv
+        run: source venv/bin/activate
+
       - name: Deploy docs
         uses: mhausenblas/mkdocs-deploy-gh-pages@master
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CONFIG_FILE: mkdocs.yml
           REQUIREMENTS: requirements.txt
-
-  publish_to_test_pypi:
-    runs-on: ubuntu-22.04
-    needs: test_linux
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Download build artifacts
-        uses: actions/download-artifact@v3
-        with:
-          name: build-artifacts-dist
-          path: dist/
-
-      - name: Publish to PyPI test
-        env:
-          TWINE_USERNAME: __token__
-          TWINE_PASSWORD: ${{ secrets.PYPI_TEST_TOKEN }}
-        run: make upload
-
-  publish_to_prod_pypi:
-    if: github.ref == 'refs/heads/main'
-    needs: test_linux
-    runs-on: ubuntu-22.04
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Download build artifacts
-        uses: actions/download-artifact@v3
-        with:
-          name: build-artifacts-dist
-          path: dist/
-
-      - name: Publish to PyPI
-        env:
-          TWINE_USERNAME: __token__
-          TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
-        run: make upload_prod
