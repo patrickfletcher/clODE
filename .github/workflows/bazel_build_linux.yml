@@ -2,11 +2,6 @@ name: CI Linux
 
 on:
   push:
-    paths-ignore:
-      - 'docs/**'
-      - 'paper/**'
-      - 'tests/**'
-      - 'mkdocs.yml'
   pull_request:
 
 jobs:
@@ -46,6 +41,18 @@ jobs:
 
       - name: make sdist
         run: make sdist
+
+      - name: Deploy docs
+        uses: mhausenblas/mkdocs-deploy-gh-pages@master
+        # Or use mhausenblas/mkdocs-deploy-gh-pages@nomaterial to build without the mkdocs-material theme
+        branch:
+          - main
+          - github-pages
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CONFIG_FILE: mkdocs.yml
+          # GITHUB_DOMAIN: github.myenterprise.com
+          REQUIREMENTS: requirements.txt
 
       - name: Publish to PyPI test
         env:
