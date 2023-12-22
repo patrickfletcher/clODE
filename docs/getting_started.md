@@ -44,12 +44,13 @@ void getRHS(const realtype t,
 
 Note that this is a simple C-language function. The ```realtype``` type declaration is a macro that will expand to ```float``` or ```double```, depending on our choice of single or double precision, which defaults to single precision.  Save this function in a file called ```van_der_pol_oscillator.cl```
 
-This function supports additional use cases not used in this example: ```t``` for time-dependent ODE terms (non-autonomous systems), ```aux``` for auxiliary readout variables, and stochastic terms via ```w```, which provides Wiener variables ($w \sim Normal \; (0,dt)$). Finally, one can also declare other simple C functions in the same file before ```getRHS``, and use them inside getRHS. For further example use cases, see [TODO]
+This function supports additional use cases not used in this example: ```t``` for time-dependent ODE terms (non-autonomous systems), ```aux``` for auxiliary readout variables, and stochastic terms via ```w```, which provides Wiener variables ($w \sim Normal \; (0,dt)$). If needed, one can also declare additional plain C-languange functions in the same file, preceding ```getRHS``, and use them inside getRHS.
 
 Next we will use a python script to define our parameters and set up the numerical simulation. Here we use clODE's feature detection mode - several features of the ODE solution, including the period of oscillation, will be measured "on the fly", without storing the trajectory itself.
 
 ```python
 import clode
+from clode import Stepper, Observer
 import numpy as np
 
 # time span for our simulation
@@ -60,23 +61,22 @@ integrator = clode.CLODEFeatures(
     src_file="van_der_pol_oscillator.cl", # This is your source file. 
     variable_names=["x", "y"],            # names for our variables
     parameter_names=["mu"],               # name for our parameters
-    num_noise=1,                          # Number of Weiner noise variables
-    observer=clode.Observer.threshold_2,  # Choose an observer
-    stepper=clode.Stepper.dormand_prince, # Choose a stepper
+    observer=Observer.threshold_2,  # Choose an observer
+    stepper=Stepper.rk4, # Choose a stepper
     tspan=tspan,
 )
 
 # Define parameter values of interest (only a few for demonstration)
-parameters = [-1, 0, 0.01, 0.1, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0]
+mu = [0.01, 0.5, 2.0, 4.0]
 
 # array format as expected internally - see implementation details
-pars_v = np.array([[par] for par in parameters])
+P0 = np.array([[u] for u in mu])
 
 # create initial conditions for each ODE instance
-x0 = np.tile([1, 1], (len(parameters), 1))
+x0 = np.tile([1, 1], (len(mu), 1))
 
 # send the data to the OpenCL device
-integrator.initialize(x0, pars_v)
+integrator.initialize(x0, P0)
 
 # Run the simulation for tspan time, storing only the final state.
 # Useful for integrating past transient behavior
@@ -92,6 +92,56 @@ print(observer_output.get_var_mean("period"))
 
 For more details, see the API reference [TODO]
 
+## Trajectories
+
+We can also compute and store full trajectories in parallel. This requires significantly more memory, though, but is important for validating the above feature results.  Using the same example, we next compute and plot a few examples trajectories.
+
+```python
+import clode
+from clode import Stepper, Observer
+import numpy as np
+import matplotlib.plt as plt
+
+# time span for our simulation
+tspan = (0.0, 1000.0)
+
+# Create the clODE trajectory solver
+integrator = clode.CLODETrajectory(
+    src_file="van_der_pol_oscillator.cl", # This is your source file. 
+    variable_names=["x", "y"],            # names for our variables
+    parameter_names=["mu"],               # name for our parameters
+    stepper=Stepper.rk4, # Choose a stepper
+    tspan=tspan,
+)
+
+# send the data to the OpenCL device
+integrator.initialize(x0, pars_v)
+
+# send the data to the OpenCL device
+integrator.initialize(x0, P0)
+
+# Run the simulation for tspan time, storing only the final state.
+# Useful for integrating past transient behavior
+integrator.transient()
+
+# Continue the simulation, now storing the trajectories
+integrator.trajectory()
+
+# get the results, and plot
+T, X, n_stored = integrator.get_trajectory()
+
+# plot
+varix = 0
+fig, ax = plt.subplots(4, 1, sharex=True, sharey=True)
+
+for i in range(nTraj):
+    ax[i].plot(T[: n_stored[i], i], X[: n_stored[i], varix, i])
+
+ax[1].set_ylabel(var_names[varix])
+ax[-1].set_xlabel('time')
+plt.show()
+```
+
 ## Implementation details
 
 The Python library wraps a CPP library, clode_cpp_wrapper.[so|dll]
@@ -100,6 +150,3 @@ by columns, i.e. if your variables are a, b and c,
 the CPP library expects data in the format [aaaabbbbcccc].
 The Python library expects data in the format
 [[a, b, c], [a, b, c], [a, b, c], ...]
-
-Note: There is a bug in the noise generation. It is currently not possible to
-set the number of noise variables to 0. Set to 1 or more.

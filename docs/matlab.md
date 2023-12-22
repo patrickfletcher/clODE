@@ -1,5 +1,11 @@
 # clODE Matlab interface
 
+## Note: currently unmaintained
+
+The Matlab interface will migrate to direct calls to the python version from Matlab.
+
+## Overview
+
 clODE solves many instances of the same ODE system given different input paramter values and/or initial conditions.
 
 This document describes the Matlab MEX-file interface provided for running clODE from within Matlab.

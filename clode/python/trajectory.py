@@ -10,6 +10,44 @@ from .xpp_parser import convert_xpp_file
 
 _clode = get_cpp()
 
+# Output datastructure.  We have a collection of num_simulations trajectories, (t, X), stacked into matrices. Each trajectory may have a different number of total stored time steps.
+# - for convenience, would be nice to have access patterns something like: 
+# >>> trajectory_output.t[0] --> t[: nstored[0], 0]
+# >>> trajectory_output.X[0] --> X[: nstored[0], :, 0]) 
+# >>> trajectory_output.X[var, 0] --> X[: nstored[0], var, 0]
+# >>> trajectory_output.t, .X --> (t[: max(nstored), :], X[: max(nstored), :, :]) 
+class TrajectoryOutput:
+    def __init__(
+        self,
+        number_of_simulations: int,
+        output_time_steps: np.array,
+        output_trajectories: np.array,
+        n_stored: np.array,
+        max_store: int,
+        variables: list[str],
+        ):
+
+        self._number_of_simulations = number_of_simulations
+        self._n_stored = n_stored
+        self._vars = variables
+        
+        max_n_stored = max(self._n_stored)
+        if max_n_stored== 0:
+            return np.array()
+        
+        # time_steps has one column per simulation (to support adaptive steppers)
+        shape = (number_of_simulations, max_store)
+        arr = np.array(output_time_steps[: np.prod(shape)])
+        self._time_steps = arr.reshape(shape, order="F").transpose((1, 0))
+        self._time_steps = self._time_steps[: max_n_stored, :]
+
+        shape = (number_of_simulations, len(self.vars), max_store)
+        arr = np.array(output_trajectories[: np.prod(shape)])
+        self._trajectory_data = arr.reshape(shape, order="F").transpose((2, 1, 0))
+        self._trajectory_data = self._trajectory_data[: max_n_stored, :, :]
+
+    # def 
+
 
 class CLODETrajectory:
     _runtime: _clode.opencl_resource | None = None
@@ -168,35 +206,36 @@ class CLODETrajectory:
         self._trajectory.trajectory()
 
     def get_trajectory(self):
-        # For now just return all the data.
-        # if simulation_id is not None and simulation_id >= self._number_of_simulations:
-        #     raise ValueError(
-        #         f"Only {self._number_of_simulations} simulations were run, "
-        #         + f"simulation id {simulation_id} not valid"
-        #     )
+        # fetch data from device
         self._n_stored = self._trajectory.get_n_stored()
         self._output_time_steps = self._trajectory.get_t()
         self._output_trajectories = self._trajectory.get_x()
-        
-        if self._time_steps is not None and self._data is not None:
-            return self._time_steps, self._data, self._n_stored
-        
-        max_stored = max(self._n_stored)
-        if max_stored == 0:
-            return np.array()
         
         # time_steps has one column per simulation (to support adaptive steppers)
         shape = (self._number_of_simulations, self._max_store)
         arr = np.array(self._output_time_steps[: np.prod(shape)])
         self._time_steps = arr.reshape(shape, order="F").transpose((1, 0))
-        self._time_steps = self._time_steps[: max_stored, :]
 
         shape = (self._number_of_simulations, len(self.vars), self._max_store)
         arr = np.array(self._output_trajectories[: np.prod(shape)])
         self._data = arr.reshape(shape, order="F").transpose((2, 1, 0))
-        self._data = self._data[: max_stored, :, :]
 
-        return self._time_steps, self._data, self._n_stored
+        # # if want to keep as matrices... need upper bound. trajectories still need to be cut to their specific n_stored...
+        # max_stored = max(self._n_stored)
+        # if max_stored == 0:
+        #     return np.array()
+        # self._time_steps = self._time_steps[: max_stored, :]
+        # self._data = self._data[: max_stored, :, :]
+
+        # alternatively, keep a list of trajectories, each stored as dict:
+        result = list()
+        for i in range(self._number_of_simulations):
+            ni = self._n_stored[i]
+            ti = self._time_steps[: ni, i]
+            xi = self._data[: ni, :, i]
+            result.append( {"t": ti, "X": xi} )
+
+        return result
 
     def get_final_state(self):
         self._final_state = self._features.get_xf()
