@@ -17,7 +17,9 @@ class Observer(Enum):
     neighbourhood_2 = "nhood2"
     threshold_2 = "thresh2"
 
-
+# may want other functionality here.
+# - full feature matrix, with names (pandas?)
+# - separate diagnostics (period count, step count, min dt, max dt , ...), summarize on print along with observer info/pars?
 class ObserverOutput:
     def __init__(
         self,
