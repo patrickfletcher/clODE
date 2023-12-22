@@ -90,9 +90,15 @@ jobs:
       - name: activate venv
         run: source venv/bin/activate
 
-      - name: Deploy docs
-        uses: mhausenblas/mkdocs-deploy-gh-pages@master
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CONFIG_FILE: mkdocs.yml
-          REQUIREMENTS: requirements.txt
+      - name: Build docs with mkdocs
+        run: mkdocs build --clean
+
+      - name: Create tar file of site folder
+        run: tar -czvf site.tar.gz site/
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v2
+        with:
+          artifact-name: site
+          path: site.tar.gz
+
