@@ -2,16 +2,20 @@ name: CI Linux
 
 on:
   push:
+    branches:
+      - main
+      - github-pages
+      - '*'
   pull_request:
+    branches:
+      - main
+      - github-pages
+      - '*'
 
 jobs:
   test_linux:
-    # virtual environments: https://github.com/actions/virtual-environments
     runs-on: ubuntu-22.04
-
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, which is the CWD for
-      # the rest of the steps
       - uses: actions/checkout@v3
 
       - name: Update system
@@ -26,7 +30,6 @@ jobs:
       - name: Install Dev Dependencies
         run: sudo apt install ocl-icd-opencl-dev python3-dev
 
-      # test
       - name: Build the code
         run: bazel build //... --subcommands
 
@@ -42,29 +45,41 @@ jobs:
       - name: make sdist
         run: make sdist
 
+  deploy_docs:
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/github-pages'
+    needs: test_linux
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v3
+
       - name: Deploy docs
         uses: mhausenblas/mkdocs-deploy-gh-pages@master
-        # Or use mhausenblas/mkdocs-deploy-gh-pages@nomaterial to build without the mkdocs-material theme
-        branch:
-          - main
-          - github-pages
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CONFIG_FILE: mkdocs.yml
-          # GITHUB_DOMAIN: github.myenterprise.com
           REQUIREMENTS: requirements.txt
+
+  publish_to_test_pypi:
+    runs-on: ubuntu-22.04
+    needs: test_linux
+    steps:
+      - uses: actions/checkout@v3
 
       - name: Publish to PyPI test
         env:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.PYPI_TEST_TOKEN }}
-        run: |
-          make upload
+        run: make upload
+
+  publish_to_prod_pypi:
+    if: github.ref == 'refs/heads/main'
+    needs: test_linux
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v3
 
       - name: Publish to PyPI
-        if: github.ref == 'refs/heads/main'
         env:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
-        run: |
-          make upload_prod
+        run: make upload_prod
