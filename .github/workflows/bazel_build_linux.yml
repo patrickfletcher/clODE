@@ -1,16 +1,6 @@
 name: CI Linux
 
-on:
-  push:
-    branches:
-      - main
-      - github-pages
-      - '*'
-  pull_request:
-    branches:
-      - main
-      - github-pages
-      - '*'
+on: ['push']
 
 jobs:
   test_linux:
@@ -59,55 +49,3 @@ jobs:
           TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
         run: |
           make upload_prod
-
-  deploy_docs:
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/github-pages'
-    runs-on: ubuntu-22.04
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Update system
-        run: sudo apt update
-
-      - name: Install Dependencies
-        run: sudo apt install ocl-icd-libopencl1 clinfo intel-opencl-icd
-
-      - name: Test OpenCL
-        run: clinfo
-
-      - name: Install Dev Dependencies
-        run: sudo apt install ocl-icd-opencl-dev python3-dev
-
-      - name: Setup venv
-        run: make venv
-
-      - name: Install requirements
-        run: make install
-
-      - name: Install pip wheel
-        run: make install_clode
-
-      - name: activate venv
-        run: source venv/bin/activate
-
-      - name: Build docs with mkdocs
-        run: mkdocs build --clean
-
-      - name: List sites folder
-        run: ls site/
-
-      - name: Create tar file of site folder
-        run: tar -cvf artifact.tar site/
-
-      - name: List tar file
-        run: ls artifact.tar
-
-      - name: Compress tar file into gzip called github-pages
-        run: gzip -c artifact.tar > github-pages
-
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v2
-        with:
-          name: github-pages
-          path: site
-
