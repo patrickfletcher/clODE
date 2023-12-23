@@ -1,15 +1,8 @@
-/*
- * OpenCLResource.hpp
- *
- *  Copyright 2017 Patrick Fletcher <patrick.fletcher@nih.gov>
- * 
- * Inspired by openCLUtilities
- */
+//
+// Created by Patrick Fletcher 2017 
+// - Inspired by openCLUtilities (https://www.eriksmistad.no/opencl-utilities/)
+//
 
-//TODO: more filters - max clock, max memory, extension available (eg. fp64), CL version, etc - How to apply multiple filters?
-
-//TODO: store maps of (UsrNameStr, cl::Mem[Buffer,Image,etc]), (nameStr, cl::Kernel), (UsrNameStr, cl::Event), and member functions to enable operations with these
-//TODO: with above, could wrap with mex function and Matlab cpp class wrapper => opencltoolbox
 
 #ifndef OPENCL_RESOURCE_HPP_
 #define OPENCL_RESOURCE_HPP_
@@ -19,7 +12,12 @@
 #define CL_HPP_TARGET_OPENCL_VERSION 120
 #define CL_HPP_CL_1_2_DEFAULT_BUILD
 #define CL_HPP_ENABLE_PROGRAM_CONSTRUCTION_FROM_ARRAY_COMPATIBILITY
-#include "OpenCL/cl2.hpp"
+// #include "OpenCL/cl2.hpp"
+#include "OpenCL/opencl.hpp"
+
+// we should be using opencl.hpp from here: https://github.com/KhronosGroup/OpenCL-CLHPP
+// e.g., see https://github.com/KhronosGroup/OpenCL-SDK/tree/main/external
+// - works as a drop-in replacement
 
 #include <string>
 #include <vector>

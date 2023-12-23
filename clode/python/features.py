@@ -5,7 +5,7 @@ from typing import List, Optional, Tuple
 import numpy as np
 
 from .observer import Observer, ObserverOutput
-from .runtime import _clode_root_dir, get_cpp, initialise_runtime
+from .runtime import _clode_root_dir, get_cpp, initialize_runtime
 from .stepper import Stepper
 from .xpp_parser import convert_xpp_file
 
@@ -224,7 +224,7 @@ class CLODEFeatures:
             observer_eps_dx,
         )
 
-        self._runtime = initialise_runtime(
+        self._runtime = initialize_runtime(
             device_type,
             vendor,
             platform_id,

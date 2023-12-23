@@ -72,9 +72,9 @@ const std::string CLODEfeatures::getProgramString()
 	return buildOptions+clprogramstring+ODEsystemsource; 
 }
 
-void CLODEfeatures::initialize(std::vector<cl_double> newTspan, std::vector<cl_double> newX0, std::vector<cl_double> newPars, SolverParams<cl_double> newSp) {
-    throw std::runtime_error("CLODEfeatures requires the newOp parameter!");
-}
+// void CLODEfeatures::initialize(std::vector<cl_double> newTspan, std::vector<cl_double> newX0, std::vector<cl_double> newPars, SolverParams<cl_double> newSp) {
+//     throw std::runtime_error("CLODEfeatures requires the newOp parameter!");
+// }
 
 //initialize everything
 void CLODEfeatures::initialize(std::vector<cl_double> newTspan, std::vector<cl_double> newX0, std::vector<cl_double> newPars, SolverParams<cl_double> newSp, ObserverParams<cl_double> newOp)

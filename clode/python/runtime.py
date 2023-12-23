@@ -10,7 +10,7 @@ _clode_root_dir: str = os.path.join(os.path.dirname(__file__), "cpp", "")
 DEFAULT_LOG_LEVEL = _clode.log_level.warn
 
 
-def initialise_runtime(
+def initialize_runtime(
     device_type: _clode.cl_device_type | None,
     vendor: _clode.cl_vendor | None,
     platform_id: int | None,

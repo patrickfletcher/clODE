@@ -7,7 +7,7 @@ from .runtime import (
     cl_vendor,
     get_cpp,
     get_log_level,
-    initialise_runtime,
+    initialize_runtime,
     log_level,
     set_log_level,
     set_log_pattern,

@@ -4,7 +4,7 @@ from typing import List, Optional, Tuple
 
 import numpy as np
 
-from .runtime import _clode_root_dir, get_cpp, initialise_runtime
+from .runtime import _clode_root_dir, get_cpp, initialize_runtime
 from .stepper import Stepper
 from .xpp_parser import convert_xpp_file
 
@@ -76,7 +76,7 @@ class CLODETrajectory:
         device_ids: List[int] | None = None,
     ) -> None:
         # We use Google-style docstrings: https://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_google.html
-        """Initialise a CLODE trajectory object.
+        """Initialize a CLODE trajectory object.
 
         Args:
             src_file (str): The path to the source file to be simulated.  If the file ends with ".xpp", it will be converted to a CLODE source file.
@@ -103,7 +103,7 @@ class CLODETrajectory:
         Raises:
             ValueError: If the source file does not exist.
 
-        Returns (CLODETrajectory): The initialised CLODE trajectory object.
+        Returns (CLODETrajectory): The initialized CLODE trajectory object.
         """
         if src_file.endswith(".xpp"):
             input_file = convert_xpp_file(src_file)
@@ -139,7 +139,7 @@ class CLODETrajectory:
             dt, dtmax, abstol, reltol, max_steps, max_store, nout
         )
 
-        self._runtime = initialise_runtime(
+        self._runtime = initialize_runtime(
             device_type,
             vendor,
             platform_id,
@@ -161,7 +161,7 @@ class CLODETrajectory:
         tspan: Tuple[float, float] | None = None,
         seed: int | None = None,
     ) -> None:
-        """Initialise the trajectory object.
+        """Initialize the trajectory object.
 
         Args:
             x0 (np.array): The initial conditions.

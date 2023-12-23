@@ -1,12 +1,6 @@
-/* clODE: a simulator class to run parallel ODE simulations on OpenCL capable hardware.
- * A clODE simulator solves on initial value problem over a grid of parameters and/or initial conditions. At each timestep,
- * "observer" rountine may be called to record/store/compute features of the solutions. Examples include storing the full
- * trajectory, recording the times and values of local extrema in a variable of the system, or directly computing other 
- * features of the trajectory.  
- */
-
-//when compiling, be sure to provide the clODE root directory as a define:
-// -DCLODE_ROOT="path/to/my/clODE/"
+//
+// Created by Patrick Fletcher 2017
+//
 
 #ifndef CLODE_TRAJECTORY_HPP_
 #define CLODE_TRAJECTORY_HPP_
@@ -19,7 +13,8 @@
 #define CL_HPP_MINIMUM_OPENCL_VERSION 120
 #define CL_HPP_TARGET_OPENCL_VERSION 120
 #define CL_HPP_ENABLE_PROGRAM_CONSTRUCTION_FROM_ARRAY_COMPATIBILITY
-#include "OpenCL/cl2.hpp"
+// #include "OpenCL/cl2.hpp"
+#include "OpenCL/opencl.hpp"
 
 #include <string>
 #include <vector>
@@ -43,7 +38,7 @@ public:
     CLODEtrajectory(ProblemInfo prob, std::string stepper, bool clSinglePrecision, unsigned int platformID, unsigned int deviceID, const std::string clodeRoot);
     virtual ~CLODEtrajectory();
 
-    void buildCL(); // build program and create kernel objects
+    virtual void buildCL(); // build program and create kernel objects
 
     //build program, set all problem data needed to run
     virtual void initialize(std::vector<cl_double> newTspan, std::vector<cl_double> newX0, std::vector<cl_double> newPars, SolverParams<cl_double> newSp);

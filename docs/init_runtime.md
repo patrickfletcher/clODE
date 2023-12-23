@@ -1,13 +1,13 @@
-# (Advanced) Initialise runtimes
+# (Advanced) Initialize runtimes
 
 Each CLODEFeature and CLODETrajectory object
 maintains its own OpenCL runtime. This is so
-that users can initialise multiple runtimes
+that users can initialize multiple runtimes
 across different devices.
 
 ## Automatic initialisation
 
-The simplest way to initialise the clODE runtime is to call
+The simplest way to initialize the clODE runtime is to call
 CLODEFeatures and CLODETrajectory without any runtime-specific
 arguments. The runtime device and vendor will be selected
 automatically.
@@ -17,7 +17,7 @@ The default runtime vendor is cl_vendor.ANY.
 
 ## Select device and vendor by name
 
-The second way to initialise the clODE runtime is to specify
+The second way to initialize the clODE runtime is to specify
 the device and platform by name. This is done by passing
 the `device_type` and `vendor` arguments to 
 CLODEFeatures or CLODETrajectory.
@@ -59,7 +59,7 @@ trajectory = clode.CLODETrajectory(
 
 ## Select platform and device by index
 
-The third way to initialise the clODE runtime is to specify
+The third way to initialize the clODE runtime is to specify
 the platform and device by index. This is done by passing
 the `platformID` and `deviceID` arguments
 to CLODEFeatures or CLODETrajectory.

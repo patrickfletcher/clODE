@@ -8,6 +8,11 @@ cc_library(
     hdrs = ["cl2.hpp"],
 )
 
+cc_library(
+    name = "openclhpp",
+    hdrs = ["opencl.hpp"],
+)
+
 config_setting(
     name = "macos_opencl",
     constraint_values = [
@@ -31,6 +36,7 @@ cc_library(
     deps = [
         ":cl",
         ":cl2",
+        ":openclhpp",
     ] + select({
         "@platforms//os:osx": [],
         "@platforms//os:linux": [],
