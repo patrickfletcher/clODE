@@ -56,7 +56,7 @@ jobs:
             ${{ runner.os }}-${{ matrix.python-version }}-pip-
 
       - name: Install dependencies
-        run: PYTHON=python3 make install
+        run: make install
 
       - uses: actions/cache/save@v3
         id: cache-pip-windows
@@ -101,7 +101,7 @@ jobs:
             ${{ runner.os }}-${{ matrix.python-version }}-pip-
 
       - name: Install dependencies
-        run: PYTHON=python3 make install
+        run: make install
 
       - uses: actions/cache/save@v3
         id: cache-pip-windows
