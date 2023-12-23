@@ -52,14 +52,14 @@ jobs:
       - name: Install dependencies
         run: PYTHON=python3 make install
 
-      - name: Install clode with pip
-        run: TEST_TMPDIR=~/.cache/bazel PYTHON=python3 make install_clode
+      - name: Build wheel
+        run: TEST_TMPDIR=~/.cache/bazel PYTHON=python3 make wheel
+
+      - name: install wheel in dist folder
+        run: PYTHON=python3 python -m pip install dist/clode-*.whl
 
       - name: Run python tests
         run: TEST_TMPDIR=~/.cache/bazel PYTHON=python3 make test_short
-
-      - name: Build wheel
-        run: TEST_TMPDIR=~/.cache/bazel PYTHON=python3 make wheel
 
       - name: Publish to PyPI test
         env:
