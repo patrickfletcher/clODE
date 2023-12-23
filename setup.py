@@ -214,6 +214,7 @@ class BuildExtCommand(setuptools.command.build_ext.build_ext):
                     # used to hide all extraneous symbols anyway.
                     build_command += ['--copt=-fvisibility=hidden']
 
+                print("BUILD COMMAND", build_command)
                 self.spawn(build_command)
                 if os.name == 'nt':
                     suffix = '.dll'
