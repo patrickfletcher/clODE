@@ -1,0 +1,41 @@
+site_name: clODE
+
+theme:
+  name: readthedocs
+
+# The code is in clode/python. We will import all class signatures from there
+# The documentation files (.md) are in docs/
+
+# Path: mkdocs.yml
+docs_dir: docs
+#site_dir: docs/site
+
+nav:
+  - Home: 'README.md'
+  - Getting Started:
+    - 'install.md'
+    - 'getting_started.md'
+  - Functionality:
+    - Feature Extraction: 'feature_extraction.md'
+    - Trajectory Simulation: 'trajectory_simulation.md'
+  - Configuration:
+      - XPP files: 'xpp_files.md'
+      - Initialising the runtime: 'init_runtime.md'
+      - Selecting logging levels: 'logging_levels.md'
+      - Querying OpenCL devices: 'querying_opencl.md'
+      - Running in Matlab: 'matlab.md'
+  #Generate the API reference from the python code in clode/python
+  - API Reference: 'api_reference.md'
+
+
+plugins:
+  - search
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          rendering:
+            show_source: true
+            show_signature_annotations: true
+

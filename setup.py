@@ -256,7 +256,7 @@ class InstallCommand(setuptools.command.install.install):
         super().run()
 
 
-with open(os.path.join(os.path.dirname(__file__), 'README.md'), mode='r',
+with open(os.path.join(os.path.dirname(__file__), 'docs', 'README.md'), mode='r',
           encoding='utf-8') as f:
     long_description = f.read()
 

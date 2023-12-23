@@ -1,0 +1,94 @@
+# Simple workflow for deploying static content to GitHub Pages
+name: Deploy static content to Pages
+
+on:
+  # Runs on pushes targeting the default branch
+  push:
+    branches: ["main"]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
+# However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build_and_upload_docs:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Update system
+        run: sudo apt update
+
+      - name: Install Dependencies
+        run: sudo apt install ocl-icd-libopencl1 clinfo intel-opencl-icd
+
+      - name: Test OpenCL
+        run: clinfo
+
+      - name: Install Dev Dependencies
+        run: sudo apt install ocl-icd-opencl-dev python3-dev
+
+      - name: Setup venv
+        run: make venv
+
+      - name: Install requirements
+        run: make install
+
+      - name: Install pip wheel
+        run: make install_clode
+
+      - name: activate venv
+        run: source venv/bin/activate
+
+      - name: Build docs with mkdocs
+        run: mkdocs build --clean
+
+      - name: List sites folder
+        run: ls site/
+
+      - name: Create tar file of site folder
+        run: tar -cvf artifact.tar site/
+
+      - name: List tar file
+        run: ls artifact.tar
+
+      - name: Compress tar file into gzip called github-pages
+        run: gzip -c artifact.tar > github-pages
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          name: github-pages
+          path: site
+
+  # Deploy job
+  deploy:
+    # Add a dependency to the build job
+    needs: build_and_upload_docs
+
+    # Grant GITHUB_TOKEN the permissions required to make a Pages deployment
+    permissions:
+      pages: write      # to deploy to Pages
+      id-token: write   # to verify the deployment originates from an appropriate source
+
+    # Deploy to the github-pages environment
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

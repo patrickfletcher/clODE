@@ -1,6 +1,13 @@
 name: CI Mac
 
-on: [push, pull_request]
+on:
+  push:
+    paths-ignore:
+      - 'docs/**'
+      - 'paper/**'
+      - 'tests/**'
+      - 'mkdocs.yml'
+  pull_request:
 
 jobs:
   test_macos:
