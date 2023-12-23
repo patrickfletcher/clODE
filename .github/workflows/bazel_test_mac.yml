@@ -42,9 +42,10 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+          cache: 'pip'
 
       - name: Python version check
         run: PYTHON=python3 python --version
@@ -53,13 +54,13 @@ jobs:
         run: PYTHON=python3 make install
 
       - name: Build wheel
-        run: TEST_TMPDIR=~/.cache/bazel PYTHON=python3 make wheel
+        run: PYTHON=python3 make wheel
 
       - name: install wheel in dist folder
         run: PYTHON=python3 python -m pip install dist/clode-*.whl
 
       - name: Run python tests
-        run: TEST_TMPDIR=~/.cache/bazel PYTHON=python3 make test_short
+        run: PYTHON=python3 make test_short
 
       - name: Publish to PyPI test
         env:
