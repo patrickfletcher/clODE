@@ -49,14 +49,34 @@ jobs:
       - name: Python version check
         run: PYTHON=python3 python --version
 
+      - uses: actions/cache@v3
+        with:
+          path: ~/Library/Caches/pip
+          key: ${{ runner.os }}-${{ matrix.python-version }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.python-version }}-pip-
+
       - name: Install dependencies
         run: PYTHON=python3 make install
+
+      - uses: actions/cache/save@v3
+        id: cache-pip-macos
+        with:
+          path: ~/Library/Caches/pip
+          key: ${{ runner.os }}-${{ matrix.python-version }}-pip-${{ hashFiles('**/requirements.txt') }}
 
       - name: Install pip wheel
         run: PYTHON=python3 make install_clode
 
       - name: Run python tests
         run: PYTHON=python3 make test_short
+
+      - name: Cache Bazel
+        uses: actions/cache/save@v3
+        with:
+          path: |
+            /private/var/tmp/_bazel_runner/
+          key: ${{ runner.os }}-${{ matrix.python-version }}-bazel-${{ hashFiles('.bazelversion', '.bazelrc', 'WORKSPACE', 'WORKSPACE.bazel', 'MODULE.bazel') }}
 
   build_macos_wheels:
     needs:   test_macos_python
@@ -82,8 +102,30 @@ jobs:
       - name: Python version check
         run: PYTHON=python3 python --version
 
+      - uses: actions/cache@v3
+        with:
+          path: ~/Library/Caches/pip
+          key: ${{ runner.os }}-${{ matrix.python-version }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.python-version }}-pip-
+
       - name: Install dependencies
         run: PYTHON=python3 make install
+
+      - uses: actions/cache/save@v3
+        id: cache-pip-macos
+        with:
+          path: ~/Library/Caches/pip
+          key: ${{ runner.os }}-${{ matrix.python-version }}-pip-${{ hashFiles('**/requirements.txt') }}
+
+      - name: Restore Bazel
+        uses: actions/cache@v3
+        with:
+          path: |
+            /private/var/tmp/_bazel_runner/
+          key: ${{ runner.os }}-${{ matrix.python-version }}-bazel-${{ hashFiles('.bazelversion', '.bazelrc', 'WORKSPACE', 'WORKSPACE.bazel', 'MODULE.bazel') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.python-version }}-bazel-
 
       - name: Build wheel
         run: PYTHON=python3 make wheel

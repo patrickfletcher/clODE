@@ -48,8 +48,21 @@ jobs:
       - name: Python library check
         run: python bazel/get_python_libs.py
 
+      - uses: actions/cache@v3
+        with:
+          path: ~\AppData\Local\pip\Cache
+          key: ${{ runner.os }}-${{ matrix.python-version }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.python-version }}-pip-
+
       - name: Install dependencies
-        run: make install
+        run: PYTHON=python3 make install
+
+      - uses: actions/cache/save@v3
+        id: cache-pip-windows
+        with:
+          path: ~\AppData\Local\pip\Cache
+          key: ${{ runner.os }}-${{ matrix.python-version }}-pip-${{ hashFiles('**/requirements.txt') }}
 
       - name: Install pip wheel
         run: python -m pip install --verbose .
@@ -80,8 +93,21 @@ jobs:
       - name: Python library check
         run: python bazel/get_python_libs.py
 
+      - uses: actions/cache@v3
+        with:
+          path: ~\AppData\Local\pip\Cache
+          key: ${{ runner.os }}-${{ matrix.python-version }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.python-version }}-pip-
+
       - name: Install dependencies
-        run: make install
+        run: PYTHON=python3 make install
+
+      - uses: actions/cache/save@v3
+        id: cache-pip-windows
+        with:
+          path: ~\AppData\Local\pip\Cache
+          key: ${{ runner.os }}-${{ matrix.python-version }}-pip-${{ hashFiles('**/requirements.txt') }}
 
       - name: Build wheel
         run: make wheel
