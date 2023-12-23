@@ -121,12 +121,19 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ~/.cache/bazel
-          key: ${{ runner.os }}-${{ matrix.python-version }}-bazel-${{ hashFiles('.bazelversion', '.bazelrc', 'WORKSPACE', 'WORKSPACE.bazel', 'MODULE.bazel') }}
+          key: ${{ runner.os }}-python-${{ matrix.python-version }}-bazel-${{ hashFiles('.bazelversion', '.bazelrc', 'WORKSPACE', 'WORKSPACE.bazel', 'MODULE.bazel') }}
           restore-keys: |
-            ${{ runner.os }}-${{ matrix.python-version }}-bazel-
+            ${{ runner.os }}-python-${{ matrix.python-version }}-bazel-
 
       - name: Build wheel
         run: TEST_TMPDIR=~/.cache/bazel PYTHON=python3 make wheel
+
+      - name: Cache Bazel (pip wheel)
+        uses: actions/cache/save@v3
+        with:
+          path: ~/.cache/bazel
+          key: ${{ runner.os }}-python-${{ matrix.python-version }}-bazel-${{ hashFiles('.bazelversion', '.bazelrc', 'WORKSPACE', 'WORKSPACE.bazel', 'MODULE.bazel') }}
+
 
       - name: Publish to PyPI test
         env:
