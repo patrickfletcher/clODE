@@ -21,7 +21,7 @@ format:
 test: install install_clode
 	$(PYTHON) -m pytest $(PYTESTFILES)
 
-test_short: install install_clode
+test_short:
 	$(PYTHON) -m pytest $(PYTESTFILES) -m "not long"
 
 run: install
@@ -33,7 +33,7 @@ lint: install
 		mypy $(PYFILES) $(PYTESTFILES)
 
 wheel:
-	$(PYTHON) -m build .
+	$(PYTHON) -m build -xn .
 
 sdist:
 	$(PYTHON) -m build . --sdist
