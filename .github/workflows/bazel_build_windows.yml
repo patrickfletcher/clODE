@@ -98,7 +98,7 @@ jobs:
           path: ~\AppData\Local\pip\Cache
           key: ${{ runner.os }}-${{ matrix.python-version }}-pip-${{ hashFiles('**/requirements.txt') }}
           restore-keys: |
-            ${{ runner.os }}-${{ matrix.python-version }}-pip-
+            ${{ runner.os }}-python-${{ matrix.python-version }}-pip-
 
       - name: Install dependencies
         run: make install
@@ -107,7 +107,7 @@ jobs:
         id: cache-pip-windows
         with:
           path: ~\AppData\Local\pip\Cache
-          key: ${{ runner.os }}-${{ matrix.python-version }}-pip-${{ hashFiles('**/requirements.txt') }}
+          key: ${{ runner.os }}-python-${{ matrix.python-version }}-pip-${{ hashFiles('**/requirements.txt') }}
 
       - name: Build wheel
         run: make wheel
