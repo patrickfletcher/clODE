@@ -34,66 +34,6 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        python-version: [ "3.8", "3.12" ]
-
-    steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, which is the CWD for
-      # the rest of the steps
-      - uses: actions/checkout@v4
-
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4
-        with:
-          python-version: ${{ matrix.python-version }}
-
-      - name: Python version check
-        run: PYTHON=python3 python --version
-
-      - uses: actions/cache@v3
-        with:
-          path: ~/Library/Caches/pip
-          key: ${{ runner.os }}-${{ matrix.python-version }}-pip-${{ hashFiles('**/requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ matrix.python-version }}-pip-
-
-      - name: Install dependencies
-        run: PYTHON=python3 make install
-
-      - uses: actions/cache/save@v3
-        id: cache-pip-macos
-        with:
-          path: ~/Library/Caches/pip
-          key: ${{ runner.os }}-${{ matrix.python-version }}-pip-${{ hashFiles('**/requirements.txt') }}
-
-      - name: Restore Bazel
-        uses: actions/cache@v3
-        with:
-          path: ~/.cache/bazel
-          key: ${{ runner.os }}-${{ matrix.python-version }}-bazel-${{ hashFiles('.bazelversion', '.bazelrc', 'WORKSPACE', 'WORKSPACE.bazel', 'MODULE.bazel') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ matrix.python-version }}-bazel-
-
-      - name: Install clode with pip
-        run: TEST_TMPDIR=~/.cache/bazel PYTHON=python3 make install_clode
-
-      - name: Run python tests
-        run: TEST_TMPDIR=~/.cache/bazel PYTHON=python3 make test_short
-
-      - name: Cache Bazel
-        uses: actions/cache/save@v3
-        with:
-          path: ~/.cache/bazel
-          key: ${{ runner.os }}-${{ matrix.python-version }}-bazel-${{ hashFiles('.bazelversion', '.bazelrc', 'WORKSPACE', 'WORKSPACE.bazel', 'MODULE.bazel') }}
-
-  build_macos_wheels:
-    needs:   test_macos_python
-
-    # virtual environments: https://github.com/actions/virtual-environments
-    runs-on: macos-12
-
-    strategy:
-      fail-fast: true
-      matrix:
         python-version: [ "3.8", "3.9", "3.10", "3.11", "3.12" ]
 
     steps:
@@ -109,39 +49,17 @@ jobs:
       - name: Python version check
         run: PYTHON=python3 python --version
 
-      - uses: actions/cache@v3
-        with:
-          path: ~/Library/Caches/pip
-          key: ${{ runner.os }}-${{ matrix.python-version }}-pip-${{ hashFiles('**/requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ matrix.python-version }}-pip-
-
       - name: Install dependencies
         run: PYTHON=python3 make install
 
-      - uses: actions/cache/save@v3
-        id: cache-pip-macos
-        with:
-          path: ~/Library/Caches/pip
-          key: ${{ runner.os }}-${{ matrix.python-version }}-pip-${{ hashFiles('**/requirements.txt') }}
+      - name: Install clode with pip
+        run: TEST_TMPDIR=~/.cache/bazel PYTHON=python3 make install_clode
 
-      - name: Restore Bazel
-        uses: actions/cache@v3
-        with:
-          path: ~/.cache/bazel
-          key: ${{ runner.os }}-python-${{ matrix.python-version }}-bazel-${{ hashFiles('.bazelversion', '.bazelrc', 'WORKSPACE', 'WORKSPACE.bazel', 'MODULE.bazel') }}
-          restore-keys: |
-            ${{ runner.os }}-python-${{ matrix.python-version }}-bazel-
+      - name: Run python tests
+        run: TEST_TMPDIR=~/.cache/bazel PYTHON=python3 make test_short
 
       - name: Build wheel
         run: TEST_TMPDIR=~/.cache/bazel PYTHON=python3 make wheel
-
-      - name: Cache Bazel (pip wheel)
-        uses: actions/cache/save@v3
-        with:
-          path: ~/.cache/bazel
-          key: ${{ runner.os }}-python-${{ matrix.python-version }}-bazel-${{ hashFiles('.bazelversion', '.bazelrc', 'WORKSPACE', 'WORKSPACE.bazel', 'MODULE.bazel') }}
-
 
       - name: Publish to PyPI test
         env:
