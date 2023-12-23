@@ -24,7 +24,7 @@ jobs:
         run: bazel.exe build //samples/...
 
   test_windows_python:
-    depends-on: build_windows_bazel
+    needs: build_windows_bazel
     runs-on: windows-latest
 
     strategy:
@@ -55,7 +55,7 @@ jobs:
         run: python -m pip install --verbose .
 
   build_windows_wheels:
-    depends-on:   test_windows_python
+    needs:   test_windows_python
     # virtual environments: https://github.com/actions/virtual-environments
     runs-on: windows-latest
 

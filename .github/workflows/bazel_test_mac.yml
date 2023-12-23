@@ -26,7 +26,7 @@ jobs:
 
 
   test_macos_python:
-    depends-on: test_macos_bazel
+    needs: test_macos_bazel
 
     # virtual environments: https://github.com/actions/virtual-environments
     runs-on: macos-12
@@ -59,7 +59,7 @@ jobs:
         run: PYTHON=python3 make test_short
 
   build_macos_wheels:
-    depends-on:   test_macos_python
+    needs:   test_macos_python
 
     # virtual environments: https://github.com/actions/virtual-environments
     runs-on: macos-12
