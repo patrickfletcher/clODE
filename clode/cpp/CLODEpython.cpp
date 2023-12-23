@@ -9,6 +9,7 @@
 #include <pybind11/stl.h>
 
 #include "clODE_struct_defs.cl"
+#include "CLODE.hpp"
 #include "CLODEfeatures.hpp"
 #include "CLODEtrajectory.hpp"
 
@@ -23,6 +24,10 @@ using overload_cast_ = py::detail::overload_cast_impl<Args...>;
 PYBIND11_MODULE(clode_cpp_wrapper, m) {
 
     m.doc() = "CLODE C++/Python interface"; // optional module docstring
+
+
+    // logging
+    /****************************************************/
 
     py::enum_<spdlog::level::level_enum>(m, "log_level")
         .value("trace", spdlog::level::trace)
@@ -73,60 +78,10 @@ PYBIND11_MODULE(clode_cpp_wrapper, m) {
         py::return_value_policy::reference,
         "Get logger singleton instance");
 
-    py::class_<ProblemInfo>(m, "problem_info")
-            .def(py::init<const std::string &,
-                 int,
-                 int,
-                 int,
-                 int,
-                 const std::vector<std::string> &,
-                 const std::vector<std::string> &,
-                 const std::vector<std::string> &>
-                 ()
-            );
 
-    py::class_<SolverParams<double>>(m, "solver_params")
-    .def(py::init<double,
-                double,
-                double,
-                double,
-                int,
-                int,
-                int>
-                ()
-    );
-
-    py::class_<ObserverParams<double>>(m, "observer_params")
-    .def(py::init<int,
-            int,
-            int,
-            double,
-            double,
-            double,
-            double,
-            double,
-            double,
-            double,
-            double>
-            ()
-    ).def_readwrite("e_var_ix", &ObserverParams<double>::eVarIx)
-    .def_readwrite("f_var_ix", &ObserverParams<double>::fVarIx)
-    .def_readwrite("maxEventCount", &ObserverParams<double>::maxEventCount)
-    .def("__repr__", [](const ObserverParams<double> &p) {
-        return "<observer_params(e_var_ix=" + std::to_string(p.eVarIx) +
-               ", f_var_ix=" + std::to_string(p.fVarIx) +
-               ", maxEventCount=" + std::to_string(p.maxEventCount) +
-               ", minXamp=" + std::to_string(p.minXamp) +
-               ", minIMI=" + std::to_string(p.minIMI) +
-               ", nHoodRadius=" + std::to_string(p.nHoodRadius) +
-               ", xUpThresh=" + std::to_string(p.xUpThresh) +
-               ", xDownThresh=" + std::to_string(p.xDownThresh) +
-               ", dxUpThresh=" + std::to_string(p.dxUpThresh) +
-               ", dxDownThresh=" + std::to_string(p.dxDownThresh) +
-               ", eps_dx=" + std::to_string(p.eps_dx) +
-               ")>";
-    });
-
+    // OpenCL runtime
+    /****************************************************/
+    
     py::enum_<cl_vendor>(m, "cl_vendor")
         .value("VENDOR_ANY", VENDOR_ANY)
         .value("VENDOR_NVIDIA", VENDOR_NVIDIA)
@@ -211,7 +166,100 @@ PYBIND11_MODULE(clode_cpp_wrapper, m) {
     m.def("query_opencl", &queryOpenCL, "Query OpenCL devices");
     m.def("print_opencl", overload_cast_<>()(&printOpenCL), "Print OpenCL devices");
 
-    py::class_<CLODEfeatures>(m, "clode_features")
+
+    // core clODE solver 
+    /****************************************************/
+
+    py::class_<ProblemInfo>(m, "problem_info")
+            .def(py::init<const std::string &,
+                 int,
+                 int,
+                 int,
+                 int,
+                 const std::vector<std::string> &,
+                 const std::vector<std::string> &,
+                 const std::vector<std::string> &>
+                 ()
+            );
+
+    py::class_<SolverParams<double>>(m, "solver_params")
+    .def(py::init<double,
+                double,
+                double,
+                double,
+                int,
+                int,
+                int>
+                ()
+    );
+    
+    py::class_<CLODE>(m, "clode")
+            .def(py::init<ProblemInfo &,
+                    std::string &,
+                    bool,
+                    OpenCLResource &,
+                    std::string &>())
+            .def("initialize", static_cast<void (CLODE::*)
+                    (std::vector<double>,
+                     std::vector<double>,
+                     std::vector<double>,
+                     SolverParams<double>)>
+            (&CLODE::initialize), "Initialize CLODE")
+            .def("seed_rng", static_cast<void (CLODE::*)(int)>(&CLODE::seedRNG))
+            .def("seed_rng", static_cast<void (CLODE::*)()>(&CLODE::seedRNG))
+            .def("build_cl", &CLODE::buildCL)
+            .def("set_tspan", static_cast<void (CLODE::*)(std::vector<double>)>(&CLODE::setTspan))
+            .def("set_problem_data", static_cast<void (CLODE::*)(std::vector<double>, std::vector<double>)>(&CLODE::setProblemData))
+            .def("set_x0", static_cast<void (CLODE::*)(std::vector<double>)>(&CLODE::setX0))
+            .def("set_pars", static_cast<void (CLODE::*)(std::vector<double>)>(&CLODE::setPars))
+            .def("set_solver_params", static_cast<void (CLODE::*)(SolverParams<double>)>(&CLODE::setSolverParams))
+            .def("transient", &CLODE::transient)
+            .def("shift_tspan", &CLODE::shiftTspan)
+            .def("shift_x0", &CLODE::shiftX0)
+            .def("get_tspan", &CLODE::getTspan)
+            .def("get_x0", &CLODE::getX0)
+            .def("get_xf", &CLODE::getXf)
+            .def("get_available_steppers", &CLODE::getAvailableSteppers)
+            .def("get_problem_info", &CLODE::getProblemInfo)
+            .def("get_program_string", &CLODE::getProgramString)
+            .def("print_status", &CLODE::printStatus);
+
+
+    // clODE features specialization 
+    /****************************************************/
+
+    py::class_<ObserverParams<double>>(m, "observer_params")
+    .def(py::init<int,
+            int,
+            int,
+            double,
+            double,
+            double,
+            double,
+            double,
+            double,
+            double,
+            double>
+            ()
+    ).def_readwrite("e_var_ix", &ObserverParams<double>::eVarIx)
+    .def_readwrite("f_var_ix", &ObserverParams<double>::fVarIx)
+    .def_readwrite("maxEventCount", &ObserverParams<double>::maxEventCount)
+    .def("__repr__", [](const ObserverParams<double> &p) {
+        return "<observer_params(e_var_ix=" + std::to_string(p.eVarIx) +
+               ", f_var_ix=" + std::to_string(p.fVarIx) +
+               ", maxEventCount=" + std::to_string(p.maxEventCount) +
+               ", minXamp=" + std::to_string(p.minXamp) +
+               ", minIMI=" + std::to_string(p.minIMI) +
+               ", nHoodRadius=" + std::to_string(p.nHoodRadius) +
+               ", xUpThresh=" + std::to_string(p.xUpThresh) +
+               ", xDownThresh=" + std::to_string(p.xDownThresh) +
+               ", dxUpThresh=" + std::to_string(p.dxUpThresh) +
+               ", dxDownThresh=" + std::to_string(p.dxDownThresh) +
+               ", eps_dx=" + std::to_string(p.eps_dx) +
+               ")>";
+    });
+
+    py::class_<CLODEfeatures, CLODE>(m, "clode_features")
             .def(py::init<ProblemInfo &,
                           std::string &,
                           std::string &,
@@ -225,41 +273,28 @@ PYBIND11_MODULE(clode_cpp_wrapper, m) {
                                                     SolverParams<double>,
                                                     ObserverParams<double>)>
                                                     (&CLODEfeatures::initialize), "Initialize CLODEfeatures")
-            .def("seed_rng", static_cast<void (CLODEfeatures::*)(int)>(&CLODEfeatures::seedRNG))
-            .def("seed_rng", static_cast<void (CLODEfeatures::*)()>(&CLODEfeatures::seedRNG))
             .def("build_cl", &CLODEfeatures::buildCL)
-            .def("transient", &CLODEfeatures::transient)
-            .def("set_tspan", static_cast<void (CLODEfeatures::*)(std::vector<double>)>(&CLODEfeatures::setTspan))
-            .def("set_problem_data", static_cast<void (CLODEfeatures::*)(std::vector<double>, std::vector<double>)>(&CLODEfeatures::setProblemData))
-            .def("set_x0", static_cast<void (CLODEfeatures::*)(std::vector<double>)>(&CLODEfeatures::setX0))
-            .def("set_pars", static_cast<void (CLODEfeatures::*)(std::vector<double>)>(&CLODEfeatures::setPars))
-            .def("set_solver_params", static_cast<void (CLODEfeatures::*)(SolverParams<double>)>(&CLODEfeatures::setSolverParams))
-            .def("shift_tspan", &CLODEfeatures::shiftTspan)
-            .def("shift_x0", &CLODEfeatures::shiftX0)
-            .def("get_tspan", &CLODEfeatures::getTspan)
-            .def("get_x0", &CLODEfeatures::getX0)
-            .def("get_xf", &CLODEfeatures::getXf)
-            .def("get_available_steppers", &CLODEfeatures::getAvailableSteppers)
-            .def("get_problem_info", &CLODEfeatures::getProblemInfo)
-            .def("get_program_string", &CLODEfeatures::getProgramString)
-            .def("print_status", &CLODEfeatures::printStatus)                                      //end of CLODE methods
             .def("features", static_cast<void (CLODEfeatures::*)(bool)>(&CLODEfeatures::features)) //CLODEfeatures specializations
             .def("features", static_cast<void (CLODEfeatures::*)()>(&CLODEfeatures::features))
+            .def("set_observer_params", static_cast<void (CLODEfeatures::*)(ObserverParams<double>)>(&CLODEfeatures::setObserverParams))
+            .def("get_observer_name", &CLODEfeatures::getObserverName)
+            .def("get_n_features", &CLODEfeatures::getNFeatures)
+            .def("get_feature_names", &CLODEfeatures::getFeatureNames)
+            .def("get_f", &CLODEfeatures::getF)
+            .def("get_available_observers", &CLODEfeatures::getAvailableObservers)
             .def("__repr__", [](const CLODEfeatures &c) {
                 return "<CLODEfeatures (observer="
                 + c.getObserverName()
                 + ", n_features="
                 + std::to_string(c.getNFeatures())
                 + ")>";
-            }, "CLODEfeatures string representation")
-            .def("set_observer_params", static_cast<void (CLODEfeatures::*)(ObserverParams<double>)>(&CLODEfeatures::setObserverParams))
-            .def("get_observer_name", &CLODEfeatures::getObserverName)
-            .def("get_n_features", &CLODEfeatures::getNFeatures)
-            .def("get_feature_names", &CLODEfeatures::getFeatureNames)
-            .def("get_f", &CLODEfeatures::getF)
-            .def("get_available_observers", &CLODEfeatures::getAvailableObservers);
+            }, "CLODEfeatures string representation");
 
-    py::class_<CLODEtrajectory>(m, "clode_trajectory")
+
+    // clODE trajectory specialization
+    /****************************************************/
+
+    py::class_<CLODEtrajectory, CLODE>(m, "clode_trajectory")
             .def(py::init<ProblemInfo &,
                     std::string &,
                     bool,
@@ -271,24 +306,7 @@ PYBIND11_MODULE(clode_cpp_wrapper, m) {
                      std::vector<double>,
                      SolverParams<double>)>
             (&CLODEtrajectory::initialize), "Initialize CLODEtrajectory")
-            .def("seed_rng", static_cast<void (CLODEtrajectory::*)(int)>(&CLODEtrajectory::seedRNG))
-            .def("seed_rng", static_cast<void (CLODEtrajectory::*)()>(&CLODEtrajectory::seedRNG))
             .def("build_cl", &CLODEtrajectory::buildCL)
-            .def("transient", &CLODEtrajectory::transient)
-            .def("set_tspan", static_cast<void (CLODEtrajectory::*)(std::vector<double>)>(&CLODEtrajectory::setTspan))
-            .def("set_problem_data", static_cast<void (CLODEtrajectory::*)(std::vector<double>, std::vector<double>)>(&CLODEtrajectory::setProblemData))
-            .def("set_x0", static_cast<void (CLODEtrajectory::*)(std::vector<double>)>(&CLODEtrajectory::setX0))
-            .def("set_pars", static_cast<void (CLODEtrajectory::*)(std::vector<double>)>(&CLODEtrajectory::setPars))
-            .def("set_solver_params", static_cast<void (CLODEtrajectory::*)(SolverParams<double>)>(&CLODEtrajectory::setSolverParams))
-            .def("shift_tspan", &CLODEtrajectory::shiftTspan)
-            .def("shift_x0", &CLODEtrajectory::shiftX0)
-            .def("get_tspan", &CLODEtrajectory::getTspan)
-            .def("get_x0", &CLODEtrajectory::getX0)
-            .def("get_xf", &CLODEtrajectory::getXf)
-            .def("get_available_steppers", &CLODEfeatures::getAvailableSteppers)
-            .def("get_problem_info", &CLODEtrajectory::getProblemInfo)
-            .def("get_program_string", &CLODEtrajectory::getProgramString)
-            .def("print_status", &CLODEtrajectory::printStatus) //end of CLODE methods
             .def("trajectory", &CLODEtrajectory::trajectory)    //CLODEtrajectory specializations
             .def("get_t", &CLODEtrajectory::getT)
             .def("get_x", &CLODEtrajectory::getX)
