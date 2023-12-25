@@ -178,12 +178,6 @@ void CLODE::buildCL()
 	try
 	{ 
 		cl_transient = cl::Kernel(opencl.getProgram(), "transient", &opencl.error);
-
-		// size_t preferred_multiple;
-		// cl::Device dev;
-		// opencl.getProgram().getInfo(CL_PROGRAM_DEVICES,&dev);
-		// cl_transient.getWorkGroupInfo(dev,CL_KERNEL_PREFERRED_WORK_GROUP_SIZE_MULTIPLE,&preferred_multiple);
-		// spdlog::info("Preferred work size multiple (transient): {}\n",preferred_multiple);
 	}
 	catch (cl::Error &er)
 	{

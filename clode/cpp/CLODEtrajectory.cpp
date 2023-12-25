@@ -39,12 +39,6 @@ void CLODEtrajectory::buildCL()
 	{
 		cl_transient = cl::Kernel(opencl.getProgram(), "transient", &opencl.error);
 		cl_trajectory = cl::Kernel(opencl.getProgram(), "trajectory", &opencl.error);
-
-		// size_t preferred_multiple;
-		// cl::Device dev;
-		// opencl.getProgram().getInfo(CL_PROGRAM_DEVICES,&dev);
-		// cl_trajectory.getWorkGroupInfo(dev,CL_KERNEL_PREFERRED_WORK_GROUP_SIZE_MULTIPLE,&preferred_multiple);
-		// printf("Preferred work size multiple (trajectory): {}\n",preferred_multiple);
 	}
 	catch (cl::Error &er)
 	{
@@ -68,7 +62,7 @@ void CLODEtrajectory::initialize(std::vector<cl_double> newTspan, std::vector<cl
 	resizeTrajectoryVariables(); 
 
 	clInitialized = true;
-	spdlog::debug("initialize clODEfeatures\n");
+	spdlog::debug("initialize clODEtrajectory\n");
 }
 
 void CLODEtrajectory::resizeTrajectoryVariables()

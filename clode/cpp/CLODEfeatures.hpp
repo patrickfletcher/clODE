@@ -15,7 +15,6 @@
 #define CL_HPP_TARGET_OPENCL_VERSION 120
 #define CL_HPP_ENABLE_PROGRAM_CONSTRUCTION_FROM_ARRAY_COMPATIBILITY
 #include "OpenCL/cl2.hpp"
-// #include "OpenCL/opencl.hpp"
 
 #include <map>
 #include <string>
@@ -53,13 +52,12 @@ protected:
     void resizeFeaturesVariables(); //d_odata and d_F depend on nPts. nPts change invalidates d_odata
 
 public:
-
     CLODEfeatures(ProblemInfo prob, std::string stepper, std::string observer, bool clSinglePrecision, OpenCLResource opencl, const std::string clodeRoot);
     CLODEfeatures(ProblemInfo prob, std::string stepper, std::string observer, bool clSinglePrecision, unsigned int platformID, unsigned int deviceID, const std::string clodeRoot);
     virtual ~CLODEfeatures();
 
     //build program, set all problem data needed to run
-    // virtual void initialize(std::vector<cl_double> newTspan, std::vector<cl_double> newX0, std::vector<cl_double> newPars, SolverParams<cl_double> newSp); // throws error
+    using CLODE::initialize;
     virtual void initialize(std::vector<cl_double> newTspan, std::vector<cl_double> newX0, std::vector<cl_double> newPars, SolverParams<cl_double> newSp, ObserverParams<cl_double> newOp);
 
     void setObserverParams(ObserverParams<cl_double> newOp);
@@ -67,18 +65,10 @@ public:
 
     virtual void buildCL(); // build program and create kernel objects
 
-    //simulation routine. TODO: overloads?
+    //simulation routine.
     void initializeObserver();                 //initialize Observer struct: possibly integrate forward an interval of duration (tf-t0), rewinds to t0
     void features();                           //integrate forward using stored tspan, x0, pars, and solver pars
     void features(bool newDoObserverInitFlag); //allow manually forcing re-init of observer data
-    // void features(std::vector<cl_double> newTspan);
-    // void features(std::vector<cl_double> newTspan, std::vector<cl_double> newX0);
-    // void features(std::vector<cl_double> newTspan, std::vector<cl_double> newX0, std::vector<cl_double> newPars);
-    // void features(std::vector<cl_double> newTspan, std::vector<cl_double> newX0, std::vector<cl_double> newPars, SolverParams<cl_double> newSp);
-    // void features(bool newDoObserverInitFlag, std::vector<cl_double> newTspan);
-    // void features(bool newDoObserverInitFlag, std::vector<cl_double> newTspan, std::vector<cl_double> newX0);
-    // void features(bool newDoObserverInitFlag, std::vector<cl_double> newTspan, std::vector<cl_double> newX0, std::vector<cl_double> newPars);
-    // void features(bool newDoObserverInitFlag, std::vector<cl_double> newTspan, std::vector<cl_double> newX0, std::vector<cl_double> newPars, SolverParams<cl_double> newSp);
 
     //Get functions
     const std::string getObserverName() const { return observerName; }

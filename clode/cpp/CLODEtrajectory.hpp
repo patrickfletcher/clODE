@@ -14,7 +14,6 @@
 #define CL_HPP_TARGET_OPENCL_VERSION 120
 #define CL_HPP_ENABLE_PROGRAM_CONSTRUCTION_FROM_ARRAY_COMPATIBILITY
 #include "OpenCL/cl2.hpp"
-// #include "OpenCL/opencl.hpp"
 
 #include <string>
 #include <vector>
@@ -45,10 +44,6 @@ public:
 
     //simulation routine. TODO: overloads?
     void trajectory(); //integrate forward an interval of duration (tf-t0)
-    // void trajectory(std::vector<cl_double> newTspan);
-    // void trajectory(std::vector<cl_double> newTspan, std::vector<cl_double> newX0);
-    // void trajectory(std::vector<cl_double> newTspan, std::vector<cl_double> newX0, std::vector<cl_double> newPars);
-    // void trajectory(std::vector<cl_double> newTspan, std::vector<cl_double> newX0, std::vector<cl_double> newPars, SolverParams<cl_double> newSp);
 
     //Get functions
     std::vector<cl_double> getT();
