@@ -5,11 +5,9 @@ py_library(
     srcs = [
         "__init__.py",
         "features.py",
-        "observer.py",
         "problem_info.py",
         "runtime.py",
-        "solver_params.py",
-        "stepper.py",
+        "solver.py",
         "trajectory.py",
     ],
     visibility = ["//visibility:public"],

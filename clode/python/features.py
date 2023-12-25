@@ -1,18 +1,83 @@
 from __future__ import annotations
 
+from enum import Enum
 from typing import List, Optional, Tuple
 
 import numpy as np
 
-from .observer import Observer, ObserverOutput
-from .runtime import _clode_root_dir, get_cpp, initialize_runtime
-from .stepper import Stepper
-from .xpp_parser import convert_xpp_file
+from .runtime import _clode_root_dir, get_cpp
+from .solver import CLODE, Stepper
 
 _clode = get_cpp()
 
 
-class CLODEFeatures:
+class Observer(Enum):
+    basic = "basic"
+    basic_all_variables = "basicall"
+    local_max = "localmax"
+    neighbourhood_1 = "nhood1"
+    neighbourhood_2 = "nhood2"
+    threshold_2 = "thresh2"
+
+# may want other functionality here.
+# - full feature matrix, with names (pandas?)
+# - separate diagnostics (period count, step count, min dt, max dt , ...), summarize on print along with observer info/pars?
+class ObserverOutput:
+    def __init__(
+        self,
+        observer_params,
+        results_array: np.array,
+        num_result_features: int,
+        variables: list[str],
+        observer_type: Observer,
+        feature_names: list[str],
+    ):
+        # print(type(observer_params))
+        self._op = observer_params
+        self._data = results_array
+        self._num_result_features = num_result_features
+        self._vars = variables
+        self._observer_type = observer_type
+        self._feature_names = feature_names
+
+        shape = (
+            self._num_result_features,
+            len(results_array) // self._num_result_features,
+        )
+        self._data = results_array.reshape(shape).transpose()
+
+    def get_feature_names(self):
+        return self._feature_names
+
+    def _get_var(self, var: str, op: str):
+        try:
+            index = self._feature_names.index(f"{op} {var}")
+            return self._data[:, index : index + 1]
+        except ValueError:
+            raise NotImplementedError(
+                f"{self._observer_type} does not track {op} {var}!"
+            )
+
+    def get_var_max(self, var: str):
+        return self._get_var(var, "max")
+
+    def get_var_min(self, var: str):
+        return self._get_var(var, "min")
+
+    def get_var_mean(self, var: str):
+        return self._get_var(var, "mean")
+
+    def get_var_max_dt(self, var: str):
+        return self.get_var_max(f"d{var}/dt")
+
+    def get_var_min_dt(self, var: str):
+        return self.get_var_min(f"d{var}/dt")
+
+    def get_var_count(self, var: str):
+        return self._get_var("count", var)
+    
+
+class CLODEFeatures(CLODE):
     """
     A class for computing features from a CLODE model.
 
@@ -142,8 +207,6 @@ class CLODEFeatures:
     >>> model.plot()
     >>> plt.show()"""
 
-    _runtime: _clode.opencl_resource | None = None
-
     def __init__(
         self,
         src_file: str,
@@ -151,17 +214,6 @@ class CLODEFeatures:
         parameter_names: List[str],
         aux: Optional[List[str]] = None,
         num_noise: int = 0,
-        event_var: str = "",
-        feature_var: str = "",
-        observer_max_event_count: int = 100,
-        observer_min_x_amp: float = 1.0,
-        observer_min_imi: float = 1,
-        observer_neighbourhood_radius: float = 0.01,
-        observer_x_up_thresh: float = 0.3,
-        observer_x_down_thresh: float = 0.2,
-        observer_dx_up_thresh: float = 0,
-        observer_dx_down_thresh: float = 0,
-        observer_eps_dx: float = 1e-7,
         tspan: Tuple[float, float] = (0.0, 1000.0),
         stepper: Stepper = Stepper.rk4,
         observer: Observer = Observer.basic_all_variables,
@@ -178,34 +230,40 @@ class CLODEFeatures:
         platform_id: int | None = None,
         device_id: int | None = None,
         device_ids: List[int] | None = None,
+        event_var: str = "",
+        feature_var: str = "",
+        observer_max_event_count: int = 100,
+        observer_min_x_amp: float = 1.0,
+        observer_min_imi: float = 1,
+        observer_neighbourhood_radius: float = 0.01,
+        observer_x_up_thresh: float = 0.3,
+        observer_x_down_thresh: float = 0.2,
+        observer_dx_up_thresh: float = 0,
+        observer_dx_down_thresh: float = 0,
+        observer_eps_dx: float = 1e-7,
     ):
-        if src_file.endswith(".xpp"):
-            input_file = convert_xpp_file(src_file)
-        else:
-            input_file = src_file
-
-        self._final_state = None
-        self._num_result_features = None
-        self._result_features = None
-        if aux is None:
-            aux = []
-
-        self.vars = variable_names
-        self.pars = parameter_names
-        self.aux_variables = aux
-        self._pi = _clode.problem_info(
-            input_file,
-            len(variable_names),
-            len(parameter_names),
-            len(aux),
-            num_noise,
-            variable_names,
-            parameter_names,
-            aux,
-        )
-        self._sp = _clode.solver_params(
-            dt, dtmax, abstol, reltol, max_steps, max_store, nout
-        )
+        super().__init__(
+            src_file=src_file,
+            variable_names=variable_names,
+            parameter_names=parameter_names,
+            aux=aux,
+            num_noise=num_noise,
+            tspan=tspan,
+            stepper=stepper,
+            single_precision=single_precision,
+            dt=dt,
+            dtmax=dtmax,
+            abstol=abstol,
+            reltol=reltol,
+            max_steps=max_steps,
+            max_store=max_store,
+            nout=nout,
+            device_type=device_type,
+            vendor=vendor,
+            platform_id=platform_id,
+            device_id=device_id,
+            device_ids=device_ids,
+            )
 
         event_var_idx = variable_names.index(event_var) if event_var != "" else 0
         feature_var_idx = variable_names.index(feature_var) if feature_var != "" else 0
@@ -224,15 +282,7 @@ class CLODEFeatures:
             observer_eps_dx,
         )
 
-        self._runtime = initialize_runtime(
-            device_type,
-            vendor,
-            platform_id,
-            device_id,
-            device_ids,
-        )
-
-        self._features = _clode.clode_features(
+        self._integrator = _clode.clode_features(
             self._pi,
             stepper.value,
             observer.value,
@@ -243,7 +293,7 @@ class CLODEFeatures:
 
         self.tspan = tspan
         self._observer_type = observer
-        self._features.build_cl()
+        self._integrator.build_cl()
 
     def initialize(
         self,
@@ -252,6 +302,20 @@ class CLODEFeatures:
         tspan: Tuple[float, float] | None = None,
         seed: int | None = None,
     ):
+        """Initialize the features object.
+
+        Args:
+            x0 (np.array): The initial conditions.
+            parameters (np.array): The parameters.
+            tspan (Tuple[float, float], optional): The time span to simulate over. Defaults to None.
+            seed (int, optional): The seed for the random number generator. Defaults to None.
+
+        Raises:
+            ValueError: If the initial conditions or parameters are not the correct shape.
+
+        Returns:
+            None
+        """
 
         if len(x0.shape) != 2:
             raise ValueError("Must provide rows of initial variables")
@@ -274,7 +338,7 @@ class CLODEFeatures:
         if tspan is not None:
             self.tspan = tspan
 
-        self._features.initialize(
+        self._integrator.initialize(
             self.tspan,
             x0.transpose().flatten(),
             parameters.transpose().flatten(),
@@ -283,77 +347,31 @@ class CLODEFeatures:
         )
         self.seed_rng(seed)
 
-    def seed_rng(self, seed: int | None = None):
-        if seed is not None:
-            self._features.seed_rng(seed)
-        else:
-            self._features.seed_rng()
-
-    def set_tspan(self, new_tspan: Tuple[float, float]):
-        self.tspan = new_tspan
-        self._features.set_tspan(new_tspan)
-
-    def set_problem_data(self, x0: np.array, parameters: np.array):
-        self._features.set_problem_data(
-            x0.transpose().flatten(),
-            parameters.transpose().flatten(),
-        )
-
-    def set_x0(self, x0: np.array):
-        self._features.set_x0(
-            x0.transpose().flatten(),
-        )
-
-    def set_parameters(self, parameters: np.array):
-        self._features.set_pars(
-            parameters.transpose().flatten(),
-        )
-
-    def transient(self, update_x0: bool = True):
-        self._features.transient()
-        if update_x0:
-            self.shift_x0()
-
-    def shift_tspan(self):
-        self._features.shift_tspan()
-
-    def shift_x0(self):
-        self._features.shift_x0()
-
     def features(self, initialize_observer: Optional[bool] = None):
+        """Run a simulation with feature detection.
+
+        Returns:
+            None
+        """
         if initialize_observer is not None:
             print("Reinitializing observer")
-            self._features.features(initialize_observer)
+            self._integrator.features(initialize_observer)
         else:
-            self._features.features()
+            self._integrator.features()
 
     def get_observer_results(self):
-        self._result_features = self._features.get_f()
-        self._num_result_features = self._features.get_n_features()
+        """Get the feature data.
+
+        Returns:
+            np.array: The feature data.
+        """
+        self._result_integrator = self._integrator.get_f()
+        self._num_result_features = self._integrator.get_n_features()
         return ObserverOutput(
             self._op,
-            np.array(self._result_features),
+            np.array(self._result_integrator),
             self._num_result_features,
             self.vars,
             self._observer_type,
-            self._features.get_feature_names(),
+            self._integrator.get_feature_names(),
         )
-
-    def get_final_state(self):
-        self._final_state = self._features.get_xf()
-        final_state = np.array(self._final_state)
-        return final_state.reshape(
-            (len(self.vars), len(final_state) // len(self.vars))
-        ).transpose()
-
-    def print_devices(self) -> None:
-        self._runtime.print_devices()
-
-    def get_max_memory_alloc_size(self) -> int:
-        return self._runtime.get_max_memory_alloc_size()
-
-    def get_device_cl_version(self) -> str:
-        return self._runtime.get_device_cl_version()
-
-    def get_double_support(self) -> bool:
-        return self._runtime.get_double_support()

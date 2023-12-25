@@ -33,11 +33,9 @@ def vdp_dormand_prince(end: int, input_file: str = "test/van_der_pol_oscillator.
         src_file=input_file,
         variable_names=["x", "y"],
         parameter_names=["mu"],
-        num_noise=0,
         observer=clode.Observer.threshold_2,
         stepper=clode.Stepper.dormand_prince,
         tspan=tspan,
-        single_precision=False,
     )
 
     parameters = [-1, 0, 0.01, 0.1, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0] + list(
@@ -54,6 +52,7 @@ def vdp_dormand_prince(end: int, input_file: str = "test/van_der_pol_oscillator.
     observer_output = integrator.get_observer_results()
 
     periods = observer_output.get_var_max("period")
+
     for index, mu in enumerate(parameters):
         period = periods[index, 0]
         expected_period = approximate_vdp_period(mu)
@@ -72,3 +71,4 @@ def test_vdp_dormand_prince():
 if __name__ == "__main__":
     print(clode)
     sys.exit(pytest.main(sys.argv[1:]))
+    # test_vdp_dormand_prince()
