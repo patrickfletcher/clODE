@@ -42,7 +42,7 @@ def test_ornl_thompson_a1():
 
     integrator.trajectory()
 
-    trajectories = integrator.get_trajectory() 
+    trajectories = integrator.get_trajectory()
     time_steps = trajectories[0]["t"]
     output_trajectory = trajectories[0]["X"]
 

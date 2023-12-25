@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from typing import List, Optional, Tuple
 from enum import Enum
+from typing import List, Optional, Tuple
 
 import numpy as np
 
@@ -34,7 +34,7 @@ class Stepper(Enum):
     stochastic_euler = "seuler"
 
 
-#note: superset of all possible options. not all used in all cases...
+# note: superset of all possible options. not all used in all cases...
 # - e.g., RK4 has no dtmax/abstol/reltol. Feaures doesn't use max_store/nout
 # --> can we expose just the relevant ones, given solver object + stepper?
 class SolverParams:
@@ -48,41 +48,43 @@ class SolverParams:
         max_store: int = 1000000,
         nout: int = 1,
     ):
-        self.dt = dt,
-        self.dtmax = dtmax,
-        self.abstol = abstol,
-        self.reltol = reltol,
-        self.max_steps = max_steps,
-        self.max_store = max_store,
-        self.nout = nout,
+        self.dt = (dt,)
+        self.dtmax = (dtmax,)
+        self.abstol = (abstol,)
+        self.reltol = (reltol,)
+        self.max_steps = (max_steps,)
+        self.max_store = (max_store,)
+        self.nout = (nout,)
         self._sp = _clode.solver_params(
             dt, dtmax, abstol, reltol, max_steps, max_store, nout
         )
 
 
-
-#base solver class with only transient()
+# base solver class with only transient()
 class CLODE:
 
     # cleaner interface? Use the problem_info and solver_params "structs"
     def __init__(
         self,
-        src_file: str, #problem_info
-        variable_names: List[str], 
+        src_file: str,  # problem_info
+        variable_names: List[str],
         parameter_names: List[str],
         aux: Optional[List[str]] = None,
         num_noise: int = 0,
-        tspan: Tuple[float, float] = (0.0, 1000.0), #tspan <- realistically usually would set this as arg during integrate
-        stepper: Stepper = Stepper.rk4, #stepper <- goes with solver_params?
-        single_precision: bool = True, #precision
-        dt: float = 0.1, #solver_params
+        tspan: Tuple[float, float] = (
+            0.0,
+            1000.0,
+        ),  # tspan <- realistically usually would set this as arg during integrate
+        stepper: Stepper = Stepper.rk4,  # stepper <- goes with solver_params?
+        single_precision: bool = True,  # precision
+        dt: float = 0.1,  # solver_params
         dtmax: float = 1.0,
         abstol: float = 1e-6,
         reltol: float = 1e-3,
         max_steps: int = 1000000,
         max_store: int = 1000000,
         nout: int = 1,
-        device_type: _clode.cl_device_type | None = None, #device selection
+        device_type: _clode.cl_device_type | None = None,  # device selection
         vendor: _clode.cl_vendor | None = None,
         platform_id: int | None = None,
         device_id: int | None = None,
@@ -121,7 +123,7 @@ class CLODE:
         self._sp = _clode.solver_params(
             dt, dtmax, abstol, reltol, max_steps, max_store, nout
         )
-        
+
         self.tspan = tspan
 
         # _runtime as an instance variable
@@ -136,11 +138,15 @@ class CLODE:
         # Check whether this is being called by a derived class:
         if type(self) is CLODE:
             self._integrator = _clode.clode(
-                self._pi, stepper.value, single_precision, self._runtime, _clode_root_dir
+                self._pi,
+                stepper.value,
+                single_precision,
+                self._runtime,
+                _clode_root_dir,
             )
             self._integrator.build_cl()
 
-    # same for clODE, clODETrajectory, overridden by clODEFeatures.... 
+    # same for clODE, clODETrajectory, overridden by clODEFeatures....
     def initialize(
         self,
         x0: np.array,
@@ -264,7 +270,9 @@ class CLODE:
             parameters.transpose().flatten(),
         )
 
-    def set_solver_parameters(self, ) -> None:
+    def set_solver_parameters(
+        self,
+    ) -> None:
         """Set the solver parameters.
 
         Args:
@@ -303,7 +311,7 @@ class CLODE:
             None
         """
         self._integrator.shift_x0()
-    
+
     def get_initial_state(self):
         """Get the final state of the simulation.
 

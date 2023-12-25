@@ -19,6 +19,7 @@ class Observer(Enum):
     neighbourhood_2 = "nhood2"
     threshold_2 = "thresh2"
 
+
 # may want other functionality here.
 # - full feature matrix, with names (pandas?)
 # - separate diagnostics (period count, step count, min dt, max dt , ...), summarize on print along with observer info/pars?
@@ -75,7 +76,7 @@ class ObserverOutput:
 
     def get_var_count(self, var: str):
         return self._get_var("count", var)
-    
+
 
 class CLODEFeatures(CLODE):
     """
@@ -263,7 +264,7 @@ class CLODEFeatures(CLODE):
             platform_id=platform_id,
             device_id=device_id,
             device_ids=device_ids,
-            )
+        )
 
         event_var_idx = variable_names.index(event_var) if event_var != "" else 0
         feature_var_idx = variable_names.index(feature_var) if feature_var != "" else 0

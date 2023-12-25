@@ -12,15 +12,15 @@ _clode = get_cpp()
 
 # TrajectoryOutput?
 # We have a collection of num_simulations trajectories, (t, X), stacked into matrices. Each trajectory may have a different number of total stored time steps.
-# - for convenience, would be nice to have access patterns something like: 
+# - for convenience, would be nice to have access patterns something like:
 # >>> trajectory_output.t[0] --> t[: nstored[0], 0]
-# >>> trajectory_output.X[0] --> X[: nstored[0], :, 0]) 
+# >>> trajectory_output.X[0] --> X[: nstored[0], :, 0])
 # >>> trajectory_output.X[var, 0] --> X[: nstored[0], var, 0]
-# >>> trajectory_output.t, .X --> (t[: max(nstored), :], X[: max(nstored), :, :]) 
+# >>> trajectory_output.t, .X --> (t[: max(nstored), :], X[: max(nstored), :, :])
 # class TrajectoryOutput:
-        
-class CLODETrajectory(CLODE):
 
+
+class CLODETrajectory(CLODE):
     def __init__(
         self,
         src_file: str,
@@ -74,7 +74,7 @@ class CLODETrajectory(CLODE):
 
         Returns (CLODETrajectory): The initialized CLODE trajectory object.
         """
-        
+
         super().__init__(
             src_file=src_file,
             variable_names=variable_names,
@@ -96,8 +96,8 @@ class CLODETrajectory(CLODE):
             platform_id=platform_id,
             device_id=device_id,
             device_ids=device_ids,
-            )
-        
+        )
+
         self._data = None
         self._output_trajectories = None
         self._time_steps = None
@@ -182,7 +182,7 @@ class CLODETrajectory(CLODE):
         self._n_stored = self._integrator.get_n_stored()
         self._output_time_steps = self._integrator.get_t()
         self._output_trajectories = self._integrator.get_x()
-        
+
         # time_steps has one column per simulation (to support adaptive steppers)
         shape = (self._number_of_simulations, self._max_store)
         arr = np.array(self._output_time_steps[: np.prod(shape)])
@@ -196,8 +196,8 @@ class CLODETrajectory(CLODE):
         result = list()
         for i in range(self._number_of_simulations):
             ni = self._n_stored[i]
-            ti = self._time_steps[: ni, i]
-            xi = self._data[: ni, :, i]
-            result.append( {"t": ti, "X": xi} )
+            ti = self._time_steps[:ni, i]
+            xi = self._data[:ni, :, i]
+            result.append({"t": ti, "X": xi})
 
         return result

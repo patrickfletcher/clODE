@@ -143,6 +143,10 @@ def format_opencl_rhs(
         "(\w+)\s*\^\s*([-+]?(\d*\.*\d+))", r"pow(\1, \2)", cl_file, flags=re.MULTILINE
     )
 
+    # Convert all floating numbers to single precision
+    # using the suffix 'f'
+    cl_file = re.sub("([-+]?(\d+\.\d*))", r"\1f", cl_file, flags=re.MULTILINE)
+
     cl_lines = cl_file.split("\n")
 
     cl_commented_lines: list[str] = []
