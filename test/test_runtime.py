@@ -86,7 +86,7 @@ def test_init_features_runtime_with_incorrect_config_fails(
     tspan = (0.0, 1000.0)
 
     with pytest.raises(ValueError):
-        _ = clode.CLODETrajectory(
+        _ = clode.TrajectorySimulator(
             src_file=input_file,
             variable_names=["x", "y"],
             parameter_names=["mu"],
@@ -101,7 +101,7 @@ def test_init_features_runtime_with_incorrect_config_fails(
         )
 
     with pytest.raises(ValueError):
-        _ = clode.CLODEFeatures(
+        _ = clode.FeaturesSimulator(
             src_file=input_file,
             variable_names=["x", "y"],
             parameter_names=["mu"],

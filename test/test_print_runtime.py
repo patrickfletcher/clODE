@@ -6,7 +6,7 @@ def test_print_open_cl_features():
 
     tspan = (0.0, 1000.0)
 
-    features = clode.CLODEFeatures(
+    features = clode.FeaturesSimulator(
         src_file=input_file,
         variable_names=["x", "y"],
         parameter_names=["mu"],
@@ -24,7 +24,7 @@ def test_print_open_cl_trajectory():
 
     tspan = (0.0, 1000.0)
 
-    trajectory = clode.CLODETrajectory(
+    trajectory = clode.TrajectorySimulator(
         src_file=input_file,
         variable_names=["x", "y"],
         parameter_names=["mu"],

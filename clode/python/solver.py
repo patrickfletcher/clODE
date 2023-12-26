@@ -10,20 +10,8 @@ from .xpp_parser import convert_xpp_file
 
 _clode = get_cpp()
 
-# more expressive definition?? XPP parser should populate this, if used.
-class ProblemInfo:
-    def __init__(
-        self,
-        src_file: str,
-        vars: List[str],
-        pars: List[str],
-        aux: List[str],
-        num_noise: int,
-    ):
-        self._pi = _clode.problem_info(
-            src_file, len(vars), len(pars), len(aux), num_noise, vars, pars, aux
-        )
-
+ProblemInfo = _clode.ProblemInfo
+SolverParams = _clode.SolverParams
 
 class Stepper(Enum):
     euler = "euler"
@@ -34,34 +22,15 @@ class Stepper(Enum):
     stochastic_euler = "seuler"
 
 
-# note: superset of all possible options. not all used in all cases...
-# - e.g., RK4 has no dtmax/abstol/reltol. Feaures doesn't use max_store/nout
-# --> can we expose just the relevant ones, given solver object + stepper?
-class SolverParams:
-    def __init__(
-        self,
-        dt: float = 0.1,
-        dtmax: float = 1.0,
-        abstol: float = 1e-6,
-        reltol: float = 1e-3,
-        max_steps: int = 1000000,
-        max_store: int = 1000000,
-        nout: int = 1,
-    ):
-        self.dt = (dt,)
-        self.dtmax = (dtmax,)
-        self.abstol = (abstol,)
-        self.reltol = (reltol,)
-        self.max_steps = (max_steps,)
-        self.max_store = (max_store,)
-        self.nout = (nout,)
-        self._sp = _clode.solver_params(
-            dt, dtmax, abstol, reltol, max_steps, max_store, nout
-        )
-
-
 # base solver class with only transient()
-class CLODE:
+class Simulator:
+    """Base class for all simulators.
+
+    This class is used to simulate transient behavior of a system of ODEs.
+
+    It can be used directly to find separatrix solutions
+    and variable steady states,
+    or it can be used as a base class for other simulators."""
 
     # cleaner interface? Use the problem_info and solver_params "structs"
     def __init__(
@@ -110,17 +79,14 @@ class CLODE:
         self.vars = variable_names
         self.pars = parameter_names
         self.aux_variables = aux
-        self._pi = _clode.problem_info(
+        self._pi = _clode.ProblemInfo(
             input_file,
-            len(variable_names),
-            len(parameter_names),
-            len(aux),
-            num_noise,
             variable_names,
             parameter_names,
             aux,
+            num_noise,
         )
-        self._sp = _clode.solver_params(
+        self._sp = _clode.SolverParams(
             dt, dtmax, abstol, reltol, max_steps, max_store, nout
         )
 
@@ -136,8 +102,8 @@ class CLODE:
         )
 
         # Check whether this is being called by a derived class:
-        if type(self) is CLODE:
-            self._integrator = _clode.clode(
+        if type(self) is Simulator:
+            self._integrator = _clode.SimulatorBase(
                 self._pi,
                 stepper.value,
                 single_precision,

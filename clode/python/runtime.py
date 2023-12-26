@@ -16,7 +16,7 @@ def initialize_runtime(
     platform_id: int | None,
     device_id: int | None,
     device_ids: list[int] | None,
-) -> _clode.opencl_resource:
+) -> _clode.OpenclResource:
     if platform_id is not None:
         if device_type is not None:
             raise ValueError("Cannot specify device_type when platform_id is specified")
@@ -27,9 +27,9 @@ def initialize_runtime(
         if device_id is None and device_ids is None:
             raise ValueError("Must specify one of device_id and device_ids")
         if device_id is not None:
-            return _clode.opencl_resource(platform_id, device_id)
+            return _clode.OpenclResource(platform_id, device_id)
         if device_ids is not None:
-            return _clode.opencl_resource(platform_id, device_ids)
+            return _clode.OpenclResource(platform_id, device_ids)
     elif device_id is not None:
         raise ValueError("Must specify platform_id when specifying device_id")
     elif device_ids is not None:
@@ -39,7 +39,7 @@ def initialize_runtime(
             device_type = _clode.cl_device_type.DEVICE_TYPE_DEFAULT
         if vendor is None:
             vendor = _clode.cl_vendor.VENDOR_ANY
-        return _clode.opencl_resource(device_type, vendor)
+        return _clode.OpenclResource(device_type, vendor)
 
 
 def get_cpp():

@@ -1,7 +1,6 @@
 from . import clode_cpp_wrapper as _clode  # type: ignore
-from .features import CLODEFeatures
-from .observer import Observer, ObserverOutput
-from .problem_info import ProblemInfo
+from .features import FeaturesSimulator, Observer, ObserverOutput
+from .solver import Simulator, SolverParams, Stepper, ProblemInfo
 from .runtime import (
     cl_device_type,
     cl_vendor,
@@ -12,8 +11,7 @@ from .runtime import (
     set_log_level,
     set_log_pattern,
 )
-from .stepper import Stepper
-from .trajectory import CLODETrajectory
+from .trajectory import TrajectorySimulator
 from .xpp_parser import convert_xpp_file, format_opencl_rhs, read_ode_parameters
 
-__version__ = "0.6.1"
+__version__ = "0.7.0"

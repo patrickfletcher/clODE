@@ -29,7 +29,7 @@ def approximate_vdp_period(mu):
 def vdp_dormand_prince(end: int, input_file: str = "test/van_der_pol_oscillator.cl"):
     tspan = (0.0, 1000.0)
 
-    integrator = clode.CLODEFeatures(
+    integrator = clode.FeaturesSimulator(
         src_file=input_file,
         variable_names=["x", "y"],
         parameter_names=["mu"],

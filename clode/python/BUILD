@@ -5,10 +5,10 @@ py_library(
     srcs = [
         "__init__.py",
         "features.py",
-        "problem_info.py",
         "runtime.py",
         "solver.py",
         "trajectory.py",
+        "xpp_parser.py",
     ],
     visibility = ["//visibility:public"],
     deps = ["//clode/cpp:py_clode"],

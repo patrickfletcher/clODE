@@ -21,7 +21,7 @@ def test_ornl_thompson_a1():
 
     tspan = (0.0, H / 2.0)
 
-    integrator = clode.CLODETrajectory(
+    integrator = clode.TrajectorySimulator(
         src_file="test/ornl_thompson_a1.cl",
         variable_names=["y1", "y2"],
         parameter_names=["m", "w", "k", "H"],

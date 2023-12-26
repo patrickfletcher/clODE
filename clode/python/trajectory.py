@@ -5,7 +5,7 @@ from typing import List, Optional, Tuple
 import numpy as np
 
 from .runtime import _clode_root_dir, get_cpp
-from .solver import CLODE, Stepper
+from .solver import Simulator, Stepper
 
 _clode = get_cpp()
 
@@ -20,7 +20,7 @@ _clode = get_cpp()
 # class TrajectoryOutput:
 
 
-class CLODETrajectory(CLODE):
+class TrajectorySimulator(Simulator):
     def __init__(
         self,
         src_file: str,
@@ -103,7 +103,7 @@ class CLODETrajectory(CLODE):
         self._time_steps = None
         self._output_time_steps = None
 
-        self._integrator = _clode.clode_trajectory(
+        self._integrator = _clode.TrajectorySimulatorBase(
             self._pi, stepper.value, single_precision, self._runtime, _clode_root_dir
         )
         self._integrator.build_cl()

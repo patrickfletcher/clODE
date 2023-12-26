@@ -6,7 +6,7 @@ from typing import List, Optional, Tuple
 import numpy as np
 
 from .runtime import _clode_root_dir, get_cpp
-from .solver import CLODE, Stepper
+from .solver import Simulator, Stepper
 
 _clode = get_cpp()
 
@@ -78,7 +78,7 @@ class ObserverOutput:
         return self._get_var("count", var)
 
 
-class CLODEFeatures(CLODE):
+class FeaturesSimulator(Simulator):
     """
     A class for computing features from a CLODE model.
 
@@ -196,7 +196,7 @@ class CLODEFeatures(CLODE):
     >>> import clode
     >>> import numpy as np
     >>> import matplotlib.pyplot as plt
-    >>> model = clode.CLODEFeatures(
+    >>> model = clode.FeaturesSimulator(
     ...     src_file="examples/lorenz96.c",
     ...     variable_names=["x"],
     ...     parameter_names=["F"],
@@ -269,7 +269,7 @@ class CLODEFeatures(CLODE):
         event_var_idx = variable_names.index(event_var) if event_var != "" else 0
         feature_var_idx = variable_names.index(feature_var) if feature_var != "" else 0
 
-        self._op = _clode.observer_params(
+        self._op = _clode.ObserverParams(
             event_var_idx,
             feature_var_idx,
             observer_max_event_count,
@@ -283,7 +283,7 @@ class CLODEFeatures(CLODE):
             observer_eps_dx,
         )
 
-        self._integrator = _clode.clode_features(
+        self._integrator = _clode.FeaturesSimulatorBase(
             self._pi,
             stepper.value,
             observer.value,

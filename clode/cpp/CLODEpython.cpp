@@ -21,6 +21,15 @@ namespace py = pybind11;
 template <typename... Args>
 using overload_cast_ = py::detail::overload_cast_impl<Args...>;
 
+std::string vector_to_string(const std::vector<std::string> &vec){
+    std::string out = "[";
+    for (const std::string &s : vec){
+        out += s + ", ";
+    }
+    out += "]";
+    return out;
+}
+
 PYBIND11_MODULE(clode_cpp_wrapper, m) {
 
     m.doc() = "CLODE C++/Python interface"; // optional module docstring
@@ -107,7 +116,7 @@ PYBIND11_MODULE(clode_cpp_wrapper, m) {
         .value("DEVICE_TYPE_CUSTOM", DEVICE_TYPE_CUSTOM)
         .export_values();
 
-    py::class_<OpenCLResource>(m, "opencl_resource")
+    py::class_<OpenCLResource>(m, "OpenclResource")
         .def(py::init<>())
         .def(py::init<cl_device_type>())
         .def(py::init<cl_vendor>())
@@ -119,7 +128,7 @@ PYBIND11_MODULE(clode_cpp_wrapper, m) {
         .def("get_device_cl_version", &OpenCLResource::getDeviceCLVersion, "Get device CL version")
         .def("print_devices", &OpenCLResource::print, "Print device info to log");
 
-    py::class_<deviceInfo>(m, "device_info")
+    py::class_<deviceInfo>(m, "DeviceInfo")
         .def_readwrite("name", &deviceInfo::name)
         .def_readwrite("vendor", &deviceInfo::vendor)
         .def_readwrite("version", &deviceInfo::version)
@@ -149,7 +158,7 @@ PYBIND11_MODULE(clode_cpp_wrapper, m) {
                    ")>";
         }, "Device info string representation");
 
-    py::class_<platformInfo>(m, "platform_info")
+    py::class_<platformInfo>(m, "PlatformInfo")
         .def_readwrite("name", &platformInfo::name)
         .def_readwrite("vendor", &platformInfo::vendor)
         .def_readwrite("version", &platformInfo::version)
@@ -170,30 +179,66 @@ PYBIND11_MODULE(clode_cpp_wrapper, m) {
     // core clODE solver 
     /****************************************************/
 
-    py::class_<ProblemInfo>(m, "problem_info")
+    py::class_<ProblemInfo>(m, "ProblemInfo")
             .def(py::init<const std::string &,
-                 int,
-                 int,
-                 int,
-                 int,
                  const std::vector<std::string> &,
                  const std::vector<std::string> &,
-                 const std::vector<std::string> &>
-                 ()
-            );
+                 const std::vector<std::string> &,
+                 int>(),
+                 py::arg("src_file"),
+                 py::arg("vars"),
+                 py::arg("pars"),
+                 py::arg("aux") = std::vector<std::string>(),
+                 py::arg("num_noise") = 1)
+                 .def(py::init<>())
+                 .def_readwrite("src_file", &ProblemInfo::clRHSfilename)
+                 .def_readwrite("num_noise", &ProblemInfo::nWiener)
+                 .def_property("vars", &ProblemInfo::getVarNames, &ProblemInfo::setVarNames)
+                 .def_property("pars", &ProblemInfo::getParNames, &ProblemInfo::setParNames)
+                 .def_property("aux", &ProblemInfo::getAuxNames, &ProblemInfo::setAuxNames)
+                 .def("__repr__", [](const ProblemInfo &p) {
+                     return "<problem_info(src_file=" + p.clRHSfilename +
+                           ", vars=" + vector_to_string(p.varNames) +
+                           ", pars=" + vector_to_string(p.parNames) +
+                           ", aux=" + vector_to_string(p.auxNames) +
+                           ", num_noise=" + std::to_string(p.nWiener) +
+                           ")>";
+                 }, "clode Problem info string representation");
 
-    py::class_<SolverParams<double>>(m, "solver_params")
+    py::class_<SolverParams<double>>(m, "SolverParams")
     .def(py::init<double,
                 double,
                 double,
                 double,
                 int,
                 int,
-                int>
-                ()
-    );
+                int>(),
+                py::arg("dt") = 0.1,
+                py::arg("dtmax") = 0.5,
+                py::arg("abstol") = 1e-6,
+                py::arg("reltol") = 1e-3,
+                py::arg("max_steps") = 1000000,
+                py::arg("max_store") = 1000000,
+                py::arg("nout") = 1
+    ).def_readwrite("dt", &SolverParams<double>::dt)
+    .def_readwrite("dtmax", &SolverParams<double>::dtmax)
+    .def_readwrite("abstol", &SolverParams<double>::abstol)
+    .def_readwrite("reltol", &SolverParams<double>::reltol)
+    .def_readwrite("max_steps", &SolverParams<double>::max_steps)
+    .def_readwrite("max_store", &SolverParams<double>::max_store)
+    .def_readwrite("nout", &SolverParams<double>::nout)
+    .def("__repr__", [](const SolverParams<double> &s) {
+        return "<solver_params(dt=" + std::to_string(s.dt) +
+               ", dtmax=" + std::to_string(s.dtmax) +
+               ", abstol=" + std::to_string(s.abstol) +
+               ", reltol=" + std::to_string(s.reltol) +
+               ", max_steps=" + std::to_string(s.max_steps) +
+               ", max_store=" + std::to_string(s.max_store) +
+               ", nout=" + std::to_string(s.nout) +
+               ")>";
+    }, "Solver params string representation");
     
-    py::class_<CLODE>(m, "clode")
+    py::class_<CLODE>(m, "SimulatorBase")
             .def(py::init<ProblemInfo &,
                     std::string &,
                     bool,
@@ -228,7 +273,7 @@ PYBIND11_MODULE(clode_cpp_wrapper, m) {
     // clODE features specialization 
     /****************************************************/
 
-    py::class_<ObserverParams<double>>(m, "observer_params")
+    py::class_<ObserverParams<double>>(m, "ObserverParams")
     .def(py::init<int,
             int,
             int,
@@ -259,7 +304,7 @@ PYBIND11_MODULE(clode_cpp_wrapper, m) {
                ")>";
     });
 
-    py::class_<CLODEfeatures, CLODE>(m, "clode_features")
+    py::class_<CLODEfeatures, CLODE>(m, "FeaturesSimulatorBase")
             .def(py::init<ProblemInfo &,
                           std::string &,
                           std::string &,
@@ -272,7 +317,7 @@ PYBIND11_MODULE(clode_cpp_wrapper, m) {
                                                     std::vector<double>,
                                                     SolverParams<double>,
                                                     ObserverParams<double>)>
-                                                    (&CLODEfeatures::initialize), "Initialize CLODEfeatures")
+                                                    (&CLODEfeatures::initialize), "Initialize FeaturesSimulatorBase")
             .def("build_cl", &CLODEfeatures::buildCL)
             .def("features", static_cast<void (CLODEfeatures::*)(bool)>(&CLODEfeatures::features)) //CLODEfeatures specializations
             .def("features", static_cast<void (CLODEfeatures::*)()>(&CLODEfeatures::features))
@@ -294,7 +339,7 @@ PYBIND11_MODULE(clode_cpp_wrapper, m) {
     // clODE trajectory specialization
     /****************************************************/
 
-    py::class_<CLODEtrajectory, CLODE>(m, "clode_trajectory")
+    py::class_<CLODEtrajectory, CLODE>(m, "TrajectorySimulatorBase")
             .def(py::init<ProblemInfo &,
                     std::string &,
                     bool,
@@ -305,7 +350,7 @@ PYBIND11_MODULE(clode_cpp_wrapper, m) {
                      std::vector<double>,
                      std::vector<double>,
                      SolverParams<double>)>
-            (&CLODEtrajectory::initialize), "Initialize CLODEtrajectory")
+            (&CLODEtrajectory::initialize), "Initialize TrajectorySimulatorBase")
             .def("build_cl", &CLODEtrajectory::buildCL)
             .def("trajectory", &CLODEtrajectory::trajectory)    //CLODEtrajectory specializations
             .def("get_t", &CLODEtrajectory::getT)

@@ -29,6 +29,76 @@ struct ProblemInfo
     std::vector<std::string> varNames;
     std::vector<std::string> parNames;
     std::vector<std::string> auxNames;
+
+    ProblemInfo(std::string clRHSfilename, cl_int nVar, cl_int nPar, cl_int nAux, cl_int nWiener, std::vector<std::string> varNames, std::vector<std::string> parNames, std::vector<std::string> auxNames)
+    {
+        this->clRHSfilename = clRHSfilename;
+        this->nVar = nVar;
+        this->nPar = nPar;
+        this->nAux = nAux;
+        this->nWiener = nWiener;
+        this->varNames = varNames;
+        this->parNames = parNames;
+        this->auxNames = auxNames;
+    }
+
+    ProblemInfo(std::string clRHSfilename, std::vector<std::string> varNames, std::vector<std::string> parNames, std::vector<std::string> auxNames = std::vector<std::string>(), cl_int nWiener = 1)
+    {
+        this->clRHSfilename = clRHSfilename;
+        this->nVar = varNames.size();
+        this->nPar = parNames.size();
+        this->nAux = auxNames.size();
+        this->nWiener = nWiener;
+        this->varNames = varNames;
+        this->parNames = parNames;
+        this->auxNames = auxNames;
+    }
+
+    ProblemInfo()
+    {
+        this->clRHSfilename = "";
+        this->nVar = 0;
+        this->nPar = 0;
+        this->nAux = 0;
+        this->nWiener = 0;
+        this->varNames = std::vector<std::string>();
+        this->parNames = std::vector<std::string>();
+        this->auxNames = std::vector<std::string>();
+    }
+
+    // These setters and getters exist for compatibility with the Python interface
+    void setVarNames(std::vector<std::string> varNamesIn)
+    {
+        this->varNames = varNamesIn;
+        this->nVar = varNamesIn.size();
+    }
+
+    void setParNames(std::vector<std::string> parNamesIn)
+    {
+        this->parNames = parNamesIn;
+        this->nPar = parNamesIn.size();
+    }
+
+    void setAuxNames(std::vector<std::string> auxNamesIn)
+    {
+        this->auxNames = auxNamesIn;
+        this->nAux = auxNamesIn.size();
+    }
+
+    std::vector<std::string> getVarNames()
+    {
+        return this->varNames;
+    }
+
+    std::vector<std::string> getParNames()
+    {
+        return this->parNames;
+    }
+
+    std::vector<std::string> getAuxNames()
+    {
+        return this->auxNames;
+    }
 };
 
 class CLODE
