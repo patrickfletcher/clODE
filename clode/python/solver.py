@@ -13,6 +13,7 @@ _clode = get_cpp()
 ProblemInfo = _clode.ProblemInfo
 SolverParams = _clode.SolverParams
 
+
 class Stepper(Enum):
     euler = "euler"
     heun = "heun"

@@ -12,7 +12,7 @@ install:
 		$(PYTHON) -m pip install -r requirements.txt
 
 install_clode:
-	$(PYTHON) -m pip install .
+	$(PYTHON) -m pip install . --verbose
 
 format:
 	isort $(PYFILES) $(PYTESTFILES) && \
