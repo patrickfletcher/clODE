@@ -2,11 +2,16 @@ from __future__ import annotations
 
 import ast
 import inspect
+import sys
 import textwrap
 from typing import Callable, Any
 from enum import Enum
 
-OpenCLRhsEquation = Callable[[float, list[float], list[float], list[float], list[float], list[float]], None]
+if sys.version_info < (3, 9):
+    from typing import List
+    OpenCLRhsEquation = Callable[[float, List[float], List[float], List[float], List[float], List[float]], None]
+else:
+    OpenCLRhsEquation = Callable[[float, list[float], list[float], list[float], list[float], list[float]], None]
 
 class OpenCLType:
     name: str
