@@ -21,6 +21,11 @@ format:
 test: install install_clode
 	$(PYTHON) -m pytest $(PYTESTFILES)
 
+test_mac_python_310:
+	# Copy bazel out file clode_cpp_wrapper.so to clode/clode_cpp_wrapper.so
+	cp bazel-out/darwin_arm64-opt/bin/clode/cpp/libclode_cpp_wrapper.dylib clode/clode_cpp_wrapper.cpython-310-darwin.so
+	$(PYTHON) -m pytest $(PYTESTFILES)
+
 test_short:
 	$(PYTHON) -m pytest $(PYTESTFILES) -m "not long"
 

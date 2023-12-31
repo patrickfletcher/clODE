@@ -18,7 +18,6 @@ py_library(
     name = "clode_all_sources",
     visibility = ["//visibility:public"],
     deps = [
-        #"//clode:clode_init",
         "//clode/cpp:py_clode",
         "//clode/python:clode_init",
     ],

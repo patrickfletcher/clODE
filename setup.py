@@ -276,7 +276,7 @@ setuptools.setup(
         'fallback_version': '0.0.0',
     },
     packages=["clode", 'clode.cpp'],
-    package_dir={'clode': 'clode/python', 'clode.cpp': 'clode/cpp'},
+    package_dir={'clode': 'clode', 'clode.cpp': 'clode/cpp'},
     ext_modules=[setuptools.Extension('clode/clode_cpp_wrapper', sources=[])],
     setup_requires=['setuptools_scm'],
     cmdclass={
