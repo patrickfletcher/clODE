@@ -27,7 +27,13 @@ test_mac_python_310:
 	$(PYTHON) -m pytest $(PYTESTFILES)
 
 test_short:
-	$(PYTHON) -m pytest $(PYTESTFILES) -m "not long"
+	# Make tmp dir, run tests in there (make sure to activate venv)
+	source venv/bin/activate && \
+	mkdir -p tmp && \
+		cd tmp && \
+		cp -R ../test  . && \
+		$(PYTHON) -m pytest test -m "not long"
+	#$(PYTHON) -m pytest $(PYTESTFILES) -m "not long"
 
 run: install
 	. venv/bin/activate && PYTHONPATH=$(PYTHONPATH) $(PYTHON) main.py
