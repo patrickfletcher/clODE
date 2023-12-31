@@ -277,7 +277,7 @@ setuptools.setup(
     },
     packages=["clode", 'clode.cpp'],
     package_dir={'clode': 'clode', 'clode.cpp': 'clode/cpp'},
-    ext_modules=[setuptools.Extension('clode/clode_cpp_wrapper', sources=[])],
+    ext_modules=[setuptools.Extension('clode/cpp/clode_cpp_wrapper', sources=[])],
     setup_requires=['setuptools_scm'],
     cmdclass={
         'build': BuildCommand,
