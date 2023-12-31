@@ -3,11 +3,10 @@ from __future__ import annotations
 import ast
 import inspect
 import textwrap
-import typing
-from typing import TypeAlias, Callable, Any
+from typing import Callable, Any
 from enum import Enum
 
-OpenCLRhsEquation: TypeAlias = Callable[[float, list[float], list[float], list[float], list[float], list[float]], None]
+OpenCLRhsEquation = Callable[[float, list[float], list[float], list[float], list[float], list[float]], None]
 
 class OpenCLType:
     name: str
@@ -536,7 +535,7 @@ class OpenCLFunction:
         self.body = []
         self.name = fn_name
         self.declared_vars = {}
-        self.modified_vars = set(mutable_args)
+        self.modified_vars = set(mutable_args) if mutable_args is not None else set()
         self.returns = _convert_ast_annotation_to_cl_type(fn_name, fn_returns)
         self._convert_ast_args(args)
         arg_names = set([arg.name for arg in self.args])
