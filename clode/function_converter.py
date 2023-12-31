@@ -4,8 +4,10 @@ import ast
 import inspect
 import textwrap
 import typing
+from typing import TypeAlias, Callable, Any
 from enum import Enum
 
+OpenCLRhsEquation: TypeAlias = Callable[[float, list[float], list[float], list[float], list[float], list[float]], None]
 
 class OpenCLType:
     name: str
@@ -355,7 +357,7 @@ class OpenCLArgument:
     function: str
     name: str
     cl_type: OpenCLType
-    const: bool = False
+    const: bool
 
     def __str__(self) -> str:
         arg = f"{self.cl_type} {self.name}"
@@ -499,6 +501,7 @@ class OpenCLFunction:
     body: list[OpenCLInstruction]
     returns: OpenCLType
     declared_vars: dict[str, OpenCLType]
+    modified_vars: set[str]
 
     def __str__(self) -> str:
         fn: str = f"{self.returns.name} {self.name}("
@@ -527,13 +530,16 @@ class OpenCLFunction:
         body: list[ast.stmt],
         fn_returns: ast.Name | ast.Constant,
         context: dict[str, OpenCLType],
+        mutable_args: list[str] | None = None,
     ):
         self.args = []
         self.body = []
         self.name = fn_name
         self.declared_vars = {}
+        self.modified_vars = set(mutable_args)
         self.returns = _convert_ast_annotation_to_cl_type(fn_name, fn_returns)
         self._convert_ast_args(args)
+        arg_names = set([arg.name for arg in self.args])
         if isinstance(body, list):
             for instruction in body:
                 local_context = dict(context, **self.declared_vars)
@@ -542,6 +548,10 @@ class OpenCLFunction:
                         f"Unsupported instruction type {type(instruction)} at line {instruction.lineno}"
                     )
                 cl_arg = OpenCLInstruction(fn_name, instruction, context=local_context)
+
+                # Record the variables that are modified in the function
+                if cl_arg.target_name in arg_names:
+                    self.modified_vars.add(cl_arg.target_name)
 
                 # Check if the variable is already declared and if the type is changed
                 if cl_arg.target_name in self.declared_vars:
@@ -579,6 +589,11 @@ class OpenCLFunction:
                 f"Body of function '{fn_name}' must be a list of instructions"
             )
 
+        # Set all the variables that are not modified to const
+        for arg in self.args:
+            if arg.name not in self.modified_vars:
+                arg.const = True
+
 
 class OpenCLSyntaxTree:
     functions: list[OpenCLFunction]
@@ -586,7 +601,7 @@ class OpenCLSyntaxTree:
     def __init__(self) -> None:
         self.functions = []
 
-    def add_function(self, fn: ast.FunctionDef) -> None:
+    def add_function(self, fn: ast.FunctionDef, mutable_args: list[str]) -> None:
         if fn.returns is None:
             raise TypeError(
                 f"Function '{fn.name}' must have a return type at line {fn.lineno}"
@@ -599,7 +614,7 @@ class OpenCLSyntaxTree:
             parsed_fn.name: parsed_fn.returns for parsed_fn in self.functions
         }
         self.functions.append(
-            OpenCLFunction(fn.name, fn.args, fn.body, fn.returns, context)
+            OpenCLFunction(fn.name, fn.args, fn.body, fn.returns, context, mutable_args=mutable_args)
         )
 
     def __str__(self) -> str:
@@ -613,6 +628,7 @@ class OpenCLConverter(ast.NodeTransformer):
     entry_function_seen: bool = False
     entry_function_name: str
     syntax_tree: OpenCLSyntaxTree
+    mutable_args: list[str] | None = None
 
     def __init__(self, entry_function_name: str = "get_rhs"):
         # Initialize any necessary variables
@@ -629,7 +645,8 @@ class OpenCLConverter(ast.NodeTransformer):
         if entrypoint:
             entry_function_seen = True
 
-        self.syntax_tree.add_function(node)
+        mutable_args = self.mutable_args if self.mutable_args is not None else []
+        self.syntax_tree.add_function(node, mutable_args=mutable_args)
         return node
 
     def visit_BinOp(self, node: ast.BinOp) -> ast.BinOp:
@@ -638,7 +655,8 @@ class OpenCLConverter(ast.NodeTransformer):
         self.generic_visit(node)
         return node
 
-    def convert_to_opencl(self, python_fn: typing.Callable[[typing.Any], typing.Any], dedent: bool = True) -> str:
+    def convert_to_opencl(self, python_fn: Callable[[Any], Any] | OpenCLRhsEquation, dedent: bool = True,
+                          mutable_args: list[str] | None = None) -> str:
         # Convert a Python function to OpenCL
         # Example: 'def add_float(a: float, b: float) -> float:\n'
         #          '    res: float = a + b\n'
@@ -652,8 +670,10 @@ class OpenCLConverter(ast.NodeTransformer):
         python_source = inspect.getsource(python_fn)
         if dedent:
             python_source = textwrap.dedent(python_source)
+        self.mutable_args = mutable_args
         tree = ast.parse(python_source)
         self.visit(tree)
+        self.mutable_args = None
         return str(self.syntax_tree)
 
 

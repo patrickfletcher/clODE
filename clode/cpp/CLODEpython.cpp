@@ -38,7 +38,7 @@ PYBIND11_MODULE(clode_cpp_wrapper, m) {
     // logging
     /****************************************************/
 
-    py::enum_<spdlog::level::level_enum>(m, "log_level")
+    py::enum_<spdlog::level::level_enum>(m, "LogLevel")
         .value("trace", spdlog::level::trace)
         .value("debug", spdlog::level::debug)
         .value("info", spdlog::level::info)
@@ -91,7 +91,7 @@ PYBIND11_MODULE(clode_cpp_wrapper, m) {
     // OpenCL runtime
     /****************************************************/
     
-    py::enum_<cl_vendor>(m, "cl_vendor")
+    py::enum_<cl_vendor>(m, "CLVendor")
         .value("VENDOR_ANY", VENDOR_ANY)
         .value("VENDOR_NVIDIA", VENDOR_NVIDIA)
         .value("VENDOR_AMD", VENDOR_AMD)
@@ -107,7 +107,7 @@ PYBIND11_MODULE(clode_cpp_wrapper, m) {
         DEVICE_TYPE_CUSTOM = CL_DEVICE_TYPE_CUSTOM
     };
 
-    py::enum_<cl_device_type_wrapper>(m, "cl_device_type")
+    py::enum_<cl_device_type_wrapper>(m, "CLDeviceType")
         .value("DEVICE_TYPE_ALL", DEVICE_TYPE_ALL)
         .value("DEVICE_TYPE_CPU", DEVICE_TYPE_CPU)
         .value("DEVICE_TYPE_GPU", DEVICE_TYPE_GPU)
@@ -116,7 +116,7 @@ PYBIND11_MODULE(clode_cpp_wrapper, m) {
         .value("DEVICE_TYPE_CUSTOM", DEVICE_TYPE_CUSTOM)
         .export_values();
 
-    py::class_<OpenCLResource>(m, "OpenclResource")
+    py::class_<OpenCLResource>(m, "OpenCLResource")
         .def(py::init<>())
         .def(py::init<cl_device_type>())
         .def(py::init<cl_vendor>())

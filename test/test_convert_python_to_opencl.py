@@ -82,8 +82,8 @@ class TestConversions:
 
         opencl_code = converter.convert_to_opencl(add_float)
         expect_code = (
-            "realtype add_float(realtype a,\n"
-            "                   realtype b) {\n"
+            "realtype add_float(const realtype a,\n"
+            "                   const realtype b) {\n"
             "    realtype res = (a + b);\n"
             "    return res;\n"
             "}\n\n"
@@ -99,7 +99,7 @@ class TestConversions:
 
         opencl_code = converter.convert_to_opencl(add_floats_in_list)
         expect_code = (
-            "void add_floats_in_list(realtype lst_in[],\n"
+            "void add_floats_in_list(const realtype lst_in[],\n"
             "                        realtype lst_out[]) {\n"
             "    realtype res = (lst_in[0] + lst_in[1]);\n"
             "    lst_out[0] = res;\n"
@@ -129,10 +129,10 @@ class TestConversions:
         opencl_code = converter.convert_to_opencl(all_operations)
 
         expect_code = (
-            "realtype all_operations(realtype a,\n"
-            "                        realtype b,\n"
-            "                        int c,\n"
-            "                        int d) {\n"
+            "realtype all_operations(const realtype a,\n"
+            "                        const realtype b,\n"
+            "                        const int c,\n"
+            "                        const int d) {\n"
             "    realtype res1 = (a + ((b * c) / d));\n"
             "    realtype res2 = pown(((a - b) % c), d);\n"
             "    realtype res3 = pow(a, b);\n"
@@ -162,13 +162,13 @@ class TestConversions:
         converter.convert_to_opencl(add_float)
         opencl_code = converter.convert_to_opencl(get_rhs)
         expect_code = (
-            "realtype add_float(realtype a,\n"
-            "                   realtype b) {\n"
+            "realtype add_float(const realtype a,\n"
+            "                   const realtype b) {\n"
             "    realtype res = (a + b);\n"
             "    return res;\n"
             "}\n"
             "\n"
-            "void get_rhs(realtype var[],\n"
+            "void get_rhs(const realtype var[],\n"
             "             realtype derivatives[]) {\n"
             "    realtype res = add_float(var[0], var[1]);\n"
             "    derivatives[0] = res;\n"

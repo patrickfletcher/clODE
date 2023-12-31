@@ -5,6 +5,7 @@ from typing import List, Optional, Tuple
 
 import numpy as np
 
+from .function_converter import OpenCLRhsEquation
 from .runtime import _clode_root_dir, get_cpp
 from .solver import Simulator, Stepper
 
@@ -210,9 +211,11 @@ class FeaturesSimulator(Simulator):
 
     def __init__(
         self,
-        src_file: str,
         variable_names: List[str],
         parameter_names: List[str],
+        src_file: str | None = None,
+        rhs_equation: OpenCLRhsEquation | None = None,
+        supplementary_equations: List[Callable[[Any], Any]] | None = None,
         aux: Optional[List[str]] = None,
         num_noise: int = 0,
         tspan: Tuple[float, float] = (0.0, 1000.0),
@@ -226,8 +229,8 @@ class FeaturesSimulator(Simulator):
         max_steps: int = 10000000,
         max_store: int = 10000000,
         nout: int = 1,
-        device_type: _clode.cl_device_type | None = None,
-        vendor: _clode.cl_vendor | None = None,
+        device_type: _clode.CLDeviceType | None = None,
+        vendor: _clode.CLVendor | None = None,
         platform_id: int | None = None,
         device_id: int | None = None,
         device_ids: List[int] | None = None,
@@ -244,9 +247,11 @@ class FeaturesSimulator(Simulator):
         observer_eps_dx: float = 1e-7,
     ):
         super().__init__(
-            src_file=src_file,
             variable_names=variable_names,
             parameter_names=parameter_names,
+            src_file=src_file,
+            rhs_equation=rhs_equation,
+            supplementary_equations=supplementary_equations,
             aux=aux,
             num_noise=num_noise,
             tspan=tspan,
