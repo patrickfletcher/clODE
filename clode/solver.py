@@ -35,9 +35,9 @@ class Simulator:
 
 
     def _handle_clode_rhs_cl_file(self,
-                       src_file: str | None = None,
-                        rhs_equation: OpenCLRhsEquation | None = None,
-                        supplementary_equations: List[Callable[[Any], Any]] | None = None) -> str:
+                                  src_file: str | None = None,
+                                  rhs_equation: OpenCLRhsEquation | None = None,
+                                  supplementary_equations: List[Callable[[Any], Any]] | None = None) -> str:
         input_file: str
 
         if src_file is not None and rhs_equation is not None:
