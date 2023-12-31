@@ -71,6 +71,7 @@ def test_type_errors(error_description: str, python_code: str):
         convert_str_to_opencl(python_code)
         print("Error handling test passed")
 
+
 class TestConversions:
     def test_convert_adder(self):
         def add_float(a: float, b: float) -> float:

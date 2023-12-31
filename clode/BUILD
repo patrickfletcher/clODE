@@ -5,6 +5,7 @@ py_library(
     srcs = [
         "__init__.py",
         "features.py",
+        "function_converter.py",
         "runtime.py",
         "solver.py",
         "trajectory.py",

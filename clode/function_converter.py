@@ -296,7 +296,7 @@ def _convert_ast_expression_to_cl_expression(
 
 
 def _convert_ast_annotation_to_cl_type(
-    name, annotation: ast.Name | ast.Subscript | ast.BinOp | ast.Constant | None
+    name: str | None, annotation: ast.Name | ast.Subscript | ast.BinOp | ast.Constant | None
 ) -> OpenCLType:
     array = False
     if isinstance(annotation, ast.Subscript):
@@ -586,7 +586,7 @@ class OpenCLSyntaxTree:
     def __init__(self) -> None:
         self.functions = []
 
-    def add_function(self, fn: ast.FunctionDef):
+    def add_function(self, fn: ast.FunctionDef) -> None:
         if fn.returns is None:
             raise TypeError(
                 f"Function '{fn.name}' must have a return type at line {fn.lineno}"
@@ -619,7 +619,7 @@ class OpenCLConverter(ast.NodeTransformer):
         self.entry_function_name = entry_function_name
         self.syntax_tree = OpenCLSyntaxTree()
 
-    def visit_FunctionDef(self, node):
+    def visit_FunctionDef(self, node: ast.FunctionDef) -> ast.FunctionDef:
         # Change the function signature for OpenCL kernel
         # For example, change 'def' to '__kernel void'
         # Add '__global' keyword for pointer arguments
@@ -632,13 +632,13 @@ class OpenCLConverter(ast.NodeTransformer):
         self.syntax_tree.add_function(node)
         return node
 
-    def visit_BinOp(self, node):
+    def visit_BinOp(self, node: ast.BinOp) -> ast.BinOp:
         # Convert binary operations to OpenCL syntax if needed
         # Example: Python's power operator '**' to OpenCL's 'pow' function
         self.generic_visit(node)
         return node
 
-    def convert_to_opencl(self, python_fn: typing.Callable, dedent: bool = True):
+    def convert_to_opencl(self, python_fn: typing.Callable[[typing.Any], typing.Any], dedent: bool = True) -> str:
         # Convert a Python function to OpenCL
         # Example: 'def add_float(a: float, b: float) -> float:\n'
         #          '    res: float = a + b\n'
@@ -657,7 +657,7 @@ class OpenCLConverter(ast.NodeTransformer):
         return str(self.syntax_tree)
 
 
-def convert_str_to_opencl(python_code):
+def convert_str_to_opencl(python_code: str) -> str:
     tree = ast.parse(python_code)
     converter = OpenCLConverter()
     converter.visit(tree)

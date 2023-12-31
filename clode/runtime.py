@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 
-from clode.cpp import clode_cpp_wrapper as _clode  # type: ignore
+from clode.cpp import clode_cpp_wrapper as _clode
 from clode.cpp.clode_cpp_wrapper import log_level, print_opencl, query_opencl  # type: ignore
 
 _clode_root_dir: str = os.path.join(os.path.dirname(__file__), "cpp", "")
@@ -42,26 +42,36 @@ def initialize_runtime(
         return _clode.OpenclResource(device_type, vendor)
 
 
-def get_cpp():
+def get_cpp() -> _clode.CppWrapper:
     return _clode
 
 
 cl_device_type = _clode.cl_device_type
 cl_vendor = _clode.cl_vendor
 
-log_level = _clode.log_level
-
 
 def get_log_level() -> log_level:
     return _clode.get_logger().get_log_level()
 
 
-def set_log_level(level: log_level):
-    return _clode.get_logger().set_log_level(level)
+def set_log_level(level: log_level) -> None:
+    _clode.get_logger().set_log_level(level)
 
 
-def set_log_pattern(pattern: str):
-    return _clode.get_logger().set_log_pattern(pattern)
+def set_log_pattern(pattern: str) -> None:
+    _clode.get_logger().set_log_pattern(pattern)
 
 
 set_log_level(DEFAULT_LOG_LEVEL)
+
+__all__ = [
+    "cl_device_type",
+    "cl_vendor",
+    "DEFAULT_LOG_LEVEL",
+    "get_cpp",
+    "get_log_level",
+    "initialize_runtime",
+    "log_level",
+    "set_log_level",
+    "set_log_pattern",
+]
