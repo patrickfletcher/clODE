@@ -310,11 +310,11 @@ def _convert_ast_annotation_to_cl_type(
                 return OpenCLType("int", array)
             else:
                 raise TypeError(
-                    f"Variable '{name}' must be a list of floats or ints at line {annotation.lineno}"
+                    f"Variable '{name}' must be a list of floats or ints at line {annotation.lineno}, got '{annotation.slice.id}'"
                 )
         else:
             raise TypeError(
-                f"Variable '{name}' must be a list at line {annotation.lineno}"
+                f"Variable '{name}' must be a list of strings or float at line {annotation.lineno}, got 'List[{type(annotation.slice)}]'"
             )
     elif isinstance(annotation, ast.Name):
         if annotation.id == "int":
