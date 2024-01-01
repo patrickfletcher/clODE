@@ -1,5 +1,7 @@
-import pytest
+from __future__ import annotations
 
+import pytest
+from typing import List
 from clode import OpenCLConverter, convert_str_to_opencl
 
 
@@ -91,7 +93,7 @@ class TestConversions:
         assert expect_code == opencl_code
 
     def test_convert_deinded_adder(self):
-        def add_floats_in_list(lst_in: list[float], lst_out: list[float]) -> None:
+        def add_floats_in_list(lst_in: List[float], lst_out: List[float]) -> None:
             res: float = lst_in[0] + lst_in[1]
             lst_out[0] = res
 
@@ -154,7 +156,7 @@ class TestConversions:
             res: float = a + b
             return res
 
-        def get_rhs(var: list[float], derivatives: list[float]) -> None:
+        def get_rhs(var: List[float], derivatives: List[float]) -> None:
             res: float = add_float(var[0], var[1])
             derivatives[0] = res
 
