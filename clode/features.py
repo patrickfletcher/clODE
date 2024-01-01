@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Callable, Any
 
 import numpy as np
+import numpy.typing as npt
 
-from .runtime import _clode_root_dir, get_cpp
+from .function_converter import OpenCLRhsEquation
+from .runtime import _clode_root_dir, ObserverParams, CLDeviceType, CLVendor, FeaturesSimulatorBase
 from .solver import Simulator, Stepper
-
-_clode = get_cpp()
 
 
 class Observer(Enum):
@@ -26,12 +26,12 @@ class Observer(Enum):
 class ObserverOutput:
     def __init__(
         self,
-        observer_params,
-        results_array: np.array,
+        observer_params: ObserverParams,
+        results_array: np.ndarray[Any, np.dtype[np.float64]],
         num_result_features: int,
-        variables: list[str],
+        variables: List[str],
         observer_type: Observer,
-        feature_names: list[str],
+        feature_names: List[str],
     ):
         # print(type(observer_params))
         self._op = observer_params
@@ -47,10 +47,10 @@ class ObserverOutput:
         )
         self._data = results_array.reshape(shape).transpose()
 
-    def get_feature_names(self):
+    def get_feature_names(self) -> List[str]:
         return self._feature_names
 
-    def _get_var(self, var: str, op: str):
+    def _get_var(self, var: str, op: str) -> np.ndarray[Any, np.dtype[np.float64]]:
         try:
             index = self._feature_names.index(f"{op} {var}")
             return self._data[:, index : index + 1]
@@ -59,22 +59,22 @@ class ObserverOutput:
                 f"{self._observer_type} does not track {op} {var}!"
             )
 
-    def get_var_max(self, var: str):
+    def get_var_max(self, var: str) -> np.ndarray[Any, np.dtype[np.float64]]:
         return self._get_var(var, "max")
 
-    def get_var_min(self, var: str):
+    def get_var_min(self, var: str) -> np.ndarray[Any, np.dtype[np.float64]]:
         return self._get_var(var, "min")
 
-    def get_var_mean(self, var: str):
+    def get_var_mean(self, var: str) -> np.ndarray[Any, np.dtype[np.float64]]:
         return self._get_var(var, "mean")
 
-    def get_var_max_dt(self, var: str):
+    def get_var_max_dt(self, var: str) -> np.ndarray[Any, np.dtype[np.float64]]:
         return self.get_var_max(f"d{var}/dt")
 
-    def get_var_min_dt(self, var: str):
+    def get_var_min_dt(self, var: str) -> np.ndarray[Any, np.dtype[np.float64]]:
         return self.get_var_min(f"d{var}/dt")
 
-    def get_var_count(self, var: str):
+    def get_var_count(self, var: str) -> np.ndarray[Any, np.dtype[np.float64]]:
         return self._get_var("count", var)
 
 
@@ -86,11 +86,11 @@ class FeaturesSimulator(Simulator):
     ----------
     src_file : str
         Path to the CLODE model source file.
-    variable_names : list[str]
+    variable_names : List[str]
         List of variable names in the model.
-    parameter_names : list[str]
+    parameter_names : List[str]
         List of parameter names in the model.
-    aux : list[str], optional
+    aux : List[str], optional
         List of auxiliary variable names in the model, by default None
     num_noise : int, optional
         Number of noise variables in the model, by default 1
@@ -208,11 +208,16 @@ class FeaturesSimulator(Simulator):
     >>> model.plot()
     >>> plt.show()"""
 
+    _integrator: FeaturesSimulatorBase
+
     def __init__(
         self,
-        src_file: str,
         variable_names: List[str],
         parameter_names: List[str],
+        src_file: str | None = None,
+        rhs_equation: OpenCLRhsEquation | None = None,
+        mutable_args: List[str] | None = None,
+        supplementary_equations: List[Callable[[Any], Any]] | None = None,
         aux: Optional[List[str]] = None,
         num_noise: int = 0,
         tspan: Tuple[float, float] = (0.0, 1000.0),
@@ -226,8 +231,8 @@ class FeaturesSimulator(Simulator):
         max_steps: int = 10000000,
         max_store: int = 10000000,
         nout: int = 1,
-        device_type: _clode.cl_device_type | None = None,
-        vendor: _clode.cl_vendor | None = None,
+        device_type: CLDeviceType | None = None,
+        vendor: CLVendor | None = None,
         platform_id: int | None = None,
         device_id: int | None = None,
         device_ids: List[int] | None = None,
@@ -242,11 +247,14 @@ class FeaturesSimulator(Simulator):
         observer_dx_up_thresh: float = 0,
         observer_dx_down_thresh: float = 0,
         observer_eps_dx: float = 1e-7,
-    ):
+    ) -> None:
         super().__init__(
-            src_file=src_file,
             variable_names=variable_names,
             parameter_names=parameter_names,
+            src_file=src_file,
+            rhs_equation=rhs_equation,
+            mutable_args=mutable_args,
+            supplementary_equations=supplementary_equations,
             aux=aux,
             num_noise=num_noise,
             tspan=tspan,
@@ -269,7 +277,7 @@ class FeaturesSimulator(Simulator):
         event_var_idx = variable_names.index(event_var) if event_var != "" else 0
         feature_var_idx = variable_names.index(feature_var) if feature_var != "" else 0
 
-        self._op = _clode.ObserverParams(
+        self._op = ObserverParams(
             event_var_idx,
             feature_var_idx,
             observer_max_event_count,
@@ -283,7 +291,7 @@ class FeaturesSimulator(Simulator):
             observer_eps_dx,
         )
 
-        self._integrator = _clode.FeaturesSimulatorBase(
+        self._integrator = FeaturesSimulatorBase(
             self._pi,
             stepper.value,
             observer.value,
@@ -298,11 +306,11 @@ class FeaturesSimulator(Simulator):
 
     def initialize(
         self,
-        x0: np.array,
-        parameters: np.array,
+        x0: np.ndarray[Any, np.dtype[np.float64]],
+        parameters: np.ndarray[Any, np.dtype[np.float64]],
         tspan: Tuple[float, float] | None = None,
         seed: int | None = None,
-    ):
+    ) -> None:
         """Initialize the features object.
 
         Args:
@@ -323,7 +331,7 @@ class FeaturesSimulator(Simulator):
 
         if x0.shape[1] != len(self.vars):
             raise ValueError(
-                f"Length of initial condition vector {len(x0.shape[1])}"
+                f"Length of initial condition vector {x0.shape[1]}"
                 f" does not match number of variables {len(self.vars)}"
             )
 
@@ -340,15 +348,15 @@ class FeaturesSimulator(Simulator):
             self.tspan = tspan
 
         self._integrator.initialize(
-            self.tspan,
-            x0.transpose().flatten(),
-            parameters.transpose().flatten(),
+            list(self.tspan),
+            x0.transpose().flatten().tolist(),
+            parameters.transpose().flatten().tolist(),
             self._sp,
             self._op,
         )
         self.seed_rng(seed)
 
-    def features(self, initialize_observer: Optional[bool] = None):
+    def features(self, initialize_observer: Optional[bool] = None) -> None:
         """Run a simulation with feature detection.
 
         Returns:
@@ -360,7 +368,7 @@ class FeaturesSimulator(Simulator):
         else:
             self._integrator.features()
 
-    def get_observer_results(self):
+    def get_observer_results(self) -> ObserverOutput:
         """Get the feature data.
 
         Returns:

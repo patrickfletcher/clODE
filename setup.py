@@ -148,6 +148,19 @@ class BuildExtCommand(setuptools.command.build_ext.build_ext):
             ext_full_path = self.get_ext_fullpath(ext.name)
 
             prebuilt_path = os.getenv('CLODE_PREBUILT_DIR')
+            if os.name == 'nt':
+                suffix = '.dll'
+                prefix = ''
+            else:
+                prefix = 'lib'
+                if platform.system() == 'Darwin':
+                    suffix = '.dylib'
+                else:
+                    suffix = '.so'
+            clode_lib_file = os.path.join(
+                "clode",
+                "cpp",
+                f"{prefix}clode_cpp_wrapper{suffix}")
             if not prebuilt_path:
                 # Ensure python_configure.bzl finds the correct Python verison.
                 os.environ['PYTHON_BIN_PATH'] = sys.executable
@@ -216,17 +229,8 @@ class BuildExtCommand(setuptools.command.build_ext.build_ext):
 
                 print("BUILD COMMAND", build_command)
                 self.spawn(build_command)
-                if os.name == 'nt':
-                    suffix = '.dll'
-                    prefix = ''
-                else:
-                    prefix = 'lib'
-                    if platform.system() == 'Darwin':
-                        suffix = '.dylib'
-                    else:
-                        suffix = '.so'
                 built_ext_path = os.path.join(
-                    f'bazel-bin/clode/cpp/{prefix}clode_cpp_wrapper{suffix}')
+                    "bazel-bin", clode_lib_file)
             else:
                 # If `CLODE_PREBUILT_DIR` is set, the extension module is assumed
                 # to have already been built a prior call to `build_ext -b
@@ -238,8 +242,7 @@ class BuildExtCommand(setuptools.command.build_ext.build_ext):
                 #
                 # https://github.com/pypa/pip/pull/9091
                 # https://github.com/joerick/cibuildwheel/issues/486
-                built_ext_path = os.path.join(prebuilt_path, 'clode',
-                                              os.path.basename(ext_full_path))
+                built_ext_path = os.path.join(prebuilt_path, clode_lib_file)
 
             os.makedirs(os.path.dirname(ext_full_path), exist_ok=True)
             print(f'Built output files: {os.listdir(os.path.dirname(built_ext_path))}')
@@ -273,8 +276,8 @@ setuptools.setup(
         'fallback_version': '0.0.0',
     },
     packages=["clode", 'clode.cpp'],
-    package_dir={'clode': 'clode/python', 'clode.cpp': 'clode/cpp'},
-    ext_modules=[setuptools.Extension('clode/clode_cpp_wrapper', sources=[])],
+    package_dir={'clode': 'clode', 'clode.cpp': 'clode/cpp'},
+    ext_modules=[setuptools.Extension('clode/cpp/clode_cpp_wrapper', sources=[])],
     setup_requires=['setuptools_scm'],
     cmdclass={
         'build': BuildCommand,

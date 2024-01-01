@@ -1,14 +1,11 @@
 from __future__ import annotations
 
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Callable, Any, Dict
 
 import numpy as np
 
-from .runtime import _clode_root_dir, get_cpp
+from .runtime import _clode_root_dir, CLDeviceType, CLVendor, TrajectorySimulatorBase
 from .solver import Simulator, Stepper
-
-_clode = get_cpp()
-
 
 # TrajectoryOutput?
 # We have a collection of num_simulations trajectories, (t, X), stacked into matrices. Each trajectory may have a different number of total stored time steps.
@@ -21,11 +18,20 @@ _clode = get_cpp()
 
 
 class TrajectorySimulator(Simulator):
+    _time_steps: np.ndarray[Any, np.dtype[np.float64]] | None
+    _output_time_steps: np.ndarray[Any, np.dtype[np.float64]] | None
+    _output_trajectories: np.ndarray[Any, np.dtype[np.float64]] | None
+    _data: np.ndarray[Any, np.dtype[np.float64]] | None
+    _integrator: TrajectorySimulatorBase
+
     def __init__(
         self,
-        src_file: str,
         variable_names: List[str],
         parameter_names: List[str],
+        src_file: str | None = None,
+        rhs_equation: OpenCLRhsEquation | None = None,
+        mutable_args: List[str] | None = None,
+        supplementary_equations: List[Callable[[Any], Any]] | None = None,
         aux: Optional[List[str]] = None,
         num_noise: int = 0,
         tspan: Tuple[float, float] = (0.0, 1000.0),
@@ -38,8 +44,8 @@ class TrajectorySimulator(Simulator):
         max_steps: int = 1000000,
         max_store: int = 1000000,
         nout: int = 1,
-        device_type: _clode.cl_device_type | None = None,
-        vendor: _clode.cl_vendor | None = None,
+        device_type: CLDeviceType | None = None,
+        vendor: CLVendor | None = None,
         platform_id: int | None = None,
         device_id: int | None = None,
         device_ids: List[int] | None = None,
@@ -63,8 +69,8 @@ class TrajectorySimulator(Simulator):
             max_steps (int, optional): The maximum number of steps. Defaults to 1000000.
             max_store (int, optional): The maximum number of time steps to store. Defaults to 1000000.
             nout (int, optional): The number of output time steps. Defaults to 1.
-            device_type (Optional[_clode.cl_device_type], optional): The type of device to use. Defaults to None.
-            vendor (Optional[_clode.cl_vendor], optional): The vendor of the device to use. Defaults to None.
+            device_type (Optional[CLDeviceType], optional): The type of device to use. Defaults to None.
+            vendor (Optional[CLVendor], optional): The vendor of the device to use. Defaults to None.
             platform_id (Optional[int], optional): The platform ID of the device to use. Defaults to None.
             device_id (Optional[int], optional): The device ID of the device to use. Defaults to None.
             device_ids (Optional[List[int]], optional): The device IDs of the devices to use. Defaults to None.
@@ -76,9 +82,12 @@ class TrajectorySimulator(Simulator):
         """
 
         super().__init__(
-            src_file=src_file,
             variable_names=variable_names,
             parameter_names=parameter_names,
+            src_file=src_file,
+            rhs_equation=rhs_equation,
+            mutable_args=mutable_args,
+            supplementary_equations=supplementary_equations,
             aux=aux,
             num_noise=num_noise,
             tspan=tspan,
@@ -103,15 +112,15 @@ class TrajectorySimulator(Simulator):
         self._time_steps = None
         self._output_time_steps = None
 
-        self._integrator = _clode.TrajectorySimulatorBase(
+        self._integrator = TrajectorySimulatorBase(
             self._pi, stepper.value, single_precision, self._runtime, _clode_root_dir
         )
         self._integrator.build_cl()
 
     def initialize(
         self,
-        x0: np.array,
-        parameters: np.array,
+        x0: np.ndarray[Any, np.dtype[np.float64]],
+        parameters: np.ndarray[Any, np.dtype[np.float64]],
         tspan: Tuple[float, float] | None = None,
         seed: int | None = None,
     ) -> None:
@@ -135,7 +144,7 @@ class TrajectorySimulator(Simulator):
 
         if x0.shape[1] != len(self.vars):
             raise ValueError(
-                f"Length of initial condition vector {len(x0.shape[1])}"
+                f"Length of initial condition vector {x0.shape[1]}"
                 f" does not match number of variables {len(self.vars)}"
             )
 
@@ -156,9 +165,9 @@ class TrajectorySimulator(Simulator):
             self.tspan = tspan
 
         self._integrator.initialize(
-            self.tspan,
-            x0.transpose().flatten(),
-            parameters.transpose().flatten(),
+            list(self.tspan),
+            x0.transpose().flatten().tolist(),
+            parameters.transpose().flatten().tolist(),
             self._sp,
         )
         self.seed_rng(seed)
@@ -171,7 +180,7 @@ class TrajectorySimulator(Simulator):
         """
         self._integrator.trajectory()
 
-    def get_trajectory(self) -> np.array:
+    def get_trajectory(self) -> List[Dict[str, np.ndarray[Any, np.dtype[np.float64]]]]:
         """Get the trajectory data.
 
         Returns:
@@ -191,6 +200,18 @@ class TrajectorySimulator(Simulator):
         shape = (self._number_of_simulations, len(self.vars), self._max_store)
         arr = np.array(self._output_trajectories[: np.prod(shape)])
         self._data = arr.reshape(shape, order="F").transpose((2, 1, 0))
+
+        # Check for None values
+        if self._data is None:
+            raise ValueError("Must run trajectory() before getting trajectory data")
+        elif self._time_steps is None:
+            raise ValueError("Must run trajectory() before getting trajectory data")
+        elif self._output_time_steps is None:
+            raise ValueError("Must run trajectory() before getting trajectory data")
+        elif self._output_trajectories is None:
+            raise ValueError("Must run trajectory() before getting trajectory data")
+        elif self._n_stored is None:
+            raise ValueError("Must run trajectory() before getting trajectory data")
 
         # list of trajectories, each stored as dict:
         result = list()
