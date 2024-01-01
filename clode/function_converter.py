@@ -3,7 +3,7 @@ from __future__ import annotations
 import ast
 import inspect
 import textwrap
-from typing import Callable, Any, List, Dict
+from typing import Callable, Any, List, Dict, Optional, Union
 from enum import Enum
 
 OpenCLRhsEquation = Callable[[float, List[float], List[float], List[float], List[float], List[float]], None]
@@ -288,7 +288,7 @@ def _convert_ast_expression_to_cl_expression(
 
 
 def _convert_ast_annotation_to_cl_type(
-    name: str | None, annotation: ast.Name | ast.Subscript | ast.BinOp | ast.Constant | None
+    name: Optional[str], annotation: Union[ast.Name, ast.Subscript, ast.BinOp, ast.Constant, None]
 ) -> OpenCLType:
     array = False
     if isinstance(annotation, ast.Subscript):
@@ -361,7 +361,7 @@ class OpenCLArgument:
     def __init__(self, fn_name: str, arg: ast.arg, const: bool = False) -> None:
         self.function = fn_name
         self.name = arg.arg
-        if isinstance(arg.annotation, (ast.Name | ast.Subscript | ast.BinOp)):
+        if isinstance(arg.annotation, (ast.Name, ast.Subscript, ast.BinOp)):
             self.cl_type = _convert_ast_annotation_to_cl_type(self.name, arg.annotation)
         # Handle the case when the annotation is None
         # Other types are caught in the _convert_ast_annotation_to_cl_type function
@@ -378,13 +378,13 @@ class OpenCLExpressionType(Enum):
 
 
 class OpenCLInstruction:
-    target: OpenCLArrayAccess | OpenCLVariable | None = None
-    cl_type: OpenCLType | None = None
+    target: Union[OpenCLArrayAccess, OpenCLVariable, None] = None
+    cl_type: Optional[OpenCLType] = None
     expression_type: OpenCLExpressionType
-    expression: OpenCLExpression | None = None
+    expression: Optional[OpenCLExpression] = None
 
     @property
-    def target_name(self) -> str | None:
+    def target_name(self) -> Optional[str]:
         if self.target is not None:
             return self.target.name
         else:
@@ -393,7 +393,7 @@ class OpenCLInstruction:
     def __init__(
         self,
         fn_name: str,
-        instruction: ast.Assign | ast.AnnAssign | ast.Return,
+        instruction: Union[ast.Assign, ast.AnnAssign, ast.Return],
         context: Dict[str, OpenCLType],
     ) -> None:
         if isinstance(instruction, ast.Assign) or isinstance(
@@ -431,7 +431,7 @@ class OpenCLInstruction:
                     )
             else:
                 target = instruction.target
-                if isinstance(instruction.annotation, (ast.Name | ast.Subscript)):
+                if isinstance(instruction.annotation, (ast.Name, ast.Subscript)):
                     self.cl_type = _convert_ast_annotation_to_cl_type(
                         self.target_name, instruction.annotation
                     )
@@ -518,9 +518,9 @@ class OpenCLFunction:
         fn_name: str,
         args: ast.arguments,
         body: List[ast.stmt],
-        fn_returns: ast.Name | ast.Constant,
+        fn_returns: Union[ast.Name, ast.Constant],
         context: Dict[str, OpenCLType],
-        mutable_args: List[str] | None = None,
+        mutable_args: Optional[List[str]] = None,
     ):
         self.args = []
         self.body = []
@@ -618,7 +618,7 @@ class OpenCLConverter(ast.NodeTransformer):
     entry_function_seen: bool = False
     entry_function_name: str
     syntax_tree: OpenCLSyntaxTree
-    mutable_args: List[str] | None = None
+    mutable_args: Optional[List[str]] = None
 
     def __init__(self, entry_function_name: str = "get_rhs"):
         # Initialize any necessary variables
@@ -645,8 +645,8 @@ class OpenCLConverter(ast.NodeTransformer):
         self.generic_visit(node)
         return node
 
-    def convert_to_opencl(self, python_fn: Callable[[Any], Any] | OpenCLRhsEquation, dedent: bool = True,
-                          mutable_args: List[str] | None = None) -> str:
+    def convert_to_opencl(self, python_fn: Union[Callable[[Any], Any], OpenCLRhsEquation], dedent: bool = True,
+                          mutable_args: Optional[List[str]] = None) -> str:
         # Convert a Python function to OpenCL
         # Example: 'def add_float(a: float, b: float) -> float:\n'
         #          '    res: float = a + b\n'

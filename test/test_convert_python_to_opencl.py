@@ -1,7 +1,9 @@
 from __future__ import annotations
 
-import pytest
 from typing import List
+
+import pytest
+
 from clode import OpenCLConverter, convert_str_to_opencl
 
 
