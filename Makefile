@@ -26,6 +26,11 @@ test_mac_python_310:
 	cp -f bazel-out/darwin_arm64-opt/bin/clode/cpp/libclode_cpp_wrapper.dylib clode/cpp/clode_cpp_wrapper.cpython-310-darwin.so
 	$(PYTHON) -m pytest $(PYTESTFILES)
 
+test_mac_python_38:
+	# Copy bazel out file clode_cpp_wrapper.so to clode/clode_cpp_wrapper.so
+	cp -f bazel-out/darwin_arm64-opt/bin/clode/cpp/libclode_cpp_wrapper.dylib clode/cpp/clode_cpp_wrapper.cpython-38-darwin.so
+	$(PYTHON) -m pytest $(PYTESTFILES)
+
 test_short:
 	# Make tmp dir, run tests in there (make sure to activate venv)
 	source venv/bin/activate && \

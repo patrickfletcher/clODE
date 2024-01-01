@@ -150,14 +150,24 @@ class OpenCLArrayAccess(OpenCLExpression):
             raise ValueError(
                 f"Array access must be a variable at line {subscript.lineno}"
             )
-        elif not isinstance(subscript.slice, ast.Constant):
+        elif sys.version_info < (3, 9):
+            if not isinstance(subscript.slice, ast.Index):
+                raise ValueError(
+                    f"Array access must be an index at line {subscript.lineno}, got '{type(subscript.slice)}'"
+                )
+            else:
+                subscript_slice = subscript.slice.value
+        else:
+            subscript_slice = subscript.slice
+
+        if not isinstance(subscript_slice, ast.Constant):
             raise ValueError(
                 f"Array access must be an index at line {subscript.lineno}, got '{type(subscript.slice)}'"
             )
 
         self.name = subscript.value.id
         self.index = _convert_ast_expression_to_cl_expression(
-            subscript.slice.value, context
+            subscript_slice.value, context
         )
         # Return underlying type of self.name from context
         underlying_type = context[self.name]
