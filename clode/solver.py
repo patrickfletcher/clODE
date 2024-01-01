@@ -6,11 +6,8 @@ from typing import List, Optional, Tuple, Callable, Any
 import numpy as np
 
 from .function_converter import OpenCLConverter, OpenCLRhsEquation
-from .runtime import _clode_root_dir, get_cpp, initialize_runtime, CLDeviceType, CLVendor, ProblemInfo, SolverParams
+from .runtime import _clode_root_dir, initialize_runtime, CLDeviceType, CLVendor, ProblemInfo, SolverParams, SimulatorBase
 from .xpp_parser import convert_xpp_file
-
-_clode = get_cpp()
-
 
 class Stepper(Enum):
     euler = "euler"
@@ -37,6 +34,7 @@ class Simulator:
     def _handle_clode_rhs_cl_file(self,
                                   src_file: str | None = None,
                                   rhs_equation: OpenCLRhsEquation | None = None,
+                                  mutable_args: List[str] | None = None,
                                   supplementary_equations: List[Callable[[Any], Any]] | None = None) -> str:
         input_file: str
 
@@ -56,7 +54,8 @@ class Simulator:
                 for eq in supplementary_equations:
                     converter.convert_to_opencl(eq)
             # TODO propagage mutable_args from __init__ to here
-            mutable_args = ["derivatives", "aux"]
+            if mutable_args is None:
+                mutable_args = ["derivatives", "aux"]
             eqn = converter.convert_to_opencl(rhs_equation, mutable_args=mutable_args)
             input_file = "clode_rhs.cl"
             with open(input_file, "w") as ff:
@@ -72,6 +71,7 @@ class Simulator:
         parameter_names: List[str],
         src_file: str | None = None,
         rhs_equation: OpenCLRhsEquation | None = None,
+        mutable_args: List[str] | None = None,
         supplementary_equations: List[Callable[[Any], Any]] | None = None,
         aux: Optional[List[str]] = None,
         num_noise: int = 0,
@@ -94,16 +94,16 @@ class Simulator:
         device_id: int | None = None,
         device_ids: List[int] | None = None,
     ) -> None:
-        input_file = self._handle_clode_rhs_cl_file(src_file, rhs_equation, supplementary_equations)
+        input_file = self._handle_clode_rhs_cl_file(src_file, rhs_equation, mutable_args, supplementary_equations)
 
-        self._data = None
-        self._output_trajectories = None
-        self._time_steps = None
-        self._output_time_steps = None
-        self._number_of_simulations = None
-        self._initial_conditions = None
-        self._var_values = None
-        self._n_stored = None
+        # self._data = None
+        # self._output_trajectories = None
+        # self._time_steps = None
+        # self._output_time_steps = None
+        # self._number_of_simulations = None
+        # self._initial_conditions = None
+        # self._var_values = None
+        # self._n_stored = None
         self._max_store = max_store
         if aux is None:
             aux = []
@@ -135,7 +135,7 @@ class Simulator:
 
         # Check whether this is being called by a derived class:
         if type(self) is Simulator:
-            self._integrator = _clode.SimulatorBase(
+            self._integrator = SimulatorBase(
                 self._pi,
                 stepper.value,
                 single_precision,
@@ -185,8 +185,6 @@ class Simulator:
                 f" does not match number of parameters {len(self.pars)}"
             )
 
-        self._data = None
-        self._time_steps = None
         self._number_of_simulations = parameters.shape[0]
 
         if tspan is not None:
@@ -334,11 +332,11 @@ class Simulator:
             (len(self.vars), len(final_state) // len(self.vars))
         ).transpose()
 
-    def get_available_steppers(self) -> list[str]:
+    def get_available_steppers(self) -> List[str]:
         """Get the available time steppers.
 
         Returns:
-            list[str]
+            List[str]
         """
         return self._integrator.get_available_steppers()
 

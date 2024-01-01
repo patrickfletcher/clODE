@@ -44,6 +44,12 @@ lint: install
 		$(PYTHON) -m pylint $(PYFILES) $(PYTESTFILES) && \
 		mypy $(PYFILES) $(PYTESTFILES)
 
+generate_stubs_macos_python_310:
+	cp -f bazel-out/darwin_arm64-opt/bin/clode/cpp/libclode_cpp_wrapper.dylib clode/cpp/clode_cpp_wrapper.cpython-310-darwin.so
+	. venv/bin/activate  && \
+		cd clode/cpp && \
+		PYTHONPATH=. pybind11-stubgen -o . clode_cpp_wrapper
+
 wheel:
 	$(PYTHON) -m build -xn .
 

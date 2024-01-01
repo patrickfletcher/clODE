@@ -2,16 +2,11 @@ from __future__ import annotations
 
 import ast
 import inspect
-import sys
 import textwrap
-from typing import Callable, Any
+from typing import Callable, Any, List, Dict
 from enum import Enum
 
-if sys.version_info < (3, 9):
-    from typing import List
-    OpenCLRhsEquation = Callable[[float, List[float], List[float], List[float], List[float], List[float]], None]
-else:
-    OpenCLRhsEquation = Callable[[float, list[float], list[float], list[float], list[float], list[float]], None]
+OpenCLRhsEquation = Callable[[float, List[float], List[float], List[float], List[float], List[float]], None]
 
 class OpenCLType:
     name: str
@@ -107,11 +102,11 @@ class OpenCLVariable(OpenCLExpression):
 
 class OpenCLFunctionCall(OpenCLExpression):
     name: str
-    args: list[OpenCLExpression]
+    args: List[OpenCLExpression]
     cl_type: OpenCLType
 
     def __init__(
-        self, name: str, args: list[OpenCLExpression], cl_type: OpenCLType
+        self, name: str, args: List[OpenCLExpression], cl_type: OpenCLType
     ) -> None:
         self.name = name
         self.args = args
@@ -148,7 +143,7 @@ class OpenCLArrayAccess(OpenCLExpression):
     cl_type: OpenCLType
 
     def __init__(
-        self, subscript: ast.Subscript, context: dict[str, OpenCLType]
+        self, subscript: ast.Subscript, context: Dict[str, OpenCLType]
     ) -> None:
         if not isinstance(subscript.value, ast.Name):
             raise ValueError(
@@ -166,15 +161,6 @@ class OpenCLArrayAccess(OpenCLExpression):
         # Return underlying type of self.name from context
         underlying_type = context[self.name]
         self.cl_type = OpenCLType(underlying_type.name, False)
-
-    # def __init__(
-    #     self, name: str, index: OpenCLExpression, context: dict[str, OpenCLType]
-    # ) -> None:
-    #     self.name = name
-    #     self.index = index
-    #     # Return underlying type of self.name from context
-    #     underlying_type = context[self.name]
-    #     self.cl_type = OpenCLType(underlying_type.name, False)
 
     def __str__(self) -> str:
         return f"{self.name}[{self.index}]"
@@ -242,7 +228,7 @@ class OpenCLBinaryOperation(OpenCLExpression):
 
 
 def _convert_ast_expression_to_cl_expression(
-    expression: ast.expr, context: dict[str, OpenCLType]
+    expression: ast.expr, context: Dict[str, OpenCLType]
 ) -> OpenCLExpression:
     if isinstance(expression, int):
         return OpenCLInteger(expression)
@@ -307,7 +293,7 @@ def _convert_ast_annotation_to_cl_type(
     array = False
     if isinstance(annotation, ast.Subscript):
         if isinstance(annotation.value, ast.Name):
-            if annotation.value.id == "list":
+            if annotation.value.id == "list" or annotation.value.id == "List":
                 array = True
             else:
                 raise TypeError(
@@ -408,7 +394,7 @@ class OpenCLInstruction:
         self,
         fn_name: str,
         instruction: ast.Assign | ast.AnnAssign | ast.Return,
-        context: dict[str, OpenCLType],
+        context: Dict[str, OpenCLType],
     ) -> None:
         if isinstance(instruction, ast.Assign) or isinstance(
             instruction, ast.AnnAssign
@@ -501,10 +487,10 @@ class OpenCLInstruction:
 
 class OpenCLFunction:
     name: str
-    args: list[OpenCLArgument]
-    body: list[OpenCLInstruction]
+    args: List[OpenCLArgument]
+    body: List[OpenCLInstruction]
     returns: OpenCLType
-    declared_vars: dict[str, OpenCLType]
+    declared_vars: Dict[str, OpenCLType]
     modified_vars: set[str]
 
     def __str__(self) -> str:
@@ -531,10 +517,10 @@ class OpenCLFunction:
         self,
         fn_name: str,
         args: ast.arguments,
-        body: list[ast.stmt],
+        body: List[ast.stmt],
         fn_returns: ast.Name | ast.Constant,
-        context: dict[str, OpenCLType],
-        mutable_args: list[str] | None = None,
+        context: Dict[str, OpenCLType],
+        mutable_args: List[str] | None = None,
     ):
         self.args = []
         self.body = []
@@ -600,12 +586,12 @@ class OpenCLFunction:
 
 
 class OpenCLSyntaxTree:
-    functions: list[OpenCLFunction]
+    functions: List[OpenCLFunction]
 
     def __init__(self) -> None:
         self.functions = []
 
-    def add_function(self, fn: ast.FunctionDef, mutable_args: list[str]) -> None:
+    def add_function(self, fn: ast.FunctionDef, mutable_args: List[str]) -> None:
         if fn.returns is None:
             raise TypeError(
                 f"Function '{fn.name}' must have a return type at line {fn.lineno}"
@@ -614,7 +600,7 @@ class OpenCLSyntaxTree:
             raise TypeError(
                 f"Unsupported return type {type(fn.returns)} for function '{fn.name}' at line {fn.lineno}"
             )
-        context: dict[str, OpenCLType] = {
+        context: Dict[str, OpenCLType] = {
             parsed_fn.name: parsed_fn.returns for parsed_fn in self.functions
         }
         self.functions.append(
@@ -632,7 +618,7 @@ class OpenCLConverter(ast.NodeTransformer):
     entry_function_seen: bool = False
     entry_function_name: str
     syntax_tree: OpenCLSyntaxTree
-    mutable_args: list[str] | None = None
+    mutable_args: List[str] | None = None
 
     def __init__(self, entry_function_name: str = "get_rhs"):
         # Initialize any necessary variables
@@ -660,7 +646,7 @@ class OpenCLConverter(ast.NodeTransformer):
         return node
 
     def convert_to_opencl(self, python_fn: Callable[[Any], Any] | OpenCLRhsEquation, dedent: bool = True,
-                          mutable_args: list[str] | None = None) -> str:
+                          mutable_args: List[str] | None = None) -> str:
         # Convert a Python function to OpenCL
         # Example: 'def add_float(a: float, b: float) -> float:\n'
         #          '    res: float = a + b\n'

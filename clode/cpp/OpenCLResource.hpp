@@ -32,6 +32,15 @@ enum cl_vendor
 	VENDOR_INTEL
 };
 
+enum e_cl_device_type {
+	DEVICE_TYPE_ALL = CL_DEVICE_TYPE_ALL,
+	DEVICE_TYPE_CPU = CL_DEVICE_TYPE_CPU,
+	DEVICE_TYPE_GPU = CL_DEVICE_TYPE_GPU,
+	DEVICE_TYPE_ACCELERATOR = CL_DEVICE_TYPE_ACCELERATOR,
+	DEVICE_TYPE_DEFAULT = CL_DEVICE_TYPE_DEFAULT,
+	DEVICE_TYPE_CUSTOM = CL_DEVICE_TYPE_CUSTOM
+};
+
 //struct to hold a reduced set of information about a device
 typedef struct deviceInfo
 {
@@ -90,6 +99,7 @@ public:
 	OpenCLResource(cl_deviceType type); //cl_vendor vendor = VENDOR_ANY
 	OpenCLResource(cl_vendor vendor);   //cl_deviceType type = CL_DEVICE_TYPE_DEFAULT
 	OpenCLResource(cl_deviceType type, cl_vendor vendor);
+	OpenCLResource(e_cl_device_type type, cl_vendor vendor);
 
 	//command line constructor, expects "--device gpu/cpu/accel" and/or "--vendor amd/intel/nvidia".  Defaults as above
 	OpenCLResource(int argc, char **argv);

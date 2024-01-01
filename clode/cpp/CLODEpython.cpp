@@ -98,16 +98,7 @@ PYBIND11_MODULE(clode_cpp_wrapper, m) {
         .value("VENDOR_INTEL", VENDOR_INTEL)
         .export_values();
 
-    enum cl_device_type_wrapper {
-        DEVICE_TYPE_ALL = CL_DEVICE_TYPE_ALL,
-        DEVICE_TYPE_CPU = CL_DEVICE_TYPE_CPU,
-        DEVICE_TYPE_GPU = CL_DEVICE_TYPE_GPU,
-        DEVICE_TYPE_ACCELERATOR = CL_DEVICE_TYPE_ACCELERATOR,
-        DEVICE_TYPE_DEFAULT = CL_DEVICE_TYPE_DEFAULT,
-        DEVICE_TYPE_CUSTOM = CL_DEVICE_TYPE_CUSTOM
-    };
-
-    py::enum_<cl_device_type_wrapper>(m, "CLDeviceType")
+    py::enum_<e_cl_device_type>(m, "CLDeviceType")
         .value("DEVICE_TYPE_ALL", DEVICE_TYPE_ALL)
         .value("DEVICE_TYPE_CPU", DEVICE_TYPE_CPU)
         .value("DEVICE_TYPE_GPU", DEVICE_TYPE_GPU)
@@ -121,6 +112,7 @@ PYBIND11_MODULE(clode_cpp_wrapper, m) {
         .def(py::init<cl_device_type>())
         .def(py::init<cl_vendor>())
         .def(py::init<cl_device_type, cl_vendor>())
+        .def(py::init<e_cl_device_type, cl_vendor>())
         .def(py::init<unsigned int, unsigned int>())
         .def(py::init<unsigned int, std::vector<unsigned int>>())
         .def("get_double_support", &OpenCLResource::getDoubleSupport, "Get double support")
@@ -243,15 +235,20 @@ PYBIND11_MODULE(clode_cpp_wrapper, m) {
                     std::string &,
                     bool,
                     OpenCLResource &,
-                    std::string &>())
+                    std::string &>(),
+                    	py::arg("problem_info"),
+                    	py::arg("stepper"),
+                    	py::arg("cl_single_precision"),
+                    	py::arg("opencl_resource"),
+                    	py::arg("clode_root"))
             .def("initialize", static_cast<void (CLODE::*)
                     (std::vector<double>,
                      std::vector<double>,
                      std::vector<double>,
                      SolverParams<double>)>
-            (&CLODE::initialize), "Initialize CLODE")
-            .def("seed_rng", static_cast<void (CLODE::*)(int)>(&CLODE::seedRNG))
-            .def("seed_rng", static_cast<void (CLODE::*)()>(&CLODE::seedRNG))
+            (&CLODE::initialize), "Initialize CLODE", py::arg("tspan"), py::arg("x0"), py::arg("pars"), py::arg("solver_params"))
+            .def("seed_rng", static_cast<void (CLODE::*)(int)>(&CLODE::seedRNG), "Seed RNG", py::arg("seed"))
+            .def("seed_rng", static_cast<void (CLODE::*)()>(&CLODE::seedRNG), "Seed RNG")
             .def("build_cl", &CLODE::buildCL)
             .def("set_tspan", static_cast<void (CLODE::*)(std::vector<double>)>(&CLODE::setTspan))
             .def("set_problem_data", static_cast<void (CLODE::*)(std::vector<double>, std::vector<double>)>(&CLODE::setProblemData))
@@ -311,6 +308,12 @@ PYBIND11_MODULE(clode_cpp_wrapper, m) {
                           bool,
                           OpenCLResource &,
                           std::string &>())
+            .def("initialize", static_cast<void (CLODEfeatures::*)
+                    (std::vector<double>,
+                     std::vector<double>,
+                     std::vector<double>,
+                     SolverParams<double>)>
+                     (&CLODEfeatures::initialize), "Initialize FeaturesSimulatorBase")
             .def("initialize", static_cast<void (CLODEfeatures::*)
                                                     (std::vector<double>,
                                                     std::vector<double>,

@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 
 from clode.cpp import clode_cpp_wrapper as _clode
-from clode.cpp.clode_cpp_wrapper import LogLevel, print_opencl, query_opencl  # type: ignore
+from clode.cpp.clode_cpp_wrapper import LogLevel, print_opencl, query_opencl, ObserverParams, SimulatorBase, FeaturesSimulatorBase, TrajectorySimulatorBase
 
 _clode_root_dir: str = os.path.join(os.path.dirname(__file__), "cpp", "")
 
@@ -11,8 +11,8 @@ DEFAULT_LOG_LEVEL = _clode.LogLevel.warn
 
 
 def initialize_runtime(
-    device_type: _clode.cl_device_type | None,
-    vendor: _clode.cl_vendor | None,
+    device_type: _clode.CLDeviceType | None,
+    vendor: _clode.CLVendor | None,
     platform_id: int | None,
     device_id: int | None,
     device_ids: list[int] | None,
@@ -42,10 +42,6 @@ def initialize_runtime(
         return _clode.OpenCLResource(device_type, vendor)
 
 
-def get_cpp() -> _clode.CppWrapper:
-    return _clode
-
-
 CLDeviceType = _clode.CLDeviceType
 CLVendor = _clode.CLVendor
 ProblemInfo = _clode.ProblemInfo
@@ -70,7 +66,6 @@ __all__ = [
     "CLDeviceType",
     "CLVendor",
     "DEFAULT_LOG_LEVEL",
-    "get_cpp",
     "get_log_level",
     "initialize_runtime",
     "LogLevel",
@@ -78,4 +73,8 @@ __all__ = [
     "set_log_pattern",
     "ProblemInfo",
     "SolverParams",
+    "ObserverParams",
+    "SimulatorBase",
+    "FeaturesSimulatorBase",
+    "TrajectorySimulatorBase",
 ]
