@@ -152,7 +152,7 @@ class OpenCLArrayAccess(OpenCLExpression):
             )
         elif not isinstance(subscript.slice, ast.Constant):
             raise ValueError(
-                f"Array access must be an index at line {subscript.lineno}"
+                f"Array access must be an index at line {subscript.lineno}, got '{type(subscript.slice)}'"
             )
 
         self.name = subscript.value.id
