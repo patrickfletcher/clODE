@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ast
 import inspect
+import sys
 import textwrap
 from typing import Callable, Any, List, Dict, Optional, Union
 from enum import Enum
@@ -303,18 +304,31 @@ def _convert_ast_annotation_to_cl_type(
             raise TypeError(
                 f"Variable '{name}' must be a list at line {annotation.lineno}"
             )
-        if isinstance(annotation.slice, ast.Name):
-            if annotation.slice.id == "float":
+
+        annotation_slice: ast.expr
+        # In Python 3.9+, annotation.slice is an ast.Name
+        if sys.version_info < (3, 9):
+            if isinstance(annotation.slice, ast.Index):
+                annotation_slice = annotation.slice.value
+            else:
+                raise TypeError(
+                    f"Variable '{name}' must be a list of strings or float at line {annotation.lineno}, got 'List[{type(annotation.slice)}]'"
+                )
+        else:
+            annotation_slice = annotation.slice
+
+        if isinstance(annotation_slice, ast.Name):
+            if annotation_slice.id == "float":
                 return OpenCLType("realtype", array)
-            elif annotation.slice.id == "int":
+            elif annotation_slice.id == "int":
                 return OpenCLType("int", array)
             else:
                 raise TypeError(
-                    f"Variable '{name}' must be a list of floats or ints at line {annotation.lineno}, got '{annotation.slice.id}'"
+                    f"Variable '{name}' must be a list of floats or ints at line {annotation.lineno}, got '{annotation_slice.id}'"
                 )
         else:
             raise TypeError(
-                f"Variable '{name}' must be a list of strings or float at line {annotation.lineno}, got 'List[{type(annotation.slice)}]'"
+                f"Variable '{name}' must be a list of strings or float at line {annotation.lineno}, got 'List[{type(annotation_slice)}]'"
             )
     elif isinstance(annotation, ast.Name):
         if annotation.id == "int":
