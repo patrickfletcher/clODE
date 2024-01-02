@@ -3,7 +3,15 @@ from __future__ import annotations
 import os
 
 from clode.cpp import clode_cpp_wrapper as _clode
-from clode.cpp.clode_cpp_wrapper import LogLevel, print_opencl, query_opencl, ObserverParams, SimulatorBase, FeaturesSimulatorBase, TrajectorySimulatorBase
+from clode.cpp.clode_cpp_wrapper import (
+    FeaturesSimulatorBase,
+    LogLevel,
+    ObserverParams,
+    SimulatorBase,
+    TrajectorySimulatorBase,
+    print_opencl,
+    query_opencl,
+)
 
 _clode_root_dir: str = os.path.join(os.path.dirname(__file__), "cpp", "")
 

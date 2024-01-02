@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from typing import List, Optional, Tuple, Callable, Any, Dict
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import numpy as np
 
-from .runtime import _clode_root_dir, CLDeviceType, CLVendor, TrajectorySimulatorBase
+from .runtime import CLDeviceType, CLVendor, TrajectorySimulatorBase, _clode_root_dir
 from .solver import Simulator, Stepper
 
 # TrajectoryOutput?

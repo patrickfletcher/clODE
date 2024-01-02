@@ -1,5 +1,5 @@
 
-PYFILES=$(shell find clode/python -name "*.py")
+PYFILES=$(shell find clode -name "*.py")
 PYTESTFILES=$(shell find test -name "*.py")
 
 PYTHON ?= python

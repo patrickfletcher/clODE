@@ -1,13 +1,19 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import List, Optional, Tuple, Callable, Any
+from typing import Any, Callable, List, Optional, Tuple
 
 import numpy as np
 import numpy.typing as npt
 
 from .function_converter import OpenCLRhsEquation
-from .runtime import _clode_root_dir, ObserverParams, CLDeviceType, CLVendor, FeaturesSimulatorBase
+from .runtime import (
+    CLDeviceType,
+    CLVendor,
+    FeaturesSimulatorBase,
+    ObserverParams,
+    _clode_root_dir,
+)
 from .solver import Simulator, Stepper
 
 

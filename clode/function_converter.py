@@ -4,10 +4,13 @@ import ast
 import inspect
 import sys
 import textwrap
-from typing import Callable, Any, List, Dict, Optional, Union
 from enum import Enum
+from typing import Any, Callable, Dict, List, Optional, Union
 
-OpenCLRhsEquation = Callable[[float, List[float], List[float], List[float], List[float], List[float]], None]
+OpenCLRhsEquation = Callable[
+    [float, List[float], List[float], List[float], List[float], List[float]], None
+]
+
 
 class OpenCLType:
     name: str
@@ -299,7 +302,8 @@ def _convert_ast_expression_to_cl_expression(
 
 
 def _convert_ast_annotation_to_cl_type(
-    name: Optional[str], annotation: Union[ast.Name, ast.Subscript, ast.BinOp, ast.Constant, None]
+    name: Optional[str],
+    annotation: Union[ast.Name, ast.Subscript, ast.BinOp, ast.Constant, None],
 ) -> OpenCLType:
     array = False
     if isinstance(annotation, ast.Subscript):
@@ -628,7 +632,14 @@ class OpenCLSyntaxTree:
             parsed_fn.name: parsed_fn.returns for parsed_fn in self.functions
         }
         self.functions.append(
-            OpenCLFunction(fn.name, fn.args, fn.body, fn.returns, context, mutable_args=mutable_args)
+            OpenCLFunction(
+                fn.name,
+                fn.args,
+                fn.body,
+                fn.returns,
+                context,
+                mutable_args=mutable_args,
+            )
         )
 
     def __str__(self) -> str:
@@ -669,8 +680,12 @@ class OpenCLConverter(ast.NodeTransformer):
         self.generic_visit(node)
         return node
 
-    def convert_to_opencl(self, python_fn: Union[Callable[[Any], Any], OpenCLRhsEquation], dedent: bool = True,
-                          mutable_args: Optional[List[str]] = None) -> str:
+    def convert_to_opencl(
+        self,
+        python_fn: Union[Callable[[Any], Any], OpenCLRhsEquation],
+        dedent: bool = True,
+        mutable_args: Optional[List[str]] = None,
+    ) -> str:
         # Convert a Python function to OpenCL
         # Example: 'def add_float(a: float, b: float) -> float:\n'
         #          '    res: float = a + b\n'
