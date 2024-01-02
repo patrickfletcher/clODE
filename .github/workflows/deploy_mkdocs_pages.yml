@@ -45,7 +45,7 @@ jobs:
         run: source venv/bin/activate
 
       - name: Build docs with mkdocs
-        run: mkdocs build --clean
+        run: python -m mkdocs build --clean
 
       - name: List sites folder
         run: ls site/
