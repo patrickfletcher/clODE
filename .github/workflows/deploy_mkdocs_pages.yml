@@ -26,17 +26,14 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Update system
-        run: sudo apt update
-
-      - name: Install Dependencies
-        run: sudo apt install ocl-icd-libopencl1 clinfo intel-opencl-icd
-
       - name: Test OpenCL
         run: clinfo
 
-      - name: Install Dev Dependencies
-        run: sudo apt install ocl-icd-opencl-dev python3-dev
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.12
+          cache: 'pip'
 
       - name: Setup venv
         run: make venv
