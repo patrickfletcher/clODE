@@ -26,9 +26,6 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Test OpenCL
-        run: clinfo
-
       - name: Set up Python 3.12
         uses: actions/setup-python@v5
         with:
