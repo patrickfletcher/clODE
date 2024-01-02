@@ -4,7 +4,6 @@ name: Deploy static content to Pages
 on:
   # Runs on pushes targeting the default branch
   push:
-    branches: ["main"]
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
@@ -23,7 +22,7 @@ concurrency:
 
 jobs:
   build_and_upload_docs:
-    runs-on: ubuntu-22.04
+    runs-on: macos-12
     steps:
       - uses: actions/checkout@v3
 
@@ -74,6 +73,9 @@ jobs:
 
   # Deploy job
   deploy:
+    # Run this job only on main
+    if: github.ref == 'refs/heads/main'
+
     # Add a dependency to the build job
     needs: build_and_upload_docs
 
