@@ -1,6 +1,6 @@
 # API Reference
 
-::: clode.CLODETrajectory
+::: clode.TrajectorySimulator
     :members:
     :undoc-members:
     :show-inheritance:

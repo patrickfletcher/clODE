@@ -4,7 +4,6 @@ name: Deploy static content to Pages
 on:
   # Runs on pushes targeting the default branch
   push:
-    branches: ["main"]
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
@@ -23,21 +22,15 @@ concurrency:
 
 jobs:
   build_and_upload_docs:
-    runs-on: ubuntu-22.04
+    runs-on: macos-12
     steps:
       - uses: actions/checkout@v3
 
-      - name: Update system
-        run: sudo apt update
-
-      - name: Install Dependencies
-        run: sudo apt install ocl-icd-libopencl1 clinfo intel-opencl-icd
-
-      - name: Test OpenCL
-        run: clinfo
-
-      - name: Install Dev Dependencies
-        run: sudo apt install ocl-icd-opencl-dev python3-dev
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.12
+          cache: 'pip'
 
       - name: Setup venv
         run: make venv
@@ -48,11 +41,14 @@ jobs:
       - name: Install pip wheel
         run: make install_clode
 
-      - name: activate venv
-        run: source venv/bin/activate
+      - name: Find libclode_cpp_wrapper.dylib in bazel-out and record name
+        run: echo "CLODE_CPP_WRAPPER=$(find -L ./bazel-out -name libclode_cpp_wrapper.dylib)" >> "$GITHUB_ENV"
+
+      - name: Copy libclode_cpp_wrapper.dylib to clode/cpp
+        run: cp -f "$CLODE_CPP_WRAPPER" clode/cpp/clode_cpp_wrapper.so
 
       - name: Build docs with mkdocs
-        run: mkdocs build --clean
+        run: python3 -m mkdocs build --clean
 
       - name: List sites folder
         run: ls site/
@@ -74,6 +70,9 @@ jobs:
 
   # Deploy job
   deploy:
+    # Run this job only on main
+    if: github.ref == 'refs/heads/main'
+
     # Add a dependency to the build job
     needs: build_and_upload_docs
 

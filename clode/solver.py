@@ -1,13 +1,22 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import List, Optional, Tuple, Callable, Any
+from typing import Any, Callable, List, Optional, Tuple
 
 import numpy as np
 
 from .function_converter import OpenCLConverter, OpenCLRhsEquation
-from .runtime import _clode_root_dir, initialize_runtime, CLDeviceType, CLVendor, ProblemInfo, SolverParams, SimulatorBase
+from .runtime import (
+    CLDeviceType,
+    CLVendor,
+    ProblemInfo,
+    SimulatorBase,
+    SolverParams,
+    _clode_root_dir,
+    initialize_runtime,
+)
 from .xpp_parser import convert_xpp_file
+
 
 class Stepper(Enum):
     euler = "euler"
@@ -30,12 +39,13 @@ class Simulator:
 
     # cleaner interface? Use the problem_info and solver_params "structs"
 
-
-    def _handle_clode_rhs_cl_file(self,
-                                  src_file: str | None = None,
-                                  rhs_equation: OpenCLRhsEquation | None = None,
-                                  mutable_args: List[str] | None = None,
-                                  supplementary_equations: List[Callable[[Any], Any]] | None = None) -> str:
+    def _handle_clode_rhs_cl_file(
+        self,
+        src_file: str | None = None,
+        rhs_equation: OpenCLRhsEquation | None = None,
+        mutable_args: List[str] | None = None,
+        supplementary_equations: List[Callable[[Any], Any]] | None = None,
+    ) -> str:
         input_file: str
 
         if src_file is not None and rhs_equation is not None:
@@ -94,7 +104,9 @@ class Simulator:
         device_id: int | None = None,
         device_ids: List[int] | None = None,
     ) -> None:
-        input_file = self._handle_clode_rhs_cl_file(src_file, rhs_equation, mutable_args, supplementary_equations)
+        input_file = self._handle_clode_rhs_cl_file(
+            src_file, rhs_equation, mutable_args, supplementary_equations
+        )
 
         # self._data = None
         # self._output_trajectories = None
@@ -118,9 +130,7 @@ class Simulator:
             aux,
             num_noise,
         )
-        self._sp = SolverParams(
-            dt, dtmax, abstol, reltol, max_steps, max_store, nout
-        )
+        self._sp = SolverParams(dt, dtmax, abstol, reltol, max_steps, max_store, nout)
 
         self.tspan = tspan
 

@@ -26,6 +26,62 @@ CLODE's observers are highly configurable. You can choose the following:
 The following example extracts features from the Van der Pol oscillator
 using the dormand_prince45 integrator.
 
+```py run
+import numpy as np
+import matplotlib.pyplot as plt
+import clode
+
+
+# Van der Pol Dormand Prince oscillator
+def getRHS(
+        t: float,
+        var: list[float],
+        par: list[float],
+        derivatives: list[float],
+        aux: list[float],
+        wiener: list[float],
+) -> None:
+    mu: float = par[0]
+    x: float = var[0]
+    y: float = var[1]
+
+    dx: float = y
+    dy: float = mu * (1 - x ** 2) * y - x
+
+    derivatives[0] = dx
+    derivatives[1] = dy
+
+
+integrator = clode.FeaturesSimulator(
+    rhs_equation=getRHS,
+    variable_names=["x", "y"],
+    parameter_names=["mu"],
+    observer=clode.Observer.threshold_2,
+    stepper=clode.Stepper.dormand_prince,
+    tspan=(0.0, 1000.0),
+)
+
+parameters = [-1, 0, 0.01, 0.1, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0]
+
+x0 = np.tile([1, 1], (len(parameters), 1))
+
+pars_v = np.array([[par] for par in parameters])
+integrator.initialize(x0, pars_v)
+
+integrator.transient()
+integrator.features()
+observer_output = integrator.get_observer_results()
+
+periods = observer_output.get_var_max("period")
+plt.plot(parameters, periods[:, 0])
+plt.title("Van der Pol oscillator")
+plt.xlabel("mu")
+plt.ylabel("period")
+
+# clode.showfig()
+plt.show()
+```
+
 ### XPP
 
 ```xpp
