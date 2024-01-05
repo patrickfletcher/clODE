@@ -83,7 +83,7 @@ class OpenCLFloat(OpenCLExpression):
         self.value = value
 
     def __str__(self) -> str:
-        return f"{str(self.value)}f"
+        return f"RCONST({str(self.value)})"
 
     def get_cl_type(self) -> OpenCLType:
         return OpenCLType("realtype")
@@ -682,7 +682,7 @@ class OpenCLConverter(ast.NodeTransformer):
 
     def convert_to_opencl(
         self,
-        python_fn: Union[Callable[[Any], Any], OpenCLRhsEquation],
+        python_fn: Union[Callable[[Any], Any], OpenCLRhsEquation] | str,
         dedent: bool = True,
         mutable_args: Optional[List[str]] = None,
     ) -> str:
@@ -696,9 +696,12 @@ class OpenCLConverter(ast.NodeTransformer):
         #          '    return res;\n'
         #          '}\n'
         # More modifications can be added here
-        python_source = inspect.getsource(python_fn)
-        if dedent:
-            python_source = textwrap.dedent(python_source)
+        if isinstance(python_fn, str):
+            python_source = python_fn
+        else:
+            python_source = inspect.getsource(python_fn)
+            if dedent:
+                python_source = textwrap.dedent(python_source)
         self.mutable_args = mutable_args
         tree = ast.parse(python_source)
         self.visit(tree)

@@ -146,7 +146,7 @@ class TestConversions:
             "    realtype res7 = (a * a * a * a);\n"
             "    realtype res8 = pown(a, 5);\n"
             "    realtype res9 = 1;\n"
-            "    realtype res10 = pow(a, 0.5f);\n"
+            "    realtype res10 = pow(a, RCONST(0.5));\n"
             "    realtype sum_res = (((((((((res1 + res2) + (-res3)) + res4) + res5) + res6) + res7) + res8) + res9) + res10);\n"
             "    return (res1 + sum_res);\n"
             "}\n\n"
