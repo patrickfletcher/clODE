@@ -30,25 +30,27 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
-from functools import partial
 import ast
-import re
-from io import BytesIO, StringIO
-import sys
-from typing import List
 import base64
-
-from pygments import highlight
-from pygments.lexers import get_lexer_by_name
-from pygments.formatters import find_formatter_class
 import code
 import linecache
+import re
+import sys
+from functools import partial
+from io import BytesIO, StringIO
+from typing import List, Tuple
+
 import matplotlib.pyplot as plt
+from pygments import highlight
+from pygments.formatters import find_formatter_class
+from pygments.lexers import get_lexer_by_name
 
 PY310 = (3, 10) <= sys.version_info
 PY311 = (3, 11) <= sys.version_info
 
-RE_INIT = re.compile(r'^\s*#\s*pragma:\s*init\n(.*?)#\s*pragma:\s*init\n', re.DOTALL | re.I)
+RE_INIT = re.compile(
+    r"^\s*#\s*pragma:\s*init\n(.*?)#\s*pragma:\s*init\n", re.DOTALL | re.I
+)
 
 AST_BLOCKS = (
     ast.If,
@@ -60,7 +62,7 @@ AST_BLOCKS = (
     ast.ClassDef,
     ast.AsyncFor,
     ast.AsyncWith,
-    ast.AsyncFunctionDef
+    ast.AsyncFunctionDef,
 )
 
 if PY310:
@@ -74,19 +76,19 @@ if PY311:
 class IPY(code.InteractiveInterpreter):
     """Handle code."""
 
-    def __init__(self, show_except=True, locals=None):
+    def __init__(self, show_except=True, locals=None) -> None:
         """Initialize."""
 
         super().__init__(locals=locals)
 
         self.show_except = show_except
 
-    def set_exceptions(self, enable):
+    def set_exceptions(self, enable) -> None:
         """Set exceptions handling."""
 
         self.show_except = enable
 
-    def write(self, data):
+    def write(self, data) -> None:
         """Write."""
 
         if not self.show_except:
@@ -98,16 +100,16 @@ class IPY(code.InteractiveInterpreter):
 class StreamOut:
     """Override the standard out."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize."""
         self.old = sys.stdout
         self.stdout = StringIO()
         sys.stdout = self.stdout
 
-    def read(self):
+    def read(self) -> str:
         """Read the stringIO buffer."""
 
-        value = ''
+        value = ""
         if self.stdout is not None:
             self.stdout.flush()
             value = self.stdout.getvalue()
@@ -115,11 +117,11 @@ class StreamOut:
             sys.stdout = self.stdout
         return value
 
-    def __enter__(self):
+    def __enter__(self) -> "StreamOut":
         """Enter."""
         return self
 
-    def __exit__(self, type, value, traceback):
+    def __exit__(self, type, value, traceback) -> None:
         """Exit."""
 
         sys.stdout = self.old
@@ -127,7 +129,7 @@ class StreamOut:
         self.stdout = None
 
 
-def execute(cmd, no_except=True, init='', ipy=None):
+def execute(cmd, no_except=True, init="", ipy=None) -> Tuple[str, List[BytesIO]]:
     """Execute color commands."""
 
     # Setup global initialization
@@ -138,27 +140,29 @@ def execute(cmd, no_except=True, init='', ipy=None):
         execute(init.strip(), ipy=ipy)
         ipy.set_exceptions(not no_except)
 
-    console = ''
+    console = ""
 
     # Build AST tree
     m = RE_INIT.match(cmd)
     if m:
         block_init = m.group(1)
-        src = cmd[m.end():]
+        src = cmd[m.end() :]
         ipy.set_exceptions(False)
         execute(block_init, ipy=ipy)
         ipy.set_exceptions(not no_except)
     else:
         src = cmd
-    lines = src.split('\n')
+    lines = src.split("\n")
     try:
         tree = ast.parse(src)
     except Exception as e:
         if no_except:
             from pymdownx.superfences import SuperFencesException
+
             raise SuperFencesException from e
         import traceback
-        return '{}'.format(traceback.format_exc())
+
+        return "{}".format(traceback.format_exc())
 
     pyplot_buffers: List[BytesIO] = []
 
@@ -168,18 +172,18 @@ def execute(cmd, no_except=True, init='', ipy=None):
         # Format source as Python console statements
         start = node.lineno
         end = node.end_lineno
-        stmt = lines[start - 1: end]
-        command = ''
-        payload = '\n'.join(stmt)
+        stmt = lines[start - 1 : end]
+        command = ""
+        payload = "\n".join(stmt)
         for i, line in enumerate(stmt, 0):
             if i == 0:
-                stmt[i] = '>>> ' + line
+                stmt[i] = ">>> " + line
             else:
-                stmt[i] = '... ' + line
-        command += '\n'.join(stmt)
+                stmt[i] = "... " + line
+        command += "\n".join(stmt)
         if isinstance(node, AST_BLOCKS):
-            command += '\n... '
-            payload += '\n'
+            command += "\n... "
+            payload += "\n"
 
         getlines = linecache.getlines
 
@@ -187,7 +191,7 @@ def execute(cmd, no_except=True, init='', ipy=None):
         # This makes inspect.getsource() work
         # See https://stackoverflow.com/a/69668959
         def getlines_monkey_patch(filename, module_globals=None):
-            if filename == '<string>':
+            if filename == "<string>":
                 return src.splitlines(keepends=True)
             else:
                 return getlines(filename, module_globals)
@@ -199,7 +203,7 @@ def execute(cmd, no_except=True, init='', ipy=None):
         # Monkey patch pyplot.show() to save the figure to a buffer
         def pyplot_show_monkey_patch() -> None:
             buf = BytesIO()
-            plt.savefig(buf, format='png', bbox_inches='tight')
+            plt.savefig(buf, format="png", bbox_inches="tight")
             plt.close()
             buf.seek(0)
             # The buffer will be closed after the image is output
@@ -211,7 +215,7 @@ def execute(cmd, no_except=True, init='', ipy=None):
             # Capture anything sent to standard out
             with StreamOut() as s:
                 # Execute code
-                ipy.runsource(payload, '<string>')
+                ipy.runsource(payload, "<string>")
 
                 # Output captured standard out after statements
                 text = s.read()
@@ -225,9 +229,11 @@ def execute(cmd, no_except=True, init='', ipy=None):
             if no_except:
                 print("PAYLOAD: ", payload)
                 from pymdownx.superfences import SuperFencesException
+
                 raise SuperFencesException from e
             import traceback
-            console += '{}\n{}'.format(command, traceback.format_exc())
+
+            console += "{}\n{}".format(command, traceback.format_exc())
             # Failed for some reason, so quit
             break
         finally:
@@ -235,7 +241,7 @@ def execute(cmd, no_except=True, init='', ipy=None):
             plt.show = pyplot_show
 
         # If we got a result, output it as well
-        console += '\n{}'.format(''.join(result))
+        console += "\n{}".format("".join(result))
 
     return console, pyplot_buffers
 
@@ -243,16 +249,16 @@ def execute(cmd, no_except=True, init='', ipy=None):
 def colorize(src, lang, **options):
     """Colorize."""
 
-    HtmlFormatter = find_formatter_class('html')
+    HtmlFormatter = find_formatter_class("html")
     lexer = get_lexer_by_name(lang, **options)
     formatter = HtmlFormatter(cssclass="highlight", wrapcode=True)
     return highlight(src, lexer, formatter).strip()
 
 
-def py_command_validator(language, inputs, options, attrs, md):
+def py_command_validator(language, inputs, options, attrs, md) -> bool:
     """Python validator."""
 
-    valid_inputs = set(['exceptions', 'run'])
+    valid_inputs = set(["exceptions", "run"])
 
     for k, v in inputs.items():
         if k in valid_inputs:
@@ -263,32 +269,30 @@ def py_command_validator(language, inputs, options, attrs, md):
 
 
 def _py_command_formatter(
-    src="",
-    language="",
-    class_name=None,
-    options=None,
-    md="",
-    init='',
-    **kwargs
+    src="", language="", class_name=None, options=None, md="", init="", **kwargs
 ):
     """Formatter wrapper."""
 
     from pymdownx.superfences import SuperFencesException
 
+    pyplot_buffers: List[BytesIO]
+
     try:
         # Check if we should allow exceptions
-        exceptions = options.get('exceptions', False) if options is not None else False
-        run = options.get('run', False) if options is not None else False
+        exceptions = options.get("exceptions", False) if options is not None else False
+        run = options.get("run", False) if options is not None else False
 
         if run:
             console, pyplot_buffers = execute(src.strip(), not exceptions, init=init)
-            language = 'pycon'
+            language = "pycon"
         else:
             console = src
             pyplot_buffers = []
-            language = 'py'
+            language = "py"
 
-        el = md.preprocessors['fenced_code_block'].extension.superfences[0]['formatter'](
+        el = md.preprocessors["fenced_code_block"].extension.superfences[0][
+            "formatter"
+        ](
             src=console,
             class_name="class_name",
             language=language,
@@ -301,21 +305,25 @@ def _py_command_formatter(
         for buf in pyplot_buffers:
             el += "<img src='data:image/png;base64,"
             # Decode the png buffer
-            el += base64.b64encode(buf.read()).decode('utf-8')
+            el += base64.b64encode(buf.read()).decode("utf-8")
             el += "' />"
             # We can now safely close the buffer
             buf.close()
     except SuperFencesException:
         raise
     except Exception:
-        from pymdownx import superfences
         import traceback
+
+        from pymdownx import superfences
+
         print(traceback.format_exc())
-        return superfences.fence_code_format(src, 'text', class_name, options, md, **kwargs)
+        return superfences.fence_code_format(
+            src, "text", class_name, options, md, **kwargs
+        )
     return el
 
 
-def py_command_formatter(init='', interactive=False):
+def py_command_formatter(init="", interactive=False):
     """Return a Python command formatter with the provided imports."""
 
     return partial(_py_command_formatter, init=init, interactive=interactive)
