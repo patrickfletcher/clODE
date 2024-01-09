@@ -11,4 +11,5 @@ mkdocs
 mkdocs-autorefs
 mkdocstrings
 mkdocstrings-python
-pymdown-extensions
+pymdown-extensions>=10.0
+matplotlib>=3.0.0

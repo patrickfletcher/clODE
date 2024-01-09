@@ -7,42 +7,42 @@ import clode
     "device_type, vendor, platform_id, device_id, device_ids",
     [
         [
-            clode.cl_device_type.DEVICE_TYPE_CPU,
-            clode.cl_vendor.VENDOR_ANY,
+            clode.CLDeviceType.DEVICE_TYPE_CPU,
+            clode.CLVendor.VENDOR_ANY,
             0,
             None,
             None,
         ],
         [
-            clode.cl_device_type.DEVICE_TYPE_CPU,
-            clode.cl_vendor.VENDOR_ANY,
+            clode.CLDeviceType.DEVICE_TYPE_CPU,
+            clode.CLVendor.VENDOR_ANY,
             None,
             0,
             None,
         ],
         [
-            clode.cl_device_type.DEVICE_TYPE_CPU,
-            clode.cl_vendor.VENDOR_ANY,
+            clode.CLDeviceType.DEVICE_TYPE_CPU,
+            clode.CLVendor.VENDOR_ANY,
             None,
             None,
             [0],
         ],
         [
-            clode.cl_device_type.DEVICE_TYPE_CPU,
+            clode.CLDeviceType.DEVICE_TYPE_CPU,
             None,
             0,
             None,
             None,
         ],
         [
-            clode.cl_device_type.DEVICE_TYPE_CPU,
+            clode.CLDeviceType.DEVICE_TYPE_CPU,
             None,
             None,
             0,
             None,
         ],
         [
-            clode.cl_device_type.DEVICE_TYPE_CPU,
+            clode.CLDeviceType.DEVICE_TYPE_CPU,
             None,
             None,
             None,
@@ -50,21 +50,21 @@ import clode
         ],
         [
             None,
-            clode.cl_vendor.VENDOR_ANY,
+            clode.CLVendor.VENDOR_ANY,
             0,
             None,
             None,
         ],
         [
             None,
-            clode.cl_vendor.VENDOR_ANY,
+            clode.CLVendor.VENDOR_ANY,
             None,
             0,
             None,
         ],
         [
             None,
-            clode.cl_vendor.VENDOR_ANY,
+            clode.CLVendor.VENDOR_ANY,
             None,
             None,
             [0],
@@ -86,7 +86,7 @@ def test_init_features_runtime_with_incorrect_config_fails(
     tspan = (0.0, 1000.0)
 
     with pytest.raises(ValueError):
-        _ = clode.CLODETrajectory(
+        _ = clode.TrajectorySimulator(
             src_file=input_file,
             variable_names=["x", "y"],
             parameter_names=["mu"],
@@ -101,7 +101,7 @@ def test_init_features_runtime_with_incorrect_config_fails(
         )
 
     with pytest.raises(ValueError):
-        _ = clode.CLODEFeatures(
+        _ = clode.FeaturesSimulator(
             src_file=input_file,
             variable_names=["x", "y"],
             parameter_names=["mu"],

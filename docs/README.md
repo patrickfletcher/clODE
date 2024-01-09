@@ -15,11 +15,11 @@ clODE is written in C++ and OpenCL, and can be used directly in C++ programs or 
 
 ## Installation
 
-See [installation](install/) for instructions on how to install CLODE.
+See [installation](install.md) for instructions on how to install CLODE.
 
 ## Getting Started
 
-See [Getting Started](getting_started/) for an example of clODE usage.
+See [Getting Started](getting_started.md) for an example of clODE usage.
 
 ## Source
 

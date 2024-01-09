@@ -44,6 +44,13 @@ OpenCLResource::OpenCLResource(cl_deviceType type, cl_vendor vendor)
     initializeOpenCL();
 }
 
+OpenCLResource::OpenCLResource(e_cl_device_type type, cl_vendor vendor)
+{
+
+    getPlatformAndDevices(type, vendor);
+    initializeOpenCL();
+}
+
 OpenCLResource::OpenCLResource(int argc, char **argv)
 {
 

@@ -11,6 +11,8 @@ def _parse_ode_definition(xpp_line: str) -> list[tuple[str, str]]:
     variable_pairs: list[tuple[str, str]] = []
     while line:
         first_variable = re.search(r"(\w+)(\s*=\s*)", line)
+        if not first_variable:
+            raise ValueError(f"Could not parse line '{xpp_line}'")
         name = first_variable.group(1)
         end_index = first_variable.end(0)
         second_variable = re.search(r"(\w+)(\s*=\s*)", line[end_index:])

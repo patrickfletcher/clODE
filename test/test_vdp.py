@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import sys
 from math import log, pi
 
@@ -26,11 +28,37 @@ def approximate_vdp_period(mu):
     return period
 
 
-def vdp_dormand_prince(end: int, input_file: str = "test/van_der_pol_oscillator.cl"):
+def getRHS(
+    t: float,
+    var: list[float],
+    par: list[float],
+    derivatives: list[float],
+    aux: list[float],
+    wiener: list[float],
+) -> None:
+    mu: float = par[0]
+    x: float = var[0]
+    y: float = var[1]
+
+    dx: float = y
+    dy: float = mu * (1 - x * x) * y - x
+
+    derivatives[0] = dx
+    derivatives[1] = dy
+
+
+def vdp_dormand_prince(
+    end: int,
+    input_file: str | None = None,
+    input_eq: clode.OpenCLRhsEquation | None = None,
+):
+    if input_file is None and input_eq is None:
+        input_file = "test/van_der_pol_oscillator.cl"
     tspan = (0.0, 1000.0)
 
-    integrator = clode.CLODEFeatures(
+    integrator = clode.FeaturesSimulator(
         src_file=input_file,
+        rhs_equation=input_eq,
         variable_names=["x", "y"],
         parameter_names=["mu"],
         observer=clode.Observer.threshold_2,
@@ -65,6 +93,10 @@ def vdp_dormand_prince(end: int, input_file: str = "test/van_der_pol_oscillator.
 
 def test_vdp_dormand_prince():
     vdp_dormand_prince(end=7)
+
+
+def test_vdp_dormand_prince_python_rhs():
+    vdp_dormand_prince(end=7, input_eq=getRHS)
 
 
 # if using 'bazel test ...'
