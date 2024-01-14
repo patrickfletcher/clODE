@@ -46,9 +46,9 @@ void CLODE::setNewProblem(ProblemInfo newProb)
 	clRHSfilename = newProb.clRHSfilename;
 	ODEsystemsource = read_file(clRHSfilename);
 	nVar = newProb.nVar;
-	nPar = newProb.nPar>0?newProb.nPar:1; //support zero params
-	nAux = newProb.nAux>0?newProb.nAux:1; //support zero aux
-	nWiener = newProb.nWiener>0?newProb.nWiener:1; //support zero wiener
+	nPar = newProb.nPar; 
+	nAux = newProb.nAux;
+	nWiener = newProb.nWiener;
 
 	clInitialized = false;
 	spdlog::debug("set new problem\n");
