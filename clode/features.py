@@ -362,6 +362,9 @@ class FeaturesSimulator(Simulator):
         )
         self.seed_rng(seed)
 
+    def get_feature_names(self) -> List[str]:
+        return self._integrator.get_feature_names()
+
     def features(self, initialize_observer: Optional[bool] = None) -> None:
         """Run a simulation with feature detection.
 
