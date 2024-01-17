@@ -1,16 +1,16 @@
 # Stochastic simulations
 
-Stochastic simulations are supported via the Euler-Maruyama method. Random normal variables W~N(0, dt) can be included in the vector field function, and each simulation instance will have an independent stream of random variables.
+Stochastic simulations are supported via the Euler-Maruyama method. Random normal variables $W_t\sim N(0, dt)$ can be included in the vector field function, and each simulation instance will have an independent stream of random variables.
 
-As an example, consider the [Ornstein-Uhlenbeck process](https://en.wikipedia.org/wiki/Ornstein-Uhlenbeck_process):
+As an example, consider the [Ornstein-Uhlenbeck process](https://en.wikipedia.org/wiki/Ornstein-Uhlenbeck_process) with $\theta = 1$:
 
-$ dx_t = (\mu - x_t)dt + \sigma W_t $
+$$ dx_t = (\mu - x_t)dt + \sigma W_t $$
 
-To implement this system, we write it in Langevin form:
+To implement this system, we heuristically write it in Langevin form:
 
-$ \frac{dx}{dt} = (\mu - x) + \sigma \eta(t)$
+$$ \frac{dx}{dt} = \mu - x + \sigma\eta(t)$$
 
-where $\eta(t)$ represents white noise. When $\sigma=0$, the system is a first-order ODE with steady state x=$\mu$. Increasing $\sigma$ produces solutions with expectation  x=$\mu$ and variance $\sigma$.
+where $\eta(t)$ represents white noise. When $\sigma=0$, the system is a first-order ODE with steady state x=$\mu$. Increasing $\sigma$ produces solutions with a steady state distribution $x\sim N(\mu, \frac{\sigma^2}{2})$.
 
 ```python
 import numpy as np
@@ -39,7 +39,7 @@ parameter_names = list(parameters.keys())
 default_parameters = list(parameters.values())
 
 # set up the ensemble of Wiener processes with identical parameters and initial conditions
-nPts = 10240
+nPts = 8192
 Pars = np.tile(default_parameters, (nPts, 1))
 X0 = np.tile(initial_state, (nPts, 1))
 
@@ -61,9 +61,21 @@ integrator.transient()
 
 XF = integrator.get_final_state()
 
+print(f"mean xf: {np.mean(XF) :0.5}")
+print(f"simulation variance: {np.var(XF) :0.5}") 
+print(f"expected variance: {parameters['sigma']**2 / 2 :0.5}")
+
 plt.hist(XF, 30)
 plt.xlabel("x")
 plt.show()
 ```
 
-![Result](Euler_Maruyama.png)
+Output:
+
+```bash
+mean xf: 1.0041
+simulation variance: 0.12629
+expected variance: 0.125
+```
+
+![Result](Ornstein-Uhlenbeck_process.png)
