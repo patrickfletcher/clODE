@@ -96,7 +96,8 @@ void CLODEtrajectory::resizeTrajectoryVariables()
 		nStoreMax = currentStoreAlloc;
 		telements = currentTelements;
 		xelements = nVar * currentTelements;
-		auxelements = nAux * currentTelements;
+		// cl::Buffer doesn't like zero-sized arrays:
+		auxelements = nAux>0 ? nAux * currentTelements : 1;
 
 		t.resize(telements);
 		x.resize(xelements);
