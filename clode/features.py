@@ -365,7 +365,7 @@ class FeaturesSimulator(Simulator):
     def get_feature_names(self) -> List[str]:
         return self._integrator.get_feature_names()
 
-    def features(self, initialize_observer: Optional[bool] = None) -> None:
+    def features(self, initialize_observer: Optional[bool] = None, update_x0: bool = True) -> None:
         """Run a simulation with feature detection.
 
         Returns:
@@ -376,6 +376,8 @@ class FeaturesSimulator(Simulator):
             self._integrator.features(initialize_observer)
         else:
             self._integrator.features()
+        if update_x0:
+            self.shift_x0()
 
     def get_observer_results(self) -> ObserverOutput:
         """Get the feature data.

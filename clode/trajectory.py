@@ -4,7 +4,14 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import numpy as np
 
-from .runtime import CLDeviceType, CLVendor, TrajectorySimulatorBase, _clode_root_dir
+from .function_converter import OpenCLRhsEquation
+from .runtime import (
+    CLDeviceType,
+    CLVendor,
+    TrajectorySimulatorBase,
+    ObserverParams,
+    _clode_root_dir,
+)
 from .solver import Simulator, Stepper
 
 # TrajectoryOutput?
@@ -172,13 +179,15 @@ class TrajectorySimulator(Simulator):
         )
         self.seed_rng(seed)
 
-    def trajectory(self) -> None:
+    def trajectory(self, update_x0: bool = True) -> None:
         """Run a trajectory simulation.
 
         Returns:
             None
         """
         self._integrator.trajectory()
+        if update_x0:
+            self.shift_x0()
 
     def get_trajectory(self) -> List[Dict[str, np.ndarray[Any, np.dtype[np.float64]]]]:
         """Get the trajectory data.
