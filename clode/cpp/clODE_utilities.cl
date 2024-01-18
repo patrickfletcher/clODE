@@ -21,7 +21,7 @@
 //TODO twosum for accurate summation (e.g. t+=dt...)?
 
 //1-norm
-inline realtype norm_1(realtype x[], int N)
+inline realtype norm_1(__generic realtype x[], int N)
 {
 	realtype result = RCONST(0.0);
 	for (int k = 0; k < N; k++)
@@ -31,7 +31,7 @@ inline realtype norm_1(realtype x[], int N)
 }
 
 //2-norm
-inline realtype norm_2(realtype x[], int N)
+inline realtype norm_2(__generic realtype x[], int N)
 {
 	realtype result = RCONST(0.0);
 	for (int k = 0; k < N; k++)
@@ -41,7 +41,7 @@ inline realtype norm_2(realtype x[], int N)
 }
 
 //Inf-norm
-inline realtype norm_inf(realtype x[], int N)
+inline realtype norm_inf(__generic realtype x[], int N)
 {
 	realtype result = RCONST(0.0);
 	for (int k = 0; k < N; k++)
@@ -51,7 +51,7 @@ inline realtype norm_inf(realtype x[], int N)
 }
 
 //Maximum of vector, returns both max and index of max
-inline void maxOfArray(realtype inArray[], int N, realtype *maxVal, int *index)
+inline void maxOfArray(__generic realtype inArray[], int N, realtype *maxVal, int *index)
 {
 	*maxVal = -BIG_REAL;
 	*index = 0;
@@ -66,7 +66,7 @@ inline void maxOfArray(realtype inArray[], int N, realtype *maxVal, int *index)
 }
 
 //Minimum of vector, returns both min and index of min
-inline void minOfArray(realtype inArray[], int N, realtype *minVal, int *index)
+inline void minOfArray(__generic realtype inArray[], int N, realtype *minVal, int *index)
 {
 	*minVal = BIG_REAL;
 	*index = 0;
