@@ -23,8 +23,6 @@ def test_lorenz_rk4(platform_id, device_id, num_pts, reps):
         # rhs_equation=getRHS,
         variable_names=variable_names,
         parameter_names=parameter_names,
-        aux=["aux1"],
-        num_noise=1,
         single_precision=True,
         platform_id=platform_id,
         device_id=device_id,
