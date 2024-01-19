@@ -74,14 +74,17 @@ if __name__ == "__main__":
     num_pts = [int(2**n) for n in np.arange(0,20)]
     reps = 30
     
+    device_names = []
     for i, ocl in enumerate(ocl_info):
         if ocl.device_count==0:
             continue
         print("\n", ocl)
-        t_average = test_lorenz_rk4(platform_id=i, device_id=0, num_pts=num_pts, reps=reps)
-        plt.plot(num_pts, t_average)
+        for j, dev in enumerate(ocl.device_info):
+            t_average = test_lorenz_rk4(platform_id=i, device_id=j, num_pts=num_pts, reps=reps)
+            plt.plot(num_pts, t_average)
+            device_names.append(dev.name)
     
-    plt.legend([ocl.name for ocl in ocl_info])
+    plt.legend(device_names)
     plt.xscale('log')
     plt.yscale('log')
     plt.show()
