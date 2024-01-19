@@ -15,7 +15,7 @@ def test_lorenz_rk4(platform_id, device_id, num_pts, reps):
     parameter_names = list(parameters.keys())
     default_parameters = list(parameters.values())
 
-    tspan = (0.0, 100.0)
+    tspan = (0.0, 10.0)
 
     src_file = "test/lorenz.cl"
     integrator = clode.Simulator(
@@ -30,7 +30,7 @@ def test_lorenz_rk4(platform_id, device_id, num_pts, reps):
         device_id=device_id,
         tspan=tspan,
         stepper=clode.Stepper.rk4,
-        dt=0.1,
+        dt=0.01,
     )
     # first initialize with dummy parameters
     Pars = np.tile(default_parameters, (1, 1))
@@ -47,15 +47,13 @@ def test_lorenz_rk4(platform_id, device_id, num_pts, reps):
         integrator.set_problem_data(X0, Pars)
 
         #warm-up pass
-        for _ in range(3):
-            integrator.transient(update_x0=False)
-            # integrator.get_final_state() #include?
+        integrator.transient(update_x0=False)
 
         for _ in range(reps):
             t0 = time.perf_counter()
-            # integrator.initialize(X0, Pars) #include?
+            # integrator.initialize(X0, Pars) #include host->device transfers?
             integrator.transient(update_x0=False)
-            # integrator.get_final_state() #include?
+            # integrator.get_final_state() #include device->host transfers?
             tsum += time.perf_counter() - t0
 
         print(f"{num}\t{tsum/reps:0.4} s")
@@ -66,14 +64,14 @@ def test_lorenz_rk4(platform_id, device_id, num_pts, reps):
 
 # if using 'bazel test ...'
 if __name__ == "__main__":
-    # clode.set_log_level(clode.LogLevel.info)    
-    # clode.runtime.print_opencl()
-    # clode.set_log_level(clode.LogLevel.warn) 
+    clode.set_log_level(clode.LogLevel.info)    
+    clode.runtime.print_opencl()
+    clode.set_log_level(clode.runtime.DEFAULT_LOG_LEVEL) 
 
     ocl_info = clode.runtime.query_opencl()
-    ocl_info = ocl_info[:3]
+    # ocl_info = ocl_info[:3]
 
-    num_pts = [int(2**n) for n in np.arange(0,18)]
+    num_pts = [int(2**n) for n in np.arange(0,20)]
     reps = 30
     
     for i, ocl in enumerate(ocl_info):
