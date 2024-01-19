@@ -49,12 +49,13 @@ PYBIND11_MODULE(clode_cpp_wrapper, m) {
         .export_values();
 
     struct LoggerSingleton {
-        std::shared_ptr<PythonSink_mt> sink;
+        // std::shared_ptr<PythonSink_mt> sink;
         std::shared_ptr<spdlog::logger> python_logger;
         LoggerSingleton() {
             spdlog::set_level(spdlog::level::info);
-            sink = std::make_shared<PythonSink_mt>();
-            python_logger = std::make_shared<spdlog::logger>("python", sink);
+            // sink = std::make_shared<PythonSink_mt>();
+            // python_logger = std::make_shared<spdlog::logger>("python", sink);
+            python_logger = spdlog::stdout_color_mt("python");   
             spdlog::set_default_logger(python_logger);
         }
 
