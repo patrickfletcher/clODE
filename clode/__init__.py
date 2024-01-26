@@ -1,4 +1,4 @@
-from clode.features import FeaturesSimulator, Observer, ObserverOutput
+from clode.features import FeatureSimulator, Observer, ObserverOutput
 from clode.function_converter import (
     OpenCLConverter,
     OpenCLRhsEquation,

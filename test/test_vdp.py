@@ -54,26 +54,24 @@ def vdp_dormand_prince(
 ):
     if input_file is None and input_eq is None:
         input_file = "test/van_der_pol_oscillator.cl"
-    tspan = (0.0, 1000.0)
+    t_span = (0.0, 1000.0)
 
-    integrator = clode.FeaturesSimulator(
+    integrator = clode.FeatureSimulator(
         src_file=input_file,
         rhs_equation=input_eq,
-        variable_names=["x", "y"],
-        parameter_names=["mu"],
+        variables={"x": 1.0, "y": 1.0},
+        parameters={"mu": 1.0},
         observer=clode.Observer.threshold_2,
         stepper=clode.Stepper.dormand_prince,
-        tspan=tspan,
+        t_span=t_span,
     )
 
-    parameters = [-1, 0, 0.01, 0.1, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0] + list(
-        range(5, end)
-    )
+    parameters = {
+        "mu": [-1, 0, 0.01, 0.1, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0]
+        + list(range(5, end))
+    }
 
-    x0 = np.tile([1, 1], (len(parameters), 1))
-
-    pars_v = np.array([[par] for par in parameters])
-    integrator.initialize(x0, pars_v)
+    integrator.initialize(parameters=parameters)
 
     integrator.transient()
     integrator.features()

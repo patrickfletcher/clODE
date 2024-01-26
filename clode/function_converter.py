@@ -548,16 +548,48 @@ class OpenCLFunction:
         body: List[ast.stmt],
         fn_returns: Union[ast.Name, ast.Constant],
         context: Dict[str, OpenCLType],
-        mutable_args: Optional[List[str]] = None,
+        mutable_args: Optional[Union[List[str], List[int]]] = None,
     ):
         self.args = []
         self.body = []
         self.name = fn_name
         self.declared_vars = {}
-        self.modified_vars = set(mutable_args) if mutable_args is not None else set()
         self.returns = _convert_ast_annotation_to_cl_type(fn_name, fn_returns)
         self._convert_ast_args(args)
         arg_names = set([arg.name for arg in self.args])
+
+        if isinstance(mutable_args, List):
+            mutable_args_str: List[str] = []
+            # Check if mutable_args is a list of ints and convert to a list of strings
+            if isinstance(mutable_args[0], int):
+                # Treat all arguments as ints and throw an error if they are not
+                for mutable_arg in mutable_args:
+                    if not isinstance(mutable_arg, int):
+                        raise TypeError(
+                            f"Mutable arguments must be a list of strings or integers, got '{mutable_args}'"
+                        )
+                    mutable_args_str.append(self.args[mutable_arg].name)
+            elif isinstance(mutable_args[0], str):
+                # Treat all arguments as strings and throw an error if they are not
+                for mutable_arg in mutable_args:
+                    if not isinstance(mutable_arg, str):
+                        raise TypeError(
+                            f"Mutable arguments must be a list of strings or integers, got '{mutable_args}'"
+                        )
+                    mutable_args_str.append(mutable_arg)
+            else:
+                # Throw an error if the list is not a list of strings or integers
+                raise TypeError(
+                    f"Mutable arguments must be a list of strings or integers, got '{mutable_args}'"
+                )
+
+            self.modified_vars = set(mutable_args_str)
+        elif mutable_args is None:
+            self.modified_vars = set()
+        else:
+            raise TypeError(
+                f"Mutable arguments must be a list of strings or integers, got '{mutable_args}'"
+            )
         if isinstance(body, list):
             for instruction in body:
                 local_context = dict(context, **self.declared_vars)
@@ -619,7 +651,12 @@ class OpenCLSyntaxTree:
     def __init__(self) -> None:
         self.functions = []
 
-    def add_function(self, fn: ast.FunctionDef, mutable_args: List[str]) -> None:
+    def add_function(
+        self,
+        fn: ast.FunctionDef,
+        mutable_args: Optional[Union[List[str], List[int]]],
+        function_name: Optional[str],
+    ) -> None:
         if fn.returns is None:
             raise TypeError(
                 f"Function '{fn.name}' must have a return type at line {fn.lineno}"
@@ -631,9 +668,11 @@ class OpenCLSyntaxTree:
         context: Dict[str, OpenCLType] = {
             parsed_fn.name: parsed_fn.returns for parsed_fn in self.functions
         }
+        if function_name is None:
+            function_name = fn.name
         self.functions.append(
             OpenCLFunction(
-                fn.name,
+                function_name,
                 fn.args,
                 fn.body,
                 fn.returns,
@@ -650,10 +689,9 @@ class OpenCLSyntaxTree:
 
 
 class OpenCLConverter(ast.NodeTransformer):
-    entry_function_seen: bool = False
-    entry_function_name: str
     syntax_tree: OpenCLSyntaxTree
-    mutable_args: Optional[List[str]] = None
+    mutable_args: Optional[Union[List[str], List[int]]] = None
+    function_name: Optional[str] = None
 
     def __init__(self, entry_function_name: str = "get_rhs"):
         # Initialize any necessary variables
@@ -666,12 +704,11 @@ class OpenCLConverter(ast.NodeTransformer):
         # Add '__global' keyword for pointer arguments
         # Change argument types to 'realtype'
         # More modifications can be added here
-        entrypoint = node.name == self.entry_function_name
-        if entrypoint:
-            entry_function_seen = True
 
-        mutable_args = self.mutable_args if self.mutable_args is not None else []
-        self.syntax_tree.add_function(node, mutable_args=mutable_args)
+        mutable_args = self.mutable_args
+        self.syntax_tree.add_function(
+            node, mutable_args=mutable_args, function_name=self.function_name
+        )
         return node
 
     def visit_BinOp(self, node: ast.BinOp) -> ast.BinOp:
@@ -684,7 +721,8 @@ class OpenCLConverter(ast.NodeTransformer):
         self,
         python_fn: Union[Callable[[Any], Any], OpenCLRhsEquation] | str,
         dedent: bool = True,
-        mutable_args: Optional[List[str]] = None,
+        mutable_args: Optional[List[str], List[int]] = None,
+        function_name: Optional[str] = None,
     ) -> str:
         # Convert a Python function to OpenCL
         # Example: 'def add_float(a: float, b: float) -> float:\n'
@@ -703,8 +741,10 @@ class OpenCLConverter(ast.NodeTransformer):
             if dedent:
                 python_source = textwrap.dedent(python_source)
         self.mutable_args = mutable_args
+        self.function_name = function_name
         tree = ast.parse(python_source)
         self.visit(tree)
+        self.function_name = None
         self.mutable_args = None
         return str(self.syntax_tree)
 

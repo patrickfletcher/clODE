@@ -19,32 +19,31 @@ def test_ornl_thompson_a1():
     k = 2
     H = 10
 
-    tspan = (0.0, H / 2.0)
+    t_span = (0.0, H / 2.0)
+
+    parameters = {"m": m, "w": w, "k": k, "H": H}
 
     integrator = clode.TrajectorySimulator(
         src_file="test/ornl_thompson_a1.cl",
-        variable_names=["y1", "y2"],
-        parameter_names=["m", "w", "k", "H"],
+        variables={"y1": 0.0, "y2": 0.0},
+        parameters=parameters,
         aux=["g1"],
         num_noise=0,
         dt=0.001,
         dtmax=0.001,
         stepper=clode.Stepper.rk4,
-        tspan=tspan,
+        t_span=t_span,
     )
 
-    parameters = [m, w, k, H]
+    x0 = {"y1": [0.0], "y2": [0.0]}
 
-    x0 = np.tile([0, 0], (num_simulations, 1))
-    pars_v = np.tile(parameters, (num_simulations, 1))
-
-    integrator.initialize(x0, pars_v)
+    integrator.initialize(variables=x0)
 
     integrator.trajectory()
 
     trajectories = integrator.get_trajectory()
-    time_steps = trajectories[0]["t"]
-    output_trajectory = trajectories[0]["X"]
+    time_steps = trajectories[0].t
+    output_trajectory = trajectories[0].x
 
     for tt, (y1, y2) in zip(time_steps, output_trajectory):
         expected_y1, expected_y2 = ornl_thompson_a1_exact(tt)

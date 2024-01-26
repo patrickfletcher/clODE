@@ -52,7 +52,46 @@ def getRHS(
     derivatives[1] = dy
 
 
-integrator = clode.FeaturesSimulator(
+def scipy_solve_ivp_wrapper(func, aux=None, wiener=None):
+    if aux is None:
+        aux = []
+    if wiener is None:
+        wiener = []
+    def wrapper(t, y, *args):
+        dydt = np.zeros_like(y)
+        func(t, y, args, dydt, aux, wiener)
+        return dydt
+
+    return wrapper
+
+wrap = scipy_solve_ivp_wrapper(getRHS)
+xx = solve_ivp(
+    wrap,
+    [0, 1000],
+    [1, 1],
+    args=(-1, 0, 1),
+    atol=1e-10,
+    rtol=1e-10,
+    mxstep=1000000,
+)
+
+# Invoke the wrapper with scipy's odeint
+
+getRHS = scipy_odeint_wrapper(getRHS)
+
+from scipy.integrate import odeint
+
+res = odeint(
+    getRHS,
+    [1, 1],
+    [0, 1000],
+    args=([-1], [], []),
+    atol=1e-10,
+    rtol=1e-10,
+    mxstep=1000000,
+)
+
+integrator = clode.FeatureSimulator(
     rhs_equation=getRHS,
     variable_names=["x", "y"],
     parameter_names=["mu"],
@@ -78,7 +117,69 @@ plt.title("Van der Pol oscillator")
 plt.xlabel("mu")
 plt.ylabel("period")
 
-# clode.showfig()
+plt.show()
+```
+
+# New definition
+
+```python
+import numpy as np
+import matplotlib.pyplot as plt
+import clode
+
+# Van der Pol Dormand Prince oscillator
+def get_rhs(
+        t: float,
+        var: list[float],
+        mu: float,
+        kl: float,
+        weiner1: float,
+) -> list[float]:
+    x: float = var[0]
+    y: float = var[1]
+    
+    kk: float = weiner1 * kl
+
+    dx: float = y
+    dy: float = mu * (1 - x ** 2) * y - x
+    
+    aux: float = x + kk
+
+    return [dx, dy]
+
+ivp = clode.IVP(
+    rhs=get_rhs,
+    variables: dict[str, float] = {"x": 1.0, "y": 1.0},
+    parameters: dict[str, float] = {"mu": 0.1},
+    aux: list["str"] = ["aux"],
+    noise: list["str"] = ["weiner1"]
+)
+    
+
+integrator = clode.FeatureSimulator(
+    ivp=ivp,
+    solver=clode.Solver.dormand_prince,
+)
+
+
+
+integrator.initialize(
+    parameters={"mu": [-1, 0, 0.01, 0.1, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0]},
+    variables={"x": [1.0, 2.0],},
+)
+
+
+integrator.transient()
+integrator.features()
+observer_output = integrator.get_observer_results()
+
+periods = observer_output.get_var_max("period")
+
+plt.plot(parameters, periods[:, 0])
+plt.title("Van der Pol oscillator")
+plt.xlabel("mu")
+plt.ylabel("period")
+
 plt.show()
 ```
 
