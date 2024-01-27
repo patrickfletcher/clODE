@@ -114,37 +114,3 @@ def test_init_features_runtime_with_incorrect_config_fails(
             device_id=device_id,
             device_ids=device_ids,
         )
-
-
-def test_fast_and_slow():
-    from typing import List
-
-    import matplotlib.pyplot as plt
-    import numpy as np
-
-    import clode
-
-    # The FitzHugh-Nagumo model
-
-    def fitzhugh_nagumo(
-        time: float,
-        variables: List[float],
-        a: float,
-        b: float,
-        current: float,
-        epsilon: float,
-    ) -> List[float]:
-        v: float = variables[0]
-        w: float = variables[1]
-        dv = v - v**3 / 3 - w + current
-        dw = epsilon * (v + a - b * w)
-        return [dv, dw]
-
-    a = [0.7, 0.8, 0.9, 1.0]
-
-    simulator = clode.FeatureSimulator(
-        rhs_equation=fitzhugh_nagumo,
-        variables={"v": np.arange(-2, 2, 0.2), "w": -1.0},
-        parameters={"a": a, "b": 0.8, "epsilon": 0.01, "current": 1.0},
-    )
-    print("Foo")

@@ -15,9 +15,9 @@ def test_ornl_thompson_a1():
     num_simulations = 1
 
     m = 1 / 4
-    w = 8
-    k = 2
-    H = 10
+    w = 8.0
+    k = 2.0
+    H = 10.0
 
     t_span = (0.0, H / 2.0)
 

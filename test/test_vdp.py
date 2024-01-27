@@ -79,8 +79,8 @@ def vdp_dormand_prince(
 
     periods = observer_output.get_var_max("period")
 
-    for index, mu in enumerate(parameters):
-        period = periods[index, 0]
+    for index, mu in enumerate(parameters["mu"]):
+        period = periods[index]
         expected_period = approximate_vdp_period(mu)
         rtol = 0.01
         atol = 1

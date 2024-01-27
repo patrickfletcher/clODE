@@ -92,11 +92,11 @@ class Simulator:
         array_length: Optional[int] = None
 
         if variables is None:
-            array_length = 0
+            array_length = 1
         else:
             for key, value in variables.items():
                 if isinstance(value, (np.ndarray, List)):
-                    if array_length is None:
+                    if array_length is None or array_length == 1:
                         array_length = len(value)
                     elif array_length != len(value):
                         raise ValueError(
@@ -108,11 +108,11 @@ class Simulator:
                         array_length = 1
 
         if parameters is None:
-            array_length = 0 if array_length is None else array_length
+            array_length = 1 if array_length is None else array_length
         else:
             for key, value in parameters.items():
                 if isinstance(value, (np.ndarray, List)):
-                    if array_length is None:
+                    if array_length is None or array_length == 1:
                         array_length = len(value)
                     elif array_length != len(value):
                         raise ValueError(
@@ -127,10 +127,7 @@ class Simulator:
         return array_length
 
     def _create_cl_arrays(
-        self,
-        data: Dict[str, Union[float, np.ndarray, List[float]]],
-        array_length: int,
-        defaults: Optional[Dict[str, Optional[float]]] = None,
+        self, data: Dict[str, Union[float, np.ndarray, List[float]]], array_length: int
     ) -> Dict[str, np.ndarray]:
         cl_data: Dict[str, np.ndarray] = {}
         for key, value in data.items():
@@ -138,16 +135,10 @@ class Simulator:
 
             if isinstance(value, float):
                 array = np.full(array_length, value)
-                if defaults is not None:
-                    defaults[key] = value
             elif isinstance(value, np.ndarray):
                 array = value
-                if defaults is not None:
-                    defaults[key] = None
             elif isinstance(value, List):
                 array = np.array(value)
-                if defaults is not None:
-                    defaults[key] = None
             else:
                 raise ValueError(f"Invalid type for {key}")
             # Check that array is the correct length
@@ -232,24 +223,33 @@ class Simulator:
         self._parameter_defaults = {}
         self._cl_array_length = self._find_cl_array_length(variables, parameters)
 
-        if self._cl_array_length > 1:
-            # Implicitly create arrays of the correct length
-            # This is instead of calling initialize()
-            self._variable_defaults = {}
-            self._parameter_defaults = {}
-            self._variables = self._create_cl_arrays(
-                variables, self._cl_array_length, self._variable_defaults
-            )
-            self._parameters = self._create_cl_arrays(
-                parameters, self._cl_array_length, self._parameter_defaults
-            )
-        else:
-            # If only one simulation is being run,
-            # the variables and parameters are just single values
-            # and the defaults are set from the variables and parameters
-            # dictionaries
-            self._variable_defaults = variables
-            self._parameter_defaults = parameters
+        self._variable_defaults = {
+            key: value if isinstance(value, float) else None
+            for key, value in variables.items()
+        }
+        self._parameter_defaults = {
+            key: value if isinstance(value, float) else None
+            for key, value in parameters.items()
+        }
+
+        # if self._cl_array_length > 1:
+        #     # Implicitly create arrays of the correct length
+        #     # This is instead of calling initialize()
+        #     self._variable_defaults = {}
+        #     self._parameter_defaults = {}
+        #     self._variables = self._create_cl_arrays(
+        #         variables, self._cl_array_length, self._variable_defaults
+        #     )
+        #     self._parameters = self._create_cl_arrays(
+        #         parameters, self._cl_array_length, self._parameter_defaults
+        #     )
+        # else:
+        #     # If only one simulation is being run,
+        #     # the variables and parameters are just single values
+        #     # and the defaults are set from the variables and parameters
+        #     # dictionaries
+        #     self._variable_defaults = variables
+        #     self._parameter_defaults = parameters
 
         input_file = self._handle_clode_rhs_cl_file(
             src_file, rhs_equation, supplementary_equations
@@ -293,7 +293,7 @@ class Simulator:
 
         self._integrator.build_cl()
 
-        self._init_integrator()
+        self.initialize(variables, parameters)
 
     def _pack_data(self) -> Tuple[np.ndarray, np.ndarray]:
         """Pack the data into a tuple.
@@ -306,12 +306,12 @@ class Simulator:
         if self._variables is not None:
             vars_array = np.array(list(self._variables.values()))
         else:
-            vars_array = np.array([self._variable_defaults.values()])
+            vars_array = np.array(list(self._variable_defaults.values()))
 
         if self._parameters is not None:
             pars_array = np.array(list(self._parameters.values()))
         else:
-            pars_array = np.array([self._parameter_defaults.values()])
+            pars_array = np.array(list(self._parameter_defaults.values()))
 
         return vars_array.transpose().flatten(), pars_array.transpose().flatten()
 
@@ -327,31 +327,35 @@ class Simulator:
     ) -> None:
         cl_array_length = self._find_cl_array_length(variables, parameters)
 
-        if variables is None:
-            self._variables = {}
-            for key, value in self._variable_defaults.items():
-                if value is not None:
-                    self._variables[key] = np.full(self._cl_array_length, value)
-                else:
-                    raise ValueError(f"Variable {key} must be specified")
-        else:
-            self._variables = self._create_cl_arrays(
-                variables, self._cl_array_length, self._variable_defaults
-            )
+        # Implicitly create arrays of the correct length
+        # Discard self._variables and self._parameters
+        local_variables = variables.copy() if variables is not None else {}
 
-        if parameters is None:
-            self._parameters = {}
-            for key, value in self._parameter_defaults.items():
-                if value is not None:
-                    self._parameters[key] = np.full(self._cl_array_length, value)
-                else:
-                    raise ValueError(f"Parameter {key} must be specified")
-        else:
-            self._parameters = self._create_cl_arrays(
-                parameters, self._cl_array_length, self._parameter_defaults
-            )
+        # Keys can be missing in variables but not in self._variable_defaults
+        for key in local_variables.keys():
+            if key not in self._variable_defaults:
+                raise KeyError(f"Key {key} not in ODE variable defaults!")
 
-        self.seed_rng(seed)
+        for key in self._variable_defaults.keys():
+            if key not in local_variables:
+                local_variables[key] = self._variable_defaults[key]
+
+        local_parameters = parameters.copy() if parameters is not None else {}
+
+        # Keys can be missing in parameters but not in self._parameter_defaults
+        for key in local_parameters.keys():
+            if key not in self._parameter_defaults:
+                raise KeyError(f"Key {key} not in ODE parameter defaults!")
+
+        for key in self._parameter_defaults.keys():
+            if key not in local_parameters:
+                local_parameters[key] = self._parameter_defaults[key]
+
+        self._variables = self._create_cl_arrays(local_variables, cl_array_length)
+
+        self._parameters = self._create_cl_arrays(local_parameters, cl_array_length)
+
+        # self.seed_rng(seed)
 
         self._init_integrator()
 

@@ -6,7 +6,7 @@ def test_print_open_cl(capfd):
 
     trajectory = clode.TrajectorySimulator(
         src_file=input_file,
-        variables={"x": 0, "y": 1},
+        variables={"x": 0.0, "y": 1.0},
         parameters={"mu": 1.0},
         num_noise=0,
         stepper=clode.Stepper.dormand_prince,

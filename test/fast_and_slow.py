@@ -62,15 +62,15 @@ def fitzhugh_nagumo(
 # print("Foo")
 #
 #
-a = [0.7, 0.8, 0.9, 1.0] * 5
-
-simulator = clode.TrajectorySimulator(
-    rhs_equation=fitzhugh_nagumo,
-    variables={"v": np.arange(-2, 2, 0.2), "w": -1.0},
-    parameters={"a": a, "b": 0.8, "epsilon": 0.01, "current": 1.0},
-)
-
-simulator.transient()
-
-trajectories = simulator.trajectory()
-print("Bar")
+# a = [0.7, 0.8, 0.9, 1.0] * 5
+#
+# simulator = clode.TrajectorySimulator(
+#     rhs_equation=fitzhugh_nagumo,
+#     variables={"v": np.arange(-2, 2, 0.2), "w": -1.0},
+#     parameters={"a": a, "b": 0.8, "epsilon": 0.01, "current": 1.0},
+# )
+#
+# simulator.transient()
+#
+# trajectories = simulator.trajectory()
+# print("Bar")
