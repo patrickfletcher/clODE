@@ -313,7 +313,7 @@ class Simulator:
         else:
             pars_array = np.array(list(self._parameter_defaults.values()))
 
-        return vars_array.transpose().flatten(), pars_array.transpose().flatten()
+        return vars_array.flatten(), pars_array.flatten()
 
     def initialize(
         self,

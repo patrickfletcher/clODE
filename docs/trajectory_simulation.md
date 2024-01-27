@@ -36,41 +36,66 @@ void getRHS(const realtype t,
 
 ### Python
 
-```python
+```py run
 import clode
+import matplotlib.pyplot as plt
 import numpy as np
+from typing import List
 
-def ornl_thompson_a1():
-    num_simulations = 1
+def fitzhugh_nagumo(
+    time: float,
+    variables: List[float],
+    parameters: List[float],
+    derivatives: list[float],
+    aux: list[float],
+    wiener: list[float],
+) -> None:
+    V: float = variables[0]
+    w: float = variables[1]
 
-    m = 1 / 4
-    w = 8
-    k = 2
-    H = 10
+    a: float = parameters[0]
+    b: float = parameters[1]
+    current: float = parameters[2]
+    epsilon: float = parameters[3]
 
-    tspan = (0.0, H / 2.)
+    dV: float = V - V**3 / 3 - w + current
+    dw: float = epsilon * (V + a - b * w)
 
-    integrator = clode.CLODETrajectory(
-        src_file="test/ornl_thompson_a1.cl",
-        variable_names=["y1", "y2"],
-        parameter_names=["m", "w", "k", "H"],
-        aux=["g1"],
-        num_noise=0,
-        dt=0.001,
-        dtmax=0.001,
-        stepper=clode.Stepper.rk4,
-        tspan=tspan,
-    )
+    derivatives[0] = dV
+    derivatives[1] = dw
 
-    parameters = [m, w, k, H]
+a = 0.7
+variables = {"V": 1.0, "w": 0.0}
+parameters = {"a": a, "b": 0.8, "current": np.arange(0.0, 0.6, 0.1), "epsilon": 1.0 / 12.5}
 
-    x0 = np.tile([0, 0], (num_simulations, 1))
-    pars_v = np.tile(parameters, (num_simulations, 1))
+simulator = clode.TrajectorySimulator(
+    rhs_equation=fitzhugh_nagumo,
+    variables=variables,
+    parameters=parameters,
+    t_span=(0, 200),
+    dt=0.02,
+)
 
-    integrator.initialize(x0, pars_v)
+trajectories = simulator.trajectory()
 
-    integrator.trajectory()
+plt.figure(figsize=(8, 6))
+for index in range(len(trajectories)):
+    label = f"I={parameters['current'][index]:.1f}"
+    plt.plot(trajectories[index].x[:, 0], trajectories[index].x[:, 1], label=label)
+plt.xlabel("V")
+plt.ylabel("w")
+plt.legend()
+plt.title("FitzHugh-Nagumo phase plane")
+plt.show()
 
-    time_steps = integrator.get_time_steps()
-    return integrator.get_trajectory()
+# Plot the time series
+plt.figure(figsize=(8, 6))
+for index in range(0, len(trajectories), 2):
+    label = f"I={parameters['current'][index]}"
+    plt.plot(trajectories[index].t, trajectories[index].x[:, 0], label=label)
+plt.xlabel("t")
+plt.ylabel("V")
+plt.legend()
+plt.title("FitzHugh-Nagumo time series")
+plt.show()
 ```

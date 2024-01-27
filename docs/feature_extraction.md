@@ -26,7 +26,7 @@ CLODE's observers are highly configurable. You can choose the following:
 The following example extracts features from the Van der Pol oscillator
 using the dormand_prince45 integrator.
 
-```py run
+```python
 import numpy as np
 import matplotlib.pyplot as plt
 import clode
@@ -239,4 +239,34 @@ def vdp_dormand_prince(end: int, input_file: str):
     return observer_output
 
 vdp_dormand_prince(100, "vdp_oscillator.xpp")
+```
+
+
+```python
+def scipy_solve_ivp_wrapper(func, aux=None, wiener=None):
+    if aux is None:
+        aux = []
+    if wiener is None:
+        wiener = []
+    def wrapper(t, y, *args):
+        dydt = np.zeros_like(y)
+        func(t, y, args, dydt, aux, wiener)
+        return dydt
+
+    return wrapper
+
+wrap = scipy_solve_ivp_wrapper(getRHS)
+xx = solve_ivp(
+    wrap,
+    [0, 1000],
+    [1, 1],
+    args=(-1, 0, 1),
+    atol=1e-10,
+    rtol=1e-10,
+    mxstep=1000000,
+)
+
+# Invoke the wrapper with scipy's odeint
+
+getRHS = scipy_odeint_wrapper(getRHS)
 ```

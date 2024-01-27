@@ -195,7 +195,7 @@ class TrajectorySimulator(Simulator):
             _clode_root_dir,
         )
 
-    def trajectory(self) -> List[Dict[str, np.ndarray[Any, np.dtype[np.float64]]]]:
+    def trajectory(self) -> List[TrajectoryResult]:
         """Run a trajectory simulation.
 
         Returns:
@@ -205,7 +205,7 @@ class TrajectorySimulator(Simulator):
 
         return self.get_trajectory()
 
-    def get_trajectory(self) -> List[Dict[str, np.ndarray[Any, np.dtype[np.float64]]]]:
+    def get_trajectory(self) -> List[TrajectoryResult]:
         """Get the trajectory data.
 
         Returns:
