@@ -46,9 +46,14 @@ void CLODE::setNewProblem(ProblemInfo newProb)
 	clRHSfilename = newProb.clRHSfilename;
 	ODEsystemsource = read_file(clRHSfilename);
 	nVar = newProb.nVar;
-	nPar = newProb.nPar>0?newProb.nPar:1; //support zero params
-	nAux = newProb.nAux>0?newProb.nAux:1; //support zero aux
-	nWiener = newProb.nWiener>0?newProb.nWiener:1; //support zero wiener
+	nPar = newProb.nPar; 
+	nAux = newProb.nAux;
+	nWiener = newProb.nWiener;
+
+	// Some OpenCL implementations don't support zero-length arrays in OpenCL programs
+	nPar = nPar>0?nPar:1;
+	nAux = nAux>0?nAux:1;
+	nWiener = nWiener>0?nWiener:1;
 
 	clInitialized = false;
 	spdlog::debug("set new problem\n");

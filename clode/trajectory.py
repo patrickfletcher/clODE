@@ -4,7 +4,14 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import numpy as np
 
-from .runtime import CLDeviceType, CLVendor, TrajectorySimulatorBase, _clode_root_dir
+from .function_converter import OpenCLRhsEquation
+from .runtime import (
+    CLDeviceType,
+    CLVendor,
+    ObserverParams,
+    TrajectorySimulatorBase,
+    _clode_root_dir,
+)
 from .solver import Simulator, Stepper
 
 # TrajectoryOutput?
@@ -126,66 +133,6 @@ class TrajectorySimulator(Simulator):
         self._time_steps = None
         self._output_time_steps = None
 
-    #
-    # def initialize(
-    #     self,
-    #     x0: np.ndarray[Any, np.dtype[np.float64]],
-    #     parameters: np.ndarray[Any, np.dtype[np.float64]],
-    #     tspan: Tuple[float, float] | None = None,
-    #     seed: int | None = None,
-    # ) -> None:
-    #     """Initialize the trajectory object.
-    #
-    #     Args:
-    #         x0 (np.array): The initial conditions.
-    #         parameters (np.array): The parameters.
-    #         tspan (Tuple[float, float], optional): The time span to simulate over. Defaults to None.
-    #         seed (int, optional): The seed for the random number generator. Defaults to None.
-    #
-    #     Raises:
-    #         ValueError: If the initial conditions or parameters are not the correct shape.
-    #
-    #     Returns:
-    #         None
-    #     """
-    #
-    #     if len(x0.shape) != 2:
-    #         raise ValueError("Must provide rows of initial variables")
-    #
-    #     if x0.shape[1] != len(self.vars):
-    #         raise ValueError(
-    #             f"Length of initial condition vector {x0.shape[1]}"
-    #             f" does not match number of variables {len(self.vars)}"
-    #         )
-    #
-    #     if len(parameters.shape) != 2:
-    #         raise ValueError("Must provide rows of parameters")
-    #
-    #     if parameters.shape[1] != len(self.pars):
-    #         raise ValueError(
-    #             f"Length of parameters vector {parameters.shape[1]}"
-    #             f" does not match number of parameters {len(self.pars)}"
-    #         )
-    #
-    #     self._data = None
-    #     self._time_steps = None
-    #     self._number_of_simulations = parameters.shape[0]
-    #
-    #     if tspan is not None:
-    #         self.tspan = tspan
-    #
-    #     self._integrator.initialize(
-    #         list(self.tspan),
-    #         x0.transpose().flatten().tolist(),
-    #         parameters.transpose().flatten().tolist(),
-    #         self._sp,
-    #     )
-    #     self.seed_rng(seed)
-    #
-    #     self._integrator.build_cl()
-    #
-    #     self._init_integrator()
-
     def _build_integrator(self) -> None:
         self._integrator = TrajectorySimulatorBase(
             self._pi,
@@ -195,13 +142,15 @@ class TrajectorySimulator(Simulator):
             _clode_root_dir,
         )
 
-    def trajectory(self) -> List[TrajectoryResult]:
+    def trajectory(self, update_x0: bool = True) -> List[TrajectoryResult]:
         """Run a trajectory simulation.
 
         Returns:
             None
         """
         self._integrator.trajectory()
+        if update_x0:
+            self.shift_x0()
 
         return self.get_trajectory()
 

@@ -60,8 +60,8 @@ static ObserverInfo getObserverInfo_localmax(const ProblemInfo pi, const int fVa
         "mean "+varName,
         "max d"+varName,
         "min d"+varName,
-        "eventcount",
-        "stepcount",
+        "event count",
+        "step count",
     };
     return oi;
 }
@@ -143,8 +143,11 @@ inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dxi[], re
     ++od->eventcount;
 
     //Simple Max of xbuffer
+    realtype thisXbuffer[3];
+    for (int j = 0; j < 3; ++j)
+     	thisXbuffer[j] = od->xbuffer[j];
     int ix = 0;
-    maxOfArray(od->xbuffer, 3, &xThisMax, &ix);
+    maxOfArray(thisXbuffer, 3, &xThisMax, &ix);
     tThisMax = od->tbuffer[ix];
 
     //Quadratic interpolation for improved accuracy BROKEN??
@@ -225,8 +228,11 @@ inline void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], real
         //local min check - one between each max - simply overwrite tLastMin, xLastMin
         if (od->dxbuffer[1] <= op->eps_dx && od->dxbuffer[2] >= op->eps_dx)
         {
+            realtype thisXbuffer[3];
+            for (int j = 0; j < 3; ++j)
+                thisXbuffer[j] = od->xbuffer[j];
             int ix;
-            minOfArray(od->xbuffer, 3, &od->xLastMin, &ix);
+            minOfArray(thisXbuffer, 3, &od->xLastMin, &ix);
             od->tLastMin = od->tbuffer[ix];
         }
         // od->xLastMin = fmin(od->xLastMin, xi[op->fVarIx]);

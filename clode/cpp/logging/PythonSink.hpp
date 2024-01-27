@@ -13,6 +13,9 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/iostream.h>
 
+//TODO: Windows produces extra carriage returns [workaround: use stdout_color_mt?]
+// https://github.com/gabime/spdlog/issues/1675
+
 //PYBIND11_MODULE(spdlog, m) {
 
     template<typename Mutex>
