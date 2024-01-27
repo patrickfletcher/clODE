@@ -42,7 +42,7 @@ struct ProblemInfo
         this->auxNames = auxNames;
     }
 
-    ProblemInfo(std::string clRHSfilename, std::vector<std::string> varNames, std::vector<std::string> parNames, std::vector<std::string> auxNames = std::vector<std::string>(), cl_int nWiener = 1)
+    ProblemInfo(std::string clRHSfilename, std::vector<std::string> varNames, std::vector<std::string> parNames, std::vector<std::string> auxNames = std::vector<std::string>(), cl_int nWiener = 0)
     {
         this->clRHSfilename = clRHSfilename;
         this->nVar = varNames.size();
