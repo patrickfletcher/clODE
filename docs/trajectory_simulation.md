@@ -37,7 +37,7 @@ def fitzhugh_nagumo(
 
 a = 0.7
 variables = {"V": 1.0, "w": 0.0}
-parameters = {"a": a, "b": 0.8, "current": np.arange(0.0, 0.6, 0.1), "epsilon": 1.0 / 12.5}
+parameters = {"a": a, "b": 0.8, "current": 0.0, "epsilon": 1.0 / 12.5}
 
 simulator = clode.TrajectorySimulator(
     rhs_equation=fitzhugh_nagumo,
@@ -47,11 +47,15 @@ simulator = clode.TrajectorySimulator(
     dt=0.02,
 )
 
+ensemble_parameters = {"current": np.arange(0.0, 0.6, 0.1)}
+
+simulator.set_ensemble(parameters=ensemble_parameters)
+
 trajectories = simulator.trajectory()
 
 plt.figure(figsize=(8, 6))
 for index in range(len(trajectories)):
-    label = f"I={parameters['current'][index]:.1f}"
+    label = f"I={ensemble_parameters['current'][index]:.1f}"
     plt.plot(trajectories[index].x[:, 0], trajectories[index].x[:, 1], label=label)
 plt.xlabel("V")
 plt.ylabel("w")
@@ -62,7 +66,7 @@ plt.show()
 # Plot the time series
 plt.figure(figsize=(8, 6))
 for index in range(0, len(trajectories), 2):
-    label = f"I={parameters['current'][index]}"
+    label = f"I={ensemble_parameters['current'][index]}"
     plt.plot(trajectories[index].t, trajectories[index].x[:, 0], label=label)
 plt.xlabel("t")
 plt.ylabel("V")

@@ -170,6 +170,7 @@ public:
 
     // set all problem data needed to run
     virtual void initialize(std::vector<cl_double> newTspan, std::vector<cl_double> newX0, std::vector<cl_double> newPars, SolverParams<cl_double> newSp);
+	bool isInitialized() { return clInitialized; };
 
     void setNpts(cl_int newNpts); //resizes the nPts-dependent input variables
     void setProblemData(std::vector<cl_double> newX0, std::vector<cl_double> newPars); //set both pars and X0 to change nPts

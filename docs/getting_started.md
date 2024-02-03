@@ -57,11 +57,11 @@ tspan = (0.0, 1000.0)
 
 # Create the clODE feature extractor
 integrator = CLODEFeatures(
-    src_file="van_der_pol_oscillator.cl", # This is your source file. 
-    variable_names=["x", "y"],            # names for our variables
-    parameter_names=["mu"],               # name for our parameters
+    src_file="van_der_pol_oscillator.cl",  # This is your source file. 
+    variable_names=["x", "y"],  # names for our variables
+    parameter_names=["mu"],  # name for our parameters
     observer=Observer.threshold_2,  # Choose an observer
-    stepper=Stepper.rk4, # Choose a stepper
+    stepper=Stepper.rk4,  # Choose a stepper
     tspan=tspan,
 )
 
@@ -75,7 +75,7 @@ P0 = np.array([[u] for u in mu])
 x0 = np.tile([1, 1], (len(mu), 1))
 
 # send the data to the OpenCL device
-integrator.initialize(x0, P0)
+integrator.set_ensemble(x0, P0)
 
 # Run the simulation for tspan time, storing only the final state.
 # Useful for integrating past transient behavior
@@ -101,15 +101,15 @@ import matplotlib.plt as plt
 
 # Create the clODE trajectory solver
 integrator = CLODETrajectory(
-    src_file="van_der_pol_oscillator.cl", # This is your source file. 
-    variable_names=["x", "y"],            # names for our variables
-    parameter_names=["mu"],               # name for our parameters
-    stepper=Stepper.rk4, # Choose a stepper
+    src_file="van_der_pol_oscillator.cl",  # This is your source file. 
+    variable_names=["x", "y"],  # names for our variables
+    parameter_names=["mu"],  # name for our parameters
+    stepper=Stepper.rk4,  # Choose a stepper
     tspan=tspan,
 )
 
 # send the data to the OpenCL device
-integrator.initialize(x0, P0)
+integrator.set_ensemble(x0, P0)
 
 # Run the simulation for tspan time, storing only the final state.
 # Useful for integrating past transient behavior

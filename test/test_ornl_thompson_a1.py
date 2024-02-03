@@ -37,7 +37,7 @@ def test_ornl_thompson_a1():
 
     x0 = {"y1": [0.0], "y2": [0.0]}
 
-    integrator.initialize(variables=x0)
+    integrator.set_ensemble(variables=x0)
 
     integrator.trajectory()
 

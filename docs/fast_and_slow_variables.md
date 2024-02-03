@@ -2,58 +2,69 @@
 
 
 ```python
-import numpy as np
-import matplotlib.pyplot as plt
 import clode
+import matplotlib.pyplot as plt
+import numpy as np
 from typing import List
 
-# The FitzHugh-Nagumo model
-
-def fitzhugh_nagumo(time: float,
-                    variables: List[float],
-                    parameters: List[float],
-                    derivatives: list[float],
-                    aux: list[float],
-                    wiener: list[float]) -> None:
-    v: float = variables[0]
+def fitzhugh_nagumo(
+    time: float,
+    variables: List[float],
+    parameters: List[float],
+    derivatives: list[float],
+    aux: list[float],
+    wiener: list[float],
+) -> None:
+    V: float = variables[0]
     w: float = variables[1]
-    
+
     a: float = parameters[0]
     b: float = parameters[1]
     current: float = parameters[2]
     epsilon: float = parameters[3]
-    
-    dv: float = v - v ** 3 / 3 - w + current
-    dw: float = epsilon * (v + a - b * w)
-    
-    derivatives[0] = dv
+
+    dV: float = V - V ** 3 / 3 - w + current
+    dw: float = epsilon * (V + a - b * w)
+
+    derivatives[0] = dV
     derivatives[1] = dw
 
-a = [0.7, 0.8, 0.9, 1.0]
+a = 0.7
+variables = {"V": 1.0, "w": 0.0}
+parameters = {"a": a, "b": 0.8, "current": 0.0, "epsilon": 1.0 / 12.5}
 
-simulator = clode.FeatureSimulator(
+simulator = clode.TrajectorySimulator(
     rhs_equation=fitzhugh_nagumo,
-    variables={"v": np.arange(-2, 2, 0.2), "w": -1.0},
-    parameters={"a": a, "b": 0.8, "epsilon": 0.01, "current": 1.0},
+    variables=variables,
+    parameters=parameters,
+    t_span=(0, 200),
+    dt=0.02,
 )
 
-simulator.transient(t_span=(0.0, 100.0))
-observer_output = simulator.features()
+ensemble_parameters = {"current": np.arange(0.0, 0.6, 0.1)}
 
-voltages = observer_output.get_var("v")
+simulator.set_ensemble(parameters=ensemble_parameters)
 
-amplitude = observer_output.get_var_max("v") - observer_output.get_var_min("v")
-period_min = observer_output.get_var_min("period")
+trajectories = simulator.trajectory()
 
-# Object classes, silent=0, excitable=1, spiking=2
-classes = np.zeros(len(voltages))
-
-classes[amplitude > 20] = 1  # excitable
-classes[(amplitude > 20) & (period_min > 5)] = 2  # spiking
-
-# Plotting
 plt.figure(figsize=(8, 6))
-plt.scatter(a, voltages, c=classes, cmap="viridis")
+for index in range(len(trajectories)):
+    label = f"I={ensemble_parameters['current'][index]:.1f}"
+    plt.plot(trajectories[index].x[:, 0], trajectories[index].x[:, 1], label=label)
+plt.xlabel("V")
+plt.ylabel("w")
+plt.legend()
+plt.title("FitzHugh-Nagumo phase plane")
+plt.show()
 
+# Plot the time series
+plt.figure(figsize=(8, 6))
+for index in range(0, len(trajectories), 2):
+    label = f"I={ensemble_parameters['current'][index]}"
+    plt.plot(trajectories[index].t, trajectories[index].x[:, 0], label=label)
+plt.xlabel("t")
+plt.ylabel("V")
+plt.legend()
+plt.title("FitzHugh-Nagumo time series")
 plt.show()
 ```

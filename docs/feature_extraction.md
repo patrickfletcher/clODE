@@ -57,12 +57,14 @@ def scipy_solve_ivp_wrapper(func, aux=None, wiener=None):
         aux = []
     if wiener is None:
         wiener = []
+
     def wrapper(t, y, *args):
         dydt = np.zeros_like(y)
         func(t, y, args, dydt, aux, wiener)
         return dydt
 
     return wrapper
+
 
 wrap = scipy_solve_ivp_wrapper(getRHS)
 xx = solve_ivp(
@@ -105,7 +107,7 @@ parameters = [-1, 0, 0.01, 0.1, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0]
 x0 = np.tile([1, 1], (len(parameters), 1))
 
 pars_v = np.array([[par] for par in parameters])
-integrator.initialize(x0, pars_v)
+integrator.set_ensemble(x0, pars_v)
 
 integrator.transient()
 integrator.features()
@@ -127,6 +129,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import clode
 
+
 # Van der Pol Dormand Prince oscillator
 def get_rhs(
         t: float,
@@ -137,37 +140,35 @@ def get_rhs(
 ) -> list[float]:
     x: float = var[0]
     y: float = var[1]
-    
+
     kk: float = weiner1 * kl
 
     dx: float = y
     dy: float = mu * (1 - x ** 2) * y - x
-    
+
     aux: float = x + kk
 
     return [dx, dy]
 
+
 ivp = clode.IVP(
     rhs=get_rhs,
     variables: dict[str, float] = {"x": 1.0, "y": 1.0},
-    parameters: dict[str, float] = {"mu": 0.1},
-    aux: list["str"] = ["aux"],
-    noise: list["str"] = ["weiner1"]
+parameters: dict[str, float] = {"mu": 0.1},
+aux: list["str"] = ["aux"],
+noise: list["str"] = ["weiner1"]
 )
-    
+
 
 integrator = clode.FeatureSimulator(
     ivp=ivp,
     solver=clode.Solver.dormand_prince,
 )
 
-
-
-integrator.initialize(
+integrator.set_ensemble(
     parameters={"mu": [-1, 0, 0.01, 0.1, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0]},
-    variables={"x": [1.0, 2.0],},
+    variables={"x": [1.0, 2.0], },
 )
-
 
 integrator.transient()
 integrator.features()
@@ -208,7 +209,7 @@ import clode
 
 
 def cuberoot(x):
-    return x**(1 / 3.)
+    return x ** (1 / 3.)
 
 
 def vdp_dormand_prince(end: int, input_file: str):
@@ -224,19 +225,20 @@ def vdp_dormand_prince(end: int, input_file: str):
         tspan=tspan,
     )
 
-    parameters = [-1, 0, 0.01, 0.1, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0] + \
-                 list(range(5, end))
+    parameters = [-1, 0, 0.01, 0.1, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0] +
+    list(range(5, end))
 
-    x0 = np.tile([1, 1], (len(parameters), 1))
 
-    pars_v = np.array([[par] for par in parameters])
-    integrator.initialize(x0, pars_v)
+x0 = np.tile([1, 1], (len(parameters), 1))
 
-    integrator.transient()
-    integrator.features()
-    observer_output = integrator.get_observer_results()
-    
-    return observer_output
+pars_v = np.array([[par] for par in parameters])
+integrator.set_ensemble(x0, pars_v)
+
+integrator.transient()
+integrator.features()
+observer_output = integrator.get_observer_results()
+
+return observer_output
 
 vdp_dormand_prince(100, "vdp_oscillator.xpp")
 ```

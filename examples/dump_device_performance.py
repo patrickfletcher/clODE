@@ -33,7 +33,7 @@ def test_lorenz_rk4(platform_id, device_id, num_pts, reps):
     # first initialize with dummy parameters
     Pars = np.tile(default_parameters, (1, 1))
     X0 = np.tile(initial_state, (1, 1))
-    integrator.initialize(X0, Pars)
+    integrator.set_ensemble(X0, Pars)
 
 
     t_average = []

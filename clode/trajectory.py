@@ -146,8 +146,11 @@ class TrajectorySimulator(Simulator):
         """Run a trajectory simulation.
 
         Returns:
-            None
+            List[TrajectoryResult]
         """
+        if not self.is_initialized:
+            raise RuntimeError("Simulator is not initialized")
+
         self._integrator.trajectory()
         if update_x0:
             self.shift_x0()

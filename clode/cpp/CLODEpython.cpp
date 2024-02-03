@@ -264,7 +264,8 @@ PYBIND11_MODULE(clode_cpp_wrapper, m) {
             .def("get_available_steppers", &CLODE::getAvailableSteppers)
             .def("get_problem_info", &CLODE::getProblemInfo)
             .def("get_program_string", &CLODE::getProgramString)
-            .def("print_status", &CLODE::printStatus);
+            .def("print_status", &CLODE::printStatus)
+            .def("is_initialized", &CLODE::isInitialized);
 
 
     // clODE features specialization 

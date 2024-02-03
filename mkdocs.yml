@@ -18,6 +18,7 @@ nav:
   - Functionality:
     - Feature Extraction: 'feature_extraction.md'
     - Trajectory Simulation: 'trajectory_simulation.md'
+    - Stochastic Simulations: 'Ornstein-Uhlenbeck_process.md'
   - Configuration:
       - XPP files: 'xpp_files.md'
       - Initialising the runtime: 'init_runtime.md'

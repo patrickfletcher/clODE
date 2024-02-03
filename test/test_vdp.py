@@ -71,7 +71,7 @@ def vdp_dormand_prince(
         + list(range(5, end))
     }
 
-    integrator.initialize(parameters=parameters)
+    integrator.set_ensemble(parameters=parameters)
 
     integrator.transient()
     integrator.features()

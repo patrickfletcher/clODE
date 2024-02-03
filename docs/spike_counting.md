@@ -56,135 +56,135 @@ The following script runs the two-parameter sweep using the clODE FeatureSimulat
 
 ```python
     src_file = "chay_keizer.cl"
-    
-    variables = {"v": -50.0, "n": 0.01, "c": 0.12}
-    parameters = {"gca": 1200.0, "gkca":750.0, "kpmca": 0.1}
-    
-    # convenience:
-    variable_names = list(variables.keys())
-    initial_state = list(variables.values())
-    parameter_names = list(parameters.keys())
-    default_parameters = list(parameters.values())
 
-    # set up the ensemble of systems
+variables = {"v": -50.0, "n": 0.01, "c": 0.12}
+parameters = {"gca": 1200.0, "gkca": 750.0, "kpmca": 0.1}
 
-    nx = 512
-    ny = 512
-    gca = np.linspace(550.0, 1050.0, nx)
-    kpmca = np.linspace(0.095, 0.155, ny)
-    # gkca = np.linspace(0.0, 1000, ny)
-    
-    x_idx = 0
-    y_idx = 2
+# convenience:
+variable_names = list(variables.keys())
+initial_state = list(variables.values())
+parameter_names = list(parameters.keys())
+default_parameters = list(parameters.values())
 
-    nPts = nx * ny
+# set up the ensemble of systems
 
-    # px, py = np.meshgrid(gkca, indexing="xy") #ij vs xy?
-    # px, py = np.meshgrid(kpmca, gkca) 
-    px, py = np.meshgrid(gca, kpmca) 
-    
-    Pars = np.tile(default_parameters, (nPts, 1))
-    Pars[:,x_idx] = px.flatten()
-    Pars[:,y_idx] = py.flatten()
+nx = 512
+ny = 512
+gca = np.linspace(550.0, 1050.0, nx)
+kpmca = np.linspace(0.095, 0.155, ny)
+# gkca = np.linspace(0.0, 1000, ny)
 
-    X0 = np.tile(initial_state, (nPts, 1))
-    X0 = X0 + (np.random.random((Pars.shape[0], 1)) - 0.5) * [20.0, 0.0, 0.1]
+x_idx = 0
+y_idx = 2
 
-    integrator = clode.FeaturesSimulator(
-        src_file=src_file,
-        variable_names=variable_names,
-        parameter_names=parameter_names,
-        single_precision=True,
-        stepper=clode.Stepper.dormand_prince,
-        dt=0.001,
-        dtmax=0.1,
-        abstol=1e-6,
-        reltol=1e-5,
-        event_var="v",
-        feature_var="v",
-        observer=clode.Observer.threshold_2,
-        observer_x_up_thresh=0.5,
-        observer_x_down_thresh=0.05,
-        # observer=clode.Observer.neighbourhood_2,
-        # observer_neighbourhood_radius=0.05,
-        observer_min_x_amp=5.0,
-        observer_min_imi=0.0,
-        observer_max_event_count=1000,
-    )
+nPts = nx * ny
 
-    integrator.initialize(X0, Pars)
+# px, py = np.meshgrid(gkca, indexing="xy") #ij vs xy?
+# px, py = np.meshgrid(kpmca, gkca) 
+px, py = np.meshgrid(gca, kpmca)
 
-    integrator.set_tspan((0.0, 50000.0))
-    integrator.transient()
+Pars = np.tile(default_parameters, (nPts, 1))
+Pars[:, x_idx] = px.flatten()
+Pars[:, y_idx] = py.flatten()
 
-    integrator.set_tspan((0.0, 10000.0))
-    integrator.features()
-    
-    features = integrator.get_observer_results()
+X0 = np.tile(initial_state, (nPts, 1))
+X0 = X0 + (np.random.random((Pars.shape[0], 1)) - 0.5) * [20.0, 0.0, 0.1]
 
-    feature = features.get_var_max("peaks")
-    feature = np.reshape(feature, (nx, ny))
+integrator = clode.FeaturesSimulator(
+    src_file=src_file,
+    variable_names=variable_names,
+    parameter_names=parameter_names,
+    single_precision=True,
+    stepper=clode.Stepper.dormand_prince,
+    dt=0.001,
+    dtmax=0.1,
+    abstol=1e-6,
+    reltol=1e-5,
+    event_var="v",
+    feature_var="v",
+    observer=clode.Observer.threshold_2,
+    observer_x_up_thresh=0.5,
+    observer_x_down_thresh=0.05,
+    # observer=clode.Observer.neighbourhood_2,
+    # observer_neighbourhood_radius=0.05,
+    observer_min_x_amp=5.0,
+    observer_min_imi=0.0,
+    observer_max_event_count=1000,
+)
 
-    plt.pcolormesh(px, py, feature, shading='nearest', vmax=12)
-    plt.title("peaks")
-    plt.colorbar()
-    plt.xlabel(parameter_names[x_idx])
-    plt.ylabel(parameter_names[y_idx])
+integrator.set_ensemble(X0, Pars)
 
-    plt.axis("tight")
+integrator.set_tspan((0.0, 50000.0))
+integrator.transient()
 
-    points = np.array([[950, 0.145],[700, 0.105],[750, 0.125],[800, 0.142]])
-    plt.plot(points[:,0], points[:,1],'o',color='black')
+integrator.set_tspan((0.0, 10000.0))
+integrator.features()
 
-    for i, txt in enumerate(range(4)):
-        plt.annotate(txt, (points[i,0]-10, points[i,1]-0.003))
+features = integrator.get_observer_results()
 
-    # plt.show()
+feature = features.get_var_max("peaks")
+feature = np.reshape(feature, (nx, ny))
+
+plt.pcolormesh(px, py, feature, shading='nearest', vmax=12)
+plt.title("peaks")
+plt.colorbar()
+plt.xlabel(parameter_names[x_idx])
+plt.ylabel(parameter_names[y_idx])
+
+plt.axis("tight")
+
+points = np.array([[950, 0.145], [700, 0.105], [750, 0.125], [800, 0.142]])
+plt.plot(points[:, 0], points[:, 1], 'o', color='black')
+
+for i, txt in enumerate(range(4)):
+    plt.annotate(txt, (points[i, 0] - 10, points[i, 1] - 0.003))
+
+# plt.show()
 
 
-    steps_taken = features.get_var_count("step")
-    max_steps = int(np.max(steps_taken))
-    print(f"max steps taken: {max_steps}")
-    # Now get the trajectories
-    
-    integrator_traj = clode.TrajectorySimulator(
-        src_file=src_file,
-        variable_names=variable_names,
-        parameter_names=parameter_names,
-        single_precision=True,
-        stepper=clode.Stepper.dormand_prince,
-        dt=0.001,
-        dtmax=0.1,
-        abstol=1e-6,
-        reltol=1e-5,
-        max_steps=2*max_steps, #must be int
-        max_store=2*max_steps,
-    )
+steps_taken = features.get_var_count("step")
+max_steps = int(np.max(steps_taken))
+print(f"max steps taken: {max_steps}")
+# Now get the trajectories
 
-    Pars_traj = np.tile(default_parameters, (4,1))
-    Pars_traj[:,x_idx] = points[:,0]
-    Pars_traj[:,y_idx] = points[:,1]
-    X0_traj = np.tile(initial_state, (4,1))
+integrator_traj = clode.TrajectorySimulator(
+    src_file=src_file,
+    variable_names=variable_names,
+    parameter_names=parameter_names,
+    single_precision=True,
+    stepper=clode.Stepper.dormand_prince,
+    dt=0.001,
+    dtmax=0.1,
+    abstol=1e-6,
+    reltol=1e-5,
+    max_steps=2 * max_steps,  # must be int
+    max_store=2 * max_steps,
+)
 
-    integrator_traj.initialize(X0_traj, Pars_traj)
+Pars_traj = np.tile(default_parameters, (4, 1))
+Pars_traj[:, x_idx] = points[:, 0]
+Pars_traj[:, y_idx] = points[:, 1]
+X0_traj = np.tile(initial_state, (4, 1))
 
-    integrator_traj.set_tspan((0.0, 50000.0))
-    integrator_traj.transient()
+integrator_traj.set_ensemble(X0_traj, Pars_traj)
 
-    integrator_traj.set_tspan((0.0, 10000.0))
-    integrator_traj.trajectory()
+integrator_traj.set_tspan((0.0, 50000.0))
+integrator_traj.transient()
 
-    trajectories = integrator_traj.get_trajectory()
-    
-    varix = 0
-    fig, ax = plt.subplots(4, 1, sharex=True, sharey=True)
+integrator_traj.set_tspan((0.0, 10000.0))
+integrator_traj.trajectory()
 
-    for i, trajectory in enumerate(trajectories):
-        ax[i].plot(trajectory["t"]/1000.0, trajectory["X"][:, varix])
+trajectories = integrator_traj.get_trajectory()
 
-    ax[1].set_ylabel(variable_names[varix])
-    ax[-1].set_xlabel('time (s)')
-    plt.show()
+varix = 0
+fig, ax = plt.subplots(4, 1, sharex=True, sharey=True)
+
+for i, trajectory in enumerate(trajectories):
+    ax[i].plot(trajectory["t"] / 1000.0, trajectory["X"][:, varix])
+
+ax[1].set_ylabel(variable_names[varix])
+ax[-1].set_xlabel('time (s)')
+plt.show()
 ```
 
 ## Output

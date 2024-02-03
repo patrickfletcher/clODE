@@ -306,39 +306,6 @@ class FeatureSimulator(Simulator):
             device_ids=device_ids,
         )
 
-        # event_var_idx = self.variable_names.index(event_var) if event_var != "" else 0
-        # feature_var_idx = (
-        #     self.variable_names.index(feature_var) if feature_var != "" else 0
-        # )
-        #
-        # self._op = ObserverParams(
-        #     event_var_idx,
-        #     feature_var_idx,
-        #     observer_max_event_count,
-        #     observer_min_x_amp,
-        #     observer_min_imi,
-        #     observer_neighbourhood_radius,
-        #     observer_x_up_thresh,
-        #     observer_x_down_thresh,
-        #     observer_dx_up_thresh,
-        #     observer_dx_down_thresh,
-        #     observer_eps_dx,
-        # )
-        #
-        # self._integrator = FeatureSimulatorBase(
-        #     self._pi,
-        #     stepper.value,
-        #     observer.value,
-        #     single_precision,
-        #     self._runtime,
-        #     _clode_root_dir,
-        # )
-        #
-        # self._observer_type = observer
-        # self._integrator.build_cl()
-        #
-        # self._init_integrator()
-
     def _build_integrator(self) -> None:
         self._integrator = FeatureSimulatorBase(
             self._pi,
@@ -370,6 +337,9 @@ class FeatureSimulator(Simulator):
         Returns:
             None
         """
+        if not self.is_initialized:
+            raise RuntimeError("Simulator is not initialized")
+
         if initialize_observer is not None:
             print("Reinitializing observer")
             self._integrator.features(initialize_observer)

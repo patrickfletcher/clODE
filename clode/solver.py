@@ -46,9 +46,9 @@ class Simulator:
     _runtime: OpenCLResource
     t_span: Tuple[float, float]
     _variables: Optional[Dict[str, np.ndarray]] = None
-    _variable_defaults: Dict[str, Optional[float]]
+    _variable_defaults: Dict[str, float]
     _parameters: Optional[Dict[str, np.ndarray]] = None
-    _parameter_defaults: Dict[str, Optional[float]]
+    _parameter_defaults: Dict[str, float]
     _cl_array_length: int
     _single_precision: bool
     _stepper: Stepper
@@ -70,6 +70,16 @@ class Simulator:
             List[str]: The parameter names.
         """
         return list(self._parameter_defaults.keys())
+
+    @property
+    def is_initialized(self) -> bool:
+        """Get whether the simulator is initialized.
+
+        Returns:
+            bool: Whether the simulator is initialized.
+        """
+        # return self._integrator.is_initialized()
+        return True
 
     def _find_cl_array_length(
         self,
@@ -185,8 +195,8 @@ class Simulator:
 
     def __init__(
         self,
-        variables: Dict[str, Union[float, np.ndarray, List[float]]],
-        parameters: Dict[str, Union[float, np.ndarray, List[float]]],
+        variables: Dict[str, float],
+        parameters: Dict[str, float],
         src_file: str | None = None,
         rhs_equation: OpenCLRhsEquation | None = None,
         supplementary_equations: List[Callable[[Any], Any]] | None = None,
@@ -221,35 +231,10 @@ class Simulator:
         # later using initialize() to set the initial conditions.
         self._variable_defaults = {}
         self._parameter_defaults = {}
-        self._cl_array_length = self._find_cl_array_length(variables, parameters)
+        self._cl_array_length = 1
 
-        self._variable_defaults = {
-            key: value if isinstance(value, float) else None
-            for key, value in variables.items()
-        }
-        self._parameter_defaults = {
-            key: value if isinstance(value, float) else None
-            for key, value in parameters.items()
-        }
-
-        # if self._cl_array_length > 1:
-        #     # Implicitly create arrays of the correct length
-        #     # This is instead of calling initialize()
-        #     self._variable_defaults = {}
-        #     self._parameter_defaults = {}
-        #     self._variables = self._create_cl_arrays(
-        #         variables, self._cl_array_length, self._variable_defaults
-        #     )
-        #     self._parameters = self._create_cl_arrays(
-        #         parameters, self._cl_array_length, self._parameter_defaults
-        #     )
-        # else:
-        #     # If only one simulation is being run,
-        #     # the variables and parameters are just single values
-        #     # and the defaults are set from the variables and parameters
-        #     # dictionaries
-        #     self._variable_defaults = variables
-        #     self._parameter_defaults = parameters
+        self._variable_defaults = variables
+        self._parameter_defaults = parameters
 
         input_file = self._handle_clode_rhs_cl_file(
             src_file, rhs_equation, supplementary_equations
@@ -258,14 +243,6 @@ class Simulator:
         if aux is None:
             aux = []
 
-        # self._data = None
-        # self._output_trajectories = None
-        # self._time_steps = None
-        # self._output_time_steps = None
-        # self._number_of_simulations = None
-        # self._initial_conditions = None
-        # self._var_values = None
-        # self._n_stored = None
         self._max_store = max_store
 
         self.aux_variables = aux
@@ -293,7 +270,7 @@ class Simulator:
 
         self._integrator.build_cl()
 
-        self.initialize(variables, parameters)
+        self._init_integrator()
 
     def _pack_data(self) -> Tuple[np.ndarray, np.ndarray]:
         """Pack the data into a tuple.
@@ -315,21 +292,70 @@ class Simulator:
 
         return vars_array.flatten(), pars_array.flatten()
 
-    def initialize(
+    def set_repeat_ensemble(self, num_repeats: int) -> None:
+        """Set the number of repeats for the ensemble.
+
+        Args:
+            num_repeats (int): The number of repeats for the ensemble.
+
+        Returns:
+            None
+        """
+        self._variables = self._create_cl_arrays(self._variable_defaults, num_repeats)
+
+        self._parameters = self._create_cl_arrays(self._parameter_defaults, num_repeats)
+
+        self._init_integrator()
+
+    def set_ensemble(
         self,
         variables: Optional[
-            Dict[str, Union[float, np.ndarray[np.dtype[np.float64]], List[float]]]
+            Union[
+                np.ndarray[np.dtype[np.float64]],
+                Dict[str, Union[np.ndarray[np.dtype[np.float64]], List[float]]],
+            ]
         ] = None,
         parameters: Optional[
-            Dict[str, Union[float, np.ndarray[np.dtype[np.float64]], List[float]]]
+            Union[
+                np.ndarray[np.dtype[np.float64]],
+                Dict[str, Union[np.ndarray[np.dtype[np.float64]], List[float]]],
+            ]
         ] = None,
         seed: Optional[int] = None,
     ) -> None:
+
+        if isinstance(variables, np.ndarray):
+            # We test that the array is the correct length
+            if len(variables.shape) != 2:
+                raise ValueError("Variables must be a matrix")
+            if variables.shape[1] != len(self.variable_names):
+                raise ValueError(
+                    f"Variables must have {len(self.variable_names)} columns"
+                )
+            variables = {
+                key: variables[:, index]
+                for index, key in enumerate(self.variable_names)
+            }
+        if isinstance(parameters, np.ndarray):
+            # We test that the array is the correct length
+            if len(parameters.shape) != 2:
+                raise ValueError("Parameters must be a matrix")
+            if parameters.shape[1] != len(self.parameter_names):
+                raise ValueError(
+                    f"Parameters must have {len(self.parameter_names)} columns"
+                )
+            parameters = {
+                key: parameters[:, index]
+                for index, key in enumerate(self.parameter_names)
+            }
+
         cl_array_length = self._find_cl_array_length(variables, parameters)
 
         # Implicitly create arrays of the correct length
         # Discard self._variables and self._parameters
-        local_variables = variables.copy() if variables is not None else {}
+        local_variables: Dict[
+            str, Union[float, np.ndarray[np.dtype[np.float64]], List[float]]
+        ] = (variables.copy() if variables is not None else {})
 
         # Keys can be missing in variables but not in self._variable_defaults
         for key in local_variables.keys():
@@ -340,7 +366,9 @@ class Simulator:
             if key not in local_variables:
                 local_variables[key] = self._variable_defaults[key]
 
-        local_parameters = parameters.copy() if parameters is not None else {}
+        local_parameters: Dict[
+            str, Union[float, np.ndarray[np.dtype[np.float64]], List[float]]
+        ] = (parameters.copy() if parameters is not None else {})
 
         # Keys can be missing in parameters but not in self._parameter_defaults
         for key in local_parameters.keys():
@@ -481,6 +509,8 @@ class Simulator:
         Returns:
             None
         """
+        if not self.is_initialized:
+            raise RuntimeError("Simulator is not initialized")
         self._integrator.transient()
         if update_x0:
             self.shift_x0()
