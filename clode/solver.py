@@ -301,6 +301,8 @@ class Simulator:
         Returns:
             None
         """
+        self._cl_array_length = num_repeats
+
         self._variables = self._create_cl_arrays(self._variable_defaults, num_repeats)
 
         self._parameters = self._create_cl_arrays(self._parameter_defaults, num_repeats)
@@ -382,6 +384,8 @@ class Simulator:
         self._variables = self._create_cl_arrays(local_variables, cl_array_length)
 
         self._parameters = self._create_cl_arrays(local_parameters, cl_array_length)
+
+        self._cl_array_length = cl_array_length
 
         # self.seed_rng(seed)
 

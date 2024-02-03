@@ -132,7 +132,7 @@ plt.show()
 # Plot the time series
 plt.figure(figsize=(8, 6))
 for index in range(0, len(trajectories), 2):
-    label = f"I={parameters['current'][index]}"
+    label = f"I={ensemble_parameters['current'][index]}"
     plt.plot(trajectories[index].t, trajectories[index].x[:, 0], label=label)
 plt.xlabel("t")
 plt.ylabel("V")
