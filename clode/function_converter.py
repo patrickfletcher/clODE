@@ -7,6 +7,8 @@ import textwrap
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional, Union
 
+from clode.opencl_functions import OpenCLExp, OpenCLMin
+
 OpenCLRhsEquation = Callable[
     [float, List[float], List[float], List[float], List[float], List[float]], None
 ]
@@ -109,10 +111,15 @@ class OpenCLFunctionCall(OpenCLExpression):
     args: List[OpenCLExpression]
     cl_type: OpenCLType
 
+    opencl_functions = {"OpenCLExp": OpenCLExp, "OpenCLMin": OpenCLMin}
+
     def __init__(
         self, name: str, args: List[OpenCLExpression], cl_type: OpenCLType
     ) -> None:
-        self.name = name
+        if name in self.opencl_functions:
+            self.name = self.opencl_functions[name]().__str__()
+        else:
+            self.name = name
         self.args = args
         self.cl_type = cl_type
 
@@ -668,6 +675,9 @@ class OpenCLSyntaxTree:
         context: Dict[str, OpenCLType] = {
             parsed_fn.name: parsed_fn.returns for parsed_fn in self.functions
         }
+        context["OpenCLExp"] = OpenCLType("realtype")
+        context["OpenCLMin"] = OpenCLType("realtype")
+
         if function_name is None:
             function_name = fn.name
         self.functions.append(
@@ -721,7 +731,7 @@ class OpenCLConverter(ast.NodeTransformer):
         self,
         python_fn: Union[Callable[[Any], Any], OpenCLRhsEquation] | str,
         dedent: bool = True,
-        mutable_args: Optional[List[str], List[int]] = None,
+        mutable_args: Optional[Union[List[str], List[int]]] = None,
         function_name: Optional[str] = None,
     ) -> str:
         # Convert a Python function to OpenCL

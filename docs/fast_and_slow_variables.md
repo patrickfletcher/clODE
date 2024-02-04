@@ -11,9 +11,9 @@ def fitzhugh_nagumo(
     time: float,
     variables: List[float],
     parameters: List[float],
-    derivatives: list[float],
-    aux: list[float],
-    wiener: list[float],
+    derivatives: List[float],
+    aux: List[float],
+    wiener: List[float],
 ) -> None:
     V: float = variables[0]
     w: float = variables[1]

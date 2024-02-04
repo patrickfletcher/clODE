@@ -4,6 +4,7 @@ from clode.function_converter import (
     OpenCLRhsEquation,
     convert_str_to_opencl,
 )
+from clode.opencl_functions import OpenCLExp, OpenCLMin
 from clode.runtime import (
     CLDeviceType,
     CLVendor,
@@ -12,6 +13,8 @@ from clode.runtime import (
     SolverParams,
     get_log_level,
     initialize_runtime,
+    print_opencl,
+    query_opencl,
     set_log_level,
     set_log_pattern,
 )

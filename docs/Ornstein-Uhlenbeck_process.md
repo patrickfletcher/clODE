@@ -22,11 +22,11 @@ from typing import List
 # Define the Wiener_process
 def wiener_process(
         t: float,
-        y: list[float],
+        y: List[float],
         p: List[float],
-        dy: list[float],
-        aux: list[float],
-        wiener: list[float],
+        dy: List[float],
+        aux: List[float],
+        wiener: List[float],
 ) -> None:
     x: float = y[0]
     mu: float = p[0]
@@ -38,12 +38,6 @@ def wiener_process(
 
 variables = {"x": 0.0}
 parameters = {"mu": 1.0, "sigma": 0.5}
-
-# convenience:
-variable_names = list(variables.keys())
-initial_state = list(variables.values())
-parameter_names = list(parameters.keys())
-default_parameters = list(parameters.values())
 
 t_span = (0.0, 1000.0)
 
