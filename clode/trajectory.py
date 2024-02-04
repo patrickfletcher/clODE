@@ -8,15 +8,6 @@ from .function_converter import OpenCLRhsEquation
 from .runtime import CLDeviceType, CLVendor, TrajectorySimulatorBase, _clode_root_dir
 from .solver import Simulator, Stepper
 
-# TrajectoryOutput?
-# We have a collection of num_simulations trajectories, (t, X), stacked into matrices. Each trajectory may have a different number of total stored time steps.
-# - for convenience, would be nice to have access patterns something like:
-# >>> trajectory_output.t[0] --> t[: nstored[0], 0]
-# >>> trajectory_output.X[0] --> X[: nstored[0], :, 0])
-# >>> trajectory_output.X[var, 0] --> X[: nstored[0], var, 0]
-# >>> trajectory_output.t, .X --> (t[: max(nstored), :], X[: max(nstored), :, :])
-# class TrajectoryOutput:
-
 
 class TrajectoryResult:
     t: np.ndarray[Any, np.dtype[np.float64]]
@@ -39,12 +30,8 @@ class TrajectorySimulator(Simulator):
 
     def __init__(
         self,
-        variables: Dict[
-            str, Union[float, np.ndarray[np.dtype[np.float64]], List[float]]
-        ],
-        parameters: Dict[
-            str, Union[float, np.ndarray[np.dtype[np.float64]], List[float]]
-        ],
+        variables: Dict[str, float],
+        parameters: Dict[str, float],
         src_file: Optional[str] = None,
         rhs_equation: Optional[OpenCLRhsEquation] = None,
         supplementary_equations: Optional[List[Callable[[Any], Any]]] = None,
@@ -164,11 +151,11 @@ class TrajectorySimulator(Simulator):
         self._output_trajectories = self._integrator.get_x()
 
         # time_steps has one column per simulation (to support adaptive steppers)
-        shape = (self._cl_array_length, self._max_store)
+        shape = (self._ensemble_size, self._max_store)
         arr = np.array(self._output_time_steps[: np.prod(shape)])
         self._time_steps = arr.reshape(shape, order="F").transpose((1, 0))
 
-        shape = (self._cl_array_length, len(self.variable_names), self._max_store)
+        shape = (self._ensemble_size, len(self.variable_names), self._max_store)
         arr = np.array(self._output_trajectories[: np.prod(shape)])
         self._data = arr.reshape(shape, order="F").transpose((2, 1, 0))
 
@@ -186,7 +173,7 @@ class TrajectorySimulator(Simulator):
 
         # list of trajectories, each stored as dict:
         results = list()
-        for i in range(self._cl_array_length):
+        for i in range(self._ensemble_size):
             ni = self._n_stored[i]
             ti = self._time_steps[:ni, i]
             xi = self._data[:ni, :, i]

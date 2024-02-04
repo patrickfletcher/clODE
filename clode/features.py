@@ -218,12 +218,8 @@ class FeatureSimulator(Simulator):
 
     def __init__(
         self,
-        variables: Dict[
-            str, Union[float, np.ndarray[np.dtype[np.float64]], List[float]]
-        ],
-        parameters: Dict[
-            str, Union[float, np.ndarray[np.dtype[np.float64]], List[float]]
-        ],
+        variables: Dict[str, float],
+        parameters: Dict[str, float],
         src_file: Optional[str] = None,
         rhs_equation: Optional[OpenCLRhsEquation] = None,
         supplementary_equations: Optional[List[Callable[[Any], Any]]] = None,

@@ -38,8 +38,6 @@ class Simulator:
     and variable steady states,
     or it can be used as a base class for other simulators."""
 
-    # cleaner interface? Use the problem_info and solver_params "structs"
-
     _integrator: SimulatorBase
     _pi: ProblemInfo
     _sp: SolverParams
@@ -49,7 +47,7 @@ class Simulator:
     _variable_defaults: Dict[str, float]
     _parameters: Optional[Dict[str, np.ndarray]] = None
     _parameter_defaults: Dict[str, float]
-    _cl_array_length: int
+    _ensemble_size: int
     _single_precision: bool
     _stepper: Stepper
 
@@ -81,7 +79,7 @@ class Simulator:
         # return self._integrator.is_initialized()
         return True
 
-    def _find_cl_array_length(
+    def _find_ensemble_size(
         self,
         variables: Optional[
             Dict[str, Union[float, np.ndarray[np.dtype[np.float64]], List[float]]]
@@ -224,17 +222,9 @@ class Simulator:
         self._stepper = stepper
         self._single_precision = single_precision
 
-        # The variable defaults are set from any variable specified as a float
-        # in the variables dictionary, rather than as a serializable.
-        # This is to handle both users who specify defaults for each
-        # variable and users who specify a single default for all variables,
-        # later using initialize() to set the initial conditions.
-        self._variable_defaults = {}
-        self._parameter_defaults = {}
-        self._cl_array_length = 1
-
         self._variable_defaults = variables
         self._parameter_defaults = parameters
+        self._ensemble_size = 1
 
         input_file = self._handle_clode_rhs_cl_file(
             src_file, rhs_equation, supplementary_equations
@@ -301,13 +291,17 @@ class Simulator:
         Returns:
             None
         """
-        self._cl_array_length = num_repeats
+        self._ensemble_size = num_repeats
 
         self._variables = self._create_cl_arrays(self._variable_defaults, num_repeats)
 
         self._parameters = self._create_cl_arrays(self._parameter_defaults, num_repeats)
 
-        self._init_integrator()
+        if self.is_initialized:
+            vars_array, pars_array = self._pack_data()
+            self._integrator.set_problem_data(vars_array, pars_array)
+        else:
+            self._init_integrator()
 
     def set_ensemble(
         self,
@@ -351,7 +345,7 @@ class Simulator:
                 for index, key in enumerate(self.parameter_names)
             }
 
-        cl_array_length = self._find_cl_array_length(variables, parameters)
+        cl_array_length = self._find_ensemble_size(variables, parameters)
 
         # Implicitly create arrays of the correct length
         # Discard self._variables and self._parameters
@@ -385,11 +379,16 @@ class Simulator:
 
         self._parameters = self._create_cl_arrays(local_parameters, cl_array_length)
 
-        self._cl_array_length = cl_array_length
+        self._ensemble_size = cl_array_length
 
+        if self.is_initialized:
+            vars_array, pars_array = self._pack_data()
+            self._integrator.set_problem_data(vars_array, pars_array)
+        else:
+            self._init_integrator()
+            
         # self.seed_rng(seed)
 
-        self._init_integrator()
 
     def _build_integrator(self) -> None:
         self._integrator = SimulatorBase(
@@ -460,10 +459,11 @@ class Simulator:
         Returns:
             None
         """
-        self._integrator.set_problem_data(
-            x0.transpose().flatten(),
-            parameters.transpose().flatten(),
-        )
+        # self._integrator.set_problem_data(
+        #     x0.transpose().flatten(),
+        #     parameters.transpose().flatten(),
+        # )
+        raise NotImplementedError
 
     def set_x0(self, x0: np.array) -> None:
         """Set the initial conditions.
@@ -474,9 +474,10 @@ class Simulator:
         Returns:
             None
         """
-        self._integrator.set_x0(
-            x0.transpose().flatten(),
-        )
+        # self._integrator.set_x0(
+        #     x0.transpose().flatten(),
+        # )
+        raise NotImplementedError
 
     def set_parameters(self, parameters: np.array) -> None:
         """Set the parameters.
@@ -487,9 +488,10 @@ class Simulator:
         Returns:
             None
         """
-        self._integrator.set_pars(
-            parameters.transpose().flatten(),
-        )
+        # self._integrator.set_pars(
+        #     parameters.transpose().flatten(),
+        # )
+        raise NotImplementedError
 
     def set_solver_parameters(
         self,
@@ -502,7 +504,7 @@ class Simulator:
         Returns:
             None
         """
-        pass
+        raise NotImplementedError
 
     def transient(self, update_x0: bool = True) -> None:
         """Run a transient simulation.
@@ -566,22 +568,6 @@ class Simulator:
             List[str]
         """
         return self._integrator.get_available_steppers()
-
-    def get_program_string(self) -> str:
-        """Get the program string.
-
-        Returns:
-            str
-        """
-        return self._integrator.get_program_string()
-
-    def print_status(self) -> None:
-        """Print the simulator status info.
-
-        Returns:
-            None
-        """
-        self._integrator.print_status()
 
     def get_program_string(self) -> str:
         """Get the program string.
