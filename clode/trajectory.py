@@ -5,13 +5,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 import numpy as np
 
 from .function_converter import OpenCLRhsEquation
-from .runtime import (
-    CLDeviceType,
-    CLVendor,
-    ObserverParams,
-    TrajectorySimulatorBase,
-    _clode_root_dir,
-)
+from .runtime import CLDeviceType, CLVendor, TrajectorySimulatorBase, _clode_root_dir
 from .solver import Simulator, Stepper
 
 # TrajectoryOutput?

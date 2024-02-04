@@ -583,6 +583,22 @@ class Simulator:
         """
         self._integrator.print_status()
 
+    def get_program_string(self) -> str:
+        """Get the program string.
+
+        Returns:
+            str
+        """
+        return self._integrator.get_program_string()
+
+    def print_status(self) -> None:
+        """Print the simulator status info.
+
+        Returns:
+            None
+        """
+        self._integrator.print_status()
+
     def print_devices(self) -> None:
         """Print the available devices.
 

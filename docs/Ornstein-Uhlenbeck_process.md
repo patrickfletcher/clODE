@@ -56,6 +56,7 @@ integrator = clode.Simulator(
 # Any parameters or initial conditions that are not specified will be set to the default values
 nPts = 8192
 integrator.set_repeat_ensemble(nPts)
+
 integrator.transient()
 
 XF = integrator.get_final_state()

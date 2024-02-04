@@ -55,7 +55,7 @@ void getRHS(const realtype t,
 The following script runs the two-parameter sweep using the clODE FeatureSimulator to generate a *spike counting diagram*, as well as some trajectories of interest using the TrajectorySimulator.
 
 ```python
-    src_file = "chay_keizer.cl"
+src_file = "chay_keizer.cl"
 
 variables = {"v": -50.0, "n": 0.01, "c": 0.12}
 parameters = {"gca": 1200.0, "gkca": 750.0, "kpmca": 0.1}
