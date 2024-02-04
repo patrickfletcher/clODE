@@ -1,8 +1,31 @@
 import numpy as np
 import clode
 import time
+from typing import List
 import matplotlib.pyplot as plt
 
+def lorenz(
+    t: float,
+    var: List[float],
+    p: List[float],
+    dvar: List[float],
+    aux: List[float],
+    wiener: List[float],
+) -> None:
+    x: float = var[0]
+    y: float = var[1]
+    z: float = var[2]
+    
+    r: float = p[0],
+    s: float = p[1],
+    beta: float = p[2],
+
+    dx: float = s*(y - x)
+    dy: float = r*x - y - x*z
+    dz: float = x*y - beta*z
+    dvar[0] = dx
+    dvar[1] = dy
+    dvar[2] = dz
 
 def test_lorenz_rk4(platform_id, device_id, num_pts, reps):
     
@@ -15,38 +38,34 @@ def test_lorenz_rk4(platform_id, device_id, num_pts, reps):
     parameter_names = list(parameters.keys())
     default_parameters = list(parameters.values())
 
-    tspan = (0.0, 10.0)
+    t_span = (0.0, 10.0)
 
     src_file = "test/lorenz.cl"
     integrator = clode.Simulator(
         src_file=src_file,
-        # rhs_equation=getRHS,
-        variable_names=variable_names,
-        parameter_names=parameter_names,
+        # rhs_equation=lorenz,
+        variables=variables,
+        parameters=parameters,
         single_precision=True,
         platform_id=platform_id,
         device_id=device_id,
-        tspan=tspan,
+        t_span=t_span,
         stepper=clode.Stepper.rk4,
         dt=0.01,
     )
-    # first initialize with dummy parameters
-    Pars = np.tile(default_parameters, (1, 1))
-    X0 = np.tile(initial_state, (1, 1))
-    integrator.set_ensemble(X0, Pars)
-
 
     t_average = []
     print(f"Time for 1000 RK4 steps of the Lorenz system. {reps} repetitions.\n(N, min, median, max time)")
     for num in num_pts:
         times = []
-        Pars = np.tile(default_parameters, (num, 1))
-        X0 = np.tile(initial_state, (num, 1))
-        integrator.set_problem_data(X0, Pars)
+        # Pars = np.tile(default_parameters, (num, 1))
+        # X0 = np.tile(initial_state, (num, 1))
+        # integrator.set_problem_data(X0, Pars)
+        integrator.set_repeat_ensemble(num_repeats=num)
 
         #warm-up passes - seems to make output more reliable
         for _ in range(5):
-            integrator.set_problem_data(X0, Pars)
+            # integrator.set_problem_data(X0, Pars)
             integrator.transient(update_x0=False)
             integrator.get_final_state()
 
@@ -69,9 +88,9 @@ def test_lorenz_rk4(platform_id, device_id, num_pts, reps):
 
 # if using 'bazel test ...'
 if __name__ == "__main__":
-    clode.set_log_level(clode.LogLevel.info)    
-    clode.runtime.print_opencl()
-    clode.set_log_level(clode.runtime.DEFAULT_LOG_LEVEL) 
+    # clode.set_log_level(clode.LogLevel.info)    
+    # clode.runtime.print_opencl()
+    # clode.set_log_level(clode.runtime.DEFAULT_LOG_LEVEL) 
 
     ocl_info = clode.runtime.query_opencl()
     ocl_info = ocl_info[:3]
