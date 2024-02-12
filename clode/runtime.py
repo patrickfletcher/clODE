@@ -87,5 +87,6 @@ __all__ = [
     "OpenCLResource",
     "FeatureSimulatorBase",
     "TrajectorySimulatorBase",
-    "print_opencl" "query_opencl",
+    "print_opencl",
+    "query_opencl",
 ]

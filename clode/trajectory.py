@@ -26,6 +26,7 @@ class TrajectorySimulator(Simulator):
     _output_time_steps: np.ndarray[Any, np.dtype[np.float64]] | None
     _output_trajectories: np.ndarray[Any, np.dtype[np.float64]] | None
     _data: np.ndarray[Any, np.dtype[np.float64]] | None
+    _aux: np.ndarray[Any, np.dtype[np.float64]] | None
     _integrator: TrajectorySimulatorBase
 
     def __init__(
@@ -113,6 +114,7 @@ class TrajectorySimulator(Simulator):
         self._output_trajectories = None
         self._time_steps = None
         self._output_time_steps = None
+        self._aux = None
 
     def _build_integrator(self) -> None:
         self._integrator = TrajectorySimulatorBase(
@@ -180,4 +182,20 @@ class TrajectorySimulator(Simulator):
             result = TrajectoryResult({"t": ti, "x": xi})
             results.append(result)
 
+        return results
+
+    def get_aux(self) -> List[np.ndarray[Any, np.dtype[np.float64]]]:
+        """Get the auxiliary data.
+
+        Returns:
+            np.array: The auxiliary data.
+        """
+        _ = self.get_trajectory()
+        self._aux = self._integrator.get_aux()
+        results = list()
+        chunk_start = 0
+        for i in range(self._ensemble_size):
+            ni = self._n_stored[i]
+            results.append(self._aux[chunk_start:ni])
+            chunk_start += ni
         return results

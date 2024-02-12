@@ -1,81 +1,51 @@
 from typing import List
 
-import matplotlib.pyplot as plt
-import numpy as np
+from clode import OpenCLConverter
+import math
 
-import clode
+def get_rhs(t: float,
+        x: List[float],
+        p: List[float],
+        dx: List[float],
+        aux: List[float],
+        w: List[float]) -> None:
+    v: float = x[0]
+    n: float = x[1]
+    c: float = x[2]
+
+    gca: float = p[0]
+    gkca: float = p[1]
+    kpmca: float = p[2]
+    gk: float = 3500.0
+
+    vca: float = 25.0
+    vk: float = -75.0
+    cm: float = 5300.0
+    alpha: float = 4.5e-6
+    fcyt: float = 0.01
+    kd: float = 0.4
+    vm: float = -20.0
+    sm: float = 12.0
+    vn: float = -16.0
+    sn: float = 5.0
+    taun: float = 20.0
+
+    minf: float = 1.0 / (1.0 + math.exp((vm - v) / sm))
+    ninf: float = 1.0 / (1.0 + math.exp((vn - v) / sn))
+    omega: float = c ** 2 / (c ** 2 + kd ** 2)
+
+    ica: float = gca * minf * (v - vca)
+    ik: float = gk * n * (v - vk)
+    ikca: float = gkca * omega * (v - vk)
+
+    dx[0] = -(ica + ik + ikca) / cm
+    dx[1] = (ninf - n) / taun
+    dx[2] = fcyt * (-alpha * ica - kpmca * c)
 
 
-def fitzhugh_nagumo(
-    time: float,
-    variables: List[float],
-    parameters: List[float],
-    derivatives: List[float],
-    aux: List[float],
-    wiener: List[float],
-) -> None:
-    V: float = variables[0]
-    w: float = variables[1]
-
-    a: float = parameters[0]
-    b: float = parameters[1]
-    current: float = parameters[2]
-    epsilon: float = parameters[3]
-
-    dV: float = V - V**3 / 3 - w + current
-    dw: float = epsilon * (V + a - b * w)
-
-    derivatives[0] = dV
-    derivatives[1] = dw
-
-
-a = 0.7
-variables = {"V": 1.0, "w": 0.0}
-parameters = {
-    "a": a,
-    "b": 0.8,
-    "current": 0.0,
-    "epsilon": 1.0 / 12.5,
-}
-
-simulator = clode.TrajectorySimulator(
-    rhs_equation=fitzhugh_nagumo,
-    variables=variables,
-    parameters=parameters,
-    t_span=(0, 200),
-    dt=0.02,
-)
-
-ensemble_parameters = {"current":np.arange(0.0, 0.6, 0.1)}
-simulator.set_ensemble(parameters=ensemble_parameters)
-
-trajectories = simulator.trajectory()
-
-plt.figure(figsize=(8, 6))
-for index in range(len(trajectories)):
-    plt.plot(
-        trajectories[index].x[:, 0],
-        trajectories[index].x[:, 1],
-        label=f"I={ensemble_parameters['current'][index]}",
-    )
-plt.xlabel("V")
-plt.ylabel("w")
-plt.legend()
-plt.show()
-
-# Plot the time series
-plt.figure(figsize=(8, 6))
-for index in range(0, len(trajectories), 2):
-    plt.plot(
-        trajectories[index].t,
-        trajectories[index].x[:, 0],
-        label=f"I={ensemble_parameters['current'][index]}",
-    )
-plt.xlabel("t")
-plt.ylabel("V")
-plt.legend()
-plt.show()
-
+converter = OpenCLConverter()
+print(converter.convert_to_opencl(get_rhs))
+print("Foo")
 # import clode
 # from clode import OpenCLConverter, OpenCLExp
 #
