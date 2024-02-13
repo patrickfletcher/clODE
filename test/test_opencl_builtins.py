@@ -63,11 +63,11 @@ from clode import (
 def test_opencl_builtins() -> None:
     def rhs(
         t: float,
-        x: list[float],
-        p: list[float],
-        dx: list[float],
-        aux: list[float],
-        w: list[float],
+        x: List[float],
+        p: List[float],
+        dx: List[float],
+        aux: List[float],
+        w: List[float],
     ) -> None:
         #  Test every OpenCL builtin function and place the result in aux
 
