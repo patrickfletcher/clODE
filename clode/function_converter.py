@@ -212,7 +212,8 @@ class OpenCLFunctionCall(OpenCLExpression):
 
     def __str__(self) -> str:
         if self.name == "int" or self.name == "float":
-            return f"({self.name})({', '.join(map(str, self.args))})"
+            name = "int" if self.name == "int" else "realtype"
+            return f"({name})({', '.join(map(str, self.args))})"
         return f"{self.name}({', '.join(map(str, self.args))})"
 
     def get_cl_type(self) -> OpenCLType:

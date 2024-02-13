@@ -54,6 +54,7 @@ simulator = TrajectorySimulator(
 ## Arithmetic operations
 
 clODE supports the following arithmetic operations:
+
 - Addition: `+`
 - Subtraction: `-`
 - Multiplication: `*`
