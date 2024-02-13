@@ -70,31 +70,33 @@ def fdim(x: float, y: float) -> float:
     return max(x - y, 0)
 
 
-def fma(x: float, y: float, z: float) -> float:
-    return x * y + z
+# OpenCL returns nan
+# def fma(x: float, y: float, z: float) -> float:
+#     return x * y + z
 
-
-def fract(x: float) -> float:
-    return x - floor(x)
+# OpenCL Compiler error
+# def fract(x: float) -> float:
+#     return x - floor(x)
 
 
 def ilogb(x: float) -> int:
     return int(log2(x))
 
 
-def logb(x: float) -> float:
-    if x == 0:
-        return float("-inf")  # Return negative infinity for 0
-    else:
-        return log2(abs(x))
+# OpenCL returns nan
+# def logb(x: float) -> float:
+#     if x == 0:
+#         return float("-inf")  # Return negative infinity for 0
+#     else:
+#         return log2(abs(x))
 
+# OpenCL returns nan
+# def mad(x: float, y: float, z: float) -> float:
+#     return x * y + z
 
-def mad(x: float, y: float, z: float) -> float:
-    return x * y + z
-
-
-def nan() -> float:
-    return float("nan")
+# Runtime error
+# def nan() -> float:
+#     return float("nan")
 
 
 def nextafter(x: float, y: float) -> float:
@@ -156,9 +158,9 @@ __all__ = [
     "fabs",
     "fdim",
     "floor",
-    "fma",
+    # "fma",
     "fmod",
-    "fract",
+    # "fract",
     "gamma",
     "hypot",
     "ilogb",
@@ -168,9 +170,9 @@ __all__ = [
     "log1p",
     "log2",
     "log10",
-    "logb",
-    "mad",
-    "nan",
+    # "logb",
+    # "mad",
+    # "nan",
     "nextafter",
     "pow",
     "pown",

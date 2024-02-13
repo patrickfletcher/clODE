@@ -33,11 +33,9 @@ def test_ornl_thompson_a1():
         dtmax=0.001,
         stepper=clode.Stepper.rk4,
         t_span=t_span,
+        max_store=20000,
+        max_steps=20000,
     )
-
-    x0 = {"y1": [0.0], "y2": [0.0]}
-
-    integrator.set_ensemble(variables=x0)
 
     integrator.trajectory()
 

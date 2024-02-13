@@ -17,7 +17,7 @@ class TrajectoryResult:
         self.t = data["t"]
         self.x = data["x"]
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"TrajectoryResult(t={self.t}, x={self.x})"
 
 
@@ -25,6 +25,7 @@ class TrajectorySimulator(Simulator):
     _time_steps: np.ndarray[Any, np.dtype[np.float64]] | None
     _output_time_steps: np.ndarray[Any, np.dtype[np.float64]] | None
     _output_trajectories: np.ndarray[Any, np.dtype[np.float64]] | None
+    _output_aux: np.ndarray[Any, np.dtype[np.float64]] | None
     _data: np.ndarray[Any, np.dtype[np.float64]] | None
     _aux: np.ndarray[Any, np.dtype[np.float64]] | None
     _integrator: TrajectorySimulatorBase
@@ -114,6 +115,7 @@ class TrajectorySimulator(Simulator):
         self._output_trajectories = None
         self._time_steps = None
         self._output_time_steps = None
+        self._output_aux = None
         self._aux = None
 
     def _build_integrator(self) -> None:
@@ -157,9 +159,9 @@ class TrajectorySimulator(Simulator):
         arr = np.array(self._output_time_steps[: np.prod(shape)])
         self._time_steps = arr.reshape(shape, order="F").transpose((1, 0))
 
-        shape = (self._ensemble_size, len(self.variable_names), self._max_store)
-        arr = np.array(self._output_trajectories[: np.prod(shape)])
-        self._data = arr.reshape(shape, order="F").transpose((2, 1, 0))
+        data_shape = (self._ensemble_size, len(self.variable_names), self._max_store)
+        arr = np.array(self._output_trajectories[: np.prod(data_shape)])
+        self._data = arr.reshape(data_shape, order="F").transpose((2, 1, 0))
 
         # Check for None values
         if self._data is None:
@@ -176,7 +178,7 @@ class TrajectorySimulator(Simulator):
         # list of trajectories, each stored as dict:
         results = list()
         for i in range(self._ensemble_size):
-            ni = self._n_stored[i]
+            ni = self._n_stored[i] + 1
             ti = self._time_steps[:ni, i]
             xi = self._data[:ni, :, i]
             result = TrajectoryResult({"t": ti, "x": xi})
@@ -191,11 +193,15 @@ class TrajectorySimulator(Simulator):
             np.array: The auxiliary data.
         """
         _ = self.get_trajectory()
-        self._aux = self._integrator.get_aux()
+        self._output_aux = self._integrator.get_aux()
+
+        shape = (self._ensemble_size, len(self.aux_variables), self._max_store)
+        arr = np.array(self._output_aux[: np.prod(shape)])
+        self._aux = arr.reshape(shape, order="F").transpose((2, 1, 0))
+
         results = list()
-        chunk_start = 0
         for i in range(self._ensemble_size):
-            ni = self._n_stored[i]
-            results.append(self._aux[chunk_start:ni])
-            chunk_start += ni
+            ni = self._n_stored[i] + 1
+            aux_data = self._aux[:ni, :, i]
+            results.append(aux_data)
         return results

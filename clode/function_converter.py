@@ -81,11 +81,11 @@ _opencl_builtins = {
     "fdim": OpenCLBuiltin(2, "fdim", OpenCLType("realtype")),
     "fmod": OpenCLBuiltin(2, "fmod", OpenCLType("realtype")),
     "floor": OpenCLBuiltin(1, "floor", OpenCLType("realtype")),
-    "fma": OpenCLBuiltin(3, "fma", OpenCLType("realtype")),
+    # "fma": OpenCLBuiltin(3, "fma", OpenCLType("realtype")), # OpenCL returns nan
     "max": OpenCLBuiltin(2, "fmax", OpenCLType("realtype")),
     "min": OpenCLBuiltin(2, "fmin", OpenCLType("realtype")),
     "mod": OpenCLBuiltin(2, "fmod", OpenCLType("realtype")),
-    "fract": OpenCLBuiltin(1, "fract", OpenCLType("realtype")),
+    # "fract": OpenCLBuiltin(1, "fract", OpenCLType("realtype")), # OpenCL Compiler error
     # "frexp": OpenCLBuiltin(2, "frexp", OpenCLType("realtype")),
     "hypot": OpenCLBuiltin(2, "hypot", OpenCLType("realtype")),
     "ilogb": OpenCLBuiltin(1, "ilogb", OpenCLType("int")),
@@ -96,16 +96,16 @@ _opencl_builtins = {
     "log2": OpenCLBuiltin(1, "log2", OpenCLType("realtype")),
     "log10": OpenCLBuiltin(1, "log10", OpenCLType("realtype")),
     "log1p": OpenCLBuiltin(1, "log1p", OpenCLType("realtype")),
-    "logb": OpenCLBuiltin(1, "logb", OpenCLType("realtype")),
-    "mad": OpenCLBuiltin(3, "mad", OpenCLType("realtype")),
-    # "modf": OpenCLBuiltin(2, "modf", OpenCLType("realtype")),
-    "nan": OpenCLBuiltin(0, "nan", OpenCLType("realtype")),
+    # "logb": OpenCLBuiltin(1, "logb", OpenCLType("realtype")), # OpenCL returns nan
+    # "mad": OpenCLBuiltin(3, "mad", OpenCLType("realtype")), # OpenCL returns nan
+    # "modf": OpenCLBuiltin(2, "modf", OpenCLType("realtype")), # Pointers not supported
+    # "nan": OpenCLBuiltin(0, "nan", OpenCLType("realtype")),
     "nextafter": OpenCLBuiltin(2, "nextafter", OpenCLType("realtype")),
     "pow": OpenCLBuiltin(2, "pow", OpenCLType("realtype")),
     "pown": OpenCLBuiltin(2, "pown", OpenCLType("realtype")),
     "powr": OpenCLBuiltin(2, "powr", OpenCLType("realtype")),
     "remainder": OpenCLBuiltin(2, "remainder", OpenCLType("realtype")),
-    # "remquo": OpenCLBuiltin(3, "remquo", OpenCLType("realtype")),
+    # "remquo": OpenCLBuiltin(3, "remquo", OpenCLType("realtype")), # Pointers not supported
     "rint": OpenCLBuiltin(1, "rint", OpenCLType("realtype")),
     "rootn": OpenCLBuiltin(2, "rootn", OpenCLType("realtype")),
     "round": OpenCLBuiltin(1, "round", OpenCLType("realtype")),

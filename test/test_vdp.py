@@ -64,6 +64,8 @@ def vdp_dormand_prince(
         observer=clode.Observer.threshold_2,
         stepper=clode.Stepper.dormand_prince,
         t_span=t_span,
+        max_store=20000,
+        max_steps=20000,
     )
 
     parameters = {
