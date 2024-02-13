@@ -51,21 +51,87 @@ simulator = TrajectorySimulator(
 )
 ```
 
-## Using builtins (min, max, etc.)
+## Arithmetic operations
 
-Certain builtin functions are available in clODE.
-In a future version, clODE will automatically determine
-which function to use based on the argument types.
-Therefore, it is recommended to use the clODE builtins
-instead of the Python builtins when possible.
+clODE supports the following arithmetic operations:
 
-The functions currently available are:
-- `OpenCLExp`
-- `OpenCLMin`
-- `OpenCLMax`
+- Addition: `+`
+- Subtraction: `-`
+- Multiplication: `*`
+- Division: `/`
+- Exponentiation: `**`
+- Modulo: `%`
 
 ```py run
-from clode import OpenCLConverter, OpenCLExp
+from clode import OpenCLConverter
+
+def get_rhs(t: float,
+            variables: list[float],
+            parameters: list[float],
+            derivatives: list[float],
+            aux: list[float],
+            wiener: list[float]) -> None:
+    x: float = variables[0]
+    y: float = variables[1]
+    
+    derivatives[0] = x + y
+    derivatives[1] = x - y
+    aux[1] = x * y
+    aux[2] = x / y
+    aux[3] = x ** 3
+    aux[4] = x % y
+    
+converter = OpenCLConverter()
+print(converter.convert_to_opencl(get_rhs))
+```
+
+Note that the exponent operator `x ** y` is implicitly
+converted to `x * ... * x` for integer exponents if x < 5.
+If x >= 5, the exponent operator is converted to the
+`pown` function.
+If the exponent is a float, the `pow` function is used.
+
+## Using builtins (sin, exp, etc.)
+
+Certain builtin functions are available in clODE.
+By convention, the floating point versions of
+these functions are used.
+
+The functions trigonometric currently available are:
+
+| Sine   | Cosine | Tangent | Other    |
+|--------|--------|---------|----------|
+| sin    | cos    | tan     | atan2    |
+| asin   | acos   | atan    | atan2pi  |
+| sinh   | cosh   | tanh    |          |
+| asinh  | acosh  | atanh   |          |
+| sinpi  | cospi  | tanpi   |          |
+| asinpi | acospi | atanpi  |          |
+
+Additionally, the following functions are supported:
+
+| Exponential & Logarithmic  | Power & Root  | Rounding & Remainder | Miscellaneous |
+|----------------------------|---------------|----------------------|------------------------|
+| exp                        | cbrt          | ceil                 | copysign               |
+| exp2                       | pow           | floor                | fabs                   |
+| exp10                      | pown          | fmod                 | fdim                   |
+| expm1                      | powr          | remainder            | gamma                  |
+| log                        | sqrt          | rint                 | hypot                  |
+| log1p                      | rsqrt         | trunc                | ilogb                  |
+| log2                       | rootn         |                      | ldexp                  |
+| log10                      |               |                      | lgamma                 |
+|                            |               |                      | nextafter              |
+|                            |               |                      | erf                    |
+|                            |               |                      | erfc                   |
+
+You can change between int and float numbers by using
+the Python builtins `int()` and `float()`.
+
+**Note:** You can import arithmetic functions from
+math, numpy or clode.
+
+```py run
+from clode import OpenCLConverter, exp
 
 def get_rhs(
     t: float,
@@ -77,9 +143,10 @@ def get_rhs(
 ) -> None:
     x: float = variables[0]
     y: float = variables[1]
+    p1: int = int(parameters[0])
 
-    derivatives[0] = (x - y) / OpenCLExp(y)
-    derivatives[1] = -x
+    derivatives[0] = (x - y) / exp(y)
+    derivatives[1] = -x ** p1
     
 
 converter = OpenCLConverter()

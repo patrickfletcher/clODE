@@ -4,6 +4,47 @@ Bursting in excitable cells is the grouping of fast spikes into clusters, or bur
 
 When studying bursting, numerical simulations can be used to observe the transitions from spiking to increasingly long bursts via *spike-adding bifurcations*. Here we show how the number of spikes per burst varies as a function of two parameters, the voltage-dependent calcium channel conductance ($g_{Ca}$) and the plasma membrane calcium ATPase pump rate ($k_{PMCA}$).
 
+```python
+void get_rhs(t: float,
+             x: List[float],
+             p: List[float],
+             dx: List[float],
+             aux: List[float],   
+             w: List[float]) -> None:    
+    v: float = x[0]
+    n: float = x[1]
+    c: float = x[2]
+
+    gca: float = p[0]
+    gkca: float = p[1]
+    kpmca: float = p[2]
+    gk: float = 3500.0
+
+    vca: float = 25.0
+    vk: float = -75.0
+    cm: float = 5300.0
+    alpha: float = 4.5e-6
+    fcyt: float = 0.01
+    kd: float = 0.4
+    vm: float = -20.0
+    sm: float = 12.0
+    vn: float = -16.0
+    sn: float = 5.0
+    taun: float = 20.0
+    
+    minf: float = 1.0/(1.0 + exp((vm - v)/sm))
+    ninf: float = 1.0/(1.0 + exp((vn - v)/sn))
+    omega: float = c**2/(c**2 + kd**2)
+
+    ica: float = gca*minf*(v - vca)
+    ik: float = gk*n*(v - vk)
+    ikca: float = gkca*omega*(v - vk)
+
+    dx[0] = -(ica + ik + ikca)/cm
+    dx[1] = (ninf - n)/taun
+    dx[2] = fcyt*(-alpha*ica - kpmca*c)
+```
+
 The model definition in OpenCL:
 ```c
 void getRHS(const realtype t,

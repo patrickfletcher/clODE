@@ -19,6 +19,7 @@ nav:
     - Feature Extraction: 'feature_extraction.md'
     - Trajectory Simulation: 'trajectory_simulation.md'
     - Stochastic Simulations: 'Ornstein-Uhlenbeck_process.md'
+#    - Spike Counting: 'spike_counting.md'
   - Configuration:
       - Specifying systems of ODEs: 'specifying_odes.md'
       - XPP files: 'xpp_files.md'

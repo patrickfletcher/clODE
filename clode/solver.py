@@ -386,9 +386,8 @@ class Simulator:
             self._integrator.set_problem_data(vars_array, pars_array)
         else:
             self._init_integrator()
-            
-        # self.seed_rng(seed)
 
+        # self.seed_rng(seed)
 
     def _build_integrator(self) -> None:
         self._integrator = SimulatorBase(
@@ -558,7 +557,7 @@ class Simulator:
         self._final_state = self._integrator.get_xf()
         final_state = np.array(self._final_state)
         return final_state.reshape(
-            (len(self._variables), len(final_state) // len(self._variables))
+            (len(self.variable_names), len(final_state) // len(self.variable_names))
         ).transpose()
 
     def get_available_steppers(self) -> List[str]:
