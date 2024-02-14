@@ -59,7 +59,7 @@ __kernel void features(
 	while (ti < tspan[1] && step < sp->max_steps)
 	{
 		++step;
-		++odata.stepcount;
+		//++odata.stepcount; //do this in updateObserverData always
         stepflag = stepper(&ti, xi, dxi, p, sp, &dt, tspan, auxi, wi, &rd);
         // if (stepflag!=0)
             // break;
@@ -85,6 +85,7 @@ __kernel void features(
 	//finalize observerdata for possible continuation
 	finalizeObserverData(&ti, xi, dxi, auxi, &odata, opars, tspan);
 
+	//store the observerData in global memory
 	OData[i] = odata;
 
     //write the final solution values to global memory.

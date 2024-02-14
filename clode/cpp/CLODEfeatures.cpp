@@ -157,8 +157,8 @@ void CLODEfeatures::updateObserverDefineMap()
 		observerDataSize=observerDefineMap.at(observer).observerDataSizeFloat;
 	else
 		observerDataSize=observerDefineMap.at(observer).observerDataSizeDouble;
-	spdlog::debug("observerDataSize = {}",observerDataSize);
-	observerDataSize = observerDataSize + observerDataSize % realSize; //align to a multiple of realsize. is this necessary?
+	// spdlog::debug("observerDataSize = {}",observerDataSize);
+	// observerDataSize = observerDataSize + observerDataSize % realSize; //align to a multiple of realsize. is this necessary?
 
 	nFeatures=(int)observerDefineMap.at(observer).featureNames.size();
 	featureNames=observerDefineMap.at(observer).featureNames;

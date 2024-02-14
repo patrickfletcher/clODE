@@ -14,8 +14,8 @@ struct ObserverData_basic
     realtype xTrajectoryMean;
     realtype dxTrajectoryMax;
     realtype dxTrajectoryMin;
-    int eventcount;
-    int stepcount;
+    unsigned int eventcount;
+    unsigned int stepcount;
 };
 
 #ifdef __cplusplus
@@ -27,7 +27,7 @@ static ObserverInfo getObserverInfo_basic(const ProblemInfo pi, const int fVarIx
     oi.observerDataSizeFloat=sizeof(ObserverData_basic<float>);
     oi.observerDataSizeDouble=sizeof(ObserverData_basic<double>);
     std::string varName=pi.varNames[fVarIx];
-    oi.featureNames={"max "+varName,"min "+varName,"mean "+varName,"max d"+varName+"/dt","min d"+varName+"/dt","stepcount"};
+    oi.featureNames={"max "+varName, "min "+varName, "mean "+varName, "max d"+varName+"/dt", "min d"+varName+"/dt", "step count"};
     return oi;
 }
 #endif
@@ -71,6 +71,7 @@ inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dxi[], re
 //all features are per-timestep (eventOccurred unused)
 inline void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
 {
+    ++od->stepcount;
     od->xTrajectoryMax = fmax(xi[op->fVarIx], od->xTrajectoryMax);
     od->xTrajectoryMin = fmin(xi[op->fVarIx], od->xTrajectoryMin);
     runningMean(&od->xTrajectoryMean, xi[op->fVarIx], od->stepcount);
