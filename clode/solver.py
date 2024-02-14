@@ -231,7 +231,7 @@ class Simulator:
         )
 
         if aux is None:
-            aux = []
+            aux = ["dummy_aux"]
 
         self._max_store = max_store
 
@@ -297,11 +297,11 @@ class Simulator:
 
         self._parameters = self._create_cl_arrays(self._parameter_defaults, num_repeats)
 
-        if self.is_initialized:
-            vars_array, pars_array = self._pack_data()
-            self._integrator.set_problem_data(vars_array, pars_array)
-        else:
-            self._init_integrator()
+        # if self.is_initialized:
+        #     vars_array, pars_array = self._pack_data()
+        #     self._integrator.set_problem_data(vars_array, pars_array)
+        # else:
+        self._init_integrator()
 
     def set_ensemble(
         self,
@@ -386,11 +386,11 @@ class Simulator:
 
         self._ensemble_size = cl_array_length
 
-        if self.is_initialized:
-            vars_array, pars_array = self._pack_data()
-            self._integrator.set_problem_data(vars_array, pars_array)
-        else:
-            self._init_integrator()
+        # if self.is_initialized:
+        #     vars_array, pars_array = self._pack_data()
+        #     self._integrator.set_problem_data(vars_array, pars_array)
+        # else:
+        self._init_integrator()
 
         # self.seed_rng(seed)
 
