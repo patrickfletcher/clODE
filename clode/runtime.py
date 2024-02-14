@@ -39,6 +39,7 @@ def initialize_runtime(
             return _clode.OpenCLResource(platform_id, device_id)
         if device_ids is not None:
             return _clode.OpenCLResource(platform_id, device_ids)
+        raise ValueError("Must specify one of device_id and device_ids")
     elif device_id is not None:
         raise ValueError("Must specify platform_id when specifying device_id")
     elif device_ids is not None:

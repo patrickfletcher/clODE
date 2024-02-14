@@ -319,7 +319,6 @@ class Simulator:
         ] = None,
         seed: Optional[int] = None,
     ) -> None:
-
         if isinstance(variables, np.ndarray):
             # We test that the array is the correct length
             if len(variables.shape) != 2:
@@ -351,28 +350,34 @@ class Simulator:
         # Discard self._variables and self._parameters
         local_variables: Dict[
             str, Union[float, np.ndarray[np.dtype[np.float64]], List[float]]
-        ] = (variables.copy() if variables is not None else {})
+        ] = {}
 
         # Keys can be missing in variables but not in self._variable_defaults
-        for key in local_variables.keys():
-            if key not in self._variable_defaults:
-                raise KeyError(f"Key {key} not in ODE variable defaults!")
+        if variables is not None:
+            for key in variables.keys():
+                if key not in self._variable_defaults:
+                    raise KeyError(f"Key {key} not in ODE variable defaults!")
 
         for key in self._variable_defaults.keys():
-            if key not in local_variables:
+            if variables is not None and key in variables:
+                local_variables[key] = variables[key]
+            else:
                 local_variables[key] = self._variable_defaults[key]
 
         local_parameters: Dict[
             str, Union[float, np.ndarray[np.dtype[np.float64]], List[float]]
-        ] = (parameters.copy() if parameters is not None else {})
+        ] = {}
 
         # Keys can be missing in parameters but not in self._parameter_defaults
-        for key in local_parameters.keys():
-            if key not in self._parameter_defaults:
-                raise KeyError(f"Key {key} not in ODE parameter defaults!")
+        if parameters is not None:
+            for key in parameters.keys():
+                if key not in self._parameter_defaults:
+                    raise KeyError(f"Key {key} not in ODE parameter defaults!")
 
         for key in self._parameter_defaults.keys():
-            if key not in local_parameters:
+            if parameters is not None and key in parameters:
+                local_parameters[key] = parameters[key]
+            else:
                 local_parameters[key] = self._parameter_defaults[key]
 
         self._variables = self._create_cl_arrays(local_variables, cl_array_length)
