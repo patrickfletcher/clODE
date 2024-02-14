@@ -201,7 +201,7 @@ class TrajectorySimulator(Simulator):
 
         results = list()
         for i in range(self._ensemble_size):
-            ni = self._n_stored[i] + 1
+            ni = self._n_stored[i]
             aux_data = self._aux[:ni, :, i]
             results.append(aux_data)
         return results
