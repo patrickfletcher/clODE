@@ -68,6 +68,8 @@ __kernel void trajectory(
     for (int j = 0; j < N_AUX; ++j)
         aux[storeix * nPts * N_AUX + j * nPts + i] = auxi[j];
 
+    ++storeix;
+    
     //time-stepping loop, main time interval
     int step = 0;
     int stepflag = 0;
@@ -81,7 +83,6 @@ __kernel void trajectory(
         //store every sp.nout'th step after the initial point
         if (step % sp->nout == 0)
         {
-            ++storeix;
 
             t[storeix * nPts + i] = ti; //adaptive steppers give different timepoints for each trajectory
 
@@ -93,6 +94,8 @@ __kernel void trajectory(
 
             for (int j = 0; j < N_AUX; ++j)
                 aux[storeix * nPts * N_AUX + j * nPts + i] = auxi[j];
+                
+            ++storeix;
         }
     }
 

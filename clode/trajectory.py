@@ -178,7 +178,7 @@ class TrajectorySimulator(Simulator):
         # list of trajectories, each stored as dict:
         results = list()
         for i in range(self._ensemble_size):
-            ni = self._n_stored[i] + 1
+            ni = self._n_stored[i]
             ti = self._time_steps[:ni, i]
             xi = self._data[:ni, :, i]
             result = TrajectoryResult({"t": ti, "x": xi})
