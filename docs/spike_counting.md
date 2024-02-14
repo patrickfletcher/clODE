@@ -80,8 +80,8 @@ integrator = clode.FeatureSimulator(
 )
 
 # set up the ensemble of systems
-nx = 256
-ny = 256
+nx = 64
+ny = 64
 nPts = nx * ny
 gca = np.linspace(550.0, 1050.0, nx)
 kpmca = np.linspace(0.095, 0.155, ny)

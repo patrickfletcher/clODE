@@ -48,16 +48,14 @@ variables = {"v": -50.0, "n": 0.01, "c": 0.12}
 parameters = {"gca": 1200.0, "gkca": 750.0, "kpmca": 0.1}
 
 # set up the solver
-t_span=(0.0, 30000.0)
 integrator = clode.FeatureSimulator(
     rhs_equation=get_rhs,
     variables=variables,
     parameters=parameters,
     single_precision=True,
-    t_span=t_span,
     stepper=clode.Stepper.dormand_prince,
     dt=0.001,
-    dtmax=1.0,
+    dtmax = 0.1,
     abstol=1e-6,
     reltol=1e-5,
     event_var="v",
@@ -71,8 +69,8 @@ integrator = clode.FeatureSimulator(
 )
 
 # set up the ensemble of systems
-nx = 256
-ny = 256
+nx = 512
+ny = 512
 nPts = nx * ny
 gca = np.linspace(550.0, 1050.0, nx)
 kpmca = np.linspace(0.095, 0.155, ny)
@@ -83,7 +81,9 @@ ensemble_parameters_names = list(ensemble_parameters.keys())
 
 integrator.set_ensemble(parameters=ensemble_parameters)
 
+integrator.set_tspan((0.0, 50000.0))
 integrator.transient()
+integrator.set_tspan((0.0, 10000.0))
 integrator.features()
 
 features = integrator.get_observer_results()
@@ -109,27 +109,26 @@ plt.show()
 
 # Now get the trajectories
 steps_taken = features.get_var_count("step")
-max_steps = int(np.max(steps_taken))
+max_store = int(np.max(steps_taken))
 
 integrator_traj = clode.TrajectorySimulator(
     rhs_equation=get_rhs,
     variables = variables,
     parameters = parameters,
     single_precision = True,
-    t_span=t_span,
     stepper = clode.Stepper.dormand_prince,
     dt = 0.001,
-    dtmax = 1.0,
+    dtmax = 0.1,
     abstol = 1e-6,
     reltol = 1e-5,
-    max_steps = max_steps,
-    max_store = max_steps,
+    max_store = max_store,
 )
 
 traj_parameters = {"gca":points[:, 0], "kpmca": points[:, 1]}
 
 integrator_traj.set_ensemble(parameters = traj_parameters)
 
+integrator_traj.set_tspan((0.0, 50000.0))
 integrator_traj.transient()
 integrator_traj.set_tspan((0.0, 10000.0))
 integrator_traj.trajectory()
