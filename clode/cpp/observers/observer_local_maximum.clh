@@ -119,7 +119,6 @@ inline void warmupObserverData(realtype *ti, realtype xi[], realtype dxi[], real
 //process warmup data to compute relevant event detector quantities (e.g. thresholds)
 inline void initializeEventDetector(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
 {
-    //nothing to do
 }
 
 //check buffer of slopes for local max
@@ -136,35 +135,34 @@ inline bool eventFunction(realtype *ti, realtype xi[], realtype dxi[], realtype 
 // - get (t,x) at local max, compute: IMI, tMaxMin, amp
 inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
 {
-    realtype tThisMax, xThisMax;
-    realtype thisIMI, thisTMaxMin, thisAmp;
-
     ++od->eventcount;
 
     //Simple Max of xbuffer
     realtype thisXbuffer[3];
     for (int j = 0; j < 3; ++j)
      	thisXbuffer[j] = od->xbuffer[j];
-    int ix = 0;
+
+    int ix;
+    realtype xThisMax;
     maxOfArray(thisXbuffer, 3, &xThisMax, &ix);
-    tThisMax = od->tbuffer[ix];
+    realtype tThisMax = od->tbuffer[ix];
 
     //Quadratic interpolation for improved accuracy BROKEN??
     //quadraticInterpVertex(od->tbuffer, od->xbuffer, &tThisMax, &xThisMax);
 
-    // od->xMax[0] = fmax(xThisMax, od->xMax[0]);
-    // od->xMax[1] = fmin(xThisMax, od->xMax[1]);
-    // runningMean(&od->xMax[2], xThisMax, od->eventcount - 1);
-
     if (od->eventcount > 1)
     { //implies tLastMax, tLastMin and xLastMin are set
+    
+        // od->xMax[0] = fmax(xThisMax, od->xMax[0]);
+        // od->xMax[1] = fmin(xThisMax, od->xMax[1]);
+        // runningMean(&od->xMax[2], xThisMax, od->eventcount - 1);
 
         // od->xMin[0] = fmax(od->xLastMin, od->xMin[0]); //must have had two maxima to have found one minimum
         // od->xMin[1] = fmin(od->xLastMin, od->xMin[1]);
         // runningMean(&od->xMin[2], od->xLastMin, od->eventcount - 1);
 
         //max/min/mean IMI
-        thisIMI = tThisMax - od->tLastMax;
+        realtype thisIMI = tThisMax - od->tLastMax;
         //if(thisIMI > op->minIMI) {
         od->IMI[0] = fmax(thisIMI, od->IMI[0]);
         od->IMI[1] = fmin(thisIMI, od->IMI[1]);
@@ -172,13 +170,13 @@ inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dxi[], re
         //}
 
         //max/min/mean tMaxMin
-        //thisTMaxMin=tThisMax-od->tLastMin;
+        //realtype thisTMaxMin=tThisMax-od->tLastMin;
         //od->tMaxMin[0]=fmax(thisTMaxMin, od->tMaxMin[0]);
         //od->tMaxMin[1]=fmin(thisTMaxMin, od->tMaxMin[1]);
         //runningMean(&od->tMaxMin[2],thisTMaxMin,od->eventcount-1);
 
         //max/min/mean amp
-        thisAmp = xThisMax - od->xLastMin;
+        realtype thisAmp = xThisMax - od->xLastMin;
         od->amp[0] = fmax(thisAmp, od->amp[0]);
         od->amp[1] = fmin(thisAmp, od->amp[1]);
         runningMean(&od->amp[2], thisAmp, od->eventcount - 1);
@@ -188,7 +186,7 @@ inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dxi[], re
     od->tLastMax = tThisMax;
     od->xLastMin = xi[op->fVarIx];
 
-    if (od->eventcount > op->maxEventCount){
+    if (od->eventcount >= op->maxEventCount){
         return true;
     }
     return false; //not terminal
@@ -209,7 +207,7 @@ inline void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], real
         od->dxbuffer[i] = od->dxbuffer[i + 1];
     }
     od->tbuffer[2] = *ti;
-    od->xbuffer[2] = xi[op->fVarIx];
+    od->xbuffer[2] = xi[op->fVarIx]; // forces fVarIx=eVarIx
     od->dxbuffer[2] = dxi[op->fVarIx];
 
     //global dxMax, dxMin
@@ -221,7 +219,6 @@ inline void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], real
 
     if (od->stepcount > 1)
     {
-
         //local min check - one between each max - simply overwrite tLastMin, xLastMin
         if (od->dxbuffer[1] <= 0.0 && od->dxbuffer[2] > 0.0)
         {
@@ -232,7 +229,6 @@ inline void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], real
             minOfArray(thisXbuffer, 3, &od->xLastMin, &ix);
             od->tLastMin = od->tbuffer[ix];
         }
-        // od->xLastMin = fmin(od->xLastMin, xi[op->fVarIx]);
     }
 }
 
