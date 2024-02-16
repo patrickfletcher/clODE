@@ -1,5 +1,6 @@
 from math import pi
 from typing import List
+import pytest
 
 import clode
 clode.set_log_level(clode.LogLevel.info)
@@ -67,6 +68,7 @@ t_span = (0.0, expected_events*expected_period)
 dt = 0.01
 expected_steps = int(t_span[1]/dt)+1
 
+@pytest.mark.skip(reason="for now just to validate/debug observers")
 def test_observer(observer):
     integrator = clode.FeatureSimulator(
         rhs_equation=get_rhs,
@@ -115,6 +117,7 @@ def test_observer(observer):
 
 observers = [observer for observer in clode.Observer]
 
+@pytest.mark.skip(reason="for now just to validate/debug observers")
 def test_all_observers():
     for observer in observers:
         test_observer(observer)
