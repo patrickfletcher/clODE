@@ -244,14 +244,14 @@ class FeatureSimulator(Simulator):
         event_var: str = "",
         feature_var: str = "",
         observer_max_event_count: int = 100,
-        observer_min_x_amp: float = 1.0,
-        observer_min_imi: float = 1,
-        observer_neighbourhood_radius: float = 0.01,
+        observer_min_x_amp: float = 0.0,
+        observer_min_imi: float = 0.0,
+        observer_neighbourhood_radius: float = 0.05,
         observer_x_up_thresh: float = 0.3,
         observer_x_down_thresh: float = 0.2,
         observer_dx_up_thresh: float = 0,
         observer_dx_down_thresh: float = 0,
-        observer_eps_dx: float = 1e-7,
+        observer_eps_dx: float = 0.0,
     ) -> None:
 
         self._observer_type = observer
