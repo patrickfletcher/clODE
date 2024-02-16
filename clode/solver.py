@@ -231,7 +231,7 @@ class Simulator:
         )
 
         if aux is None:
-            aux = ["dummy_aux"]
+            aux = []
 
         self._max_store = max_store
 

@@ -51,9 +51,9 @@ void CLODE::setNewProblem(ProblemInfo newProb)
 	nWiener = newProb.nWiener;
 
 	// Some OpenCL implementations don't support zero-length arrays in OpenCL programs
-	nPar = nPar>0?nPar:1;
-	nAux = nAux>0?nAux:1;
-	nWiener = nWiener>0?nWiener:1;
+	// nPar = nPar>0?nPar:1;
+	// nAux = nAux>0?nAux:1;
+	// nWiener = nWiener>0?nWiener:1;
 
 	clInitialized = false;
 	spdlog::debug("set new problem");
