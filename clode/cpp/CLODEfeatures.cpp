@@ -61,7 +61,7 @@ void CLODEfeatures::buildCL()
 	spdlog::debug("initialize features kernel");
 
 	clInitialized = false;
-	spdlog::info("Using observer: {}",observer.c_str());
+	spdlog::debug("Using observer: {}",observer.c_str());
 }
 
 
