@@ -264,7 +264,8 @@ PYBIND11_MODULE(clode_cpp_wrapper, m) {
             .def("get_available_steppers", &CLODE::getAvailableSteppers)
             .def("get_problem_info", &CLODE::getProblemInfo)
             .def("get_program_string", &CLODE::getProgramString)
-            .def("print_status", &CLODE::printStatus);
+            .def("print_status", &CLODE::printStatus)
+            .def("is_initialized", &CLODE::isInitialized);
 
 
     // clODE features specialization 
@@ -301,7 +302,7 @@ PYBIND11_MODULE(clode_cpp_wrapper, m) {
                ")>";
     });
 
-    py::class_<CLODEfeatures, CLODE>(m, "FeaturesSimulatorBase")
+    py::class_<CLODEfeatures, CLODE>(m, "FeatureSimulatorBase")
             .def(py::init<ProblemInfo &,
                           std::string &,
                           std::string &,
@@ -313,14 +314,14 @@ PYBIND11_MODULE(clode_cpp_wrapper, m) {
                      std::vector<double>,
                      std::vector<double>,
                      SolverParams<double>)>
-                     (&CLODEfeatures::initialize), "Initialize FeaturesSimulatorBase")
+                     (&CLODEfeatures::initialize), "Initialize FeatureSimulatorBase")
             .def("initialize", static_cast<void (CLODEfeatures::*)
                                                     (std::vector<double>,
                                                     std::vector<double>,
                                                     std::vector<double>,
                                                     SolverParams<double>,
                                                     ObserverParams<double>)>
-                                                    (&CLODEfeatures::initialize), "Initialize FeaturesSimulatorBase")
+                                                    (&CLODEfeatures::initialize), "Initialize FeatureSimulatorBase")
             .def("build_cl", &CLODEfeatures::buildCL)
             .def("features", static_cast<void (CLODEfeatures::*)(bool)>(&CLODEfeatures::features)) //CLODEfeatures specializations
             .def("features", static_cast<void (CLODEfeatures::*)()>(&CLODEfeatures::features))

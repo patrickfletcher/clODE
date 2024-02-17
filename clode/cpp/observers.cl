@@ -15,6 +15,8 @@
 
 #include "realtype.cl"
 
+//TODO: expose different observerParams for each observer (provide relevant values only)
+//TODO: support using aux vars as event/feature var in observers.
 #ifdef __cplusplus
 template <typename realtype>
 #endif

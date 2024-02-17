@@ -4,9 +4,10 @@ import os
 
 from clode.cpp import clode_cpp_wrapper as _clode
 from clode.cpp.clode_cpp_wrapper import (
-    FeaturesSimulatorBase,
+    FeatureSimulatorBase,
     LogLevel,
     ObserverParams,
+    OpenCLResource,
     SimulatorBase,
     TrajectorySimulatorBase,
     print_opencl,
@@ -24,7 +25,7 @@ def initialize_runtime(
     platform_id: int | None,
     device_id: int | None,
     device_ids: list[int] | None,
-) -> _clode.OpenCLResource:
+) -> OpenCLResource:
     if platform_id is not None:
         if device_type is not None:
             raise ValueError("Cannot specify device_type when platform_id is specified")
@@ -38,6 +39,7 @@ def initialize_runtime(
             return _clode.OpenCLResource(platform_id, device_id)
         if device_ids is not None:
             return _clode.OpenCLResource(platform_id, device_ids)
+        raise ValueError("Must specify one of device_id and device_ids")
     elif device_id is not None:
         raise ValueError("Must specify platform_id when specifying device_id")
     elif device_ids is not None:
@@ -83,6 +85,9 @@ __all__ = [
     "SolverParams",
     "ObserverParams",
     "SimulatorBase",
-    "FeaturesSimulatorBase",
+    "OpenCLResource",
+    "FeatureSimulatorBase",
     "TrajectorySimulatorBase",
+    "print_opencl",
+    "query_opencl",
 ]

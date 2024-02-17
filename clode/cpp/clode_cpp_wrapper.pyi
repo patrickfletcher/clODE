@@ -3,7 +3,7 @@ CLODE C++/Python interface
 """
 from __future__ import annotations
 import typing
-__all__ = ['CLDeviceType', 'CLVendor', 'DEVICE_TYPE_ACCELERATOR', 'DEVICE_TYPE_ALL', 'DEVICE_TYPE_CPU', 'DEVICE_TYPE_CUSTOM', 'DEVICE_TYPE_DEFAULT', 'DEVICE_TYPE_GPU', 'DeviceInfo', 'FeaturesSimulatorBase', 'LogLevel', 'LoggerSingleton', 'ObserverParams', 'OpenCLResource', 'PlatformInfo', 'ProblemInfo', 'SimulatorBase', 'SolverParams', 'TrajectorySimulatorBase', 'VENDOR_AMD', 'VENDOR_ANY', 'VENDOR_INTEL', 'VENDOR_NVIDIA', 'critical', 'debug', 'err', 'get_logger', 'info', 'off', 'print_opencl', 'query_opencl', 'trace', 'warn']
+__all__ = ['CLDeviceType', 'CLVendor', 'DEVICE_TYPE_ACCELERATOR', 'DEVICE_TYPE_ALL', 'DEVICE_TYPE_CPU', 'DEVICE_TYPE_CUSTOM', 'DEVICE_TYPE_DEFAULT', 'DEVICE_TYPE_GPU', 'DeviceInfo', 'FeatureSimulatorBase', 'LogLevel', 'LoggerSingleton', 'ObserverParams', 'OpenCLResource', 'PlatformInfo', 'ProblemInfo', 'SimulatorBase', 'SolverParams', 'TrajectorySimulatorBase', 'VENDOR_AMD', 'VENDOR_ANY', 'VENDOR_INTEL', 'VENDOR_NVIDIA', 'critical', 'debug', 'err', 'get_logger', 'info', 'off', 'print_opencl', 'query_opencl', 'trace', 'warn']
 class CLDeviceType:
     """
     Members:
@@ -114,7 +114,7 @@ class DeviceInfo:
         """
         Device info string representation
         """
-class FeaturesSimulatorBase(SimulatorBase):
+class FeatureSimulatorBase(SimulatorBase):
     def __init__(self, arg0: ProblemInfo, arg1: str, arg2: str, arg3: bool, arg4: OpenCLResource, arg5: str) -> None:
         ...
     def __repr__(self) -> str:
@@ -142,12 +142,12 @@ class FeaturesSimulatorBase(SimulatorBase):
     @typing.overload
     def initialize(self, arg0: list[float], arg1: list[float], arg2: list[float], arg3: SolverParams) -> None:
         """
-        Initialize FeaturesSimulatorBase
+        Initialize FeatureSimulatorBase
         """
     @typing.overload
     def initialize(self, arg0: list[float], arg1: list[float], arg2: list[float], arg3: SolverParams, arg4: ObserverParams) -> None:
         """
-        Initialize FeaturesSimulatorBase
+        Initialize FeatureSimulatorBase
         """
     def set_observer_params(self, arg0: ObserverParams) -> None:
         ...

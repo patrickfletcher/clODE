@@ -1,13 +1,7 @@
-# Trajectory simulation
-CLODE can simulate ODE trajectories using the TrajectorySimulator class.
+# Fast and slow variables
 
-## Example - FitzHugh-Nagumo oscillator
 
-The following example simulates the FitzHugh-Nagumo oscillator using the RK45 integrator.
-
-### Python
-
-```py run
+```python
 import clode
 import matplotlib.pyplot as plt
 import numpy as np
@@ -17,9 +11,9 @@ def fitzhugh_nagumo(
     time: float,
     variables: List[float],
     parameters: List[float],
-    derivatives: list[float],
-    aux: list[float],
-    wiener: list[float],
+    derivatives: List[float],
+    aux: List[float],
+    wiener: List[float],
 ) -> None:
     V: float = variables[0]
     w: float = variables[1]

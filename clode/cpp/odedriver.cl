@@ -78,7 +78,7 @@ __kernel void odedriver(
     {
 
         ++step;
-        ++odata.stepcount;
+        //++odata.stepcount;
         stepflag = stepper(&ti, xi, dxi, p, sp, &dt, tspanPtr, auxi, wi, step, &rd);
         if (stepflag!=0)
             break;

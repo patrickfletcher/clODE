@@ -5,43 +5,41 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 import numpy as np
 
 from .function_converter import OpenCLRhsEquation
-from .runtime import (
-    CLDeviceType,
-    CLVendor,
-    TrajectorySimulatorBase,
-    ObserverParams,
-    _clode_root_dir,
-)
+from .runtime import CLDeviceType, CLVendor, TrajectorySimulatorBase, _clode_root_dir
 from .solver import Simulator, Stepper
 
-# TrajectoryOutput?
-# We have a collection of num_simulations trajectories, (t, X), stacked into matrices. Each trajectory may have a different number of total stored time steps.
-# - for convenience, would be nice to have access patterns something like:
-# >>> trajectory_output.t[0] --> t[: nstored[0], 0]
-# >>> trajectory_output.X[0] --> X[: nstored[0], :, 0])
-# >>> trajectory_output.X[var, 0] --> X[: nstored[0], var, 0]
-# >>> trajectory_output.t, .X --> (t[: max(nstored), :], X[: max(nstored), :, :])
-# class TrajectoryOutput:
+
+class TrajectoryResult:
+    t: np.ndarray[Any, np.dtype[np.float64]]
+    x: np.ndarray[Any, np.dtype[np.float64]]
+
+    def __init__(self, data: Dict[str, np.ndarray[Any, np.dtype[np.float64]]]) -> None:
+        self.t = data["t"]
+        self.x = data["x"]
+
+    def __repr__(self) -> str:
+        return f"TrajectoryResult(t={self.t}, x={self.x})"
 
 
 class TrajectorySimulator(Simulator):
     _time_steps: np.ndarray[Any, np.dtype[np.float64]] | None
     _output_time_steps: np.ndarray[Any, np.dtype[np.float64]] | None
     _output_trajectories: np.ndarray[Any, np.dtype[np.float64]] | None
+    _output_aux: np.ndarray[Any, np.dtype[np.float64]] | None
     _data: np.ndarray[Any, np.dtype[np.float64]] | None
+    _aux: np.ndarray[Any, np.dtype[np.float64]] | None
     _integrator: TrajectorySimulatorBase
 
     def __init__(
         self,
-        variable_names: List[str],
-        parameter_names: List[str],
-        src_file: str | None = None,
-        rhs_equation: OpenCLRhsEquation | None = None,
-        mutable_args: List[str] | None = None,
-        supplementary_equations: List[Callable[[Any], Any]] | None = None,
+        variables: Dict[str, float],
+        parameters: Dict[str, float],
+        src_file: Optional[str] = None,
+        rhs_equation: Optional[OpenCLRhsEquation] = None,
+        supplementary_equations: Optional[List[Callable[[Any], Any]]] = None,
         aux: Optional[List[str]] = None,
         num_noise: int = 0,
-        tspan: Tuple[float, float] = (0.0, 1000.0),
+        t_span: Tuple[float, float] = (0.0, 1000.0),
         stepper: Stepper = Stepper.rk4,
         single_precision: bool = True,
         dt: float = 0.1,
@@ -89,15 +87,14 @@ class TrajectorySimulator(Simulator):
         """
 
         super().__init__(
-            variable_names=variable_names,
-            parameter_names=parameter_names,
+            variables=variables,
+            parameters=parameters,
             src_file=src_file,
             rhs_equation=rhs_equation,
-            mutable_args=mutable_args,
             supplementary_equations=supplementary_equations,
             aux=aux,
             num_noise=num_noise,
-            tspan=tspan,
+            t_span=t_span,
             stepper=stepper,
             single_precision=single_precision,
             dt=dt,
@@ -118,78 +115,34 @@ class TrajectorySimulator(Simulator):
         self._output_trajectories = None
         self._time_steps = None
         self._output_time_steps = None
+        self._output_aux = None
+        self._aux = None
 
+    def _build_integrator(self) -> None:
         self._integrator = TrajectorySimulatorBase(
-            self._pi, stepper.value, single_precision, self._runtime, _clode_root_dir
+            self._pi,
+            self._stepper.value,
+            self._single_precision,
+            self._runtime,
+            _clode_root_dir,
         )
-        self._integrator.build_cl()
 
-    def initialize(
-        self,
-        x0: np.ndarray[Any, np.dtype[np.float64]],
-        parameters: np.ndarray[Any, np.dtype[np.float64]],
-        tspan: Tuple[float, float] | None = None,
-        seed: int | None = None,
-    ) -> None:
-        """Initialize the trajectory object.
-
-        Args:
-            x0 (np.array): The initial conditions.
-            parameters (np.array): The parameters.
-            tspan (Tuple[float, float], optional): The time span to simulate over. Defaults to None.
-            seed (int, optional): The seed for the random number generator. Defaults to None.
-
-        Raises:
-            ValueError: If the initial conditions or parameters are not the correct shape.
-
-        Returns:
-            None
-        """
-
-        if len(x0.shape) != 2:
-            raise ValueError("Must provide rows of initial variables")
-
-        if x0.shape[1] != len(self.vars):
-            raise ValueError(
-                f"Length of initial condition vector {x0.shape[1]}"
-                f" does not match number of variables {len(self.vars)}"
-            )
-
-        if len(parameters.shape) != 2:
-            raise ValueError("Must provide rows of parameters")
-
-        if parameters.shape[1] != len(self.pars):
-            raise ValueError(
-                f"Length of parameters vector {parameters.shape[1]}"
-                f" does not match number of parameters {len(self.pars)}"
-            )
-
-        self._data = None
-        self._time_steps = None
-        self._number_of_simulations = parameters.shape[0]
-
-        if tspan is not None:
-            self.tspan = tspan
-
-        self._integrator.initialize(
-            list(self.tspan),
-            x0.transpose().flatten().tolist(),
-            parameters.transpose().flatten().tolist(),
-            self._sp,
-        )
-        self.seed_rng(seed)
-
-    def trajectory(self, update_x0: bool = True) -> None:
+    def trajectory(self, update_x0: bool = True) -> List[TrajectoryResult]:
         """Run a trajectory simulation.
 
         Returns:
-            None
+            List[TrajectoryResult]
         """
+        if not self.is_initialized:
+            raise RuntimeError("Simulator is not initialized")
+
         self._integrator.trajectory()
         if update_x0:
             self.shift_x0()
 
-    def get_trajectory(self) -> List[Dict[str, np.ndarray[Any, np.dtype[np.float64]]]]:
+        return self.get_trajectory()
+
+    def get_trajectory(self) -> List[TrajectoryResult]:
         """Get the trajectory data.
 
         Returns:
@@ -202,13 +155,13 @@ class TrajectorySimulator(Simulator):
         self._output_trajectories = self._integrator.get_x()
 
         # time_steps has one column per simulation (to support adaptive steppers)
-        shape = (self._number_of_simulations, self._max_store)
+        shape = (self._ensemble_size, self._max_store)
         arr = np.array(self._output_time_steps[: np.prod(shape)])
         self._time_steps = arr.reshape(shape, order="F").transpose((1, 0))
 
-        shape = (self._number_of_simulations, len(self.vars), self._max_store)
-        arr = np.array(self._output_trajectories[: np.prod(shape)])
-        self._data = arr.reshape(shape, order="F").transpose((2, 1, 0))
+        data_shape = (self._ensemble_size, len(self.variable_names), self._max_store)
+        arr = np.array(self._output_trajectories[: np.prod(data_shape)])
+        self._data = arr.reshape(data_shape, order="F").transpose((2, 1, 0))
 
         # Check for None values
         if self._data is None:
@@ -223,11 +176,32 @@ class TrajectorySimulator(Simulator):
             raise ValueError("Must run trajectory() before getting trajectory data")
 
         # list of trajectories, each stored as dict:
-        result = list()
-        for i in range(self._number_of_simulations):
+        results = list()
+        for i in range(self._ensemble_size):
             ni = self._n_stored[i]
             ti = self._time_steps[:ni, i]
             xi = self._data[:ni, :, i]
-            result.append({"t": ti, "X": xi})
+            result = TrajectoryResult({"t": ti, "x": xi})
+            results.append(result)
 
-        return result
+        return results
+
+    def get_aux(self) -> List[np.ndarray[Any, np.dtype[np.float64]]]:
+        """Get the auxiliary data.
+
+        Returns:
+            np.array: The auxiliary data.
+        """
+        _ = self.get_trajectory()
+        self._output_aux = self._integrator.get_aux()
+
+        shape = (self._ensemble_size, len(self.aux_variables), self._max_store)
+        arr = np.array(self._output_aux[: np.prod(shape)])
+        self._aux = arr.reshape(shape, order="F").transpose((2, 1, 0))
+
+        results = list()
+        for i in range(self._ensemble_size):
+            ni = self._n_stored[i]
+            aux_data = self._aux[:ni, :, i]
+            results.append(aux_data)
+        return results

@@ -1,10 +1,33 @@
-# CLODE - Getting started
+# Getting Started
 
-## Installation
+## Basic concepts
 
-See [installation](install.md) for instructions on how to install CLODE.
+clODE is a Python library for solving systems of ordinary differential
+equations (ODEs) using OpenCL. It is designed to be easy to use, and
+to provide a high-level interface for specifying ODEs and running simulations.
 
-Once installed, you can have clODE query your system and display information about available OpenCL devices - see [Querying system OpenCL capabilities](querying_opencl.md)
+The primary use case for clODE is to simulate **ensembles** of ODEs. This
+is useful for studying the behavior of a system of ODEs as a function of
+parameters, initial conditions, or other factors.
+
+The clODE library includes three solvers. Two of these solvers discard the trajectory,
+to save memory, and instead measure features of the solution. The third solver
+stores the trajectory.
+
+The three solvers are:
+- `Simulator`: This solver measures the end state of the solution, and is useful for studying long-term convergence behavior.
+- `FeatureSimulator`: This solver measures features of the solution, such as the period of oscillation, and is useful for studying the behavior of the system as a function of parameters.
+- `TrajectorySimulator`: This solver stores the trajectory of the solution, and is useful for studying the detailed behavior of the system.
+
+clODE lets users specify ODEs using Python functions, and then converts these
+functions to OpenCL code. This code is then executed on an OpenCL device, such
+as a GPU or a multi-core CPU.
+
+## Differences to SciPy
+clODE uses OpenCL to solve ODEs, while SciPy uses a combination of C and Fortran
+code. The main difference is that SciPy returns the derivatives of the state
+variables, while clODE modifies a list item in place. This is due to
+the fact that one cannot return arrays in OpenCL.
 
 ## Usage Example - computing the period of the Van der Pol oscillator
 
@@ -15,36 +38,78 @@ $
 \dot{y} = \mu(1-x^2)y - x
 $
 
-Oscillations occur when $\mu>0$. Suppose we wish to measure the period of oscillations as $\mu$ varies. First, we will need to implement the vector field above as function - the right-hand-side (RHS) function - with the signature expected by clODE:
+Oscillations occur when $\mu>0$. Suppose we wish to measure the period of oscillations as $\mu$ varies.
+First, we will need to implement the vector field above as function -
+the right-hand-side (RHS) function - with the signature expected by clODE:
+
+```python
+def van_der_pol(float t,
+                list[float] variables,
+                list[float] parameters,
+                list[float] derivatives,
+                list[float] aux,
+                list[float] weiner) -? None:
+
+
+    # State variables
+    x: float = variables[0]
+    y: float = variables[1]
+
+    # Parameters
+    mu: float = parameters[0]
+
+    # Differential equations
+    dx: float = y
+    dy: float = mu * (1 - x*x) * y - x
+
+    # Differential outputs
+    derivatives[0] = dx
+    derivatives[1] = dy
+```
+
+Note that the Python function must be **fully typed** and
+must have this exact signature.
+
+When run, this function will be converted to OpenCL and written
+to a file called `clode_rhs.cl`. This file will then be loaded
+into an OpenCL program and executed on the OpenCL device.
+
+In the above case, the output OpenCL function would look like this:
 
 ```c
 void getRHS(const realtype t,
-            const realtype x_[],
-            const realtype p_[],
-            realtype dx_[],
-            realtype aux_[],
-            const realtype w_[]) {
+            const realtype variables[],
+            const realtype parameters[],
+            realtype derivatives[],
+            realtype aux[],
+            const realtype wiener[]) {
 
     /* State variables */
-    realtype x = x_[0];
-    realtype y = x_[1];
+    realtype x = variables[0];
+    realtype y = variables[1];
 
     /* Parameters */
-    realtype mu = p_[0];
+    realtype mu = parameters[0];
 
     /* Differential equations */
     realtype dx = y;
     realtype dy = mu * (1 - x*x) * y - x;
 
     /* Differential outputs */
-    dx_[0] = dx;
-    dx_[1] = dy;
+    derivatives[0] = dx;
+    derivatives[1] = dy;
 }
 ```
 
-Note that this is a simple C-language function. The ```realtype``` type declaration is a macro that will expand to ```float``` or ```double```, depending on our choice of single or double precision, which defaults to single precision.  Save this function in a file called ```van_der_pol_oscillator.cl```
+Note that this is a simple C-language function.
+The ```realtype``` type declaration is a macro that will expand to
+```float``` or ```double```, depending on whether clODE is configured for
+single or double precision floats. clODE defaults to single precision.
 
-This function supports additional use cases not used in this example: ```t``` for time-dependent ODE terms (non-autonomous systems), ```aux``` for auxiliary readout variables, and stochastic terms via ```w```, which provides Wiener variables ($w \sim Normal \; (0,dt)$). If needed, one can also declare additional plain C-languange functions in the same file, preceding ```getRHS``, and use them inside getRHS.
+Note - clODE supports many additional use cases. For reference, see
+[Specifying systems of ODEs](specifying_odes.md).
+
+[//]: # (This function supports additional use cases not used in this example: ```t``` for time-dependent ODE terms &#40;non-autonomous systems&#41;, ```aux``` for auxiliary readout variables, and stochastic terms via ```w```, which provides Wiener variables &#40;$w \sim Normal \; &#40;0,dt&#41;$&#41;. If needed, one can also declare additional plain C-languange functions in the same file, preceding ```getRHS``, and use them inside getRHS.)
 
 Next we will use a python script to define our parameters and set up the numerical simulation. Here we use clODE's feature detection mode - several features of the ODE solution, including the period of oscillation, will be measured "on the fly", without storing the trajectory itself.
 
@@ -57,11 +122,11 @@ tspan = (0.0, 1000.0)
 
 # Create the clODE feature extractor
 integrator = CLODEFeatures(
-    src_file="van_der_pol_oscillator.cl", # This is your source file. 
-    variable_names=["x", "y"],            # names for our variables
-    parameter_names=["mu"],               # name for our parameters
+    src_file="van_der_pol_oscillator.cl",  # This is your source file. 
+    variable_names=["x", "y"],  # names for our variables
+    parameter_names=["mu"],  # name for our parameters
     observer=Observer.threshold_2,  # Choose an observer
-    stepper=Stepper.rk4, # Choose a stepper
+    stepper=Stepper.rk4,  # Choose a stepper
     tspan=tspan,
 )
 
@@ -75,7 +140,7 @@ P0 = np.array([[u] for u in mu])
 x0 = np.tile([1, 1], (len(mu), 1))
 
 # send the data to the OpenCL device
-integrator.initialize(x0, P0)
+integrator.set_ensemble(x0, P0)
 
 # Run the simulation for tspan time, storing only the final state.
 # Useful for integrating past transient behavior
@@ -101,15 +166,15 @@ import matplotlib.plt as plt
 
 # Create the clODE trajectory solver
 integrator = CLODETrajectory(
-    src_file="van_der_pol_oscillator.cl", # This is your source file. 
-    variable_names=["x", "y"],            # names for our variables
-    parameter_names=["mu"],               # name for our parameters
-    stepper=Stepper.rk4, # Choose a stepper
+    src_file="van_der_pol_oscillator.cl",  # This is your source file. 
+    variable_names=["x", "y"],  # names for our variables
+    parameter_names=["mu"],  # name for our parameters
+    stepper=Stepper.rk4,  # Choose a stepper
     tspan=tspan,
 )
 
 # send the data to the OpenCL device
-integrator.initialize(x0, P0)
+integrator.set_ensemble(x0, P0)
 
 # Run the simulation for tspan time, storing only the final state.
 # Useful for integrating past transient behavior
@@ -141,3 +206,13 @@ by columns, i.e. if your variables are a, b and c,
 the CPP library expects data in the format [aaaabbbbcccc].
 The Python library expects data in the format
 [[a, b, c], [a, b, c], [a, b, c], ...]
+
+
+```py run
+import matplotlib.pyplot as plt
+
+plt.plot([1,2,3,4], [1,4,9,16])
+plt.show()
+plt.plot([1, 3, 5, 7], [2, 3, 4, 5])
+plt.show()
+```

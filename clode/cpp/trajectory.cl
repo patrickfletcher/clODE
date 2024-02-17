@@ -29,7 +29,9 @@ __kernel void trajectory(
     int nPts = get_global_size(0);
 
     realtype ti, dt;
-    realtype p[N_PAR], xi[N_VAR], dxi[N_VAR], auxi[N_AUX], wi[N_WIENER];
+    realtype p[N_PAR], xi[N_VAR], dxi[N_VAR];
+    realtype auxi[N_AUX>0?N_AUX:1];
+    realtype wi[N_WIENER>0?N_WIENER:1];
     rngData rd;
 
     //get private copy of ODE parameters, initial data, and compute slope at initial state
@@ -68,6 +70,8 @@ __kernel void trajectory(
     for (int j = 0; j < N_AUX; ++j)
         aux[storeix * nPts * N_AUX + j * nPts + i] = auxi[j];
 
+    ++storeix;
+    
     //time-stepping loop, main time interval
     int step = 0;
     int stepflag = 0;
@@ -81,7 +85,6 @@ __kernel void trajectory(
         //store every sp.nout'th step after the initial point
         if (step % sp->nout == 0)
         {
-            ++storeix;
 
             t[storeix * nPts + i] = ti; //adaptive steppers give different timepoints for each trajectory
 
@@ -93,6 +96,8 @@ __kernel void trajectory(
 
             for (int j = 0; j < N_AUX; ++j)
                 aux[storeix * nPts * N_AUX + j * nPts + i] = auxi[j];
+                
+            ++storeix;
         }
     }
 

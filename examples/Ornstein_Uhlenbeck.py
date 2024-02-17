@@ -1,18 +1,3 @@
-# Stochastic simulations
-
-Stochastic simulations are supported via the Euler-Maruyama method. Random normal variables $W_t\sim N(0, dt)$ can be included in the vector field function, and each simulation instance will have an independent stream of random variables.
-
-As an example, consider the [Ornstein-Uhlenbeck process](https://en.wikipedia.org/wiki/Ornstein-Uhlenbeck_process) with $\theta = 1$:
-
-$$ dx_t = (\mu - x_t)dt + \sigma W_t $$
-
-To implement this system, we heuristically write it in Langevin form:
-
-$$ \frac{dx}{dt} = \mu - x + \sigma\eta(t)$$
-
-where $\eta(t)$ represents white noise. When $\sigma=0$, the system is a first-order ODE with steady state x=$\mu$. Increasing $\sigma$ produces solutions with a steady state distribution $x\sim N(\mu, \frac{\sigma^2}{2})$.
-
-```py run
 import numpy as np
 import matplotlib.pyplot as plt
 import clode
@@ -68,14 +53,3 @@ plt.show()
 print(f"mean xf: {np.mean(XF) :0.5}")
 print(f"simulation variance: {np.var(XF) :0.5}")
 print(f"expected variance: {parameters['sigma'] ** 2 / 2 :0.5}")
-```
-
-Output:
-
-```bash
-mean xf: 1.0041
-simulation variance: 0.12629
-expected variance: 0.125
-```
-
-[//]: # (![Result]&#40;Ornstein-Uhlenbeck_process.png&#41;)

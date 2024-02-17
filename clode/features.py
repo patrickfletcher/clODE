@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Any, Callable, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import numpy.typing as npt
@@ -10,7 +10,7 @@ from .function_converter import OpenCLRhsEquation
 from .runtime import (
     CLDeviceType,
     CLVendor,
-    FeaturesSimulatorBase,
+    FeatureSimulatorBase,
     ObserverParams,
     _clode_root_dir,
 )
@@ -59,7 +59,7 @@ class ObserverOutput:
     def _get_var(self, var: str, op: str) -> np.ndarray[Any, np.dtype[np.float64]]:
         try:
             index = self._feature_names.index(f"{op} {var}")
-            return self._data[:, index : index + 1]
+            return self._data[:, index : index + 1].squeeze()
         except ValueError:
             raise NotImplementedError(
                 f"{self._observer_type} does not track {op} {var}!"
@@ -84,7 +84,7 @@ class ObserverOutput:
         return self._get_var("count", var)
 
 
-class FeaturesSimulator(Simulator):
+class FeatureSimulator(Simulator):
     """
     A class for computing features from a CLODE model.
 
@@ -202,7 +202,7 @@ class FeaturesSimulator(Simulator):
     >>> import clode
     >>> import numpy as np
     >>> import matplotlib.pyplot as plt
-    >>> model = clode.FeaturesSimulator(
+    >>> model = clode.FeatureSimulator(
     ...     src_file="examples/lorenz96.c",
     ...     variable_names=["x"],
     ...     parameter_names=["F"],
@@ -214,19 +214,18 @@ class FeaturesSimulator(Simulator):
     >>> model.plot()
     >>> plt.show()"""
 
-    _integrator: FeaturesSimulatorBase
+    _integrator: FeatureSimulatorBase
 
     def __init__(
         self,
-        variable_names: List[str],
-        parameter_names: List[str],
-        src_file: str | None = None,
-        rhs_equation: OpenCLRhsEquation | None = None,
-        mutable_args: List[str] | None = None,
-        supplementary_equations: List[Callable[[Any], Any]] | None = None,
+        variables: Dict[str, float],
+        parameters: Dict[str, float],
+        src_file: Optional[str] = None,
+        rhs_equation: Optional[OpenCLRhsEquation] = None,
+        supplementary_equations: Optional[List[Callable[[Any], Any]]] = None,
         aux: Optional[List[str]] = None,
         num_noise: int = 0,
-        tspan: Tuple[float, float] = (0.0, 1000.0),
+        t_span: Tuple[float, float] = (0.0, 1000.0),
         stepper: Stepper = Stepper.rk4,
         observer: Observer = Observer.basic_all_variables,
         single_precision: bool = True,
@@ -245,25 +244,48 @@ class FeaturesSimulator(Simulator):
         event_var: str = "",
         feature_var: str = "",
         observer_max_event_count: int = 100,
-        observer_min_x_amp: float = 1.0,
-        observer_min_imi: float = 1,
-        observer_neighbourhood_radius: float = 0.01,
+        observer_min_x_amp: float = 0.0,
+        observer_min_imi: float = 0.0,
+        observer_neighbourhood_radius: float = 0.05,
         observer_x_up_thresh: float = 0.3,
         observer_x_down_thresh: float = 0.2,
         observer_dx_up_thresh: float = 0,
         observer_dx_down_thresh: float = 0,
-        observer_eps_dx: float = 1e-7,
+        observer_eps_dx: float = 0.0,
     ) -> None:
+
+        self._observer_type = observer
+
+        event_var_idx = (
+            list(variables.keys()).index(event_var) if event_var != "" else 0
+        )
+        feature_var_idx = (
+            list(variables.keys()).index(feature_var) if feature_var != "" else 0
+        )
+
+        self._op = ObserverParams(
+            event_var_idx,
+            feature_var_idx,
+            observer_max_event_count,
+            observer_min_x_amp,
+            observer_min_imi,
+            observer_neighbourhood_radius,
+            observer_x_up_thresh,
+            observer_x_down_thresh,
+            observer_dx_up_thresh,
+            observer_dx_down_thresh,
+            observer_eps_dx,
+        )
+
         super().__init__(
-            variable_names=variable_names,
-            parameter_names=parameter_names,
+            variables=variables,
+            parameters=parameters,
             src_file=src_file,
             rhs_equation=rhs_equation,
-            mutable_args=mutable_args,
             supplementary_equations=supplementary_equations,
             aux=aux,
             num_noise=num_noise,
-            tspan=tspan,
+            t_span=t_span,
             stepper=stepper,
             single_precision=single_precision,
             dt=dt,
@@ -280,97 +302,40 @@ class FeaturesSimulator(Simulator):
             device_ids=device_ids,
         )
 
-        event_var_idx = variable_names.index(event_var) if event_var != "" else 0
-        feature_var_idx = variable_names.index(feature_var) if feature_var != "" else 0
-
-        self._op = ObserverParams(
-            event_var_idx,
-            feature_var_idx,
-            observer_max_event_count,
-            observer_min_x_amp,
-            observer_min_imi,
-            observer_neighbourhood_radius,
-            observer_x_up_thresh,
-            observer_x_down_thresh,
-            observer_dx_up_thresh,
-            observer_dx_down_thresh,
-            observer_eps_dx,
-        )
-
-        self._integrator = FeaturesSimulatorBase(
+    def _build_integrator(self) -> None:
+        self._integrator = FeatureSimulatorBase(
             self._pi,
-            stepper.value,
-            observer.value,
-            single_precision,
+            self._stepper.value,
+            self._observer_type.value,
+            self._single_precision,
             self._runtime,
             _clode_root_dir,
         )
 
-        self.tspan = tspan
-        self._observer_type = observer
-        self._integrator.build_cl()
-
-    def initialize(
-        self,
-        x0: np.ndarray[Any, np.dtype[np.float64]],
-        parameters: np.ndarray[Any, np.dtype[np.float64]],
-        tspan: Tuple[float, float] | None = None,
-        seed: int | None = None,
-    ) -> None:
-        """Initialize the features object.
-
-        Args:
-            x0 (np.array): The initial conditions.
-            parameters (np.array): The parameters.
-            tspan (Tuple[float, float], optional): The time span to simulate over. Defaults to None.
-            seed (int, optional): The seed for the random number generator. Defaults to None.
-
-        Raises:
-            ValueError: If the initial conditions or parameters are not the correct shape.
-
-        Returns:
-            None
-        """
-
-        if len(x0.shape) != 2:
-            raise ValueError("Must provide rows of initial variables")
-
-        if x0.shape[1] != len(self.vars):
-            raise ValueError(
-                f"Length of initial condition vector {x0.shape[1]}"
-                f" does not match number of variables {len(self.vars)}"
-            )
-
-        if len(parameters.shape) != 2:
-            raise ValueError("Must provide rows of parameters")
-
-        if parameters.shape[1] != len(self.pars):
-            raise ValueError(
-                f"Length of parameters vector {parameters.shape[1]}"
-                f" does not match number of parameters {len(self.pars)}"
-            )
-
-        if tspan is not None:
-            self.tspan = tspan
-
+    def _init_integrator(self) -> None:
+        vars_array, pars_array = self._pack_data()
         self._integrator.initialize(
-            list(self.tspan),
-            x0.transpose().flatten().tolist(),
-            parameters.transpose().flatten().tolist(),
+            self.tspan,
+            vars_array,
+            pars_array,
             self._sp,
             self._op,
         )
-        self.seed_rng(seed)
 
     def get_feature_names(self) -> List[str]:
         return self._integrator.get_feature_names()
 
-    def features(self, initialize_observer: Optional[bool] = None, update_x0: bool = True) -> None:
+    def features(
+        self, initialize_observer: Optional[bool] = None, update_x0: bool = True
+    ) -> ObserverOutput:
         """Run a simulation with feature detection.
 
         Returns:
             None
         """
+        if not self.is_initialized:
+            raise RuntimeError("Simulator is not initialized")
+
         if initialize_observer is not None:
             print("Reinitializing observer")
             self._integrator.features(initialize_observer)
@@ -378,6 +343,8 @@ class FeaturesSimulator(Simulator):
             self._integrator.features()
         if update_x0:
             self.shift_x0()
+
+        return self.get_observer_results()
 
     def get_observer_results(self) -> ObserverOutput:
         """Get the feature data.
@@ -391,7 +358,7 @@ class FeaturesSimulator(Simulator):
             self._op,
             np.array(self._result_integrator),
             self._num_result_features,
-            self.vars,
+            self.variable_names,
             self._observer_type,
             self._integrator.get_feature_names(),
         )

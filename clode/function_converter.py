@@ -41,6 +41,88 @@ class OpenCLType:
         return False
 
 
+class OpenCLBuiltin:
+    arg_count: int
+    name: str
+    return_type: OpenCLType
+
+    def __init__(self, arg_count: int, name: str, return_type: OpenCLType) -> None:
+        self.arg_count = arg_count
+        self.name = name
+        self.return_type = return_type
+
+
+_opencl_builtins = {
+    "acos": OpenCLBuiltin(1, "acos", OpenCLType("realtype")),
+    "acosh": OpenCLBuiltin(1, "acosh", OpenCLType("realtype")),
+    "acospi": OpenCLBuiltin(1, "acospi", OpenCLType("realtype")),
+    "asin": OpenCLBuiltin(1, "asin", OpenCLType("realtype")),
+    "asinh": OpenCLBuiltin(1, "asinh", OpenCLType("realtype")),
+    "asinpi": OpenCLBuiltin(1, "asinpi", OpenCLType("realtype")),
+    "atan": OpenCLBuiltin(1, "atan", OpenCLType("realtype")),
+    "atan2": OpenCLBuiltin(2, "atan2", OpenCLType("realtype")),
+    "atanh": OpenCLBuiltin(1, "atanh", OpenCLType("realtype")),
+    "atanpi": OpenCLBuiltin(1, "atanpi", OpenCLType("realtype")),
+    "atan2pi": OpenCLBuiltin(2, "atan2pi", OpenCLType("realtype")),
+    "cbrt": OpenCLBuiltin(1, "cbrt", OpenCLType("realtype")),
+    "ceil": OpenCLBuiltin(1, "ceil", OpenCLType("realtype")),
+    "copysign": OpenCLBuiltin(2, "copysign", OpenCLType("realtype")),
+    "cos": OpenCLBuiltin(1, "cos", OpenCLType("realtype")),
+    "cosh": OpenCLBuiltin(1, "cosh", OpenCLType("realtype")),
+    "cospi": OpenCLBuiltin(1, "cospi", OpenCLType("realtype")),
+    "erfc": OpenCLBuiltin(1, "erfc", OpenCLType("realtype")),
+    "erf": OpenCLBuiltin(1, "erf", OpenCLType("realtype")),
+    "exp": OpenCLBuiltin(1, "exp", OpenCLType("realtype")),
+    "exp2": OpenCLBuiltin(1, "exp2", OpenCLType("realtype")),
+    "exp10": OpenCLBuiltin(1, "exp10", OpenCLType("realtype")),
+    "expm1": OpenCLBuiltin(1, "expm1", OpenCLType("realtype")),
+    "abs": OpenCLBuiltin(1, "fabs", OpenCLType("realtype")),
+    "fabs": OpenCLBuiltin(1, "fabs", OpenCLType("realtype")),
+    "fdim": OpenCLBuiltin(2, "fdim", OpenCLType("realtype")),
+    "fmod": OpenCLBuiltin(2, "fmod", OpenCLType("realtype")),
+    "floor": OpenCLBuiltin(1, "floor", OpenCLType("realtype")),
+    # "fma": OpenCLBuiltin(3, "fma", OpenCLType("realtype")), # OpenCL returns nan
+    "max": OpenCLBuiltin(2, "fmax", OpenCLType("realtype")),
+    "min": OpenCLBuiltin(2, "fmin", OpenCLType("realtype")),
+    "mod": OpenCLBuiltin(2, "fmod", OpenCLType("realtype")),
+    # "fract": OpenCLBuiltin(1, "fract", OpenCLType("realtype")), # OpenCL Compiler error
+    # "frexp": OpenCLBuiltin(2, "frexp", OpenCLType("realtype")),
+    "hypot": OpenCLBuiltin(2, "hypot", OpenCLType("realtype")),
+    "ilogb": OpenCLBuiltin(1, "ilogb", OpenCLType("int")),
+    "ldexp": OpenCLBuiltin(2, "ldexp", OpenCLType("realtype")),
+    "lgamma": OpenCLBuiltin(1, "lgamma", OpenCLType("realtype")),
+    # "lgamma_r": OpenCLBuiltin(2, "lgamma_r", OpenCLType("realtype")), # Pointers not supported
+    "log": OpenCLBuiltin(1, "log", OpenCLType("realtype")),
+    "log2": OpenCLBuiltin(1, "log2", OpenCLType("realtype")),
+    "log10": OpenCLBuiltin(1, "log10", OpenCLType("realtype")),
+    "log1p": OpenCLBuiltin(1, "log1p", OpenCLType("realtype")),
+    # "logb": OpenCLBuiltin(1, "logb", OpenCLType("realtype")), # OpenCL returns nan
+    # "mad": OpenCLBuiltin(3, "mad", OpenCLType("realtype")), # OpenCL returns nan
+    # "modf": OpenCLBuiltin(2, "modf", OpenCLType("realtype")), # Pointers not supported
+    # "nan": OpenCLBuiltin(0, "nan", OpenCLType("realtype")),
+    "nextafter": OpenCLBuiltin(2, "nextafter", OpenCLType("realtype")),
+    "pow": OpenCLBuiltin(2, "pow", OpenCLType("realtype")),
+    "pown": OpenCLBuiltin(2, "pown", OpenCLType("realtype")),
+    "powr": OpenCLBuiltin(2, "powr", OpenCLType("realtype")),
+    "remainder": OpenCLBuiltin(2, "remainder", OpenCLType("realtype")),
+    # "remquo": OpenCLBuiltin(3, "remquo", OpenCLType("realtype")), # Pointers not supported
+    "rint": OpenCLBuiltin(1, "rint", OpenCLType("realtype")),
+    "rootn": OpenCLBuiltin(2, "rootn", OpenCLType("realtype")),
+    "round": OpenCLBuiltin(1, "round", OpenCLType("realtype")),
+    "rsqrt": OpenCLBuiltin(1, "rsqrt", OpenCLType("realtype")),
+    "sin": OpenCLBuiltin(1, "sin", OpenCLType("realtype")),
+    "sincos": OpenCLBuiltin(2, "sincos", OpenCLType("realtype")),
+    "sinh": OpenCLBuiltin(1, "sinh", OpenCLType("realtype")),
+    "sinpi": OpenCLBuiltin(1, "sinpi", OpenCLType("realtype")),
+    "sqrt": OpenCLBuiltin(1, "sqrt", OpenCLType("realtype")),
+    "tan": OpenCLBuiltin(1, "tan", OpenCLType("realtype")),
+    "tanh": OpenCLBuiltin(1, "tanh", OpenCLType("realtype")),
+    "tanpi": OpenCLBuiltin(1, "tanpi", OpenCLType("realtype")),
+    "gamma": OpenCLBuiltin(1, "tgamma", OpenCLType("realtype")),
+    "trunc": OpenCLBuiltin(1, "trunc", OpenCLType("realtype")),
+}
+
+
 def _convert_ast_op_to_cl_op(op: ast.operator) -> str:
     if isinstance(op, ast.Add):
         return "+"
@@ -112,11 +194,26 @@ class OpenCLFunctionCall(OpenCLExpression):
     def __init__(
         self, name: str, args: List[OpenCLExpression], cl_type: OpenCLType
     ) -> None:
-        self.name = name
+        if name in _opencl_builtins:
+            # Verify that the number of arguments is correct
+            if len(args) != _opencl_builtins[name].arg_count:
+                raise ValueError(
+                    (
+                        f"Invalid number of arguments for function '{name}', expected "
+                        f"'{_opencl_builtins[name].arg_count}', args = {args}"
+                        "\n    Hint: OpenCL Arg count can differ from Python arg count."
+                    )
+                )
+            self.name = _opencl_builtins[name].name
+        else:
+            self.name = name
         self.args = args
         self.cl_type = cl_type
 
     def __str__(self) -> str:
+        if self.name == "int" or self.name == "float":
+            name = "int" if self.name == "int" else "realtype"
+            return f"({name})({', '.join(map(str, self.args))})"
         return f"{self.name}({', '.join(map(str, self.args))})"
 
     def get_cl_type(self) -> OpenCLType:
@@ -271,17 +368,37 @@ def _convert_ast_expression_to_cl_expression(
             for arg in expression.args
         ]
         # Check if function exists in context and retrieve its type
+        function_name: str
         if isinstance(expression.func, ast.Name):
-            if expression.func.id not in context:
+            if expression.func.id == "int":
+                return_type = OpenCLType("int")
+            elif expression.func.id == "float":
+                return_type = OpenCLType("realtype")
+            elif expression.func.id not in context:
                 raise ValueError(
                     f"Function '{expression.func.id}' not found at line {expression.lineno}"
                 )
-            return_type = context[expression.func.id]
+            else:
+                return_type = context[expression.func.id]
+            function_name = expression.func.id
+        # Check if func is a module (e.g. math.exp)
+        elif isinstance(expression.func, ast.Attribute):
+            if expression.func.attr not in context:
+                module = (
+                    expression.func.value.id
+                    if isinstance(expression.func.value, ast.Name)
+                    else ""
+                )
+                raise ValueError(
+                    f"Function '{expression.func.attr}' from module '{module}' not found at line {expression.lineno}"
+                )
+            return_type = context[expression.func.attr]
+            function_name = expression.func.attr
         else:
             raise ValueError(
                 f"Unsupported function call '{expression.func}' at line {expression.lineno}"
             )
-        return OpenCLFunctionCall(expression.func.id, args, cl_type=return_type)
+        return OpenCLFunctionCall(function_name, args, cl_type=return_type)
     elif isinstance(expression, ast.UnaryOp):
         return OpenCLUnaryOperation(
             expression.op,
@@ -548,16 +665,48 @@ class OpenCLFunction:
         body: List[ast.stmt],
         fn_returns: Union[ast.Name, ast.Constant],
         context: Dict[str, OpenCLType],
-        mutable_args: Optional[List[str]] = None,
+        mutable_args: Optional[Union[List[str], List[int]]] = None,
     ):
         self.args = []
         self.body = []
         self.name = fn_name
         self.declared_vars = {}
-        self.modified_vars = set(mutable_args) if mutable_args is not None else set()
         self.returns = _convert_ast_annotation_to_cl_type(fn_name, fn_returns)
         self._convert_ast_args(args)
         arg_names = set([arg.name for arg in self.args])
+
+        if isinstance(mutable_args, List):
+            mutable_args_str: List[str] = []
+            # Check if mutable_args is a list of ints and convert to a list of strings
+            if isinstance(mutable_args[0], int):
+                # Treat all arguments as ints and throw an error if they are not
+                for mutable_arg in mutable_args:
+                    if not isinstance(mutable_arg, int):
+                        raise TypeError(
+                            f"Mutable arguments must be a list of strings or integers, got '{mutable_args}'"
+                        )
+                    mutable_args_str.append(self.args[mutable_arg].name)
+            elif isinstance(mutable_args[0], str):
+                # Treat all arguments as strings and throw an error if they are not
+                for mutable_arg in mutable_args:
+                    if not isinstance(mutable_arg, str):
+                        raise TypeError(
+                            f"Mutable arguments must be a list of strings or integers, got '{mutable_args}'"
+                        )
+                    mutable_args_str.append(mutable_arg)
+            else:
+                # Throw an error if the list is not a list of strings or integers
+                raise TypeError(
+                    f"Mutable arguments must be a list of strings or integers, got '{mutable_args}'"
+                )
+
+            self.modified_vars = set(mutable_args_str)
+        elif mutable_args is None:
+            self.modified_vars = set()
+        else:
+            raise TypeError(
+                f"Mutable arguments must be a list of strings or integers, got '{mutable_args}'"
+            )
         if isinstance(body, list):
             for instruction in body:
                 local_context = dict(context, **self.declared_vars)
@@ -619,7 +768,12 @@ class OpenCLSyntaxTree:
     def __init__(self) -> None:
         self.functions = []
 
-    def add_function(self, fn: ast.FunctionDef, mutable_args: List[str]) -> None:
+    def add_function(
+        self,
+        fn: ast.FunctionDef,
+        mutable_args: Optional[Union[List[str], List[int]]],
+        function_name: Optional[str],
+    ) -> None:
         if fn.returns is None:
             raise TypeError(
                 f"Function '{fn.name}' must have a return type at line {fn.lineno}"
@@ -631,9 +785,13 @@ class OpenCLSyntaxTree:
         context: Dict[str, OpenCLType] = {
             parsed_fn.name: parsed_fn.returns for parsed_fn in self.functions
         }
+        context.update({key: val.return_type for key, val in _opencl_builtins.items()})
+
+        if function_name is None:
+            function_name = fn.name
         self.functions.append(
             OpenCLFunction(
-                fn.name,
+                function_name,
                 fn.args,
                 fn.body,
                 fn.returns,
@@ -650,10 +808,9 @@ class OpenCLSyntaxTree:
 
 
 class OpenCLConverter(ast.NodeTransformer):
-    entry_function_seen: bool = False
-    entry_function_name: str
     syntax_tree: OpenCLSyntaxTree
-    mutable_args: Optional[List[str]] = None
+    mutable_args: Optional[Union[List[str], List[int]]] = None
+    function_name: Optional[str] = None
 
     def __init__(self, entry_function_name: str = "get_rhs"):
         # Initialize any necessary variables
@@ -666,12 +823,11 @@ class OpenCLConverter(ast.NodeTransformer):
         # Add '__global' keyword for pointer arguments
         # Change argument types to 'realtype'
         # More modifications can be added here
-        entrypoint = node.name == self.entry_function_name
-        if entrypoint:
-            entry_function_seen = True
 
-        mutable_args = self.mutable_args if self.mutable_args is not None else []
-        self.syntax_tree.add_function(node, mutable_args=mutable_args)
+        mutable_args = self.mutable_args
+        self.syntax_tree.add_function(
+            node, mutable_args=mutable_args, function_name=self.function_name
+        )
         return node
 
     def visit_BinOp(self, node: ast.BinOp) -> ast.BinOp:
@@ -684,7 +840,8 @@ class OpenCLConverter(ast.NodeTransformer):
         self,
         python_fn: Union[Callable[[Any], Any], OpenCLRhsEquation] | str,
         dedent: bool = True,
-        mutable_args: Optional[List[str]] = None,
+        mutable_args: Optional[Union[List[str], List[int]]] = None,
+        function_name: Optional[str] = None,
     ) -> str:
         # Convert a Python function to OpenCL
         # Example: 'def add_float(a: float, b: float) -> float:\n'
@@ -703,8 +860,10 @@ class OpenCLConverter(ast.NodeTransformer):
             if dedent:
                 python_source = textwrap.dedent(python_source)
         self.mutable_args = mutable_args
+        self.function_name = function_name
         tree = ast.parse(python_source)
         self.visit(tree)
+        self.function_name = None
         self.mutable_args = None
         return str(self.syntax_tree)
 

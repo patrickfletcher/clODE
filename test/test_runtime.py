@@ -83,16 +83,16 @@ def test_init_features_runtime_with_incorrect_config_fails(
 ):
     input_file: str = "test/van_der_pol_oscillator.cl"
 
-    tspan = (0.0, 1000.0)
+    t_span = (0.0, 1000.0)
 
     with pytest.raises(ValueError):
         _ = clode.TrajectorySimulator(
             src_file=input_file,
-            variable_names=["x", "y"],
-            parameter_names=["mu"],
+            variables={"x": 1.0, "y": 1.0},
+            parameters={"mu": 1.0},
             num_noise=0,
             stepper=clode.Stepper.dormand_prince,
-            tspan=tspan,
+            t_span=t_span,
             device_type=device_type,
             vendor=vendor,
             platform_id=platform_id,
@@ -101,13 +101,13 @@ def test_init_features_runtime_with_incorrect_config_fails(
         )
 
     with pytest.raises(ValueError):
-        _ = clode.FeaturesSimulator(
+        _ = clode.FeatureSimulator(
             src_file=input_file,
-            variable_names=["x", "y"],
-            parameter_names=["mu"],
+            variables={"x": 1.0, "y": 1.0},
+            parameters={"mu": 1.0},
             num_noise=0,
             stepper=clode.Stepper.dormand_prince,
-            tspan=tspan,
+            t_span=t_span,
             device_type=device_type,
             vendor=vendor,
             platform_id=platform_id,
