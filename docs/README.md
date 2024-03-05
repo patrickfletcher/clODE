@@ -8,17 +8,12 @@
 ![Linux](https://github.com/patrickfletcher/clODE/actions/workflows/bazel_build_linux.yml/badge.svg)
 
 clODE is an efficient computational tool designed for parallel solving
-of ordinary differential equation (ODE) ensembles by leveraging OpenCL.
-It lets users define ODE systems in Python and enhances numerical
-simulation speeds up to 500 times faster than scipy's solve_ivp by
-utilising graphics cards, on-the-fly feature extraction
-and parallel processing.
+of ordinary differential equation (ODE) ensembles using OpenCL.
+It lets users define their ODE system and the ensemble of parameter sets and initial conditions in Python.  By leveraging OpenCL, significant speedups can be obtained for this inherently parallel problem on any CPU, GPU, or other device with OpenCL support. Two primary modes of simulation are supported:
 
-The software features two primary simulators: the FeatureSimulator,
-which analyses ODE trajectory characteristics (like oscillation periods)
-in real-time without needing to store the trajectory, facilitating extensive
-parameter analyses with considerable computational speed improvements.
-Conversely, the TrajectorySimulator provides detailed trajectory data.
+- FeatureSimulator computes features of ODE trajectories, such as oscillation period, on-the-fly, without storing the trajectory data, facilitating extensive parameter analyses with considerable computational speed improvements.
+- TrajectorySimulator stores the full trajectory data.
+
 clODE offers flexibility in simulator deployment across different hardware,
 allowing, for example, the FeatureSimulator to operate on a GPU while the
 TrajectorySimulator runs on a CPU.

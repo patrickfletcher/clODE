@@ -3,13 +3,16 @@
 ## Python
 
 Pre-build binaries are provided via PyPI for Python 3.8-3.12 on MacOS and Windows, which can be installed simply using pip:
+
 ```
     pip install clode
 ```
+
 An OpenCL runtime for your device is required. This is often included as part of your
 GPU driver (AMD APP SDK, Intel OpenCL SDK, NVIDIA CUDA, etc.)
 
 ### Google Colab
+
 On Google Colab, you need to re-install the nvidia-opencl-dev package
 to make the OpenCL runtime work correctly.
 

@@ -4,7 +4,7 @@ clODE's Python library can read XPP files and convert them to OpenCL source file
 
 To use this functionality, you must have the Python library installed.
 Simply send your .xpp file to the functions
-clode_features or clode_trajectory.
+clode_features or clode_trajectory. For a fully-working example, look in `test/test_xpp_converter.py`.
 
 ## Example
 
@@ -37,10 +37,6 @@ import clode
 # and you can find it in the same directory as the .xpp file
 clode_cl_filename = clode.convert_xpp_file("van_der_pol_oscillator.xpp")
 ```
-
-## Example
-
-For a fully-working example, look in `test/test_xpp_converter.py`.
 
 ## Limitations
 

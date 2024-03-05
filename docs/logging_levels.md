@@ -3,6 +3,7 @@
 clODE has several internal logging levels. These are set by the
 `clode.set_log_level` function, which takes an enum argument. The
 levels are:
+
 * `clode.log_level.off`: No logging
 * `clode.log_level.critical`: Only log critical errors
 * `clode.log_level.error`: Only log errors
@@ -12,6 +13,7 @@ levels are:
 * `clode.log_level.trace`: Log everything, including trace messages
 
 To set the logging level, use the `clode.set_log_level` function:
+
 ```python
 import clode
 

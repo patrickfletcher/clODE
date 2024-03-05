@@ -1,6 +1,5 @@
 # Fast and slow variables
 
-
 ```python
 import clode
 import matplotlib.pyplot as plt

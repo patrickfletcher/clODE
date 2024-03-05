@@ -122,7 +122,7 @@ plt.ylabel("period")
 plt.show()
 ```
 
-# New definition
+## New definition
 
 ```python
 import numpy as np
@@ -184,7 +184,7 @@ plt.ylabel("period")
 plt.show()
 ```
 
-### XPP
+## XPP
 
 ```xpp
 init x = 0.1 y = 0.1
@@ -242,7 +242,6 @@ return observer_output
 
 vdp_dormand_prince(100, "vdp_oscillator.xpp")
 ```
-
 
 ```python
 def scipy_solve_ivp_wrapper(func, aux=None, wiener=None):

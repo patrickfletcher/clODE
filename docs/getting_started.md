@@ -6,28 +6,19 @@ clODE is a Python library for solving systems of ordinary differential
 equations (ODEs) using OpenCL. It is designed to be easy to use, and
 to provide a high-level interface for specifying ODEs and running simulations.
 
-The primary use case for clODE is to simulate **ensembles** of ODEs. This
+The primary use case for clODE is to simulate **ensembles** of initial value problems. This
 is useful for studying the behavior of a system of ODEs as a function of
-parameters, initial conditions, or other factors.
+parameters, initial conditions, or other factors. By leveraging OpenCL, clODE enables significant speedups for this inherently parallel problem on any CPU, GPU, or other device with OpenCL support.
 
-The clODE library includes three solvers. Two of these solvers discard the trajectory,
-to save memory, and instead measure features of the solution. The third solver
-stores the trajectory.
+The clODE library includes three solvers:
 
-The three solvers are:
-- `Simulator`: This solver measures the end state of the solution, and is useful for studying long-term convergence behavior.
-- `FeatureSimulator`: This solver measures features of the solution, such as the period of oscillation, and is useful for studying the behavior of the system as a function of parameters.
-- `TrajectorySimulator`: This solver stores the trajectory of the solution, and is useful for studying the detailed behavior of the system.
+- `Simulator`: This is the solver base class from which other solvers inherit. It supports advancing the ODE solution over a time interval, storing only the final state. This may be useful for studying long-term convergence behavior.
+- `FeatureSimulator`: This solver measures features of the solution, such as the period of oscillation, on the fly, without storing the full trajectory data. The reduced storage can enable large ensembles to be rapidly evaluated.
+- `TrajectorySimulator`: This solver stores the full trajectories of an ensemble of initial value problems.
 
 clODE lets users specify ODEs using Python functions, and then converts these
 functions to OpenCL code. This code is then executed on an OpenCL device, such
 as a GPU or a multi-core CPU.
-
-## Differences to SciPy
-clODE uses OpenCL to solve ODEs, while SciPy uses a combination of C and Fortran
-code. The main difference is that SciPy returns the derivatives of the state
-variables, while clODE modifies a list item in place. This is due to
-the fact that one cannot return arrays in OpenCL.
 
 ## Usage Example - computing the period of the Van der Pol oscillator
 
@@ -48,7 +39,7 @@ def van_der_pol(float t,
                 list[float] parameters,
                 list[float] derivatives,
                 list[float] aux,
-                list[float] weiner) -? None:
+                list[float] weiner) -> None:
 
 
     # State variables
@@ -68,11 +59,12 @@ def van_der_pol(float t,
 ```
 
 Note that the Python function must be **fully typed** and
-must have this exact signature.
-
-When run, this function will be converted to OpenCL and written
+must have this exact signature. This function will be converted to OpenCL and written
 to a file called `clode_rhs.cl`. This file will then be loaded
 into an OpenCL program and executed on the OpenCL device.
+
+Note that this differs from the signature expected by Scipy's ```solve_ivp```;
+[TODO] we provide a wrapper to support using the same vector field function in both Scipy and clODE.
 
 In the above case, the output OpenCL function would look like this:
 
@@ -206,7 +198,6 @@ by columns, i.e. if your variables are a, b and c,
 the CPP library expects data in the format [aaaabbbbcccc].
 The Python library expects data in the format
 [[a, b, c], [a, b, c], [a, b, c], ...]
-
 
 ```py run
 import matplotlib.pyplot as plt

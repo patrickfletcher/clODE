@@ -19,10 +19,10 @@ The default runtime vendor is cl_vendor.ANY.
 
 The second way to initialize the clODE runtime is to specify
 the device and platform by name. This is done by passing
-the `device_type` and `vendor` arguments to 
-CLODEFeatures or CLODETrajectory.
+the `device_type` and `vendor` arguments to CLODEFeatures or CLODETrajectory.
 
 You can select from the following devices:
+
 * cl_device_type.DEVICE_TYPE_DEFAULT
 * cl_device_type.DEVICE_TYPE_CPU
 * cl_device_type.DEVICE_TYPE_GPU
@@ -31,6 +31,7 @@ You can select from the following devices:
 * cl_device_type.DEVICE_TYPE_ALL
 
 You can select from the following vendors:
+
 * cl_vendor.AMD
 * cl_vendor.NVIDIA
 * cl_vendor.INTEL
