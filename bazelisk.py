@@ -95,8 +95,10 @@ def decide_which_bazel_version_to_use():
 def find_workspace_root(root=None):
     if root is None:
         root = os.getcwd()
-    if os.path.exists(os.path.join(root, "WORKSPACE")):
-        return root
+    for boundary in ["MODULE.bazel", "REPO.bazel", "WORKSPACE.bazel", "WORKSPACE"]:
+        path = os.path.join(root, boundary)
+        if os.path.exists(path) and not os.path.isdir(path):
+            return root
     new_root = os.path.dirname(root)
     return find_workspace_root(new_root) if new_root != root else None
 
@@ -177,7 +179,7 @@ def get_version_history(bazelisk_directory):
             if not release["prerelease"]
         ),
         # This only handles versions with numeric components, but that is fine
-        # since prerelease verisons have been excluded.
+        # since prerelease versions have been excluded.
         key=lambda version: tuple(int(component)
                                   for component in version.split('.')),
         reverse=True,
@@ -236,10 +238,10 @@ def get_supported_machine_archs(version, operating_system):
         # released version
         major, minor = int(versions[0]), int(versions[1])
         if (
-                operating_system == "darwin"
-                and (major > 4 or major == 4 and minor >= 1)
-                or operating_system == "linux"
-                and (major > 3 or major == 3 and minor >= 4)
+            operating_system == "darwin"
+            and (major > 4 or major == 4 and minor >= 1)
+            or operating_system == "linux"
+            and (major > 3 or major == 3 and minor >= 4)
         ):
             # Linux arm64 was supported since 3.4.0.
             # Darwin arm64 was supported since 4.1.0.

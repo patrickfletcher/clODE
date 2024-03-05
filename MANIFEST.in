@@ -1,3 +1,5 @@
 include clode/cpp/*.cl
 include clode/cpp/observers/*.clh
 include clode/cpp/steppers/*.clh
+include clode/py.typed
+include clode/cpp/clode_cpp_wrapper.pyi

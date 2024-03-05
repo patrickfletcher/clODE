@@ -10,8 +10,8 @@ template <typename realtype>
 #endif
 struct ObserverData_template
 {
-    int eventcount;
-    int stepcount;
+    unsigned int eventcount;
+    unsigned int stepcount;
 }
 
 #ifdef __cplusplus
@@ -37,6 +37,8 @@ typedef struct ObserverData_template ObserverData;
 //set initial values to relevant fields in ObserverData
 inline void initializeObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
 {
+    od->eventcount = 0;
+    od->stepcount = 0;
 }
 
 //restricted per-timestep update of observer data for initializing event detector
@@ -58,12 +60,17 @@ inline bool eventFunction(realtype *ti, realtype xi[], realtype dxi[], realtype 
 //When an event is detected, computes desired event-based features. returns true if a terminal event was reached
 inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
 {
+    ++od->eventcount;
+    if (od->eventcount > op->maxEventCount){
+        return true;
+    }
     return false;
 }
 
 //full per-timestep update of observer data. If an event occurred this timestep, event-based observer data is reset. Per-timestep features are computed here.
 inline void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
 {
+    ++od->stepcount;
 }
 
 //Perform and post-integration cleanup and write desired features into the global array F

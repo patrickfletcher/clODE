@@ -20,7 +20,9 @@ __kernel void initializeObserver(
 	int nPts = get_global_size(0);
 
 	realtype ti, dt;
-    realtype p[N_PAR], xi[N_VAR], dxi[N_VAR], auxi[N_AUX], wi[N_WIENER];
+    realtype p[N_PAR], xi[N_VAR], dxi[N_VAR];
+    realtype auxi[N_AUX>0?N_AUX:1];
+    realtype wi[N_WIENER>0?N_WIENER:1];
 	rngData rd;
 
 	//get private copy of ODE parameters, initial data, and compute slope at initial state

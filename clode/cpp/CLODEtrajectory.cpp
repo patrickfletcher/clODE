@@ -10,20 +10,20 @@ CLODEtrajectory::CLODEtrajectory(ProblemInfo prob, std::string stepper, bool clS
 	: CLODE(prob, stepper, clSinglePrecision, opencl, clodeRoot), nStoreMax(0)
 {
 
-	//printf("\nCLODE has been specialized: CLODEtrajectory\n");
+	//printf("CLODE has been specialized: CLODEtrajectory");
 
 	clprogramstring += read_file(clodeRoot + "trajectory.cl");
-	spdlog::debug("constructor clODEtrajectory\n");
+	spdlog::debug("constructor clODEtrajectory");
 }
 
 CLODEtrajectory::CLODEtrajectory(ProblemInfo prob, std::string stepper, bool clSinglePrecision, unsigned int platformID, unsigned int deviceID, const std::string clodeRoot)
 	: CLODE(prob, stepper, clSinglePrecision, platformID, deviceID, clodeRoot), nStoreMax(0)
 {
 
-	//printf("\nCLODE has been specialized: CLODEtrajectory\n");
+	//printf("CLODE has been specialized: CLODEtrajectory");
 
 	clprogramstring += read_file(clodeRoot + "trajectory.cl");
-	spdlog::debug("constructor clODEtrajectory\n");
+	spdlog::debug("constructor clODEtrajectory");
 }
 
 CLODEtrajectory::~CLODEtrajectory() {}
@@ -39,20 +39,14 @@ void CLODEtrajectory::buildCL()
 	{
 		cl_transient = cl::Kernel(opencl.getProgram(), "transient", &opencl.error);
 		cl_trajectory = cl::Kernel(opencl.getProgram(), "trajectory", &opencl.error);
-
-		// size_t preferred_multiple;
-		// cl::Device dev;
-		// opencl.getProgram().getInfo(CL_PROGRAM_DEVICES,&dev);
-		// cl_trajectory.getWorkGroupInfo(dev,CL_KERNEL_PREFERRED_WORK_GROUP_SIZE_MULTIPLE,&preferred_multiple);
-		// printf("Preferred work size multiple (trajectory): {}\n",preferred_multiple);
 	}
 	catch (cl::Error &er)
 	{
-		spdlog::error("CLODEtrajectory::initializeTrajectoryKernel():{}({})\n", er.what(), CLErrorString(er.err()).c_str());
+		spdlog::error("CLODEtrajectory::initializeTrajectoryKernel():{}({})", er.what(), CLErrorString(er.err()).c_str());
 		throw er;
 	}
 	clInitialized = false;
-	spdlog::debug("initialize trajectory kernel\n");
+	spdlog::debug("initialize trajectory kernel");
 }
 
 //initialize everything
@@ -68,7 +62,7 @@ void CLODEtrajectory::initialize(std::vector<cl_double> newTspan, std::vector<cl
 	resizeTrajectoryVariables(); 
 
 	clInitialized = true;
-	spdlog::debug("initialize clODEfeatures\n");
+	spdlog::debug("initialize clODEtrajectory");
 }
 
 void CLODEtrajectory::resizeTrajectoryVariables()
@@ -80,7 +74,7 @@ void CLODEtrajectory::resizeTrajectoryVariables()
 	// currentStoreAlloc=std::min(currentStoreAlloc, sp.max_store);
 	//~ if (currentStoreAlloc > sp.max_store) {
 	//~ currentStoreAlloc=sp.max_store;
-	//~ printf("Warning: (tspan[1]-tspan[0])/(dt*nout)+1 > max_store. Reducing storage to max_store={} timepoints. \n",sp.max_store);
+	//~ printf("Warning: (tspan[1]-tspan[0])/(dt*nout)+1 > max_store. Reducing storage to max_store={} timepoints. ",sp.max_store);
 	//~ }
 
 	//check largest desired memory chunk against device's maximum allowable variable size
@@ -89,7 +83,7 @@ void CLODEtrajectory::resizeTrajectoryVariables()
 	if (largestAlloc > opencl.getMaxMemAllocSize())
 	{
 		int estimatedMaxStoreAlloc = std::floor(opencl.getMaxMemAllocSize() / (std::max(1, std::max(nVar, nAux)) * nPts * realSize));
-        spdlog::error("Storage requested exceeds device maximum variable size. Reason: {}. Try reducing storage to <{} time points, or reducing nPts. \n", nAux > nVar ? "aux vars" : "state vars", estimatedMaxStoreAlloc);
+        spdlog::error("Storage requested exceeds device maximum variable size. Reason: {}. Try reducing storage to <{} time points, or reducing nPts. ", nAux > nVar ? "aux vars" : "state vars", estimatedMaxStoreAlloc);
 		throw std::invalid_argument("nPts*nStoreMax*nVar*realSize or nPts*nStoreMax*nAux*realSize is too big");
 	}
 
@@ -102,7 +96,8 @@ void CLODEtrajectory::resizeTrajectoryVariables()
 		nStoreMax = currentStoreAlloc;
 		telements = currentTelements;
 		xelements = nVar * currentTelements;
-		auxelements = nAux * currentTelements;
+		// cl::Buffer doesn't like zero-sized arrays:
+		auxelements = nAux>0 ? nAux * currentTelements : 1;
 
 		t.resize(telements);
 		x.resize(xelements);
@@ -122,10 +117,10 @@ void CLODEtrajectory::resizeTrajectoryVariables()
 		}
 		catch (cl::Error &er)
 		{
-			spdlog::error("CLODEtrajectory::resizeTrajectoryVariables():{}({})\n", er.what(), CLErrorString(er.err()).c_str());
+			spdlog::error("CLODEtrajectory::resizeTrajectoryVariables():{}({})", er.what(), CLErrorString(er.err()).c_str());
 			throw er;
 		}
-		spdlog::debug("resize d_t, d_x, d_dx, d_aux, d_nStored\n");
+		spdlog::debug("resize d_t, d_x, d_dx, d_aux, d_nStored");
 	}
 }
 
@@ -160,14 +155,14 @@ void CLODEtrajectory::trajectory()
 		}
 		catch (cl::Error &er)
 		{
-			spdlog::error("CLODEtrajectory::trajectory():{}({})\n", er.what(), CLErrorString(er.err()).c_str());
+			spdlog::error("CLODEtrajectory::trajectory():{}({})", er.what(), CLErrorString(er.err()).c_str());
 			throw er;
 		}
-		spdlog::debug("run trajectory\n");
+		spdlog::debug("run trajectory");
 	}
 	else
 	{
-		printf("CLODE has not been initialized\n");
+		printf("CLODE has not been initialized");
 	}
 }
 

@@ -7,19 +7,28 @@
 ![Mac](https://github.com/patrickfletcher/clODE/actions/workflows/bazel_test_mac.yml/badge.svg)
 ![Linux](https://github.com/patrickfletcher/clODE/actions/workflows/bazel_build_linux.yml/badge.svg)
 
-clODE is a tool for solving ordinary differential equations (ODEs) using OpenCL. It is tailored to numerically solving many instances of a given ODE system in parallel, each with different parameter sets and/or initial conditions.
+clODE is an efficient computational tool designed for parallel solving
+of ordinary differential equation (ODE) ensembles using OpenCL.
+It lets users define their ODE system and the ensemble of parameter sets and initial conditions in Python.  By leveraging OpenCL, significant speedups can be obtained for this inherently parallel problem on any CPU, GPU, or other device with OpenCL support. Two primary modes of simulation are supported:
 
-The ODE solver runs entirely on the OpenCL device, supporting independent solver state per simulation (e.g., adaptive timesteps). clODE can return the full trajectories, though this is somewhat memory intensive. Alternatively, clODE supports computing features of the ODE trajectory (e.g., oscillation period) on the fly without storing the trajectory itself, enabling much larger parameter sweeps to be run with significant speedup over serial computation.
+- FeatureSimulator computes features of ODE trajectories, such as oscillation period, on-the-fly, without storing the trajectory data, facilitating extensive parameter analyses with considerable computational speed improvements.
+- TrajectorySimulator stores the full trajectory data.
 
-clODE is written in C++ and OpenCL, and can be used directly in C++ programs or via the provided Python interface. The library is compiled using bazel and bazelisk, and it runs on Linux, Windows and MacOS.
+clODE offers flexibility in simulator deployment across different hardware,
+allowing, for example, the FeatureSimulator to operate on a GPU while the
+TrajectorySimulator runs on a CPU.
+
+Developed in C++ and OpenCL, clODE is accessible for direct use in C++
+applications or through a Python interface. The library compiles with bazel
+and bazelisk, and works on Linux, Windows, and MacOS platforms.
 
 ## Installation
 
-See [installation](install/) for instructions on how to install CLODE.
+See [installation](install.md) for instructions on how to install CLODE.
 
 ## Getting Started
 
-See [Getting Started](getting_started/) for an example of clODE usage.
+See [Getting Started](getting_started.md) for an example of clODE usage.
 
 ## Source
 

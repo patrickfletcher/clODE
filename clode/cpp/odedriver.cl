@@ -1,3 +1,5 @@
+// currently unused...
+
 #include "clODE_random.cl"
 #include "clODE_struct_defs.cl"
 #include "clODE_utilities.cl"
@@ -76,7 +78,7 @@ __kernel void odedriver(
     {
 
         ++step;
-        ++odata.stepcount;
+        //++odata.stepcount;
         stepflag = stepper(&ti, xi, dxi, p, sp, &dt, tspanPtr, auxi, wi, step, &rd);
         if (stepflag!=0)
             break;

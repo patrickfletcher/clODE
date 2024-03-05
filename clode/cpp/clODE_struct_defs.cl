@@ -2,6 +2,7 @@
 #define CLODE_STRUCT_DEFS_H_
 
 //TODO: bounds param (like XPP) to catch numerical instability/blow up in finite time?
+//TODO: provide different structs for base vs trajectory solvers (expose relevant members)
 #include "realtype.cl"
 
 #ifdef __cplusplus

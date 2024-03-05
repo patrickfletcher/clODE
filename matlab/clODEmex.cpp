@@ -9,6 +9,7 @@
 //TODO: is it better or more convenient to use the new matlab C++ data API?
 
 #include "mex.h"
+#include "spdlog/spdlog.h"
 
 #include <vector>
 #include <memory> //shared_ptr
@@ -17,10 +18,12 @@
 
 ////////////////////////  BEGIN Step 1: Configuration  ////////////////////////
 
-
 #include "OpenCLResource.hpp"
 #include "CLODE.hpp"
 #include "clODEmexHelpers.hpp"
+#include "matlabLogging.hpp"
+
+// set_log_level(spdlog::level::warn);
 
 typedef CLODE class_type;
 

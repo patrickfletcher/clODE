@@ -11,6 +11,8 @@ def _parse_ode_definition(xpp_line: str) -> list[tuple[str, str]]:
     variable_pairs: list[tuple[str, str]] = []
     while line:
         first_variable = re.search(r"(\w+)(\s*=\s*)", line)
+        if not first_variable:
+            raise ValueError(f"Could not parse line '{xpp_line}'")
         name = first_variable.group(1)
         end_index = first_variable.end(0)
         second_variable = re.search(r"(\w+)(\s*=\s*)", line[end_index:])
@@ -25,12 +27,16 @@ def _parse_ode_definition(xpp_line: str) -> list[tuple[str, str]]:
     return variable_pairs
 
 
-def _parse_ode_definitions(store: dict[str, str], xpp_line: str):
+def _parse_ode_definitions(store: dict[str, str], xpp_line: str) -> None:
     for name, value in _parse_ode_definition(xpp_line):
         store[name] = value.rstrip(",")
 
 
-def read_ode_parameters(xpp_string: str):
+def read_ode_parameters(
+    xpp_string: str,
+) -> tuple[
+    dict[str, str], dict[str, str], dict[str, str], dict[str, str], list[str], list[str]
+]:
     parameters: dict[str, str] = dict()
     auxiliaries: dict[str, str] = dict()
     initial_values: dict[str, str] = dict()
@@ -142,6 +148,10 @@ def format_opencl_rhs(
     cl_file = re.sub(
         "(\w+)\s*\^\s*([-+]?(\d*\.*\d+))", r"pow(\1, \2)", cl_file, flags=re.MULTILINE
     )
+
+    # Convert all floating numbers to single precision
+    # using the suffix 'f'
+    cl_file = re.sub("([-+]?(\d+\.\d*))", r"\1f", cl_file, flags=re.MULTILINE)
 
     cl_lines = cl_file.split("\n")
 

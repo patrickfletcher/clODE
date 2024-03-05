@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import sys
 from math import log, pi
 
@@ -26,36 +28,61 @@ def approximate_vdp_period(mu):
     return period
 
 
-def vdp_dormand_prince(end: int, input_file: str = "test/van_der_pol_oscillator.cl"):
-    tspan = (0.0, 1000.0)
+def getRHS(
+    t: float,
+    var: list[float],
+    par: list[float],
+    derivatives: list[float],
+    aux: list[float],
+    wiener: list[float],
+) -> None:
+    mu: float = par[0]
+    x: float = var[0]
+    y: float = var[1]
 
-    integrator = clode.CLODEFeatures(
+    dx: float = y
+    dy: float = mu * (1 - x * x) * y - x
+
+    derivatives[0] = dx
+    derivatives[1] = dy
+
+
+def vdp_dormand_prince(
+    end: int,
+    input_file: str | None = None,
+    input_eq: clode.OpenCLRhsEquation | None = None,
+):
+    if input_file is None and input_eq is None:
+        input_file = "test/van_der_pol_oscillator.cl"
+    t_span = (0.0, 1000.0)
+
+    integrator = clode.FeatureSimulator(
         src_file=input_file,
-        variable_names=["x", "y"],
-        parameter_names=["mu"],
-        num_noise=0,
+        rhs_equation=input_eq,
+        variables={"x": 1.0, "y": 1.0},
+        parameters={"mu": 1.0},
         observer=clode.Observer.threshold_2,
         stepper=clode.Stepper.dormand_prince,
-        tspan=tspan,
-        single_precision=False,
+        t_span=t_span,
+        max_store=20000,
+        max_steps=20000,
     )
 
-    parameters = [-1, 0, 0.01, 0.1, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0] + list(
-        range(5, end)
-    )
+    parameters = {
+        "mu": [-1, 0, 0.01, 0.1, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0]
+        + list(range(5, end))
+    }
 
-    x0 = np.tile([1, 1], (len(parameters), 1))
-
-    pars_v = np.array([[par] for par in parameters])
-    integrator.initialize(x0, pars_v)
+    integrator.set_ensemble(parameters=parameters)
 
     integrator.transient()
     integrator.features()
     observer_output = integrator.get_observer_results()
 
     periods = observer_output.get_var_max("period")
-    for index, mu in enumerate(parameters):
-        period = periods[index, 0]
+
+    for index, mu in enumerate(parameters["mu"]):
+        period = periods[index]
         expected_period = approximate_vdp_period(mu)
         rtol = 0.01
         atol = 1
@@ -68,7 +95,12 @@ def test_vdp_dormand_prince():
     vdp_dormand_prince(end=7)
 
 
+def test_vdp_dormand_prince_python_rhs():
+    vdp_dormand_prince(end=7, input_eq=getRHS)
+
+
 # if using 'bazel test ...'
 if __name__ == "__main__":
     print(clode)
     sys.exit(pytest.main(sys.argv[1:]))
+    # test_vdp_dormand_prince()

@@ -1,12 +1,6 @@
-/* clODE: a simulator class to run parallel ODE simulations on OpenCL capable hardware.
- * A clODE simulator solves on initial value problem over a grid of parameters and/or initial conditions. At each timestep,
- * "observer" rountine may be called to record/store/compute features of the solutions. Examples include storing the full
- * trajectory, recording the times and values of local extrema in a variable of the system, or directly computing other 
- * features of the trajectory.  
- */
-
-//when compiling, be sure to provide the clODE root directory as a define:
-// -DCLODE_ROOT="path/to/my/clODE/"
+//
+// Created by Patrick Fletcher 2017
+//
 
 #ifndef CLODE_FEATURES_HPP_
 #define CLODE_FEATURES_HPP_
@@ -58,32 +52,23 @@ protected:
     void resizeFeaturesVariables(); //d_odata and d_F depend on nPts. nPts change invalidates d_odata
 
 public:
-
     CLODEfeatures(ProblemInfo prob, std::string stepper, std::string observer, bool clSinglePrecision, OpenCLResource opencl, const std::string clodeRoot);
     CLODEfeatures(ProblemInfo prob, std::string stepper, std::string observer, bool clSinglePrecision, unsigned int platformID, unsigned int deviceID, const std::string clodeRoot);
     virtual ~CLODEfeatures();
 
     //build program, set all problem data needed to run
-    virtual void initialize(std::vector<cl_double> newTspan, std::vector<cl_double> newX0, std::vector<cl_double> newPars, SolverParams<cl_double> newSp); // throws error
+    using CLODE::initialize;
     virtual void initialize(std::vector<cl_double> newTspan, std::vector<cl_double> newX0, std::vector<cl_double> newPars, SolverParams<cl_double> newSp, ObserverParams<cl_double> newOp);
 
     void setObserverParams(ObserverParams<cl_double> newOp);
     void setObserver(std::string newObserver); //requires rebuild: program, kernel, kernel args. Host + Device data OK
 
-    void buildCL(); // build program and create kernel objects
+    virtual void buildCL(); // build program and create kernel objects
 
-    //simulation routine. TODO: overloads?
+    //simulation routine.
     void initializeObserver();                 //initialize Observer struct: possibly integrate forward an interval of duration (tf-t0), rewinds to t0
     void features();                           //integrate forward using stored tspan, x0, pars, and solver pars
     void features(bool newDoObserverInitFlag); //allow manually forcing re-init of observer data
-    // void features(std::vector<cl_double> newTspan);
-    // void features(std::vector<cl_double> newTspan, std::vector<cl_double> newX0);
-    // void features(std::vector<cl_double> newTspan, std::vector<cl_double> newX0, std::vector<cl_double> newPars);
-    // void features(std::vector<cl_double> newTspan, std::vector<cl_double> newX0, std::vector<cl_double> newPars, SolverParams<cl_double> newSp);
-    // void features(bool newDoObserverInitFlag, std::vector<cl_double> newTspan);
-    // void features(bool newDoObserverInitFlag, std::vector<cl_double> newTspan, std::vector<cl_double> newX0);
-    // void features(bool newDoObserverInitFlag, std::vector<cl_double> newTspan, std::vector<cl_double> newX0, std::vector<cl_double> newPars);
-    // void features(bool newDoObserverInitFlag, std::vector<cl_double> newTspan, std::vector<cl_double> newX0, std::vector<cl_double> newPars, SolverParams<cl_double> newSp);
 
     //Get functions
     const std::string getObserverName() const { return observerName; }

@@ -1,12 +1,36 @@
-# Introduction
+# Installation
 
 ## Python
 
 Pre-build binaries are provided via PyPI for Python 3.8-3.12 on MacOS and Windows, which can be installed simply using pip:
+
 ```
     pip install clode
 ```
-An OpenCL runtime for your device is requires - often included as part of GPU drivers (AMD APP SDK, Intel OpenCL SDK, NVIDIA CUDA, etc.)
+
+An OpenCL runtime for your device is required. This is often included as part of your
+GPU driver (AMD APP SDK, Intel OpenCL SDK, NVIDIA CUDA, etc.)
+
+### Google Colab
+
+On Google Colab, you need to re-install the nvidia-opencl-dev package
+to make the OpenCL runtime work correctly.
+
+```jupyter
+!sudo apt-get update
+!sudo apt remove nvidia-opencl-dev clinfo -y
+!sudo apt install nvidia-opencl-dev clinfo -y
+```
+
+### Linux
+
+You might need to install the OpenCL runtime separately.
+For example, on Ubuntu, you can install the OpenCL runtime using the following command:
+
+```bash
+sudo apt-get update
+sudo apt install ocl-icd-libopencl1 clinfo intel-opencl-icd
+```
 
 ## Installation from source
 
@@ -68,6 +92,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE.md) f
 
 To verify that the installation was successful, you can run the following command:
 
-```
-python -c "from clode.runtime import query_opencl; print(query_opencl())"
+```py run
+from clode import query_opencl
+print(query_opencl())
 ```

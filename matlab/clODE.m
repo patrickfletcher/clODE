@@ -81,8 +81,11 @@ classdef clODE < cppclass
             if isempty(selectedDevice)
                 selectedDevice=clODE.autoselectDevice(devices);
             end
+
+            % purify the problem struct
+            newprob = clODE.purifyProblemStruct(prob);
             
-            args{1}=prob;
+            args{1}=newprob;
             args{2}=stepper;
             args{3}=clSinglePrecision;
             args{4}=devices(selectedDevice).platformID;
@@ -103,7 +106,7 @@ classdef clODE < cppclass
             %TODO: mex call constructing the object is slow!!! why?
             obj@cppclass(mexFilename,args{:});
             
-            obj.prob=prob;
+            obj.prob=newprob;
             obj.devices=devices;
             obj.selectedDevice=selectedDevice;
             
@@ -116,10 +119,11 @@ classdef clODE < cppclass
         % new and delete are inherited
         
         %set a new problem - must initialize again!
-        function setNewProblem(obj, prob)
-            if ~strcmp(prob,obj.prob)
-                obj.cppmethod('setnewproblem', prob);
-                obj.prob=prob;
+        function setNewProblem(obj, newprob)
+            newprob = clODE.purifyProblemStruct(newprob);
+            if ~strcmp(newprob,obj.prob)
+                obj.cppmethod('setnewproblem', newprob);
+                obj.prob=newprob;
                 obj.clBuilt=false;
                 obj.clInitialized=false;
             end
@@ -412,6 +416,18 @@ classdef clODE < cppclass
     %static helper methods
     methods (Static=true)
         
+        function newprob = purifyProblemStruct(prob)
+            newprob = struct;
+            newprob.clRHSfilename = char(prob.clRHSfilename);
+            newprob.nVar = prob.nVar;
+            newprob.nPar = prob.nPar;
+            newprob.nAux = prob.nAux;
+            newprob.nWiener = prob.nWiener;
+            newprob.varNames = prob.varNames;
+            newprob.parNames = prob.parNames;
+            newprob.auxNames = prob.auxNames;
+        end
+
         function sp=defaultSolverParams()
             sp.dt=.1;
             sp.dtmax=100.00;

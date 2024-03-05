@@ -7,6 +7,7 @@
 // by Jonathan Chappelow (chappjc)
   
 #include "mex.h"
+#include "spdlog/spdlog.h"
 
 #include <vector>
 #include <memory> //shared_ptr
@@ -19,6 +20,7 @@
 #include "CLODE.hpp"
 #include "CLODEfeatures.hpp"
 #include "clODEmexHelpers.hpp"
+#include "matlabLogging.hpp"
 
 typedef CLODEfeatures class_type;
 

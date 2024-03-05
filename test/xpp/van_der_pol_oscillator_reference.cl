@@ -23,7 +23,7 @@ void getRHS(const realtype t,
     realtype y4 = y*y*y*y;
     realtype x5 = pown(x, 5);
     realtype negx = pow(x, -2);
-    realtype negy = pow(y, -1.5);
+    realtype negy = pow(y, -1.5f);
 
     /* Differential equations */
     realtype dy = mu * (1 - x*x) * y - x;

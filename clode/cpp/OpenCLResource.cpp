@@ -44,6 +44,13 @@ OpenCLResource::OpenCLResource(cl_deviceType type, cl_vendor vendor)
     initializeOpenCL();
 }
 
+OpenCLResource::OpenCLResource(e_cl_device_type type, cl_vendor vendor)
+{
+
+    getPlatformAndDevices(type, vendor);
+    initializeOpenCL();
+}
+
 OpenCLResource::OpenCLResource(int argc, char **argv)
 {
 
@@ -96,7 +103,7 @@ OpenCLResource::OpenCLResource(int argc, char **argv)
 
     if (nValidArgs == 0 && argc > 1)
     {
-        spdlog::warn("OpenCLResource didn't recognize the command line arguments. Using default device. \n");
+        spdlog::warn("OpenCLResource didn't recognize the command line arguments. Using default device. ");
     }
 
     getPlatformAndDevices(type, vendor);
@@ -243,11 +250,11 @@ void OpenCLResource::initializeOpenCL()
     }
     catch (cl::Error &er)
     {
-        spdlog::error("{}({})\n", er.what(), CLErrorString(er.err()).c_str());
+        spdlog::error("{}({})", er.what(), CLErrorString(er.err()).c_str());
         throw er;
     }
 
-    spdlog::debug("OpenCLResource Created\n");
+    spdlog::debug("OpenCLResource Created");
 }
 
 //attempt to build OpenCL program given as a string, build options empty if not supplied.
@@ -260,26 +267,26 @@ void OpenCLResource::buildProgramFromString(std::string sourceStr, std::string b
     try
     {
         program = cl::Program(context, source, &error);
-        spdlog::debug("Program Object creation error code: {}\n",CLErrorString(error).c_str());
+        spdlog::debug("Program Object creation error code: {}",CLErrorString(error).c_str());
 
         builderror = program.build(devices, buildOptions.c_str());
-        spdlog::debug("Program Object build error code: {}\n",CLErrorString(builderror).c_str());
+        spdlog::debug("Program Object build error code: {}",CLErrorString(builderror).c_str());
 
         std::string kernelnames;
         program.getInfo(CL_PROGRAM_KERNEL_NAMES,&kernelnames);
-        spdlog::debug("Kernels built:   {}\n", kernelnames.c_str());
+        spdlog::debug("Kernels built:   {}", kernelnames.c_str());
     }
     catch (cl::Error &er)
     {
-        spdlog::error("{}({})\n", er.what(), CLErrorString(er.err()).c_str());
+        spdlog::error("{}({})", er.what(), CLErrorString(er.err()).c_str());
         if (er.err() == CL_BUILD_PROGRAM_FAILURE)
         {
-            // spdlog::info("{}\n",sourceStr.c_str());
+            // spdlog::info("{}",sourceStr.c_str());
             for (unsigned int i = 0; i < devices.size(); ++i)
             {
                 program.getBuildInfo(devices[i], CL_PROGRAM_BUILD_LOG, &buildLog);
-                spdlog::error("OpenCL build log, Device {}:\n", i);
-                spdlog::error("{}\n", buildLog.c_str());
+                spdlog::error("OpenCL build log, Device {}:", i);
+                spdlog::error("{}", buildLog.c_str());
                 //spdlog::error(std::__fs::filesystem::current_path().c_str());
             }
         }
@@ -298,8 +305,8 @@ void OpenCLResource::buildProgramFromSource(std::string filename, std::string bu
 void OpenCLResource::print()
 {
     std::string tmp;
-    spdlog::info("\nSelected platform and device: \n");
-    spdlog::info("\nPlatform  --------------------\n");
+    spdlog::info("Selected platform and device: ");
+    spdlog::info("Platform  --------------------");
     printPlatformInfo(platform_info);
 }
 
@@ -394,7 +401,7 @@ deviceInfo getDeviceInfo(cl::Device device)
 void printOpenCL()
 {
 
-    spdlog::info("\nQuerying OpenCL platforms...\n");
+    spdlog::info("Querying OpenCL platforms...");
     std::vector<platformInfo> pinfo = queryOpenCL();
     printOpenCL(pinfo);
 }
@@ -403,25 +410,25 @@ void printOpenCL()
 void printOpenCL(std::vector<platformInfo> pinfo)
 {
 
-    spdlog::info("Number of platforms found: %u\n", (unsigned int)pinfo.size());
+    spdlog::info("Number of platforms found: {}", (unsigned int)pinfo.size());
     for (unsigned int i = 0; i < pinfo.size(); ++i)
     {
-        spdlog::info("\nPlatform {}. ------------------------------\n", i);
+        spdlog::info("- Platform {} ------------------------------", i);
         printPlatformInfo(pinfo[i]);
     }
-    spdlog::info("\n");
+    spdlog::info("");
 }
 
 //print information about a platform and its devices given pre-queried info in platformInfo struct
 void printPlatformInfo(platformInfo pinfo)
 {
-    spdlog::info("Name:    {}\n", pinfo.name.c_str());
-    spdlog::info("Vendor:  {}\n", pinfo.vendor.c_str());
-    spdlog::info("Version: {}\n", pinfo.version.c_str());
+    spdlog::info("Name:    {}", pinfo.name.c_str());
+    spdlog::info("Vendor:  {}", pinfo.vendor.c_str());
+    spdlog::info("Version: {}", pinfo.version.c_str());
 
     for (unsigned int j = 0; j < pinfo.nDevices; j++)
     {
-        spdlog::info("\nDevice {}. --------------------\n", j);
+        spdlog::info("- Device {} ------------", j);
         printDeviceInfo(pinfo.device_info[j]);
     }
 }
@@ -436,17 +443,17 @@ void printDeviceInfo(cl::Device device)
 //print info about a specific cl::Device given pre-queried info in deviceInfo struct
 void printDeviceInfo(deviceInfo dinfo)
 {
-    spdlog::info("Name:   {}\n", dinfo.name.c_str());
-    spdlog::info("Type:   {}\n", dinfo.devTypeStr.c_str());
-    spdlog::info("Vendor: {}\n", dinfo.vendor.c_str());
-    spdlog::info("Version: {}\n", dinfo.version.c_str());
-    spdlog::info("Compute units (CUs): {}\n", dinfo.computeUnits);
-    spdlog::info("Clock frequency:     {} MHz\n", dinfo.maxClock);
-    spdlog::info("Global memory size:  {} MB\n", (long long unsigned int)(dinfo.deviceMemSize / 1024 / 1024));
-    spdlog::info("Max allocation size: {} MB\n", (long long unsigned int)(dinfo.maxMemAllocSize / 1024 / 1024));
-    spdlog::info("Max work group/CU:   {}\n", (int)dinfo.maxWorkGroupSize);
-    spdlog::info("Double support:      {}\n", (dinfo.doubleSupport ? "true" : "false"));
-    spdlog::info("Device available:    {}\n", (dinfo.deviceAvailable ? "true" : "false"));
+    spdlog::info("  Name:   {}", dinfo.name.c_str());
+    spdlog::info("  Type:   {}", dinfo.devTypeStr.c_str());
+    spdlog::info("  Vendor: {}", dinfo.vendor.c_str());
+    spdlog::info("  Version: {}", dinfo.version.c_str());
+    spdlog::info("  Compute units (CUs): {}", dinfo.computeUnits);
+    spdlog::info("  Clock frequency:     {} MHz", dinfo.maxClock);
+    spdlog::info("  Global memory size:  {} MB", (long long unsigned int)(dinfo.deviceMemSize / 1024 / 1024));
+    spdlog::info("  Max allocation size: {} MB", (long long unsigned int)(dinfo.maxMemAllocSize / 1024 / 1024));
+    spdlog::info("  Max work group/CU:   {}", (int)dinfo.maxWorkGroupSize);
+    spdlog::info("  Double support:      {}", (dinfo.doubleSupport ? "true" : "false"));
+    spdlog::info("  Device available:    {}", (dinfo.deviceAvailable ? "true" : "false"));
 };
 
 std::string CLErrorString(cl_int error)

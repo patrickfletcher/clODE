@@ -18,7 +18,10 @@ nav:
   - Functionality:
     - Feature Extraction: 'feature_extraction.md'
     - Trajectory Simulation: 'trajectory_simulation.md'
+    - Stochastic Simulations: 'Ornstein-Uhlenbeck_process.md'
+    - Spike Counting: 'spike_counting.md'
   - Configuration:
+      - Specifying systems of ODEs: 'specifying_odes.md'
       - XPP files: 'xpp_files.md'
       - Initialising the runtime: 'init_runtime.md'
       - Selecting logging levels: 'logging_levels.md'
@@ -27,9 +30,22 @@ nav:
   #Generate the API reference from the python code in clode/python
   - API Reference: 'api_reference.md'
 
+#https://squidfunk.github.io/mkdocs-material/reference/math/
+markdown_extensions:
+  - pymdownx.superfences:
+      preserve_tabs: true
+      custom_fences:
+        - name: py
+          class: 'highlight'
+          format: !!python/object/apply:docs.pycon.py_command_formatter
+            kwds:
+              init: |
+                import numpy as np
+                import matplotlib.pyplot as plt
+          validator: !!python/name:docs.pycon.py_command_validator
+  - pymdownx.arithmatex:
+      generic: true
 
-plugins:
-  - search
 plugins:
   - search
   - mkdocstrings:
@@ -39,11 +55,6 @@ plugins:
             show_source: true
             show_signature_annotations: true
 
-#https://squidfunk.github.io/mkdocs-material/reference/math/
-markdown_extensions:
-  - pymdownx.arithmatex:
-      generic: true
-
 extra_javascript:
   - javascripts/katex.js 
   - https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.7/katex.min.js  
@@ -51,3 +62,4 @@ extra_javascript:
 
 extra_css:
   - https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.7/katex.min.css
+

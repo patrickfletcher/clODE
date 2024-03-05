@@ -23,7 +23,9 @@ __kernel void features(
 	int nPts = get_global_size(0);
 
 	realtype ti, dt;
-    realtype p[N_PAR], xi[N_VAR], dxi[N_VAR], auxi[N_AUX], wi[N_WIENER];
+    realtype p[N_PAR], xi[N_VAR], dxi[N_VAR];
+    realtype auxi[N_AUX>0?N_AUX:1];
+    realtype wi[N_WIENER>0?N_WIENER:1];
 	rngData rd;
 
 	//get private copy of ODE parameters, initial data, and compute slope at initial state
@@ -59,7 +61,7 @@ __kernel void features(
 	while (ti < tspan[1] && step < sp->max_steps)
 	{
 		++step;
-		++odata.stepcount;
+		//++odata.stepcount; //do this in updateObserverData always
         stepflag = stepper(&ti, xi, dxi, p, sp, &dt, tspan, auxi, wi, &rd);
         // if (stepflag!=0)
             // break;
@@ -85,6 +87,7 @@ __kernel void features(
 	//finalize observerdata for possible continuation
 	finalizeObserverData(&ti, xi, dxi, auxi, &odata, opars, tspan);
 
+	//store the observerData in global memory
 	OData[i] = odata;
 
     //write the final solution values to global memory.

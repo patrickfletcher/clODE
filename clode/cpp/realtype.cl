@@ -1,7 +1,5 @@
 // header for specifying realtype
 
-//TODO: what if neither is defined?
-
 #ifndef CL_SOLVER_PRECISION_H_
 #define CL_SOLVER_PRECISION_H_
 

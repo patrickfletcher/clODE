@@ -9,6 +9,7 @@
 
 
 #include "mex.h"
+#include "spdlog/spdlog.h"
 
 #include <vector>
 #include <memory> //shared_ptr
@@ -22,6 +23,7 @@
 #include "CLODEtrajectory.hpp"
 #include "CLODE.hpp"
 #include "clODEmexHelpers.hpp"
+#include "matlabLogging.hpp"
 
 typedef CLODEtrajectory class_type;
 

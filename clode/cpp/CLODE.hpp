@@ -1,24 +1,6 @@
-/* clODE: a simulator class to run parallel ODE simulations on OpenCL capable hardware.
- * A clODE simulator solves an initial value problem for a set of (parameters, initial conditions). At each timestep,
- * "observer" rountine may be called to record/store/compute features of the solutions. Examples include storing the full
- * trajectory, recording the times and values of local extrema in a variable of the system, or directly computing other 
- * features of the trajectory.  
- */
-
-//TODO: namespaces?
-
-//TODO: break up computation (timespan) into chunks that don't crash the system. some fine-grained max time chunk to run a kernel, a while loop in C++ to do all chunks
-
-//TODO: choosing specific RNG - get nRNGstate using a switch
-
-//TODO: device-to-device transfers instead of overwriting x0?
-
-//TODO: separate flags for initialized state and built state
-
-//TODO: use kernel.getWorkGroupInfo with CL_KERNEL_PREFERRED_WORK_GROUP_SIZE_MULTIPLE to offer the user a hint of nPts to use
-
-//when compiling, be sure to provide the clODE root directory as a define:
-// -DCLODE_ROOT="path/to/my/clODE/"
+//
+// Created by Patrick Fletcher 2017
+//
 
 #ifndef CLODE_HPP_
 #define CLODE_HPP_
@@ -31,6 +13,7 @@
 #define CL_HPP_TARGET_OPENCL_VERSION 120
 #define CL_HPP_ENABLE_PROGRAM_CONSTRUCTION_FROM_ARRAY_COMPATIBILITY
 #include "OpenCL/cl2.hpp"
+// #include "OpenCL/opencl.hpp"
 
 #include <map>
 #include <string>
@@ -46,6 +29,76 @@ struct ProblemInfo
     std::vector<std::string> varNames;
     std::vector<std::string> parNames;
     std::vector<std::string> auxNames;
+
+    ProblemInfo(std::string clRHSfilename, cl_int nVar, cl_int nPar, cl_int nAux, cl_int nWiener, std::vector<std::string> varNames, std::vector<std::string> parNames, std::vector<std::string> auxNames)
+    {
+        this->clRHSfilename = clRHSfilename;
+        this->nVar = nVar;
+        this->nPar = nPar;
+        this->nAux = nAux;
+        this->nWiener = nWiener;
+        this->varNames = varNames;
+        this->parNames = parNames;
+        this->auxNames = auxNames;
+    }
+
+    ProblemInfo(std::string clRHSfilename, std::vector<std::string> varNames, std::vector<std::string> parNames, std::vector<std::string> auxNames = std::vector<std::string>(), cl_int nWiener = 0)
+    {
+        this->clRHSfilename = clRHSfilename;
+        this->nVar = varNames.size();
+        this->nPar = parNames.size();
+        this->nAux = auxNames.size();
+        this->nWiener = nWiener;
+        this->varNames = varNames;
+        this->parNames = parNames;
+        this->auxNames = auxNames;
+    }
+
+    ProblemInfo()
+    {
+        this->clRHSfilename = "";
+        this->nVar = 0;
+        this->nPar = 0;
+        this->nAux = 0;
+        this->nWiener = 0;
+        this->varNames = std::vector<std::string>();
+        this->parNames = std::vector<std::string>();
+        this->auxNames = std::vector<std::string>();
+    }
+
+    // These setters and getters exist for compatibility with the Python interface
+    void setVarNames(std::vector<std::string> varNamesIn)
+    {
+        this->varNames = varNamesIn;
+        this->nVar = varNamesIn.size();
+    }
+
+    void setParNames(std::vector<std::string> parNamesIn)
+    {
+        this->parNames = parNamesIn;
+        this->nPar = parNamesIn.size();
+    }
+
+    void setAuxNames(std::vector<std::string> auxNamesIn)
+    {
+        this->auxNames = auxNamesIn;
+        this->nAux = auxNamesIn.size();
+    }
+
+    std::vector<std::string> getVarNames()
+    {
+        return this->varNames;
+    }
+
+    std::vector<std::string> getParNames()
+    {
+        return this->parNames;
+    }
+
+    std::vector<std::string> getAuxNames()
+    {
+        return this->auxNames;
+    }
 };
 
 class CLODE
@@ -113,10 +166,11 @@ public:
     void setClodeRoot(const std::string clodeRoot);
 
     void buildProgram(std::string extraBuildOpts = ""); //build the program object (inherited by subclasses)
-    void buildCL(); // build program and create kernel objects - overloaded by subclasses to include any extra kernels
+    virtual void buildCL(); // build program and create kernel objects - overloaded by subclasses to include any extra kernels
 
     // set all problem data needed to run
     virtual void initialize(std::vector<cl_double> newTspan, std::vector<cl_double> newX0, std::vector<cl_double> newPars, SolverParams<cl_double> newSp);
+	bool isInitialized() { return clInitialized; };
 
     void setNpts(cl_int newNpts); //resizes the nPts-dependent input variables
     void setProblemData(std::vector<cl_double> newX0, std::vector<cl_double> newPars); //set both pars and X0 to change nPts

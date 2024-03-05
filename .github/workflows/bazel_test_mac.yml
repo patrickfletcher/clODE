@@ -60,7 +60,11 @@ jobs:
         run: PYTHON=python3 python -m pip install dist/clode-*.whl
 
       - name: Run python tests
-        run: PYTHON=python3 make test_short
+        run: |
+          mkdir -p tmp && \
+          cd tmp && \
+          cp -R ../test  . && \
+          python3 -m pytest test -m "not long"
 
       - name: Publish to PyPI test
         env:
