@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 def lorenz(
     t: float,
     var: List[float],
-    p: List[float],
+    par: List[float],
     dvar: List[float],
     aux: List[float],
     wiener: List[float],
@@ -16,9 +16,9 @@ def lorenz(
     y: float = var[1]
     z: float = var[2]
     
-    r: float = p[0],
-    s: float = p[1],
-    beta: float = p[2],
+    r: float = par[0]
+    s: float = par[1]
+    beta: float = par[2]
 
     dx: float = s*(y - x)
     dy: float = r*x - y - x*z
@@ -29,21 +29,15 @@ def lorenz(
 
 def test_lorenz_rk4(platform_id, device_id, num_pts, reps):
     
-    parameters = {"r": 27.0, "s": 10.0, "b": 8.0/3.0}
+    parameters = {"r": 27.0, "s": 10.0, "beta": 8.0/3.0}
     variables = {"x": 1.0, "y": 1.0, "z": 1.0}
     
-    # convenience:
-    variable_names = list(variables.keys())
-    initial_state = list(variables.values())
-    parameter_names = list(parameters.keys())
-    default_parameters = list(parameters.values())
-
     t_span = (0.0, 10.0)
 
     src_file = "test/lorenz.cl"
     integrator = clode.Simulator(
-        src_file=src_file,
-        # rhs_equation=lorenz,
+        # src_file=src_file,
+        rhs_equation=lorenz,
         variables=variables,
         parameters=parameters,
         single_precision=True,
@@ -58,22 +52,16 @@ def test_lorenz_rk4(platform_id, device_id, num_pts, reps):
     print(f"Time for 1000 RK4 steps of the Lorenz system. {reps} repetitions.\n(N, min, median, max time)")
     for num in num_pts:
         times = []
-        # Pars = np.tile(default_parameters, (num, 1))
-        # X0 = np.tile(initial_state, (num, 1))
-        # integrator.set_problem_data(X0, Pars)
+        
         integrator.set_repeat_ensemble(num_repeats=num)
 
         #warm-up passes - seems to make output more reliable
         for _ in range(5):
-            # integrator.set_problem_data(X0, Pars)
             integrator.transient(update_x0=False)
-            integrator.get_final_state()
 
         for _ in range(reps):
             t0 = time.perf_counter()
-            # integrator.initialize(X0, Pars) #include host->device transfers?
             integrator.transient(update_x0=False)
-            # integrator.get_final_state() #include device->host transfers?
             times.append(time.perf_counter() - t0)
 
         t_mean = sum(times)/reps
@@ -88,9 +76,6 @@ def test_lorenz_rk4(platform_id, device_id, num_pts, reps):
 
 # if using 'bazel test ...'
 if __name__ == "__main__":
-    # clode.set_log_level(clode.LogLevel.info)    
-    # clode.runtime.print_opencl()
-    # clode.set_log_level(clode.runtime.DEFAULT_LOG_LEVEL) 
 
     ocl_info = clode.runtime.query_opencl()
     ocl_info = ocl_info[:3]
