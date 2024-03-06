@@ -7,6 +7,11 @@
 ![Mac](https://github.com/patrickfletcher/clODE/actions/workflows/bazel_test_mac.yml/badge.svg)
 ![Linux](https://github.com/patrickfletcher/clODE/actions/workflows/bazel_build_linux.yml/badge.svg)
 
+**`Documentation`** |
+------------------- |
+[![Documentation](https://img.shields.io/badge/api-reference-blue.svg)](https://patrickfletcher.github.io/clODE/) |
+
+
 clODE is an efficient computational tool designed for parallel solving
 of ordinary differential equation (ODE) ensembles using OpenCL.
 It lets users define their ODE system and the ensemble of parameter sets and initial conditions in Python.  By leveraging OpenCL, significant speedups can be obtained for this inherently parallel problem on any CPU, GPU, or other device with OpenCL support. Two primary modes of simulation are supported:
@@ -24,11 +29,11 @@ and bazelisk, and works on Linux, Windows, and MacOS platforms.
 
 ## Installation
 
-See [installation](install.md) for instructions on how to install CLODE.
+See [installation](https://patrickfletcher.github.io/clODE/install/) for instructions on how to install CLODE.
 
 ## Getting Started
 
-See [Getting Started](getting_started.md) for an example of clODE usage.
+See [Getting Started](https://patrickfletcher.github.io/clODE/getting_started/) for an example of clODE usage.
 
 ## Source
 
