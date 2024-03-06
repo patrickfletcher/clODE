@@ -45,3 +45,7 @@ requires = [
     "wheel",
     "setuptools_scm"
 ]
+
+[project.urls]
+Documentation = "https://patrickfletcher.github.io/clODE/"
+Repository = "https://github.com/patrickfletcher/clODE"
