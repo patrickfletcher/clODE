@@ -75,7 +75,7 @@ def vdp_dormand_prince(
 
     integrator.set_ensemble(parameters=parameters)
 
-    integrator.transient()
+    # integrator.transient()
     integrator.features()
     observer_output = integrator.get_observer_results()
 
@@ -101,6 +101,7 @@ def test_vdp_dormand_prince_python_rhs():
 
 # if using 'bazel test ...'
 if __name__ == "__main__":
-    print(clode)
-    sys.exit(pytest.main(sys.argv[1:]))
-    # test_vdp_dormand_prince()
+    # print(clode)
+    # sys.exit(pytest.main(sys.argv[1:]))
+    clode.set_log_level(clode.LogLevel.debug)
+    vdp_dormand_prince(end=100)

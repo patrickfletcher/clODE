@@ -77,7 +77,7 @@ from clode.solver import Simulator, Stepper
 from clode.trajectory import TrajectorySimulator
 from clode.xpp_parser import convert_xpp_file, format_opencl_rhs, read_ode_parameters
 
-__version__ = "0.7.1"
+__version__ = "0.8.0"
 
 __all__ = [
     "TrajectorySimulator",

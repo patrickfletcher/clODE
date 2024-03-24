@@ -275,6 +275,7 @@ PYBIND11_MODULE(clode_cpp_wrapper, m) {
     .def(py::init<int,
             int,
             int,
+            unsigned int,
             double,
             double,
             double,
@@ -286,11 +287,13 @@ PYBIND11_MODULE(clode_cpp_wrapper, m) {
             ()
     ).def_readwrite("e_var_ix", &ObserverParams<double>::eVarIx)
     .def_readwrite("f_var_ix", &ObserverParams<double>::fVarIx)
-    .def_readwrite("maxEventCount", &ObserverParams<double>::maxEventCount)
+    .def_readwrite("max_event_count", &ObserverParams<double>::maxEventCount)
+    .def_readwrite("max_event_timestamps", &ObserverParams<double>::maxEventTimestamps)
     .def("__repr__", [](const ObserverParams<double> &p) {
         return "<observer_params(e_var_ix=" + std::to_string(p.eVarIx) +
                ", f_var_ix=" + std::to_string(p.fVarIx) +
-               ", maxEventCount=" + std::to_string(p.maxEventCount) +
+               ", max_event_count=" + std::to_string(p.maxEventCount) +
+               ", max_event_timestamps=" + std::to_string(p.maxEventTimestamps) +
                ", minXamp=" + std::to_string(p.minXamp) +
                ", minIMI=" + std::to_string(p.minIMI) +
                ", nHoodRadius=" + std::to_string(p.nHoodRadius) +
@@ -306,6 +309,7 @@ PYBIND11_MODULE(clode_cpp_wrapper, m) {
             .def(py::init<ProblemInfo &,
                           std::string &,
                           std::string &,
+                          ObserverParams<double>,
                           bool,
                           OpenCLResource &,
                           std::string &>())

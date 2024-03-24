@@ -20,7 +20,7 @@ struct ObserverData_basic
 
 #ifdef __cplusplus
 //Collect all the info for this observer. Must be a static function when defining function in header, otherwise defined for each time included.
-static ObserverInfo getObserverInfo_basic(const ProblemInfo pi, const int fVarIx, const int eVarIx)
+static ObserverInfo getObserverInfo_basic(const ProblemInfo pi, const int fVarIx, const int eVarIx, const unsigned int nPhase)
 {
     ObserverInfo oi;
     oi.define="USE_OBSERVER_BASIC";

@@ -141,9 +141,9 @@ void CLODE::setCLbuildOpts(std::string extraBuildOpts)
 	//include folder for CLODE
 	buildOptions += " -I" + clodeRoot;
 
-    spdlog::debug("OpenCL build options {}", buildOptions);
-
 	buildOptions += extraBuildOpts;
+
+    spdlog::debug("OpenCL build options {}", buildOptions);
 }
 
 
@@ -154,14 +154,14 @@ void CLODE::buildProgram(std::string extraBuildOpts)
 
 	opencl.buildProgramFromString(clprogramstring + ODEsystemsource, buildOptions);
 
-    spdlog::debug(clprogramstring + ODEsystemsource);
-    spdlog::debug(buildOptions);
-	spdlog::debug("buildProgram");
+    spdlog::trace(clprogramstring + ODEsystemsource);
+	spdlog::debug("CLODE buildProgram finished");
 }
 
 // build program and create kernel objects. requires host variables to be set
 void CLODE::buildCL()
 {
+	spdlog::info("Running CLODE buildCL");
 	buildProgram();
 
 	//set up the kernel

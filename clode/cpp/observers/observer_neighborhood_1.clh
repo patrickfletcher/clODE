@@ -3,12 +3,12 @@
 
 #ifdef __cplusplus
 //Collect all the info for this observer. Must be a static function when defining function in header, otherwise defined for each time included.
-static ObserverInfo getObserverInfo_nhood1(const ProblemInfo pi, const int fVarIx, const int eVarIx)
+static ObserverInfo getObserverInfo_nhood1(const ProblemInfo pi, const int fVarIx, const int eVarIx, const unsigned int nPhase)
 {
     ObserverInfo oi;
     oi.define="USE_OBSERVER_NEIGHBORHOOD_1";  
-    size_t n_real=(12*pi.nVar + 15 + 3*pi.nAux); //hard coded, because C++ code can't see the N_VAR, N_AUX etc...
-    size_t n_int=5;
+    size_t n_real=(12*pi.nVar + 17 + 3*pi.nAux  + 3 * nPhase); //hard coded, because C++ code can't see the N_VAR, N_AUX etc...
+    size_t n_int=7;
     oi.observerDataSizeFloat=n_real*sizeof(cl_float) + n_int*sizeof(cl_uint);
     oi.observerDataSizeDouble=n_real*sizeof(cl_double) + n_int*sizeof(cl_uint);  
     
@@ -18,6 +18,7 @@ static ObserverInfo getObserverInfo_nhood1(const ProblemInfo pi, const int fVarI
     oi.featureNames.push_back("max peaks");
     oi.featureNames.push_back("min peaks");
     oi.featureNames.push_back("mean peaks");
+
     for (int j = 0; j < pi.nVar; ++j)
     {
         oi.featureNames.push_back("max " + pi.varNames[j]);
@@ -32,6 +33,12 @@ static ObserverInfo getObserverInfo_nhood1(const ProblemInfo pi, const int fVarI
         oi.featureNames.push_back("min " + pi.auxNames[j]);
         oi.featureNames.push_back("mean " + pi.auxNames[j]);
     }
+    for (int j = 0; j < nPhase; ++j)
+	{
+		oi.featureNames.push_back("active phase " + std::to_string(j));
+		oi.featureNames.push_back("inactive phase " + std::to_string(j));
+		oi.featureNames.push_back("event phase " + std::to_string(j));
+	}
     oi.featureNames.push_back("period count");
     oi.featureNames.push_back("step count");
     oi.featureNames.push_back("max dt");
@@ -72,9 +79,16 @@ typedef struct ObserverData_nhood1
     // realtype xMin[3]; //max/min/mean
     realtype stepDt[3]; //max/min/mean
 
+    //event-wise features
+    realtype activePhase[N_PHASE];
+    realtype passivePhase[N_PHASE];
+    realtype eventPhase[N_PHASE];
+
     realtype tLastEvent;
     realtype thisNormXdiff;
     realtype lastNormXdiff;
+    realtype dxUp;
+    realtype dxDown;
 
     // realtype xLastMax;
     // realtype tLastMax;
@@ -86,6 +100,8 @@ typedef struct ObserverData_nhood1
     unsigned int stepcount;
     unsigned int foundX0;
     unsigned int isInNhood;
+    unsigned int isAfterEvent;
+    unsigned int isActivePhase;
 
 } ObserverData;
 
@@ -117,6 +133,14 @@ inline void initializeObserverData(realtype *ti, realtype xi[], realtype dxi[], 
         od->auxTrajectoryMin[j] = BIG_REAL;
         od->auxTrajectoryMean[j] = RCONST(0.0); //not needed - set first time anyway.
     }
+
+    for (int j = 0; j < N_PHASE; ++j)
+	{
+		od->activePhase[j] = RCONST(0.0);
+		od->passivePhase[j] = RCONST(0.0);
+		od->eventPhase[j] = RCONST(0.0);
+	}
+
     // od->tLastEvent=RCONST(0.0);
 
     // od->xLastMax = -BIG_REAL;
@@ -153,11 +177,16 @@ inline void initializeObserverData(realtype *ti, realtype xi[], realtype dxi[], 
     od->stepDt[1] = BIG_REAL;
     od->stepDt[2] = RCONST(0.0);
 
+    od->dxUp = RCONST(0.0);
+    od->dxDown = RCONST(0.0);
+
     od->thisNMaxima = 0;
     od->eventcount = 0;
     od->stepcount = 0;
     od->foundX0 = 0;
     od->isInNhood = 0;
+    od->isAfterEvent = 0;
+    od->isActivePhase = 0;
 }
 
 //restricted per-timestep update of observer data for initializing event detector
@@ -169,6 +198,9 @@ inline void warmupObserverData(realtype *ti, realtype xi[], realtype dxi[], real
 //process warmup data to compute relevant event detector quantities (e.g. thresholds)
 inline void initializeEventDetector(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
 {
+    //threshold for dx
+    od->dxUp =  op->dxUpThresh;
+	od->dxDown = op->dxDownThresh;
 }
 
 //check for entry into "epsilon ball" surrounding od->x0
@@ -191,6 +223,7 @@ inline bool eventFunction(realtype *ti, realtype xi[], realtype dxi[], realtype 
         // od->thisNormXdiff=norm_1(thisXdiff, N_VAR);
         od->thisNormXdiff = norm_2(thisXdiff, N_VAR);
         od->isInNhood = od->thisNormXdiff <= op->nHoodRadius; //L-2 norm ball
+        od->isAfterEvent = !od->isInNhood;
         return (od->isInNhood & !lastInNhood); //event only on entry
     }
     return false;
@@ -223,6 +256,8 @@ inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dxi[], re
 
     od->tLastEvent = tThisEvent;
     od->thisNMaxima = 0;
+    if (od->eventcount < N_PHASE)
+    	od->eventPhase[od->eventcount-1] = tThisEvent;
 
     if (od->eventcount >= op->maxEventCount){
         return true;
@@ -335,8 +370,38 @@ inline void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], real
             // 		// od->tLastEvent=*ti;
             // 	}
         }
+
+        // Avoid branching when we have observed zero events
+        int timeIndex = od->eventcount == 0 ? 0 : od->eventcount - 1;
+
+        // If we are after the event, we look for the inactive phase
+        if (od->isAfterEvent)
+        {
+			// We reach the inactive phase after the event, when dx drops below our threshold
+			od->isActivePhase = od->isAfterEvent && dxi[op->eVarIx] <= od->dxDown;
+
+			if (!od->isActivePhase)
+			{
+				// After reaching the inactive phase, we are no longer after the event
+				od->isAfterEvent = 0;
+				if (timeIndex < N_PHASE)
+					od->passivePhase[timeIndex] = thisDt;
+			}
+		}
+		if (!od->isActivePhase)
+		{
+			// We reach the active phase after dx rises above our threshold
+			od->isActivePhase = xi[op->eVarIx] > od->dxUp;
+
+			if (od->isActivePhase)
+			{
+				// After reaching the active phase, we are also no longer after the event
+				od->isAfterEvent = 0;
+				if (timeIndex < N_PHASE)
+					od->activePhase[timeIndex] = thisDt;
+			}
+		}
     }
-    
 }
 
 //Perform and post-integration cleanup and write desired features into the global array F
@@ -363,6 +428,12 @@ inline void finalizeFeatures(realtype *ti, realtype xi[], realtype dxi[], realty
         F[ix++ * nPts + i] = od->auxTrajectoryMin[j];
         F[ix++ * nPts + i] = od->auxTrajectoryMean[j];
     }
+    for (int j = 0; j < N_PHASE; ++j) //3*N_PHASE
+	{
+		F[ix++ * nPts + i] = od->activePhase[j];
+		F[ix++ * nPts + i] = od->passivePhase[j];
+		F[ix++ * nPts + i] = od->eventPhase[j];
+	}
     F[ix++ * nPts + i] = od->eventcount - 1; //periods
     F[ix++ * nPts + i] = od->stepcount;
     F[ix++ * nPts + i] = od->stepDt[0];

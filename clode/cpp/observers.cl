@@ -26,6 +26,7 @@ struct ObserverParams
     int fVarIx; //variable for features
 
     int maxEventCount; //time loop limiter
+    unsigned int maxEventTimestamps; //max number of event timestamps to store
     realtype minXamp;  //consider oscillations lower than this to be steady state (return mean X)
     realtype minIMI;
 
@@ -89,24 +90,29 @@ typedef struct ObserverInfo
 
 // collect available methods into "name"-ObserverInfo map, for C++ side access. Must come after including all the getObserverInfo_functions.
 #ifdef __cplusplus
-static void getObserverDefineMap(const ProblemInfo pi, const int fVarIx, const int eVarIx, std::map<std::string, ObserverInfo> &observerDefineMap, std::vector<std::string> &availableObserverNames) 
+static void getObserverDefineMap(const ProblemInfo pi,
+								 const int fVarIx,
+								 const int eVarIx,
+								 const unsigned int nPhase,
+								 std::map<std::string, ObserverInfo> &observerDefineMap,
+								 std::vector<std::string> &availableObserverNames)
 {
 
     std::map<std::string, ObserverInfo> newMap;
-    newMap["basic"]=getObserverInfo_basic(pi, fVarIx, eVarIx);
-    newMap["basicall"]=getObserverInfo_basicAll(pi, fVarIx, eVarIx);
-    newMap["localmax"]=getObserverInfo_localmax(pi, fVarIx, eVarIx);
-    newMap["nhood1"]=getObserverInfo_nhood1(pi, fVarIx, eVarIx);
-    newMap["nhood2"]=getObserverInfo_nhood2(pi, fVarIx, eVarIx);
-    newMap["thresh2"]=getObserverInfo_thresh2(pi, fVarIx, eVarIx);
+    newMap["basic"]=getObserverInfo_basic(pi, fVarIx, eVarIx, nPhase);
+    newMap["basicall"]=getObserverInfo_basicAll(pi, fVarIx, eVarIx, nPhase);
+    newMap["localmax"]=getObserverInfo_localmax(pi, fVarIx, eVarIx, nPhase);
+    newMap["nhood1"]=getObserverInfo_nhood1(pi, fVarIx, eVarIx, nPhase);
+    newMap["nhood2"]=getObserverInfo_nhood2(pi, fVarIx, eVarIx, nPhase);
+    newMap["thresh2"]=getObserverInfo_thresh2(pi, fVarIx, eVarIx, nPhase);
 
-//export vector of names for access in C++
-std::vector<std::string> newNames;
-for (auto const& element : newMap)
-    newNames.push_back(element.first);
+	//export vector of names for access in C++
+	std::vector<std::string> newNames;
+	for (auto const& element : newMap)
+		newNames.push_back(element.first);
 
-observerDefineMap=newMap;
-availableObserverNames=newNames;
+	observerDefineMap=newMap;
+	availableObserverNames=newNames;
 }
 #endif
 

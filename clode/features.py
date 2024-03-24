@@ -82,6 +82,42 @@ class ObserverOutput:
     def get_var_count(self, var: str) -> np.ndarray[Any, np.dtype[np.float64]]:
         return self._get_var("count", var)
 
+    def get_timestamp(self, var: str) -> np.ndarray[Any, np.dtype[np.float64]]:
+        first_key = f"{var} phase 0"
+        if first_key not in self._feature_names:
+            raise NotImplementedError(
+                f"{self._observer_type} does not track {var} timestamps!"
+            )
+        data = []
+        for key_idx in range(0, self._op.max_event_timestamps):
+            key = f"{var} phase {key_idx}"
+            index = self._feature_names.index(key)
+            datapoint = self._data[:, index]
+            if np.all(datapoint == 0):
+                break
+            data.append(datapoint)
+        return np.concatenate(data) if data else []
+
+    def get_eventvar_threshold(self, var: str) -> np.ndarray[Any, np.dtype[np.float64]]:
+        try:
+            index = self._feature_names.index(f"eventvar {var} threshold")
+            return self._data[:, index : index + 1].squeeze()
+        except ValueError:
+            raise NotImplementedError(
+                f"{self._observer_type} does not track {var} threshold!"
+            )
+
+    def get_featurevar_threshold(
+        self, var: str
+    ) -> np.ndarray[Any, np.dtype[np.float64]]:
+        try:
+            index = self._feature_names.index(f"featurevar {var} threshold")
+            return self._data[:, index : index + 1].squeeze()
+        except ValueError:
+            raise NotImplementedError(
+                f"{self._observer_type} does not track {var} threshold!"
+            )
+
 
 class FeatureSimulator(Simulator):
     """
@@ -243,6 +279,7 @@ class FeatureSimulator(Simulator):
         event_var: str = "",
         feature_var: str = "",
         observer_max_event_count: int = 100,
+        observer_max_event_timestamps: int = 5,
         observer_min_x_amp: float = 0.0,
         observer_min_imi: float = 0.0,
         observer_neighbourhood_radius: float = 0.05,
@@ -266,6 +303,7 @@ class FeatureSimulator(Simulator):
             event_var_idx,
             feature_var_idx,
             observer_max_event_count,
+            observer_max_event_timestamps,
             observer_min_x_amp,
             observer_min_imi,
             observer_neighbourhood_radius,
@@ -306,6 +344,7 @@ class FeatureSimulator(Simulator):
             self._pi,
             self._stepper.value,
             self._observer_type.value,
+            self._op,
             self._single_precision,
             self._runtime,
             _clode_root_dir,

@@ -32,6 +32,7 @@ CLODEtrajectory::~CLODEtrajectory() {}
 // build program and create kernel objects. requires host variables to be set
 void CLODEtrajectory::buildCL()
 {
+	spdlog::info("Running CLODEtrajectory buildCL");
 	buildProgram();
 
 	//set up the kernels

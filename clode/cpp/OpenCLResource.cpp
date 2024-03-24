@@ -260,7 +260,9 @@ void OpenCLResource::initializeOpenCL()
 //attempt to build OpenCL program given as a string, build options empty if not supplied.
 void OpenCLResource::buildProgramFromString(std::string sourceStr, std::string buildOptions)
 {
-
+	spdlog::debug("Building program from string");
+	spdlog::trace(sourceStr.c_str());
+	spdlog::debug(buildOptions.c_str());
     cl::Program::Sources source(1, std::make_pair(sourceStr.c_str(), sourceStr.length()));
     std::string buildLog;
     cl_int builderror;
@@ -296,7 +298,9 @@ void OpenCLResource::buildProgramFromString(std::string sourceStr, std::string b
 
 void OpenCLResource::buildProgramFromSource(std::string filename, std::string buildOptions)
 {
-
+	spdlog::debug("Building program from source file");
+	spdlog::trace(filename.c_str());
+	spdlog::debug(buildOptions.c_str());
     std::string sourceStr = read_file(filename);
     buildProgramFromString(sourceStr, buildOptions);
 }

@@ -20,6 +20,8 @@ nav:
     - Trajectory Simulation: 'trajectory_simulation.md'
     - Stochastic Simulations: 'Ornstein-Uhlenbeck_process.md'
     - Spike Counting: 'spike_counting.md'
+  - Observers:
+    - 'observers.md'
   - Configuration:
       - Specifying systems of ODEs: 'specifying_odes.md'
       - XPP files: 'xpp_files.md'

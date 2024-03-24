@@ -6,12 +6,13 @@
 
 #include "spdlog/spdlog.h"
 
-CLODEfeatures::CLODEfeatures(ProblemInfo prob, std::string stepper, std::string observer, bool clSinglePrecision, OpenCLResource opencl, const std::string clodeRoot)
+CLODEfeatures::CLODEfeatures(ProblemInfo prob, std::string stepper, std::string observer, ObserverParams<cl_double> op, bool clSinglePrecision, OpenCLResource opencl, const std::string clodeRoot)
 	: CLODE(prob, stepper, clSinglePrecision, opencl, clodeRoot), observer(observer)
 {
 	// default fVarIx and eVarIx to allow first query of observer define map (exposes availableObservers, fNames)
 	op.fVarIx=0;
 	op.eVarIx=0;
+	setObserverParams(op);
 	updateObserverDefineMap();
 
 	clprogramstring += read_file(clodeRoot + "initializeObserver.cl");
@@ -19,12 +20,13 @@ CLODEfeatures::CLODEfeatures(ProblemInfo prob, std::string stepper, std::string 
 	spdlog::debug("constructor clODEfeatures");
 }
 
-CLODEfeatures::CLODEfeatures(ProblemInfo prob, std::string stepper, std::string observer, bool clSinglePrecision,  unsigned int platformID, unsigned int deviceID, const std::string clodeRoot)
+CLODEfeatures::CLODEfeatures(ProblemInfo prob, std::string stepper, std::string observer, ObserverParams<cl_double> op, bool clSinglePrecision,  unsigned int platformID, unsigned int deviceID, const std::string clodeRoot)
 	: CLODE(prob, stepper, clSinglePrecision, platformID, deviceID, clodeRoot), observer(observer)
 {
 	// default fVarIx and eVarIx to allow first query of observer define map
 	op.fVarIx=0;
 	op.eVarIx=0;
+	setObserverParams(op);
 	updateObserverDefineMap();
 
 	clprogramstring += read_file(clodeRoot + "initializeObserver.cl");
@@ -37,7 +39,9 @@ CLODEfeatures::~CLODEfeatures() {}
 // build program and create kernel objects - requires host variables to be set (specifically observerBuildOpts)
 void CLODEfeatures::buildCL()
 {
+	spdlog::info("Running CLODEFeatures buildCL");
 	observerBuildOpts=" -D" + observerDefineMap.at(observer).define;
+	observerBuildOpts += " -DN_PHASE=" + std::to_string((long long)op.maxEventTimestamps);
 	buildProgram(observerBuildOpts);
 
 	//set up the kernels
@@ -67,9 +71,10 @@ void CLODEfeatures::buildCL()
 
 const std::string CLODEfeatures::getProgramString()
 {
-	observerBuildOpts=" -D" + observerDefineMap.at(observer).define;
+	observerBuildOpts = " -D" + observerDefineMap.at(observer).define;
+	observerBuildOpts += " -DN_PHASE=" + std::to_string((long long)op.maxEventTimestamps);
 	setCLbuildOpts(observerBuildOpts);
-	return buildOptions+clprogramstring+ODEsystemsource; 
+	return buildOptions + clprogramstring + ODEsystemsource;
 }
 
 // void CLODEfeatures::initialize(std::vector<cl_double> newTspan, std::vector<cl_double> newX0, std::vector<cl_double> newPars, SolverParams<cl_double> newSp) {
@@ -151,8 +156,9 @@ void CLODEfeatures::setObserverParams(ObserverParams<cl_double> newOp)
 // updates the defineMap to reflect changes in problem, precision, observerParams
 void CLODEfeatures::updateObserverDefineMap()
 {
-	getObserverDefineMap(prob, op.fVarIx, op.eVarIx, observerDefineMap, availableObserverNames);
-	observerBuildOpts=" -D" + observerDefineMap.at(observer).define;
+	getObserverDefineMap(prob, op.fVarIx, op.eVarIx, op.maxEventTimestamps, observerDefineMap, availableObserverNames);
+	observerBuildOpts = " -D" + observerDefineMap.at(observer).define;
+	observerBuildOpts += " -DN_PHASE=" + std::to_string((long long)op.maxEventTimestamps);
 	if (clSinglePrecision)
 		observerDataSize=observerDefineMap.at(observer).observerDataSizeFloat;
 	else

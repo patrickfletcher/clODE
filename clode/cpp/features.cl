@@ -22,6 +22,18 @@ __kernel void features(
 	int i = get_global_id(0);
 	int nPts = get_global_size(0);
 
+
+
+
+
+
+
+
+
+
+
+
+
 	realtype ti, dt;
     realtype p[N_PAR], xi[N_VAR], dxi[N_VAR];
     realtype auxi[N_AUX>0?N_AUX:1];

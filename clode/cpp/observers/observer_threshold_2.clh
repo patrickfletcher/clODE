@@ -4,11 +4,11 @@
 
 #ifdef __cplusplus
 //Collect all the info for this observer. Must be a static function when defining function in header, otherwise defined for each time included.
-static ObserverInfo getObserverInfo_thresh2(const ProblemInfo pi, const int fVarIx, const int eVarIx)
+static ObserverInfo getObserverInfo_thresh2(const ProblemInfo pi, const int fVarIx, const int eVarIx, const unsigned int nPhase)
 {
     ObserverInfo oi;
     oi.define="USE_OBSERVER_THRESHOLD_2";
-    size_t n_real = (11*pi.nVar + 7*3 + 13 + 3*pi.nAux); //hard coded, because C++ code can't see the N_VAR, N_AUX etc...
+    size_t n_real = (11*pi.nVar + 7*3 + 13 + 3*pi.nAux + 2*nPhase); //hard coded, because C++ code can't see the N_VAR, N_AUX etc...
     size_t n_int = 4;
     oi.observerDataSizeFloat = n_real*sizeof(cl_float) + n_int*sizeof(cl_uint);
     oi.observerDataSizeDouble = n_real*sizeof(cl_double) + n_int*sizeof(cl_uint); 
@@ -28,6 +28,7 @@ static ObserverInfo getObserverInfo_thresh2(const ProblemInfo pi, const int fVar
     oi.featureNames.push_back("max duty");
     oi.featureNames.push_back("min duty");
     oi.featureNames.push_back("mean duty");
+
     for (int j = 0; j < pi.nVar; ++j)
     {
         oi.featureNames.push_back("max " + pi.varNames[j]);
@@ -42,6 +43,11 @@ static ObserverInfo getObserverInfo_thresh2(const ProblemInfo pi, const int fVar
         oi.featureNames.push_back("min " + pi.auxNames[j]);
         oi.featureNames.push_back("mean " + pi.auxNames[j]);
     }
+    for (int j = 0; j < nPhase; ++j)
+	{
+		oi.featureNames.push_back("active phase " + std::to_string(j));
+		oi.featureNames.push_back("inactive phase " + std::to_string(j));
+	}
     oi.featureNames.push_back("period count");
     oi.featureNames.push_back("step count");
     oi.featureNames.push_back("max dt");
@@ -72,12 +78,16 @@ struct ObserverData_thresh2
     realtype auxTrajectoryMin[N_AUX];
     realtype auxTrajectoryMean[N_AUX];
 
+    //event-wise features
+    realtype activePhase[N_PHASE];
+    realtype passivePhase[N_PHASE];
+
+    //period-wise features
     realtype nMaxima[3]; //max/min/mean
     realtype period[3];  //max/min/mean
     realtype upDuration[3];  //max/min/mean
     realtype downDuration[3];  //max/min/mean
     realtype duty[3];  //max/min/mean
-
     realtype stepDt[3]; //max/min/mean
 
     //thresholds
@@ -129,6 +139,12 @@ inline void initializeObserverData(realtype *ti, realtype xi[], realtype dxi[], 
         od->auxTrajectoryMin[j] = BIG_REAL;
         od->auxTrajectoryMean[j] = RCONST(0.0); //not needed - set first time anyway.
     }
+
+    for (int j = 0; j < N_PHASE; ++j)
+	{
+		od->activePhase[j] = RCONST(0.0);
+		od->passivePhase[j] = RCONST(0.0);
+	}
 
     od->nMaxima[0] = -BIG_REAL;
     od->nMaxima[1] = BIG_REAL;
@@ -278,6 +294,9 @@ inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dxi[], re
     od->tLastEvent = tThisEvent;
     od->thisNMaxima = 0;
 
+	if (od->eventcount < N_PHASE)
+    	od->activePhase[od->eventcount-1] = tThisEvent;
+
     if (od->eventcount >= op->maxEventCount){
         return true;
     }
@@ -369,6 +388,10 @@ inline void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], real
             //alts: linearly interp to get more accurate tThisEvent within the last time step: xi-1, xi, ti-1, ti; get t @ x=xUp
             // od->tThisDown = linearInterp(od->xbuffer[2], xi[op->fVarIx], od->tbuffer[2], *ti, od->xDown);
             od->inUpstate = 0;
+            if (od->eventcount > 0 && od->eventcount < N_PHASE)
+			{
+				od->passivePhase[od->eventcount-1] = od->tThisDown;
+			}
         }
     }
 }
@@ -409,6 +432,11 @@ inline void finalizeFeatures(realtype *ti, realtype xi[], realtype dxi[], realty
         F[ix++ * nPts + i] = od->auxTrajectoryMin[j];
         F[ix++ * nPts + i] = od->auxTrajectoryMean[j];
     }
+    for (int j = 0; j < N_PHASE; ++j) //2*N_PHASE
+	{
+		F[ix++ * nPts + i] = od->activePhase[j];
+		F[ix++ * nPts + i] = od->passivePhase[j];
+	}
     F[ix++ * nPts + i] = od->eventcount - 1; //periods
     F[ix++ * nPts + i] = od->stepcount;
     F[ix++ * nPts + i] = od->stepDt[0];

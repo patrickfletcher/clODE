@@ -1,8 +1,10 @@
 from math import pi
 from typing import List
+
 import pytest
 
 import clode
+
 clode.set_log_level(clode.LogLevel.info)
 
 # test each observer to make sure they:
@@ -44,29 +46,33 @@ clode.set_log_level(clode.LogLevel.info)
 # TODO: support zero parameters? (for sweeps of initial conditions only)
 
 # harmonic oscillator
-def get_rhs(t: float,
-            vars: List[float],
-            p: List[float],
-            dy: List[float],
-            aux: List[float],   
-            w: List[float]) -> None:
+def get_rhs(
+    t: float,
+    vars: List[float],
+    p: List[float],
+    dy: List[float],
+    aux: List[float],
+    w: List[float],
+) -> None:
     k: float = p[0]
     x: float = vars[0]
     y: float = vars[1]
     dy[0] = y
-    dy[1] = -k*x
+    dy[1] = -k * x
+
 
 # start at the left of the unit circle
-variables = {"x": -1.0, "y":0.0} 
+variables = {"x": -1.0, "y": 0.0}
 
-parameters = {"k": 1.0} 
-expected_period = 2*pi
+parameters = {"k": 1.0}
+expected_period = 2 * pi
 
 # 10 full periods
 expected_events = 10
-t_span = (0.0, expected_events*expected_period)
+t_span = (0.0, expected_events * expected_period)
 dt = 0.01
-expected_steps = int(t_span[1]/dt)+1
+expected_steps = int(t_span[1] / dt) + 1
+
 
 @pytest.mark.skip(reason="for now just to validate/debug observers")
 def test_observer(observer):
@@ -94,13 +100,15 @@ def test_observer(observer):
     features = integrator.get_observer_results()
     feature_names = features.get_feature_names()
 
-    #TODO: switch to asserts?
+    # TODO: switch to asserts?
     if "mean y" in feature_names:
         mean_y = features.get_var_mean("y")
         print(f"expected mean y: {0.0},\t\t actual:{mean_y:0.4}")
     if "mean IMI" in feature_names:
         inter_maximum_interval = features.get_var_mean("IMI")
-        print(f"expected IMI: {expected_period:0.4},\t\t actual:{inter_maximum_interval:0.4}")
+        print(
+            f"expected IMI: {expected_period:0.4},\t\t actual:{inter_maximum_interval:0.4}"
+        )
     if "mean period" in feature_names:
         period = features.get_var_mean("period")
         print(f"expected period: {expected_period:0.4},\t\t actual:{period:0.4}")
@@ -109,18 +117,23 @@ def test_observer(observer):
         print(f"expected event count: {expected_events},\t actual:{int(event_count)}")
     if "period count" in feature_names:
         period_count = features.get_var_count("period")
-        print(f"expected period count: {expected_events-1},\t actual:{int(period_count)}")
+        print(
+            f"expected period count: {expected_events-1},\t actual:{int(period_count)}"
+        )
     if "step count" in feature_names:
         step_count = features.get_var_count("step")
         print(f"expected step count: {expected_steps},\t actual:{int(step_count)}")
     print("\n")
 
+
 observers = [observer for observer in clode.Observer]
+
 
 @pytest.mark.skip(reason="for now just to validate/debug observers")
 def test_all_observers():
     for observer in observers:
         test_observer(observer)
+
 
 if __name__ == "__main__":
     test_all_observers()
