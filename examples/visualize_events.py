@@ -73,7 +73,7 @@ variables = {
 
 parameters = {
     "gca": 2.5,
-    "gk": 2.5,
+    "gk": 2.56,
     "gsk": 3,
     "gleak": 0.1,
     "cm": 4.0,
@@ -82,35 +82,39 @@ parameters = {
     "k_c": 0.1,
 }
 
-tend=8000
+tend=4500
 features_integrator = clode.FeatureSimulator(
     rhs_equation=lactotroph,
     supplementary_equations=[x_inf, s_inf],
     variables=variables,
     parameters=parameters,
     aux=['ica'],
-    observer=clode.Observer.neighbourhood_2,
+    observer=clode.Observer.threshold_2,
     stepper=clode.Stepper.dormand_prince,
     t_span=(0.0, tend),
-    observer_min_x_amp=0.0,
-    observer_x_down_thresh=0.02,
+    observer_min_x_amp=0.1,
+    observer_x_up_thresh=0.1,
+    observer_x_down_thresh=0.1,
     observer_neighbourhood_radius=0.5,
-    observer_dx_down_thresh=-0.1,
-    observer_dx_up_thresh=0.1,
+    observer_dx_down_thresh=0.01,
+    observer_dx_up_thresh=0.01,
     observer_max_event_count=100000,
     event_var="v",
     feature_var="v",
+    dtmax=5.0,
+    dt=0.1,
 )
 
 features_integrator.transient()
 output = features_integrator.features()
 
-events = output.get_timestamp("event")
+# events = output.get_timestamp("event")
 active = output.get_timestamp("active")
 inactive = output.get_timestamp("inactive")
-afterevent = output.get_timestamp("afterevent")
+# afterevent = output.get_timestamp("afterevent")
 period_count = int(output.get_var_count("period"))
 step_count = int(output.get_var_count("step"))
+active_dip = output.get_var_mean("activeDip")
 
 # Plot trajectory
 trajectory_integrator = clode.TrajectorySimulator(
@@ -120,21 +124,23 @@ trajectory_integrator = clode.TrajectorySimulator(
     parameters=parameters,
     stepper=clode.Stepper.dormand_prince,
     t_span=(0.0, tend),
-    dt=0.01,
+    dt=0.1,
+    dtmax=5.0,
 )
 
-active_threshold = output.get_eventvar_threshold('x')
-dxup_threshold = output.get_featurevar_threshold('dx up')
-dxdown_threshold = output.get_featurevar_threshold('dx down')
-inactive_v_mean = output.get_var_mean('inactive v')
+# active_threshold = output.get_eventvar_threshold('x')
+# dxup_threshold = output.get_featurevar_threshold('dx up')
+# dxdown_threshold = output.get_featurevar_threshold('dx down')
+# inactive_v_mean = output.get_var_mean('inactive v')
+max_dt = output.get_var_max_dt('v')
 
 trajectory_integrator.transient()
 trajectory = trajectory_integrator.trajectory()
 
 plt.plot(trajectory[0].t, trajectory[0].x[:, 0])
 # Plot events
-for event in events:
-    plt.axvline(x=event, color="red", linestyle="--")
+# for event in events:
+#     plt.axvline(x=event, color="red", linestyle="--")
 
 for event in active:
     plt.axvline(x=event, color="green", linestyle="--")
@@ -158,8 +164,9 @@ plt.plot(trajectory[0].t, dvdt)
 plt.xlabel("Time")
 plt.ylabel("dv/dt")
 plt.title("Lactotroph model")
-for event in events:
-    plt.axvline(x=event, color="red", linestyle="--")
+plt.ylim(-0.5, 0.5)
+# for event in events:
+#     plt.axvline(x=event, color="red", linestyle="--")
 
 for event in active:
     plt.axvline(x=event, color="green", linestyle="--")
@@ -169,6 +176,16 @@ for event in inactive:
 #
 # for event in afterevent:
 #     plt.axvline(x=event, color="orange", linestyle="--")
+
+from functools import reduce
+start = 221
+end = 352
+zz = lambda: zip(trajectory[0].x[start:end, 0], trajectory[0].t[start:end])
+t0 = trajectory[0].t[start]
+mvn_avg = reduce(lambda x, y: (x[0] + (y[0] - x[0]) / (y[1] - t0), y[1]), zz())
+mvn_avg2 = reduce(lambda x, y: (x[0] + (y[0] - x[0]) * (y[1] - x[1]) / (y[1] - t0), y[1]), zz())
+
+
 
 plt.show()
 pass

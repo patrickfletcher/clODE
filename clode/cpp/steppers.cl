@@ -111,8 +111,6 @@ void getRHS(const realtype t, const realtype x_[], const realtype p_[], realtype
 #include "steppers/adaptive_explicit_step.clh"
 #endif
 
-
-
 //TODO: implicit fixed/adaptive steppers
 
 

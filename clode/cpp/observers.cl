@@ -97,7 +97,6 @@ static void getObserverDefineMap(const ProblemInfo pi,
 								 std::map<std::string, ObserverInfo> &observerDefineMap,
 								 std::vector<std::string> &availableObserverNames)
 {
-
     std::map<std::string, ObserverInfo> newMap;
     newMap["basic"]=getObserverInfo_basic(pi, fVarIx, eVarIx, nPhase);
     newMap["basicall"]=getObserverInfo_basicAll(pi, fVarIx, eVarIx, nPhase);
