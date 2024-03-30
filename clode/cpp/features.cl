@@ -7,8 +7,6 @@
 #include "realtype.cl"
 #include "steppers.cl"
 
-#define FOO1 123
-
 __kernel void features(
 	__constant realtype *tspan,         //time vector [t0,tf] - adds (tf-t0) to these at the end
 	__global realtype *x0,              //initial state 				[nPts*nVar]
@@ -69,8 +67,6 @@ __kernel void features(
         stepflag = stepper(&ti, xi, dxi, p, sp, &dt, tspan, auxi, wi, &rd);
         // if (stepflag!=0)
             // break;
-
-
 
 		//TODO: Update solution buffers here?
 

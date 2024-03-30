@@ -97,7 +97,7 @@ int main(int argc, char **argv)
 	std::chrono::duration<double, std::milli> elapsed_ms;
 
 	// create the simulator
-	CLODEfeatures clo(prob, stepper, observer, CLSinglePrecision, opencl, CLODE_ROOT);
+	CLODEfeatures clo(prob, stepper, observer, op, CLSinglePrecision, opencl, CLODE_ROOT);
 
 	//~ std::cout<<"here"<<std::endl;
 	//copy problem data to the device
