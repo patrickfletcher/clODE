@@ -303,7 +303,7 @@ inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dxi[], re
         od->duty[1] = fmin(thisduty, od->duty[1]);
         runningMean(&od->duty[2], thisduty, nPeriods);
 
-        realtype thisActiveDip = od->fVarInactiveMean;// - od->fVarLastActiveMin;
+        realtype thisActiveDip = od->fVarInactiveMean - od->fVarLastActiveMin;
         od->activeDip[0] = fmax(thisActiveDip, od->activeDip[0]);
         od->activeDip[1] = fmin(thisActiveDip, od->activeDip[1]);
         runningMean(&od->activeDip[2], thisActiveDip, nPeriods);

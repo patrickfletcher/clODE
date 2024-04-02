@@ -233,8 +233,6 @@ class Simulator:
         if aux is None:
             aux = []
 
-        self._max_store = max_store
-
         self.aux_variables = aux
         self._pi = ProblemInfo(
             input_file,
