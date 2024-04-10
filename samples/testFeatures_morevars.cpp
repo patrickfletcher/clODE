@@ -91,7 +91,7 @@ int main(int argc, char **argv)
 	
 	
 	// create the solver
-	CLODEfeatures clo(prob, stepper, observer, CLSinglePrecision, opencl, CLODE_ROOT);
+	CLODEfeatures clo(prob, stepper, observer,  op, CLSinglePrecision, opencl, CLODE_ROOT);
 	
 	clo.buildCL();
 	
