@@ -1,4 +1,4 @@
-// currently unused...
+// Unified features + trajectory kernel. currently unused...
 
 #include "clODE_random.cl"
 #include "clODE_struct_defs.cl"
@@ -14,27 +14,30 @@ __kernel void odedriver(
     __constant struct SolverParams *sp, //dtmin/max, tols, etc
     __global realtype *xf,              //final state 				[nPts*nVar]
     __global ulong *RNGstate,            //state for RNG					[nPts*nRNGstate]
-    __global ObserverData *OData,        //Observer data. Assume it is initialized externally by initialize observer kernel!
-    __constant struct ObserverParams *opars,
-    __global realtype *F,  //feature results
+    __global realtype *d_dt,            //array of dt values, one per solver
     __global realtype *t,  // trajectory storage: t, x, dx, aux
     __global realtype *x,
     __global realtype *dx,
     __global realtype *aux,
-    __global int *nStored)
+    __global int *nStored,
+    __global ObserverData *OData,        //Observer data. 
+    __constant struct ObserverParams *opars,
+    __global realtype *F,  //feature results)
 {
 
     int i = get_global_id(0);
     int nPts = get_global_size(0);
 
     realtype ti, dt;
-    realtype p[N_PAR], xi[N_VAR], dxi[N_VAR], auxi[N_AUX], wi[N_WIENER];
+    realtype ti, dt;
+    realtype p[N_PAR], xi[N_VAR], dxi[N_VAR];
+    realtype auxi[N_AUX>0?N_AUX:1];
+    realtype wi[N_WIENER>0?N_WIENER:1];
     rngData rd;
-    __constant realtype * const tspanPtr = tspan;
 
     //get private copy of ODE parameters, initial data, and compute slope at initial state
     ti = tspan[0];
-    dt = sp->dt;
+    dt = d_dt[i];
 
     for (int j = 0; j < N_PAR; ++j)
         p[j] = pars[j * nPts + i];
@@ -55,9 +58,11 @@ __kernel void odedriver(
 #endif
 	getRHS(ti, xi, p, dxi, auxi, wi); //slope at initial point, needed for FSAL steppers (bs23, dorpri5)
 
-    //store the initial point --> could be set elsewhere using an "init" kernel?
+	ObserverData odata = OData[i]; //private copy of observer data
+
+    //store the initial point
     int storeix = 0;
-    t[storeix + i] = tspan[0];
+    t[storeix * nPts + i] = ti;
     for (int j = 0; j < N_VAR; ++j)
         x[storeix * nPts * N_VAR + j * nPts + i] = xi[j];
 
@@ -66,8 +71,6 @@ __kernel void odedriver(
 
     for (int j = 0; j < N_AUX; ++j)
         aux[storeix * nPts * N_AUX + j * nPts + i] = auxi[j];
-
-    ObserverData odata = OData[i]; //private copy of observer data. Assume it is initialized externally by initialize observer kernel
 
     //time-stepping loop, main time interval
     int step = 0;
@@ -78,22 +81,19 @@ __kernel void odedriver(
     {
 
         ++step;
-        //++odata.stepcount;
-        stepflag = stepper(&ti, xi, dxi, p, sp, &dt, tspanPtr, auxi, wi, step, &rd);
-        if (stepflag!=0)
-            break;
+        stepflag = stepper(&ti, xi, dxi, p, sp, &dt, tspan, auxi, wi, step, &rd);
+        // if (stepflag!=0)
+        //     break;
 
         eventOccurred = eventFunction(&ti, xi, dxi, auxi, &odata, opars);
         if (eventOccurred)
         {
             terminalEvent = computeEventFeatures(&ti, xi, dxi, auxi, &odata, opars);
-            if (terminalEvent)
-            {
-                break;
-            };
+			if (terminalEvent)
+				break;
         }
 
-        updateObserverData(&ti, xi, dxi, auxi, &odata, opars); //TODO: if not FSAL, dxi buffer is delayed by one. (dxi is slope at LAST timestep)
+		updateObserverData(&ti, xi, dxi, auxi, &odata, opars); 
 
         //store every sp.nout'th step after the initial point
         if (step % sp->nout == 0)
@@ -119,6 +119,10 @@ __kernel void odedriver(
     //finalize observerdata for possible continuation
     finalizeObserverData(&ti, xi, dxi, auxi, &odata, opars, tspan);
 
+	//store the observerData in global memory
+    OData[i] = odata;
+
+    nStored[i] = storeix; //storeix ranged from 0 to nStored-1
 
     //write the final solution values to global memory.
     for (int j = 0; j < N_VAR; ++j)
@@ -127,8 +131,7 @@ __kernel void odedriver(
     // To get same RNG on repeat (non-continued) run, need to set the seed to same value
     for (int j = 0; j < N_RNGSTATE; ++j)
         RNGstate[j * nPts + i] = rd.state[j];
-
-    OData[i] = odata;
     
-    nStored[i] = storeix; //storeix ranged from 0 to nStored-1
+    // update dt to its final value (for adaptive stepper continue)
+    d_dt[i] = dt;
 }

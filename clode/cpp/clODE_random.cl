@@ -14,23 +14,16 @@
 //TODO: not clear how to make host code aware of rngstatetype. Only use 64bit int methods?
 // -> template rngData struct on realtype, rngstatetype. Pass N_RNGSTATE as compiler define to OpenCL? Store array of structs (not just rngData.state)
 
+
 #define XORSHIRO128_PLUS
 //~ #define XORSHIFT128_PLUS
 
-//Wrappers with fixed function signatures. Conditional compilation could be used to select the backend "next" function
 
 #ifdef XORSHIRO128_PLUS
 
-//TODO: this can be set as compiler flag to enable different RNG algorithms
 #define N_RNGSTATE (2)
-
 typedef ulong rngstatetype;
 #define RNGNORM RCONST(5.421010862427522e-20)
-// #if defined(CLODE_SINGLE_PRECISION)
-// 	#define RNGNORM (5.4210109e-20f) // 1.0/(2^64 - 1) single precision
-// #elif defined(CLODE_DOUBLE_PRECISION)
-// 	#define RNGNORM (5.421010862427522e-20) // 1.0/(2^64 - 1) double precision
-// #endif
 
 static inline ulong rotl(const ulong x, int k)
 {
@@ -50,12 +43,13 @@ ulong next(__private rngstatetype s[])
 	return result;
 }
 
-#endif
+#endif //XORSHIRO128_PLUS
+
+
 
 #ifdef XORSHIFT128_PLUS
 
 #define N_RNGSTATE (2)
-
 typedef ulong rngstatetype;
 #define RNGNORM RCONST(5.421010862427522e-20)
 
@@ -70,7 +64,10 @@ ulong next(ulong s[])
 	return result;
 }
 
-#endif
+#endif //XORSHIFT128_PLUS
+
+
+// ---- Utilities ------
 
 //hold the RNG's state and other data in a struct
 typedef struct rngData
@@ -88,7 +85,6 @@ inline realtype rand(__private rngstatetype *state)
 };
 
 //return normally distributed pseudorandom number N(0,1)
-//polar method, generates two at a time requiring  external storage of useLast switch and y2.... ugly! but no access to work-item private static vars..
 inline realtype randn(__private rngData *rd)
 {
 
