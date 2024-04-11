@@ -20,9 +20,9 @@ __kernel void odedriver(
     __global realtype *dx,
     __global realtype *aux,
     __global int *nStored,
-    __global ObserverData *OData,        //Observer data. 
+    __global ObserverData *OData,        //Observer data 
     __constant struct ObserverParams *opars,
-    __global realtype *F,  //feature results)
+    __global realtype *F) 
 {
 
     int i = get_global_id(0);
