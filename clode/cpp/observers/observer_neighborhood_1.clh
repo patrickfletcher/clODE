@@ -236,7 +236,6 @@ inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dxi[], re
 // - reset intermediates upon local max event detection
 inline void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
 {
-    ++od->stepcount;
     //advance solution buffer
     od->tbuffer[0] = od->tbuffer[1];
     od->tbuffer[1] = od->tbuffer[2];
@@ -251,6 +250,11 @@ inline void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], real
         od->dxbuffer[j * 3 + 2] = dxi[j];
     }
 
+    //record actual dt
+    realtype thisDt = od->tbuffer[2] - od->tbuffer[1];
+    od->stepDt[0] = fmax(thisDt, od->stepDt[0]);
+    od->stepDt[1] = fmin(thisDt, od->stepDt[1]);
+    runningMean(&od->stepDt[2], thisDt, od->stepcount);
 
     //global extent of all vars, var slopes, and aux vars
     for (int j = 0; j < N_VAR; ++j)
@@ -268,14 +272,8 @@ inline void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], real
         runningMean(&od->auxTrajectoryMean[j], auxi[j], od->stepcount);
     }
 
-
     if (od->stepcount > 1)
     {
-        //record actual dt
-        realtype thisDt = od->tbuffer[2] - od->tbuffer[1];
-        od->stepDt[0] = fmax(thisDt, od->stepDt[0]);
-        od->stepDt[1] = fmin(thisDt, od->stepDt[1]);
-        runningMean(&od->stepDt[2], thisDt, od->stepcount);
         
         //check for x0
         if (!od->foundX0)
@@ -336,7 +334,7 @@ inline void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], real
             // 	}
         }
     }
-    
+    ++od->stepcount;
 }
 
 //Perform and post-integration cleanup and write desired features into the global array F

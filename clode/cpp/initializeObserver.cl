@@ -27,7 +27,7 @@ __kernel void initializeObserver(
 
 	//get private copy of ODE parameters, initial data, and compute slope at initial state
 	ti = tspan[0];
-	dt = sp->dt;
+    dt = d_dt[i];
 
 	for (int j = 0; j < N_PAR; ++j)
 		p[j] = pars[j * nPts + i];
@@ -58,13 +58,18 @@ __kernel void initializeObserver(
     int stepflag = 0;
 	while (ti < tspan[1] && step < sp->max_steps)
 	{
-		++step;
         stepflag = stepper(&ti, xi, dxi, p, sp, &dt, tspan, auxi, wi, &rd);
         // if (stepflag!=0)
         //     break;
 
 		warmupObserverData(&ti, xi, dxi, auxi, &odata, opars);
+		++step;
 	}
+	//rewind the time and state so initializeEventDetector gets the right values
+	ti = tspan[0];
+	for (int j = 0; j < N_VAR; ++j)
+		xi[j] = x0[j * nPts + i];
+	getRHS(ti, xi, p, dxi, auxi, wi);
 
 #endif //TWO_PASS_EVENT_DETECTOR
 

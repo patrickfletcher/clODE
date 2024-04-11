@@ -27,7 +27,7 @@ __kernel void transient(
 
     //get private copy of ODE parameters, initial data, and compute slope at initial state
     ti = tspan[0];
-    dt = sp->dt;
+    dt = d_dt[i];
 
     for (int j = 0; j < N_PAR; ++j)
         p[j] = pars[j * nPts + i];
@@ -53,10 +53,10 @@ __kernel void transient(
     int stepflag = 0;
     while (ti < tspan[1] && step < sp->max_steps)
     {
-        ++step;
         stepflag = stepper(&ti, xi, dxi, p, sp, &dt, tspan, auxi, wi, &rd);
         // if (stepflag!=0)
         //     break;
+        ++step;
     }
 
     //write the final solution values to global memory.
@@ -68,5 +68,5 @@ __kernel void transient(
         RNGstate[j * nPts + i] = rd.state[j];
 
     // update dt to its final value (for adaptive stepper continue)
-    // d_dt[i] = dt;
+    d_dt[i] = dt;
 }

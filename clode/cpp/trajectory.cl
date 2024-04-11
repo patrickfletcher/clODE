@@ -36,7 +36,7 @@ __kernel void trajectory(
 
     //get private copy of ODE parameters, initial data, and compute slope at initial state
     ti = tspan[0];
-    dt = sp->dt;
+    dt = d_dt[i];
 
     for (int j = 0; j < N_PAR; ++j)
         p[j] = pars[j * nPts + i];
@@ -58,7 +58,6 @@ __kernel void trajectory(
     getRHS(ti, xi, p, dxi, auxi, wi); //slope at initial point, needed for FSAL steppers (bs23, dorpri5) and for DX output
 
     //store the initial point
-
     int storeix = 0;
     t[storeix * nPts + i] = ti;
     for (int j = 0; j < N_VAR; ++j)
@@ -69,15 +68,12 @@ __kernel void trajectory(
 
     for (int j = 0; j < N_AUX; ++j)
         aux[storeix * nPts * N_AUX + j * nPts + i] = auxi[j];
-
-    ++storeix;
     
     //time-stepping loop, main time interval
     int step = 0;
     int stepflag = 0;
     while (ti < tspan[1] && step < sp->max_steps && storeix < sp->max_store)
     {
-        ++step;
         stepflag = stepper(&ti, xi, dxi, p, sp, &dt, tspan, auxi, wi, &rd);
         // if (stepflag!=0)
         //     break;
@@ -85,6 +81,7 @@ __kernel void trajectory(
         //store every sp.nout'th step after the initial point
         if (step % sp->nout == 0)
         {
+            ++storeix;
 
             t[storeix * nPts + i] = ti; //adaptive steppers give different timepoints for each trajectory
 
@@ -97,8 +94,8 @@ __kernel void trajectory(
             for (int j = 0; j < N_AUX; ++j)
                 aux[storeix * nPts * N_AUX + j * nPts + i] = auxi[j];
                 
-            ++storeix;
         }
+        ++step;
     }
 
     nStored[i] = storeix; //storeix ranged from 0 to nStored-1
@@ -112,5 +109,5 @@ __kernel void trajectory(
         RNGstate[j * nPts + i] = rd.state[j];
 
     // update dt to its final value (for adaptive stepper continue)
-    // d_dt[i] = dt;
+    d_dt[i] = dt;
 }

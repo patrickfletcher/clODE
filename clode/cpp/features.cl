@@ -15,7 +15,7 @@ __kernel void features(
 	__global realtype *xf,              //final state 				[nPts*nVar]
 	__global ulong *RNGstate,           //state for RNG					[nPts*nRNGstate]
     __global realtype *d_dt,            //array of dt values, one per solver
-	__global ObserverData *OData,		//for continue
+	__global ObserverData *OData,		//Observer data
 	__constant struct ObserverParams *opars,
 	__global realtype *F)
 {
@@ -30,7 +30,7 @@ __kernel void features(
 
 	//get private copy of ODE parameters, initial data, and compute slope at initial state
 	ti = tspan[0];
-	dt = sp->dt;
+    dt = d_dt[i];
 
 	for (int j = 0; j < N_PAR; ++j)
 		p[j] = pars[j * nPts + i];
@@ -53,8 +53,6 @@ __kernel void features(
 
 	ObserverData odata = OData[i]; //private copy of observer data
 
-	int forceNoCache = 83;
-
 	//time-stepping loop, main time interval
     int step = 0;
     int stepflag = 0;
@@ -62,25 +60,20 @@ __kernel void features(
 	bool terminalEvent;
 	while (ti < tspan[1] && step < sp->max_steps)
 	{
-		++step;
-		//++odata.stepcount; //do this in updateObserverData always
         stepflag = stepper(&ti, xi, dxi, p, sp, &dt, tspan, auxi, wi, &rd);
         // if (stepflag!=0)
             // break;
-
-		//TODO: Update solution buffers here?
 
 		eventOccurred = eventFunction(&ti, xi, dxi, auxi, &odata, opars);
 		if (eventOccurred)
 		{
 			terminalEvent = computeEventFeatures(&ti, xi, dxi, auxi, &odata, opars);
 			if (terminalEvent)
-			{
 				break;
-			};
 		}
 
 		updateObserverData(&ti, xi, dxi, auxi, &odata, opars); 
+		++step;
 	}
 
 	//readout features of interest and write to global F:
@@ -101,5 +94,5 @@ __kernel void features(
 		RNGstate[j * nPts + i] = rd.state[j];
 
     // update dt to its final value (for adaptive stepper continue)
-    // d_dt[i] = dt;
+    d_dt[i] = dt;
 }
