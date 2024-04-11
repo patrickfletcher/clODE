@@ -73,10 +73,10 @@ class ObserverOutput:
     def get_var_mean(self, var: str) -> np.ndarray[Any, np.dtype[np.float64]]:
         return self._get_var(var, "mean")
 
-    def get_var_max_dt(self, var: str) -> np.ndarray[Any, np.dtype[np.float64]]:
+    def get_var_max_slope(self, var: str) -> np.ndarray[Any, np.dtype[np.float64]]:
         return self.get_var_max(f"d{var}/dt")
 
-    def get_var_min_dt(self, var: str) -> np.ndarray[Any, np.dtype[np.float64]]:
+    def get_var_min_slope(self, var: str) -> np.ndarray[Any, np.dtype[np.float64]]:
         return self.get_var_min(f"d{var}/dt")
 
     def get_var_count(self, var: str) -> np.ndarray[Any, np.dtype[np.float64]]:
