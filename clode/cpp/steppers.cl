@@ -36,7 +36,7 @@ stepperDefineMap=newMap;
 availableStepperNames=newNames;
 }
 
-#else
+#endif //__cplusplus
 
 #include "realtype.cl"
 
@@ -115,6 +115,4 @@ void getRHS(const realtype t, const realtype x_[], const realtype p_[], realtype
 
 
 
-
-#endif //__cplusplus
 #endif //STEPPERS_H_

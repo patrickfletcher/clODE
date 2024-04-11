@@ -41,19 +41,21 @@ __kernel void features(
 	for (int j = 0; j < N_RNGSTATE; ++j)
 		rd.state[j] = RNGstate[j * nPts + i];
 
-	rd.randnUselast = 0;
+	ObserverData odata = OData[i]; 
 
+    // generate random numbers if needed
+    rd.randnUselast = 0;
     for (int j = 0; j < N_WIENER; ++j)
 #ifdef STOCHASTIC_STEPPER
         wi[j] = randn(&rd) / sqrt(dt);
 #else
         wi[j] = RCONST(0.0);
 #endif
-	getRHS(ti, xi, p, dxi, auxi, wi); //slope at initial point, needed for FSAL steppers (bs23, dorpri5)
 
-	ObserverData odata = OData[i]; //private copy of observer data
+    //get the slope and aux at initial point
+    getRHS(ti, xi, p, dxi, auxi, wi); 
 
-	//time-stepping loop, main time interval
+	//time-stepping loop
     int step = 0;
     int stepflag = 0;
 	bool eventOccurred;

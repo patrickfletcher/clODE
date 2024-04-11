@@ -29,13 +29,12 @@ __kernel void odedriver(
     int nPts = get_global_size(0);
 
     realtype ti, dt;
-    realtype ti, dt;
     realtype p[N_PAR], xi[N_VAR], dxi[N_VAR];
     realtype auxi[N_AUX>0?N_AUX:1];
     realtype wi[N_WIENER>0?N_WIENER:1];
     rngData rd;
 
-    //get private copy of ODE parameters, initial data, and compute slope at initial state
+    //get private copy of ODE parameters, initial data, and random state
     ti = tspan[0];
     dt = d_dt[i];
 
@@ -48,55 +47,62 @@ __kernel void odedriver(
     for (int j = 0; j < N_RNGSTATE; ++j)
         rd.state[j] = RNGstate[j * nPts + i];
 
-    rd.randnUselast = 0;
+    if (sp->useObserver){
+	    ObserverData odata = OData[i]; //private copy of observer data
+    }
 
+    // generate random numbers if needed
+    rd.randnUselast = 0;
     for (int j = 0; j < N_WIENER; ++j)
 #ifdef STOCHASTIC_STEPPER
         wi[j] = randn(&rd) / sqrt(dt);
 #else
         wi[j] = RCONST(0.0);
 #endif
-	getRHS(ti, xi, p, dxi, auxi, wi); //slope at initial point, needed for FSAL steppers (bs23, dorpri5)
 
-	ObserverData odata = OData[i]; //private copy of observer data
+    //get the slope and aux at initial point
+    getRHS(ti, xi, p, dxi, auxi, wi); 
 
     //store the initial point
-    int storeix = 0;
-    t[storeix * nPts + i] = ti;
-    for (int j = 0; j < N_VAR; ++j)
-        x[storeix * nPts * N_VAR + j * nPts + i] = xi[j];
+    if (sp->storeTrajectory == 1)
+    {
+        int storeix = 0;
+        t[storeix * nPts + i] = ti;
+        for (int j = 0; j < N_VAR; ++j)
+            x[storeix * nPts * N_VAR + j * nPts + i] = xi[j];
 
-    for (int j = 0; j < N_VAR; ++j)
-        dx[storeix * nPts * N_VAR + j * nPts + i] = dxi[j];
+        for (int j = 0; j < N_VAR; ++j)
+            dx[storeix * nPts * N_VAR + j * nPts + i] = dxi[j];
 
-    for (int j = 0; j < N_AUX; ++j)
-        aux[storeix * nPts * N_AUX + j * nPts + i] = auxi[j];
+        for (int j = 0; j < N_AUX; ++j)
+            aux[storeix * nPts * N_AUX + j * nPts + i] = auxi[j];
+    }
 
-    //time-stepping loop, main time interval
+	//time-stepping loop
     int step = 0;
     int stepflag = 0;
     bool eventOccurred;
     bool terminalEvent;
     while (ti < tspan[1] && step < sp->max_steps && storeix < sp->max_store)
     {
-
-        ++step;
-        stepflag = stepper(&ti, xi, dxi, p, sp, &dt, tspan, auxi, wi, step, &rd);
+        stepflag = stepper(&ti, xi, dxi, p, sp, &dt, tspan, auxi, wi, &rd);
         // if (stepflag!=0)
-        //     break;
+            // break;
 
-        eventOccurred = eventFunction(&ti, xi, dxi, auxi, &odata, opars);
-        if (eventOccurred)
-        {
-            terminalEvent = computeEventFeatures(&ti, xi, dxi, auxi, &odata, opars);
-			if (terminalEvent)
-				break;
+        if (sp->useObserver){
+            eventOccurred = eventFunction(&ti, xi, dxi, auxi, &odata, opars);
+            if (eventOccurred)
+            {
+                terminalEvent = computeEventFeatures(&ti, xi, dxi, auxi, &odata, opars);
+                if (terminalEvent)
+                    break;
+            }
+
+            updateObserverData(&ti, xi, dxi, auxi, &odata, opars); 
         }
 
-		updateObserverData(&ti, xi, dxi, auxi, &odata, opars); 
-
         //store every sp.nout'th step after the initial point
-        if (step % sp->nout == 0)
+        if (sp->storeTrajectory && step % sp->nout == 0)
         {
             ++storeix;
 
@@ -111,16 +117,19 @@ __kernel void odedriver(
             for (int j = 0; j < N_AUX; ++j)
                 aux[storeix * nPts * N_AUX + j * nPts + i] = auxi[j];
         }
+		++step;
     }
 
-    //readout features of interest and write to global F:
-    finalizeFeatures(&ti, xi, dxi, auxi, &odata, opars, F, i, nPts);
+    if (sp->useObserver){
+        //readout features of interest and write to global F:
+        finalizeFeatures(&ti, xi, dxi, auxi, &odata, opars, F, i, nPts);
 
-    //finalize observerdata for possible continuation
-    finalizeObserverData(&ti, xi, dxi, auxi, &odata, opars, tspan);
+        //finalize observerdata for possible continuation
+        finalizeObserverData(&ti, xi, dxi, auxi, &odata, opars, tspan);
 
-	//store the observerData in global memory
-    OData[i] = odata;
+        //store the observerData in global memory
+        OData[i] = odata;
+    }
 
     nStored[i] = storeix; //storeix ranged from 0 to nStored-1
 
