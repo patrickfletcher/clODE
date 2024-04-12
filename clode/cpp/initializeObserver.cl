@@ -57,16 +57,16 @@ __kernel void initializeObserver(
 #ifdef TWO_PASS_EVENT_DETECTOR
 
 	//time-stepping loop
-    int step = 0;
+    unsigned int step = 0;
     int stepflag = 0;
 	while (ti < tspan[1] && step < sp->max_steps)
 	{
+		++step;
         stepflag = stepper(&ti, xi, dxi, p, sp, &dt, tspan, auxi, wi, &rd);
         // if (stepflag!=0)
         //     break;
 
 		warmupObserverData(&ti, xi, dxi, auxi, &odata, opars);
-		++step;
 	}
 	//rewind the time and state so initializeEventDetector gets the right values
 	ti = tspan[0];

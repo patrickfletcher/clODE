@@ -20,7 +20,7 @@ typedef float realtype;
 #pragma OPENCL EXTENSION cl_amd_fp64 : enable
 #else
 #error "Double precision floating point not supported by OpenCL implementation."
-#endif
+#endif //cl_khr_fp64
 
 typedef double realtype;
 #define RCONST(x) (x)
@@ -28,6 +28,6 @@ typedef double realtype;
 #define SMALL_REAL DBL_MIN
 #define UNIT_ROUNDOFF DBL_EPSILON
 
-#endif
+#endif //elif defined(CLODE_DOUBLE_PRECISION)
 
 #endif //CL_SOLVER_PRECISION_H_

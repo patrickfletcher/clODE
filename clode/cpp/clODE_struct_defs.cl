@@ -14,9 +14,9 @@ struct SolverParams
 	realtype dtmax;
 	realtype abstol;
 	realtype reltol;
-	int max_steps;
-	int max_store;
-	int nout;
+	unsigned int max_steps;
+	unsigned int max_store;
+	unsigned int nout;
 };
 
 #endif //CLODE_STRUCT_DEFS_H_

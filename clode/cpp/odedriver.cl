@@ -79,12 +79,13 @@ __kernel void odedriver(
     }
 
 	//time-stepping loop
-    int step = 0;
+    unsigned int step = 0;
     int stepflag = 0;
     bool eventOccurred;
     bool terminalEvent;
     while (ti < tspan[1] && step < sp->max_steps && storeix < sp->max_store)
     {
+		++step;
         stepflag = stepper(&ti, xi, dxi, p, sp, &dt, tspan, auxi, wi, &rd);
         // if (stepflag!=0)
             // break;
@@ -117,7 +118,6 @@ __kernel void odedriver(
             for (int j = 0; j < N_AUX; ++j)
                 aux[storeix * nPts * N_AUX + j * nPts + i] = auxi[j];
         }
-		++step;
     }
 
     if (sp->useObserver){

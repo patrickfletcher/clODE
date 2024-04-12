@@ -61,12 +61,8 @@ struct ObserverData
     realtype dxLastMin[N_VAR];
     realtype auxLastMin[N_AUX];
 
-    int stepcount;
-    int eventcount;
-    int mincount;
-    int eventmincount;
-    int maxcount;
-    int eventmaxcount;
+    unsigned int stepcount;
+    unsigned int eventcount;
     bool inUpstate;
 };
 
@@ -102,6 +98,7 @@ inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dxi[], re
 //full per-timestep update of observer data. If an event occurred this timestep, event-based observer data is reset. Per-timestep features are computed here.
 inline void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
 {
+    ++od->stepcount;
 }
 
 //Perform and post-integration cleanup and write desired features into the global array F

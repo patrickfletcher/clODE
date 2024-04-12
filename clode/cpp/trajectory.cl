@@ -72,10 +72,11 @@ __kernel void trajectory(
         aux[storeix * nPts * N_AUX + j * nPts + i] = auxi[j];
     
 	//time-stepping loop
-    int step = 0;
+    unsigned int step = 0;
     int stepflag = 0;
     while (ti < tspan[1] && step < sp->max_steps && storeix < sp->max_store)
     {
+		++step;
         stepflag = stepper(&ti, xi, dxi, p, sp, &dt, tspan, auxi, wi, &rd);
         // if (stepflag!=0)
         //     break;
@@ -97,7 +98,6 @@ __kernel void trajectory(
                 aux[storeix * nPts * N_AUX + j * nPts + i] = auxi[j];
                 
         }
-        ++step;
     }
 
     nStored[i] = storeix; //storeix ranged from 0 to nStored-1

@@ -36,7 +36,7 @@ stepperDefineMap=newMap;
 availableStepperNames=newNames;
 }
 
-#endif //__cplusplus
+#else
 
 #include "realtype.cl"
 
@@ -44,7 +44,6 @@ availableStepperNames=newNames;
 void getRHS(const realtype t, const realtype x_[], const realtype p_[], realtype dx_[], realtype aux_[], const realtype w_[]);
 
 // FIXED STEPSIZE EXPLICIT METHODS
-// The fixed steppers use stepcount to purify the T values (eliminates roundoff)
 
 #ifdef STOCHASTIC_EULER
 #define STOCHASTIC_STEPPER
@@ -114,5 +113,6 @@ void getRHS(const realtype t, const realtype x_[], const realtype p_[], realtype
 //TODO: implicit fixed/adaptive steppers
 
 
+#endif //__cplusplus
 
 #endif //STEPPERS_H_

@@ -1,7 +1,9 @@
 #include "clODE_struct_defs.cl" //for SolverParams struct definition
 #include "realtype.cl"
 
-//TODO: seems like there's no need for this if we use naive time update, except to allow Wiener vars in any solver without cluttering the steppers
+// time update: Which should it be? adaptive uses:
+// realtype tNew = *ti + dt;
+// realtype newDt = tNew - *ti; //use the effective part of dt
 
 //Wrapper to handle step-size adaptation.  note: wi should be zeros
 inline int stepper(realtype *ti, realtype xi[], realtype k1[], const realtype pars[], 

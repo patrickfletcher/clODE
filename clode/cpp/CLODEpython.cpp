@@ -202,9 +202,9 @@ PYBIND11_MODULE(clode_cpp_wrapper, m) {
                 double,
                 double,
                 double,
-                int,
-                int,
-                int>(),
+                unsigned int,
+                unsigned int,
+                unsigned int>(),
                 py::arg("dt") = 0.1,
                 py::arg("dtmax") = 0.5,
                 py::arg("abstol") = 1e-6,
@@ -272,9 +272,9 @@ PYBIND11_MODULE(clode_cpp_wrapper, m) {
     /****************************************************/
 
     py::class_<ObserverParams<double>>(m, "ObserverParams")
-    .def(py::init<int,
-            int,
-            int,
+    .def(py::init<unsigned int,
+            unsigned int,
+            unsigned int,
             unsigned int,
             double,
             double,

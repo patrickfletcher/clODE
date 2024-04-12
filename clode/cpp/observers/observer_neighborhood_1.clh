@@ -3,7 +3,7 @@
 
 #ifdef __cplusplus
 //Collect all the info for this observer. Must be a static function when defining function in header, otherwise defined for each time included.
-static ObserverInfo getObserverInfo_nhood1(const ProblemInfo pi, const int fVarIx, const int eVarIx, const unsigned int nPhase)
+static ObserverInfo getObserverInfo_nhood1(const ProblemInfo pi, const unsigned int fVarIx, const unsigned int eVarIx, const unsigned int nPhase)
 {
     ObserverInfo oi;
     oi.define="USE_OBSERVER_NEIGHBORHOOD_1";  
@@ -236,6 +236,7 @@ inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dxi[], re
 // - reset intermediates upon local max event detection
 inline void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
 {
+    ++od->stepcount;
     //advance solution buffer
     od->tbuffer[0] = od->tbuffer[1];
     od->tbuffer[1] = od->tbuffer[2];
@@ -334,7 +335,6 @@ inline void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], real
             // 	}
         }
     }
-    ++od->stepcount;
 }
 
 //Perform and post-integration cleanup and write desired features into the global array F

@@ -56,12 +56,13 @@ __kernel void features(
     getRHS(ti, xi, p, dxi, auxi, wi); 
 
 	//time-stepping loop
-    int step = 0;
+    unsigned int step = 0;
     int stepflag = 0;
 	bool eventOccurred;
 	bool terminalEvent;
 	while (ti < tspan[1] && step < sp->max_steps)
 	{
+		++step;
         stepflag = stepper(&ti, xi, dxi, p, sp, &dt, tspan, auxi, wi, &rd);
         // if (stepflag!=0)
             // break;
@@ -75,7 +76,6 @@ __kernel void features(
 		}
 
 		updateObserverData(&ti, xi, dxi, auxi, &odata, opars); 
-		++step;
 	}
 
 	//readout features of interest and write to global F:

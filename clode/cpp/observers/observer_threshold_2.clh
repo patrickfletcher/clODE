@@ -4,7 +4,7 @@
 
 #ifdef __cplusplus
 //Collect all the info for this observer. Must be a static function when defining function in header, otherwise defined for each time included.
-static ObserverInfo getObserverInfo_thresh2(const ProblemInfo pi, const int fVarIx, const int eVarIx, const unsigned int nPhase)
+static ObserverInfo getObserverInfo_thresh2(const ProblemInfo pi, const unsigned int fVarIx, const unsigned int eVarIx, const unsigned int nPhase)
 {
     ObserverInfo oi;
     oi.define="USE_OBSERVER_THRESHOLD_2";
@@ -193,9 +193,9 @@ inline void initializeObserverData(realtype *ti, realtype xi[], realtype dxi[], 
     od->dxDown = RCONST(0.0);
     od->tLastEvent = RCONST(0.0);
     od->tThisDown = RCONST(0.0);
-    od->tLastMax = -BIG_REAL;
+    od->tLastMax = RCONST(0.0);
     od->tLastMin = RCONST(0.0);
-    od->xLastMin = -BIG_REAL; 
+    od->xLastMin = BIG_REAL; 
 
     od->thisNMaxima=0;
     od->stepcount=0;
@@ -319,6 +319,8 @@ inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dxi[], re
 //full per-timestep update of observer data. If an event occurred this timestep, event-based observer data is reset. Per-timestep features are computed here.
 inline void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
 {
+    ++od->stepcount;
+
     // advance solution buffer
     od->tbuffer[0] = od->tbuffer[1];
     od->tbuffer[1] = od->tbuffer[2];
@@ -359,7 +361,7 @@ inline void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], real
     {
         
         //local max check in fVarIx
-        if (od->dxbuffer[op->fVarIx * 3 + 1] >= 0.0 && od->dxbuffer[op->fVarIx * 3 + 2] < 0.0)
+        if (od->dxbuffer[op->fVarIx * 3 + 1] > 0.0 && od->dxbuffer[op->fVarIx * 3 + 2] < 0.0)
         {
             int ix;
             realtype thisXbuffer[N_VAR];
@@ -382,7 +384,7 @@ inline void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], real
         }
 
         //local min check in fVarIx - one between each max - simply overwrite tLastMin, xLastMin
-        if (od->dxbuffer[op->fVarIx * 3 + 1] <= 0.0 && od->dxbuffer[op->fVarIx * 3 + 2] > 0.0)
+        if (od->dxbuffer[op->fVarIx * 3 + 1] < 0.0 && od->dxbuffer[op->fVarIx * 3 + 2] > 0.0)
         {
             int ix;
             realtype thisXbuffer[N_VAR];
@@ -420,7 +422,6 @@ inline void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], real
 				od->fVarInactiveMean += (xi[op->fVarIx] - od->fVarInactiveMean) * (*ti - od->tbuffer[1]) / thisPassivePhase;
 		}
     }
-    ++od->stepcount;
 }
 
 

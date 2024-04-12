@@ -22,10 +22,10 @@ template <typename realtype>
 #endif
 struct ObserverParams
 {
-    int eVarIx; //variable for event detection
-    int fVarIx; //variable for features
+    unsigned int eVarIx; //variable for event detection
+    unsigned int fVarIx; //variable for features
 
-    int maxEventCount; //time loop limiter
+    unsigned int maxEventCount; //time loop limiter
     unsigned int maxEventTimestamps; //max number of event timestamps to store
     realtype minXamp;  //consider oscillations lower than this to be steady state (return mean X)
     realtype minIMI;
@@ -91,8 +91,8 @@ typedef struct ObserverInfo
 // collect available methods into "name"-ObserverInfo map, for C++ side access. Must come after including all the getObserverInfo_functions.
 #ifdef __cplusplus
 static void getObserverDefineMap(const ProblemInfo pi,
-								 const int fVarIx,
-								 const int eVarIx,
+								 const unsigned int fVarIx,
+								 const unsigned int eVarIx,
 								 const unsigned int nPhase,
 								 std::map<std::string, ObserverInfo> &observerDefineMap,
 								 std::vector<std::string> &availableObserverNames)
