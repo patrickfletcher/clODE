@@ -25,7 +25,7 @@ nav:
   - Configuration:
       - Specifying systems of ODEs: 'specifying_odes.md'
       - XPP files: 'xpp_files.md'
-      - Initialising the runtime: 'init_runtime.md'
+      - Initializing the runtime: 'init_runtime.md'
       - Selecting logging levels: 'logging_levels.md'
       - Querying OpenCL devices: 'querying_opencl.md'
       - Running in Matlab: 'matlab.md'

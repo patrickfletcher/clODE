@@ -13,10 +13,12 @@
  * - finalizeFeatures: post-integration cleanup and write to global feature array
  */
 
-#include "realtype.cl"
-
 //TODO: expose different observerParams for each observer (provide relevant values only)
 //TODO: support using aux vars as event/feature var in observers.
+//TODO: concept of "solution buffer" or "solver state" data structure could simplify observer coding. Update it in the ode driver, pass to observer functions
+
+#include "realtype.cl"
+
 #ifdef __cplusplus
 template <typename realtype>
 #endif
@@ -56,6 +58,21 @@ typedef struct ObserverInfo
 
 #endif
 
+// Design criteria
+// - use online algorithms for features such as mean, median, etc.
+// - minimize storage of state
+// - 
+
+// TODO:
+// - step-size aware method for <x(t)>
+// - return sequence data: list of features per event
+// - hashing for distinct value counting [binning?] - not same as above
+// - use minimal solution buffer size for task at hand. local extrema: t[3], x[3], dx[2]?
+// - separate diagnostic features [toggle on/off independent of observer?]
+// - time (e.g., durations) vs state-space features (e.g., amplitudes, means) 
+// -- supply list of vars to track for state-space features [similarly for trajectory storage]
+// - composable observers? toggle on only what you want 
+// - how to handle domain-specific use cases? eg. AHP
 
 ////////////////////////////////////////////////
 // one-pass detectors
@@ -64,26 +81,36 @@ typedef struct ObserverInfo
 //basic detectors: no events. Measure extent of state space explored, max/min/mean x and aux, max/min dx
 #include "observers/observer_basic.clh" //one variable, specified by fVarIx
 #include "observers/observer_basic_allVar.clh"
+
+// convex hull of trajectory in state-space?
+
+// Local maximum detector
+// - could do local extremum, toggle whether event is on max vs min?
 #include "observers/observer_local_maximum.clh"
 
+// Threshold-based event detection with thresholds defined in state-space coordinates
 // #include "observers/observer_threshold_1.clh" //not implemented
 
-//Event is the return of trajectory to small neighborhood of Xstart (specified state, eg. x0)
-// to select Xstart: local min (e.g. of user-selected slow variable) 
+// Poincaré section, specified as a normal vector and offset in state-space coordinates
+// #include "observers/observer_poincare_1.clh"
+
+// Event trigger is the return of the trajectory to small neighborhood of a point Xstart in state-space coordinates
+// - define a sensible Xstart, found in one pass: e.g., local min of a slow variable 
 #include "observers/observer_neighborhood_1.clh"
 
 ////////////////////////////////////////////////
 // two-pass detectors
 ////////////////////////////////////////////////
+// Run a first pass to establish trajectory properties - e.g., extrema for computing normalized state-space coordinates
 
-//Threshold-based event detection with relative thresholds in a specified variable xi.
-// First pass to measure the extent of state-space trajectory visits, then compute thresholds as fractions of range
+// Threshold-based event detection with thresholds defined in normalized state-space coordinates
 #include "observers/observer_threshold_2.clh"
 
-// // First pass to measure the extent of state-space trajectory visits, decide x0 based on threshold. check each crossing, period when norm(x-x0)<tol
+// Poincaré section, specified as a normal vector and offset in normalized state-space coordinates
 // #include "observers/observer_poincare_2.clh"
 
-//Use a first pass to find a good Xstart (e.g. absolute drop below 0.5*range of slowest variable)
+// Event trigger is the return of the trajectory to small neighborhood of a point Xstart in normalized state-space coordinates
+// - Use a first pass to find a good Xstart (e.g. absolute drop below 0.5*range of slowest variable)
 #include "observers/observer_neighborhood_2.clh"
 
 

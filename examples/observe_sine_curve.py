@@ -54,8 +54,8 @@ event_count = int(output.get_var_count("period"))
 print(event_count)
 
 # Get the timestamps of the events
-active = output.get_timestamp("active")
-inactive = output.get_timestamp("inactive")
+up_times = output.get_timestamps("up")
+down_times = output.get_timestamps("down")
 pass
 
 
@@ -66,10 +66,10 @@ import numpy as np
 t = np.linspace(0, 4 * pi, 1000)
 x = np.sin(t)
 plt.plot(t, x)
-for event in active:
+for event in up_times:
     plt.axvline(x=event, color="green", linestyle="--")
 
-for event in inactive:
+for event in down_times:
     plt.axvline(x=event, color="blue", linestyle="--")
 plt.show()
 pass

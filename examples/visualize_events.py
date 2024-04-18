@@ -1,16 +1,15 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import clode
+from clode import exp
 from typing import List
 
 def x_inf(v: float, vx: float, sx: float) -> float:
     return 1.0 / (1.0 + exp((vx - v) / sx))
 
-
 def s_inf(c: float, k_s: float) -> float:
     c2: float = c * c
     return c2 / (c2 + k_s * k_s)
-
 
 def lactotroph(
     t: float,
@@ -52,9 +51,7 @@ def lactotroph(
     current: float = ica + ik + isk + ileak
 
     dv: float = -current / cm
-
     dn: float = (x_inf(v, vn, sn) - n) / tau_n
-
     dc: float = -f_c * (alpha * ica + k_c * c)
 
     dx_[0] = dv
@@ -82,110 +79,112 @@ parameters = {
     "k_c": 0.1,
 }
 
+auxvars = ['ica']
+
 tend=4500
 features_integrator = clode.FeatureSimulator(
     rhs_equation=lactotroph,
     supplementary_equations=[x_inf, s_inf],
     variables=variables,
     parameters=parameters,
-    aux=['ica'],
+    aux=auxvars,
     observer=clode.Observer.threshold_2,
     stepper=clode.Stepper.dormand_prince,
     t_span=(0.0, tend),
     observer_min_x_amp=0.1,
-    observer_x_up_thresh=0.1,
+    observer_x_up_thresh=0.2,
+    observer_dx_up_thresh=0.,
     observer_x_down_thresh=0.1,
-    observer_neighbourhood_radius=0.5,
-    observer_dx_down_thresh=0.01,
-    observer_dx_up_thresh=0.01,
-    observer_max_event_count=100000,
+    observer_dx_down_thresh=0.,
+    observer_max_event_count=2,
     event_var="v",
     feature_var="v",
-    dtmax=5.0,
+    dtmax=1.0,
     dt=0.1,
+    abstol=1.0e-6,
+    reltol=1.0e-6
 )
 
 features_integrator.transient()
 output = features_integrator.features()
 
-# events = output.get_timestamp("event")
-active = output.get_timestamp("active")
-inactive = output.get_timestamp("inactive")
-# afterevent = output.get_timestamp("afterevent")
+# events = output.get_timestamps("event")
+up_times = output.get_timestamps("up")
+down_times = output.get_timestamps("down")
 period_count = int(output.get_var_count("period"))
 step_count = int(output.get_var_count("step"))
 active_dip = output.get_var_mean("activeDip")
 
-# Plot trajectory
+print(up_times)
+
+# Get the trajectory
 trajectory_integrator = clode.TrajectorySimulator(
     rhs_equation=lactotroph,
     supplementary_equations=[x_inf, s_inf],
     variables=variables,
     parameters=parameters,
+    aux=auxvars,
     stepper=clode.Stepper.dormand_prince,
     t_span=(0.0, tend),
     dt=0.1,
-    dtmax=5.0,
+    dtmax=1.0,
+    abstol=1.0e-6,
+    reltol=1.0e-6
 )
-
-# active_threshold = output.get_eventvar_threshold('x')
-# dxup_threshold = output.get_featurevar_threshold('dx up')
-# dxdown_threshold = output.get_featurevar_threshold('dx down')
-# inactive_v_mean = output.get_var_mean('inactive v')
-max_dt = output.get_var_max_dt('v')
 
 trajectory_integrator.transient()
 trajectory = trajectory_integrator.trajectory()
 
-plt.plot(trajectory[0].t, trajectory[0].x[:, 0])
+print(trajectory)
+
+var = "v"
+t = trajectory[0].t
+v = trajectory[0].x(var)
+dvdt = trajectory[0].dx(var)
+
+plt.plot(t, v)
 # Plot events
-# for event in events:
-#     plt.axvline(x=event, color="red", linestyle="--")
+for event in up_times:
+    plt.axvline(x=event, color="red", linestyle="--")
 
-for event in active:
-    plt.axvline(x=event, color="green", linestyle="--")
-
-for event in inactive:
+for event in down_times:
     plt.axvline(x=event, color="blue", linestyle="--")
 
-# for event in afterevent:
-#     plt.axvline(x=event, color="orange", linestyle="--")
-
-plt.xlabel("Time")
-plt.ylabel("Membrane potential")
-plt.title("Lactotroph model")
-plt.ylim(-80, 20)
+plt.xlabel("t")
+plt.ylabel(var)
 plt.show()
-pass
+# pass
 
-# Plot dv/dt by calculating the derivative of the membrane potential from trajectory.x
-dvdt = np.gradient(trajectory[0].x[:, 0], trajectory[0].t)
-plt.plot(trajectory[0].t, dvdt)
-plt.xlabel("Time")
-plt.ylabel("dv/dt")
+
+# plot the dvdt vs v for the first full period
+start = np.argmax(t>=up_times[0])
+stop = np.argmax(t>=up_times[1])
+
+plt.plot(v[start:stop], dvdt[start:stop])
+plt.xlabel(var)
+plt.ylabel(f"d{var}/dt")
 plt.title("Lactotroph model")
-plt.ylim(-0.5, 0.5)
-# for event in events:
-#     plt.axvline(x=event, color="red", linestyle="--")
+plt.axhline(y=0.0, color="gray", linestyle="-")
 
-for event in active:
-    plt.axvline(x=event, color="green", linestyle="--")
+# this part won't be needed if we return the state/slope at each event
+first_active_idx = np.argmax(t>up_times[0]) 
+first_inactive_idx = np.argmax(t>down_times[0]) 
 
-for event in inactive:
-    plt.axvline(x=event, color="blue", linestyle="--")
-#
-# for event in afterevent:
-#     plt.axvline(x=event, color="orange", linestyle="--")
+plt.axvline(x=v[first_active_idx], color="red", linestyle="--")
+plt.axhline(y=dvdt[first_active_idx], color="orange", linestyle="--")
 
-from functools import reduce
-start = 221
-end = 352
-zz = lambda: zip(trajectory[0].x[start:end, 0], trajectory[0].t[start:end])
-t0 = trajectory[0].t[start]
-mvn_avg = reduce(lambda x, y: (x[0] + (y[0] - x[0]) / (y[1] - t0), y[1]), zz())
-mvn_avg2 = reduce(lambda x, y: (x[0] + (y[0] - x[0]) * (y[1] - x[1]) / (y[1] - t0), y[1]), zz())
-
-
+plt.axvline(x=v[first_inactive_idx], color="blue", linestyle="--")
+plt.axhline(y=dvdt[first_inactive_idx], color="green", linestyle="--")
 
 plt.show()
-pass
+
+# from functools import reduce
+# start = 221
+# end = 352
+# zz = lambda: zip(trajectory[0].x[start:end, 0], trajectory[0].t[start:end])
+# t0 = trajectory[0].t[start]
+# mvn_avg = reduce(lambda x, y: (x[0] + (y[0] - x[0]) / (y[1] - t0), y[1]), zz())
+# mvn_avg2 = reduce(lambda x, y: (x[0] + (y[0] - x[0]) * (y[1] - x[1]) / (y[1] - t0), y[1]), zz())
+
+
+# pass

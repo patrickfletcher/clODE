@@ -37,8 +37,7 @@ class ObserverOutput:
         variables: List[str],
         observer_type: Observer,
         feature_names: List[str],
-    ):
-        # print(type(observer_params))
+    ) -> None:
         self._op = observer_params
         self._data = results_array
         self._num_result_features = num_result_features
@@ -82,41 +81,21 @@ class ObserverOutput:
     def get_var_count(self, var: str) -> np.ndarray[Any, np.dtype[np.float64]]:
         return self._get_var("count", var)
 
-    def get_timestamp(self, var: str) -> np.ndarray[Any, np.dtype[np.float64]]:
-        first_key = f"{var} phase 0"
+    def get_timestamps(self, var: str = "event") -> np.ndarray[Any, np.dtype[np.float64]]:
+        first_key = f"{var} timestamp 0"
         if first_key not in self._feature_names:
             raise NotImplementedError(
                 f"{self._observer_type} does not track {var} timestamps!"
             )
         data = []
         for key_idx in range(0, self._op.max_event_timestamps):
-            key = f"{var} phase {key_idx}"
+            key = f"{var} timestamp {key_idx}"
             index = self._feature_names.index(key)
             datapoint = self._data[:, index]
             if np.all(datapoint == 0):
                 break
             data.append(datapoint)
         return np.concatenate(data) if data else []
-
-    def get_eventvar_threshold(self, var: str) -> np.ndarray[Any, np.dtype[np.float64]]:
-        try:
-            index = self._feature_names.index(f"eventvar {var} threshold")
-            return self._data[:, index : index + 1].squeeze()
-        except ValueError:
-            raise NotImplementedError(
-                f"{self._observer_type} does not track {var} threshold!"
-            )
-
-    def get_featurevar_threshold(
-        self, var: str
-    ) -> np.ndarray[Any, np.dtype[np.float64]]:
-        try:
-            index = self._feature_names.index(f"featurevar {var} threshold")
-            return self._data[:, index : index + 1].squeeze()
-        except ValueError:
-            raise NotImplementedError(
-                f"{self._observer_type} does not track {var} threshold!"
-            )
 
 
 class FeatureSimulator(Simulator):

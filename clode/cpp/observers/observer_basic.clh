@@ -14,7 +14,6 @@ struct ObserverData_basic
     realtype xTrajectoryMean;
     realtype dxTrajectoryMax;
     realtype dxTrajectoryMin;
-    unsigned int eventcount;
     unsigned int stepcount;
 };
 
@@ -43,7 +42,6 @@ inline void initializeObserverData(realtype *ti, realtype xi[], realtype dxi[], 
     od->xTrajectoryMean = RCONST(0.0);
     od->dxTrajectoryMax = -BIG_REAL;
     od->dxTrajectoryMin = BIG_REAL;
-    od->eventcount = 0;
     od->stepcount = 0;
 }
 //nothing to do - One pass detector

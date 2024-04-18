@@ -67,6 +67,8 @@ __kernel void features(
         // if (stepflag!=0)
             // break;
 
+		updateObserverData(&ti, xi, dxi, auxi, &odata, opars); 
+
 		eventOccurred = eventFunction(&ti, xi, dxi, auxi, &odata, opars);
 		if (eventOccurred)
 		{
@@ -74,8 +76,6 @@ __kernel void features(
 			if (terminalEvent)
 				break;
 		}
-
-		updateObserverData(&ti, xi, dxi, auxi, &odata, opars); 
 	}
 
 	//readout features of interest and write to global F:

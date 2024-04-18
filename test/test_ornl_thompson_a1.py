@@ -37,11 +37,9 @@ def test_ornl_thompson_a1():
         max_steps=20000,
     )
 
-    integrator.trajectory()
-
-    trajectories = integrator.get_trajectory()
+    trajectories = integrator.trajectory()
     time_steps = trajectories[0].t
-    output_trajectory = trajectories[0].x
+    output_trajectory = trajectories[0].x()
 
     for tt, (y1, y2) in zip(time_steps, output_trajectory):
         expected_y1, expected_y2 = ornl_thompson_a1_exact(tt)
@@ -81,11 +79,9 @@ def test_ornl_thompson_a1_ensemble():
         max_steps=20000,
     )
 
-    integrator.trajectory()
-
-    trajectories = integrator.get_trajectory()
+    trajectories = integrator.trajectory()
     time_steps = trajectories[0].t
-    output_trajectory = trajectories[0].x
+    output_trajectory = trajectories[0].x()
 
     integrator_params = clode.TrajectorySimulator(
         src_file="test/ornl_thompson_a1.cl",
@@ -105,9 +101,9 @@ def test_ornl_thompson_a1_ensemble():
 
     integrator_params.trajectory()
 
-    trajectories_params = integrator_params.get_trajectory()
+    trajectories_params = integrator_params.trajectory()
     time_steps_params = trajectories_params[0].t
-    output_trajectory_params = trajectories_params[0].x
+    output_trajectory_params = trajectories_params[0].x()
 
     assert_time_steps_equal(time_steps, time_steps_params)
     assert_output_trajectory_equal(output_trajectory, output_trajectory_params)
@@ -128,11 +124,9 @@ def test_ornl_thompson_a1_ensemble():
 
     integrator_vars.set_ensemble(variables={"y2": [1.0]})
 
-    integrator_vars.trajectory()
-
-    trajectories_vars = integrator_vars.get_trajectory()
+    trajectories_vars = integrator_vars.trajectory()
     time_steps_vars = trajectories_vars[0].t
-    output_trajectory_vars = trajectories_vars[0].x
+    output_trajectory_vars = trajectories_vars[0].x()
 
     assert_time_steps_equal(time_steps, time_steps_vars)
     assert_output_trajectory_equal(output_trajectory, output_trajectory_vars)

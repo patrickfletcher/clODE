@@ -41,7 +41,7 @@ void CLODEfeatures::buildCL()
 {
 	spdlog::info("Running CLODEFeatures buildCL");
 	observerBuildOpts=" -D" + observerDefineMap.at(observer).define;
-	observerBuildOpts += " -DN_PHASE=" + std::to_string((long long)op.maxEventTimestamps);
+	observerBuildOpts += " -DN_STORE_EVENTS=" + std::to_string((long long)op.maxEventTimestamps);
 	buildProgram(observerBuildOpts);
 
 	//set up the kernels
@@ -72,7 +72,7 @@ void CLODEfeatures::buildCL()
 const std::string CLODEfeatures::getProgramString()
 {
 	observerBuildOpts = " -D" + observerDefineMap.at(observer).define;
-	observerBuildOpts += " -DN_PHASE=" + std::to_string((long long)op.maxEventTimestamps);
+	observerBuildOpts += " -DN_STORE_EVENTS=" + std::to_string((long long)op.maxEventTimestamps);
 	setCLbuildOpts(observerBuildOpts);
 	return buildOptions + clprogramstring + ODEsystemsource;
 }
@@ -158,7 +158,7 @@ void CLODEfeatures::updateObserverDefineMap()
 {
 	getObserverDefineMap(prob, op.fVarIx, op.eVarIx, op.maxEventTimestamps, observerDefineMap, availableObserverNames);
 	observerBuildOpts = " -D" + observerDefineMap.at(observer).define;
-	observerBuildOpts += " -DN_PHASE=" + std::to_string((long long)op.maxEventTimestamps);
+	observerBuildOpts += " -DN_STORE_EVENTS=" + std::to_string((long long)op.maxEventTimestamps);
 	if (clSinglePrecision)
 		observerDataSize=observerDefineMap.at(observer).observerDataSizeFloat;
 	else

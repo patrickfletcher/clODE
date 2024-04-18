@@ -186,12 +186,12 @@ def test_threshold_2_observes_sine_events():
     assert event_count == 1
 
     # Get the timestamps of the events
-    active = output.get_timestamp("active")
-    assert active[0] == pytest.approx(pi / 4, rel=1e-2)
-    assert active[1] == pytest.approx(9 * pi / 4, rel=1e-2)
-    inactive = output.get_timestamp("inactive")
-    assert inactive[0] == pytest.approx(3 * pi / 2, rel=1e-2)
-    assert inactive[1] == pytest.approx(7 * pi / 2, rel=1e-2)
+    up_times = output.get_timestamps("up")
+    assert up_times[0] == pytest.approx(pi / 4, rel=1e-2)
+    assert up_times[1] == pytest.approx(9 * pi / 4, rel=1e-2)
+    down_times = output.get_timestamps("down")
+    assert down_times[0] == pytest.approx(3 * pi / 2, rel=1e-2)
+    assert down_times[1] == pytest.approx(7 * pi / 2, rel=1e-2)
 
 
 if __name__ == "__main__":

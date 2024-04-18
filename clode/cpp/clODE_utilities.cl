@@ -73,40 +73,65 @@ inline void minOfArray(realtype inArray[], int N, realtype *minVal, int *index)
 	}
 }
 
-//Compute a running mean
-inline void runningMean(realtype *mean, realtype thisValue, unsigned int eventCount)
+// Neumaier’s algorithm for summation - avoid loss of precision in accumulators
+// - requires adding the correction at the end, once
+// inline void twoSum(realtype *sum, realtype *correction, realtype newValue)
+// {
+// 	realtype total;
+// 	volatile realtype diff; //is needed?
+// 	t = *sum + newValue;
+// 	if (fabs(*sum) >= fabs(newValue))
+// 		diff = (*sum - t);
+// 		*correction += diff + newValue;
+// 	else 
+// 		diff = (newValue - t);
+// 		*correction += diff + *sum;
+// 	*sum = t;
+// }
+
+/* 
+Online algorithms for feature detection
+Goal: compute features using minimal storage as the solution is numerically approximated
+- running means (should handle non-uniform sampling for adaptive time-stepping)
+-- could implement an online trapezoidal method for running mean?
+- running percentiles - P2 algorithm
+
+other notes
+- may be of interest to use larger solution buffer (>3) along with some notion of "forgetting" old states?
+- check, e.g., online/real-time speech/signal processing literature
+*/ 
+
+//Compute a running mean of a function at possibly non-uniform sample points
+// - mean should be initialized to zero externally (first step: dt=total_delta --> mean=newValue)
+inline realtype runningMeanDt(realtype mean, realtype newValue, realtype dt, realtype total_delta)
 {
-	if (eventCount == 0)
-	{ //do nothing
-	}
-	else if (eventCount == 1)
-	{ //initialize the mean to the first value
-		*mean = thisValue;
-	}
-	else
-	{ //compute the current value of the running mean
-		*mean = *mean + (thisValue - *mean) / (realtype)eventCount;
-	}
+	return mean + (newValue - mean) * dt/total_delta;
 }
 
-//Compute a running mean and variance. 
+//Compute a running mean for a set of numbers
+inline void runningMean(realtype *mean, realtype newValue, unsigned int eventCount)
+{
+	if (eventCount == 1) //initialize the mean to the first value
+		*mean = newValue;
+	else if (eventCount > 1) //compute the current value of the running mean
+		*mean += (newValue - *mean) / (realtype)eventCount;
+}
+
+//Compute a running mean and variance for a set of numbers
 // https://www.johndcook.com/blog/standard_deviation/
 // NOTE: once the variance value is desired, it must be divided by the final event count!
-inline void runningMeanVar(realtype *mean, realtype *variance, realtype thisValue, unsigned int eventCount)
+inline void runningMeanVar(realtype *mean, realtype *variance, realtype newValue, unsigned int eventCount)
 {
-	if (eventCount == 0)
-	{ //do nothing
-	}
-	else if (eventCount == 1)
+	if (eventCount == 1)
 	{ //initialize the mean to the first value, variance to zero
-		*mean = thisValue;
+		*mean = newValue;
 		*variance = RCONST(0.0);
 	}
-	else
+	else if (eventCount > 1)
 	{ //compute the current value of the running mean and variance
 		realtype tmp = *mean;
-		*mean = tmp + (thisValue - tmp) / (realtype)eventCount;
-		*variance = *variance + (thisValue - tmp) * (thisValue - *mean);
+		*mean = tmp + (newValue - tmp) / (realtype)eventCount;
+		*variance = *variance + (newValue - tmp) * (newValue - *mean);
 	}
 }
 
@@ -158,7 +183,7 @@ inline void quadraticInterpVertex(realtype t[], realtype y[], realtype *tv, real
 	*yv = b0 + b1 * (*tv - t[0]) + b2 * (*tv - t[0]) * (*tv - t[1]);
 }
 
-//TODO: use slopes!
+//TODO: use slope information!
 // quadratic given slopes, cubic given slopes, ...
 //~ inline realtype cubicInterp(realtype t[], realtype y[], realtype dy[], realtype ti) {
 //~ return yi;
