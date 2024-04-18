@@ -78,7 +78,7 @@ def test_lorenz_rk4(platform_id, device_id, num_pts, reps):
 if __name__ == "__main__":
 
     ocl_info = clode.runtime.query_opencl()
-    ocl_info = ocl_info[:3]
+    # ocl_info = ocl_info[:3]
 
     num_pts = [int(2**n) for n in np.arange(0,18)]
     reps = 50

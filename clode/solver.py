@@ -29,6 +29,8 @@ class Stepper(Enum):
 
 
 # base solver class with only transient()
+# TODO: would be nice to have an alternate constructor that copies all the parameters/settings from another solver object: 
+# - eg. "TrajectorySimulator.from_simulator(my_feature_simulator)"
 class Simulator:
     """Base class for all simulators.
 

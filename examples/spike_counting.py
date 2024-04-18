@@ -131,14 +131,13 @@ integrator_traj.set_ensemble(parameters = traj_parameters)
 integrator_traj.set_tspan((0.0, 50000.0))
 integrator_traj.transient()
 integrator_traj.set_tspan((0.0, 10000.0))
-integrator_traj.trajectory()
+trajectories = integrator_traj.trajectory()
 
-trajectories = integrator_traj.get_trajectory()
-
+var = "v"
 fig, ax = plt.subplots(4, 1, sharex=True, sharey=True)
 for i, trajectory in enumerate(trajectories):
-    ax[i].plot(trajectory.t / 1000.0, trajectory.x[:, 0])
+    ax[i].plot(trajectory.t / 1000.0, trajectory.x("v"))
 
-ax[1].set_ylabel("v")
+ax[1].set_ylabel(var)
 ax[-1].set_xlabel('time (s)')
 plt.show()

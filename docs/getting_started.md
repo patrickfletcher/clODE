@@ -24,10 +24,10 @@ as a GPU or a multi-core CPU.
 
 [The Van der Pol oscillator](https://en.wikipedia.org/wiki/Van_der_Pol_oscillator) can be written as a system of two differential equations:
 
-$
+$$
 \dot{x} = y\\
 \dot{y} = \mu(1-x^2)y - x
-$
+$$
 
 Oscillations occur when $\mu>0$. Suppose we wish to measure the period of oscillations as $\mu$ varies.
 First, we will need to implement the vector field above as function -
@@ -173,10 +173,7 @@ integrator.set_ensemble(x0, P0)
 integrator.transient()
 
 # Continue the simulation, now storing the trajectories
-integrator.trajectory()
-
-# get the results, and plot
-trajectories = integrator.get_trajectory()
+trajectories = integrator.trajectory()
 
 # plot
 varix = 0

@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import numpy as np
+# from numpy.typing import NDArray
 
 from .function_converter import OpenCLRhsEquation
 from .runtime import CLDeviceType, CLVendor, TrajectorySimulatorBase, _clode_root_dir
@@ -10,24 +11,70 @@ from .solver import Simulator, Stepper
 
 
 class TrajectoryResult:
-    t: np.ndarray[Any, np.dtype[np.float64]]
-    x: np.ndarray[Any, np.dtype[np.float64]]
-
-    def __init__(self, data: Dict[str, np.ndarray[Any, np.dtype[np.float64]]]) -> None:
-        self.t = data["t"]
-        self.x = data["x"]
+    def __init__(
+            self, 
+            t: np.ndarray[Any, np.dtype[np.float64]], 
+            x: np.ndarray[Any, np.dtype[np.float64]], 
+            dx: np.ndarray[Any, np.dtype[np.float64]], 
+            aux: np.ndarray[Any, np.dtype[np.float64]], 
+            variables: list[str], 
+            aux_variables: list[str],
+            ) -> None:
+        self.t = t
+        self._x = x
+        self._dx = dx
+        self._aux = aux
+        self._variables = variables
+        self._aux_variables = aux_variables
 
     def __repr__(self) -> str:
-        return f"TrajectoryResult(t={self.t}, x={self.x})"
+        return f"TrajectoryResult(length:{len(self.t)}, variables:{self._variables}, aux variables:{self._aux_variables})"
 
+    # instead of the following, could simply use numpy structured arrays? similarly in features. numpy 1.24 supports 3.8+
+    def x(self, var: str|None = None) -> np.ndarray[Any, np.dtype[np.float64]]:
+        if var is None:
+            return self._x
+        
+        try:
+            index = self._variables.index(var)
+            return self._x[:, index : index + 1].squeeze()
+        except ValueError:
+            raise NotImplementedError(
+                f"{var} is not a valid variable name!"
+            )
+        
+    def dx(self, var: str|None = None) -> np.ndarray[Any, np.dtype[np.float64]]:
+        if var is None:
+            return self._dx
+        
+        try:
+            index = self._variables.index(var)
+            return self._dx[:, index : index + 1].squeeze()
+        except ValueError:
+            raise NotImplementedError(
+                f"{var} is not a valid variable name!"
+            )
 
+    def aux(self, var: str|None = None) -> np.ndarray[Any, np.dtype[np.float64]]:
+        if var is None:
+            return self._aux
+        
+        try:
+            index = self._aux_variables.index(var)
+            return self._aux[:, index : index + 1].squeeze()
+        except ValueError:
+            raise NotImplementedError(
+                f"{var} is not a valid aux variable name!"
+            )
+        
 class TrajectorySimulator(Simulator):
     _time_steps: np.ndarray[Any, np.dtype[np.float64]] | None
-    _output_time_steps: np.ndarray[Any, np.dtype[np.float64]] | None
-    _output_trajectories: np.ndarray[Any, np.dtype[np.float64]] | None
+    _output_t: np.ndarray[Any, np.dtype[np.float64]] | None
+    _output_x: np.ndarray[Any, np.dtype[np.float64]] | None
+    _output_dx: np.ndarray[Any, np.dtype[np.float64]] | None
     _output_aux: np.ndarray[Any, np.dtype[np.float64]] | None
-    _data: np.ndarray[Any, np.dtype[np.float64]] | None
-    _aux: np.ndarray[Any, np.dtype[np.float64]] | None
+    _x_data: np.ndarray[Any, np.dtype[np.float64]] | None
+    _aux_data: np.ndarray[Any, np.dtype[np.float64]] | None
     _integrator: TrajectorySimulatorBase
 
     def __init__(
@@ -111,12 +158,13 @@ class TrajectorySimulator(Simulator):
             device_ids=device_ids,
         )
 
-        self._data = None
-        self._output_trajectories = None
+        self._x_data = None
         self._time_steps = None
-        self._output_time_steps = None
+        self._output_t = None
+        self._output_x = None
+        self._output_dx = None
         self._output_aux = None
-        self._aux = None
+        self._aux_data = None
 
     def _build_integrator(self) -> None:
         self._integrator = TrajectorySimulatorBase(
@@ -151,57 +199,47 @@ class TrajectorySimulator(Simulator):
 
         # fetch data from device
         self._n_stored = self._integrator.get_n_stored()
-        self._output_time_steps = self._integrator.get_t()
-        self._output_trajectories = self._integrator.get_x()
+        self._output_t = self._integrator.get_t()
+        self._output_x = self._integrator.get_x()
+        self._output_dx = self._integrator.get_dx()
+        self._output_aux = self._integrator.get_aux()
 
+        # Check for None values
+        if self._n_stored is None:
+            raise ValueError("Must run trajectory() before getting trajectory data")
+        elif self._output_t is None:
+            raise ValueError("Must run trajectory() before getting trajectory data")
+        elif self._output_x is None:
+            raise ValueError("Must run trajectory() before getting trajectory data")
+        elif self._output_dx is None:
+            raise ValueError("Must run trajectory() before getting trajectory data")
+        elif self._output_aux is None:
+            raise ValueError("Must run trajectory() before getting trajectory data")
+        
         # time_steps has one column per simulation (to support adaptive steppers)
         shape = (self._ensemble_size, self._max_store)
-        arr = np.array(self._output_time_steps[: np.prod(shape)])
+        arr = np.array(self._output_t[: np.prod(shape)])
         self._time_steps = arr.reshape(shape, order="F").transpose((1, 0))
 
         data_shape = (self._ensemble_size, len(self.variable_names), self._max_store)
-        arr = np.array(self._output_trajectories[: np.prod(data_shape)])
-        self._data = arr.reshape(data_shape, order="F").transpose((2, 1, 0))
+        arr = np.array(self._output_x[: np.prod(data_shape)])
+        self._x_data = arr.reshape(data_shape, order="F").transpose((2, 1, 0))
+        arr = np.array(self._output_dx[: np.prod(data_shape)])
+        self._dx_data = arr.reshape(data_shape, order="F").transpose((2, 1, 0))
 
-        # Check for None values
-        if self._data is None:
-            raise ValueError("Must run trajectory() before getting trajectory data")
-        elif self._time_steps is None:
-            raise ValueError("Must run trajectory() before getting trajectory data")
-        elif self._output_time_steps is None:
-            raise ValueError("Must run trajectory() before getting trajectory data")
-        elif self._output_trajectories is None:
-            raise ValueError("Must run trajectory() before getting trajectory data")
-        elif self._n_stored is None:
-            raise ValueError("Must run trajectory() before getting trajectory data")
+        aux_shape = (self._ensemble_size, len(self.aux_variables), self._max_store)
+        arr = np.array(self._output_aux[: np.prod(aux_shape)])
+        self._aux_data = arr.reshape(aux_shape, order="F").transpose((2, 1, 0))
 
         # list of trajectories, each stored as dict:
         results = list()
         for i in range(self._ensemble_size):
             ni = self._n_stored[i]
             ti = self._time_steps[:ni, i]
-            xi = self._data[:ni, :, i]
-            result = TrajectoryResult({"t": ti, "x": xi})
+            xi = self._x_data[:ni, :, i]
+            dxi = self._dx_data[:ni, :, i]
+            auxi = self._aux_data[:ni, :, i]
+            result = TrajectoryResult(t=ti, x=xi, dx=dxi, aux=auxi, variables=self.variable_names, aux_variables=self.aux_variables)
             results.append(result)
 
-        return results
-
-    def get_aux(self) -> List[np.ndarray[Any, np.dtype[np.float64]]]:
-        """Get the auxiliary data.
-
-        Returns:
-            np.array: The auxiliary data.
-        """
-        _ = self.get_trajectory()
-        self._output_aux = self._integrator.get_aux()
-
-        shape = (self._ensemble_size, len(self.aux_variables), self._max_store)
-        arr = np.array(self._output_aux[: np.prod(shape)])
-        self._aux = arr.reshape(shape, order="F").transpose((2, 1, 0))
-
-        results = list()
-        for i in range(self._ensemble_size):
-            ni = self._n_stored[i]
-            aux_data = self._aux[:ni, :, i]
-            results.append(aux_data)
         return results
