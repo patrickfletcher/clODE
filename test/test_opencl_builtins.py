@@ -156,8 +156,7 @@ def test_opencl_builtins() -> None:
         max_steps=3,
     )
 
-    sim.trajectory()
-    aux_values = sim.get_aux()[0]
+    trajectory = sim.trajectory()
 
     vars_arr = list(variables.values())
     params_arr = list(parameters.values())
@@ -166,7 +165,11 @@ def test_opencl_builtins() -> None:
         dx = [0.0] * len(vars_arr)
         w: List[float] = []
         rhs(t, vars_arr, params_arr, dx, aux_arr, w)
-        for i in range(len(aux)):
+        for i, auxi in enumerate(aux):
+            cl_aux_arr = trajectory.aux[auxi]
             assert np.isclose(
-                aux_values[t_index, i], aux_arr[i], atol=1e-7
-            ), f"Divergence at index {i} at time {t}, expected {aux_arr[i]}, got {aux_values[t_index, i]}"
+                cl_aux_arr[t_index], aux_arr[i], atol=1e-7
+            ), f"Assertion failed for {auxi} at time {t}, expected {aux_arr[i]}, got {cl_aux_arr[t_index]}"
+
+# if __name__ == "__main__":
+#     test_opencl_builtins()

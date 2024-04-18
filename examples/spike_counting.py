@@ -69,8 +69,8 @@ integrator = clode.FeatureSimulator(
 )
 
 # set up the ensemble of systems
-nx = 512
-ny = 512
+nx = 256
+ny = 256
 nPts = nx * ny
 gca = np.linspace(550.0, 1050.0, nx)
 kpmca = np.linspace(0.095, 0.155, ny)
@@ -133,11 +133,10 @@ integrator_traj.transient()
 integrator_traj.set_tspan((0.0, 10000.0))
 trajectories = integrator_traj.trajectory()
 
-var = "v"
 fig, ax = plt.subplots(4, 1, sharex=True, sharey=True)
 for i, trajectory in enumerate(trajectories):
-    ax[i].plot(trajectory.t / 1000.0, trajectory.x("v"))
+    ax[i].plot(trajectory.t / 1000.0, trajectory.x["v"])
 
-ax[1].set_ylabel(var)
-ax[-1].set_xlabel('time (s)')
+ax[1].set_ylabel("v")
+ax[-1].set_xlabel("time (s)")
 plt.show()

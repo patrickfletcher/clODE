@@ -176,11 +176,10 @@ integrator.transient()
 trajectories = integrator.trajectory()
 
 # plot
-varix = 0
 fig, ax = plt.subplots(4, 1, sharex=True, sharey=True)
 
 for i, trajectory in enumerate(trajectories):
-    ax[i].plot(trajectory["t"], trajectory["X"][:, varix])
+    ax[i].plot(trajectory["t"], trajectory.x['x'])
 
 ax[1].set_ylabel('x')
 ax[-1].set_xlabel('time')
@@ -195,12 +194,3 @@ by columns, i.e. if your variables are a, b and c,
 the CPP library expects data in the format [aaaabbbbcccc].
 The Python library expects data in the format
 [[a, b, c], [a, b, c], [a, b, c], ...]
-
-```py run
-import matplotlib.pyplot as plt
-
-plt.plot([1,2,3,4], [1,4,9,16])
-plt.show()
-plt.plot([1, 3, 5, 7], [2, 3, 4, 5])
-plt.show()
-```

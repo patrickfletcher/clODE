@@ -45,7 +45,7 @@ clode.set_log_level(clode.LogLevel.info)
 # TODO: per-observer parameter struct?
 # TODO: support zero parameters? (for sweeps of initial conditions only)
 
-# harmonic oscillator
+# harmonic oscillator. Solution is x=cos(t), y=sin(t) --> the unit circle
 def get_rhs(
     t: float,
     vars: List[float],

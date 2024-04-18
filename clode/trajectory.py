@@ -4,6 +4,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import numpy as np
 # from numpy.typing import NDArray
+from numpy.lib import recfunctions as rfn
 
 from .function_converter import OpenCLRhsEquation
 from .runtime import CLDeviceType, CLVendor, TrajectorySimulatorBase, _clode_root_dir
@@ -20,52 +21,30 @@ class TrajectoryResult:
             variables: list[str], 
             aux_variables: list[str],
             ) -> None:
+        
         self.t = t
-        self._x = x
-        self._dx = dx
-        self._aux = aux
+
+        x_dtype = np.dtype({"names":variables, "formats":[np.float64]*len(variables)})
+        self.x = rfn.unstructured_to_structured(x, dtype=x_dtype)
+        self.dx = rfn.unstructured_to_structured(dx, dtype=x_dtype)
+
+        if len(aux_variables)>0:
+            aux_dtype = np.dtype({"names":aux_variables, "formats":[np.float64]*len(aux_variables)})
+            self.aux = rfn.unstructured_to_structured(aux, dtype=aux_dtype)
+
         self._variables = variables
         self._aux_variables = aux_variables
 
     def __repr__(self) -> str:
         return f"TrajectoryResult(length:{len(self.t)}, variables:{self._variables}, aux variables:{self._aux_variables})"
-
-    # instead of the following, could simply use numpy structured arrays? similarly in features. numpy 1.24 supports 3.8+
-    def x(self, var: str|None = None) -> np.ndarray[Any, np.dtype[np.float64]]:
-        if var is None:
-            return self._x
-        
-        try:
-            index = self._variables.index(var)
-            return self._x[:, index : index + 1].squeeze()
-        except ValueError:
-            raise NotImplementedError(
-                f"{var} is not a valid variable name!"
-            )
-        
-    def dx(self, var: str|None = None) -> np.ndarray[Any, np.dtype[np.float64]]:
-        if var is None:
-            return self._dx
-        
-        try:
-            index = self._variables.index(var)
-            return self._dx[:, index : index + 1].squeeze()
-        except ValueError:
-            raise NotImplementedError(
-                f"{var} is not a valid variable name!"
-            )
-
-    def aux(self, var: str|None = None) -> np.ndarray[Any, np.dtype[np.float64]]:
-        if var is None:
-            return self._aux
-        
-        try:
-            index = self._aux_variables.index(var)
-            return self._aux[:, index : index + 1].squeeze()
-        except ValueError:
-            raise NotImplementedError(
-                f"{var} is not a valid aux variable name!"
-            )
+    
+    def to_ndarray(self, slot:str, **kwargs):
+        if slot=="x":
+            return rfn.structured_to_unstructured(self.x, **kwargs)
+        elif slot=="dx":
+            return rfn.structured_to_unstructured(self.dx, **kwargs)
+        elif slot=="aux":
+            return rfn.structured_to_unstructured(self.aux, **kwargs)
         
 class TrajectorySimulator(Simulator):
     _time_steps: np.ndarray[Any, np.dtype[np.float64]] | None
@@ -194,7 +173,7 @@ class TrajectorySimulator(Simulator):
         """Get the trajectory data.
 
         Returns:
-            np.array: The trajectory data.
+            TrajectoryResult
         """
 
         # fetch data from device
@@ -242,4 +221,4 @@ class TrajectorySimulator(Simulator):
             result = TrajectoryResult(t=ti, x=xi, dx=dxi, aux=auxi, variables=self.variable_names, aux_variables=self.aux_variables)
             results.append(result)
 
-        return results
+        return results[0] if self._ensemble_size==1 else results

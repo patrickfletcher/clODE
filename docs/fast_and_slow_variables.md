@@ -47,9 +47,9 @@ simulator.set_ensemble(parameters=ensemble_parameters)
 trajectories = simulator.trajectory()
 
 plt.figure(figsize=(8, 6))
-for index in range(len(trajectories)):
+for index, trajectory in enumerate(trajectories):
     label = f"I={ensemble_parameters['current'][index]:.1f}"
-    plt.plot(trajectories[index].x[:, 0], trajectories[index].x[:, 1], label=label)
+    plt.plot(trajectory.x["V"], trajectory.x["w"], label=label)
 plt.xlabel("V")
 plt.ylabel("w")
 plt.legend()
@@ -60,7 +60,7 @@ plt.show()
 plt.figure(figsize=(8, 6))
 for index in range(0, len(trajectories), 2):
     label = f"I={ensemble_parameters['current'][index]}"
-    plt.plot(trajectories[index].t, trajectories[index].x[:, 0], label=label)
+    plt.plot(trajectories[index].t, trajectories[index].x["V"], label=label)
 plt.xlabel("t")
 plt.ylabel("V")
 plt.legend()

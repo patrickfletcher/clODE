@@ -60,7 +60,7 @@ __kernel void features(
     int stepflag = 0;
 	bool eventOccurred;
 	bool terminalEvent;
-	while (ti < tspan[1] && step < sp->max_steps)
+	while (ti <= tspan[1] && step < sp->max_steps)
 	{
 		++step;
         stepflag = stepper(&ti, xi, dxi, p, sp, &dt, tspan, auxi, wi, &rd);

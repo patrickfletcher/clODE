@@ -53,7 +53,7 @@ __kernel void transient(
 	//time-stepping loop
     unsigned int step = 0;
     int stepflag = 0;
-    while (ti < tspan[1] && step < sp->max_steps)
+    while (ti <= tspan[1] && step < sp->max_steps)
     {
 		++step;
         stepflag = stepper(&ti, xi, dxi, p, sp, &dt, tspan, auxi, wi, &rd);

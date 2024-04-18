@@ -135,12 +135,10 @@ trajectory_integrator = clode.TrajectorySimulator(
 trajectory_integrator.transient()
 trajectory = trajectory_integrator.trajectory()
 
-print(trajectory)
-
 var = "v"
-t = trajectory[0].t
-v = trajectory[0].x(var)
-dvdt = trajectory[0].dx(var)
+t = trajectory.t
+v = trajectory.x[var]
+dvdt = trajectory.dx[var]
 
 plt.plot(t, v)
 # Plot events
@@ -177,14 +175,3 @@ plt.axvline(x=v[first_inactive_idx], color="blue", linestyle="--")
 plt.axhline(y=dvdt[first_inactive_idx], color="green", linestyle="--")
 
 plt.show()
-
-# from functools import reduce
-# start = 221
-# end = 352
-# zz = lambda: zip(trajectory[0].x[start:end, 0], trajectory[0].t[start:end])
-# t0 = trajectory[0].t[start]
-# mvn_avg = reduce(lambda x, y: (x[0] + (y[0] - x[0]) / (y[1] - t0), y[1]), zz())
-# mvn_avg2 = reduce(lambda x, y: (x[0] + (y[0] - x[0]) * (y[1] - x[1]) / (y[1] - t0), y[1]), zz())
-
-
-# pass
