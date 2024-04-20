@@ -14,6 +14,8 @@ struct ObserverData_basic
     realtype xTrajectoryMean;
     realtype dxTrajectoryMax;
     realtype dxTrajectoryMin;
+    realtype t_last;
+    realtype t_start;
     unsigned int stepcount;
 };
 
@@ -42,6 +44,8 @@ inline void initializeObserverData(realtype *ti, realtype xi[], realtype dxi[], 
     od->xTrajectoryMean = RCONST(0.0);
     od->dxTrajectoryMax = -BIG_REAL;
     od->dxTrajectoryMin = BIG_REAL;
+    od->t_last = *ti;
+    od->t_start = *ti;
     od->stepcount = 0;
 }
 //nothing to do - One pass detector
@@ -70,9 +74,12 @@ inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dxi[], re
 inline void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
 {
     ++od->stepcount;
+    realtype dt = *ti - od->t_last;
+    od->t_last = *ti;
+    realtype elapsedTime = *ti - od->t_start;
     od->xTrajectoryMax = fmax(xi[op->fVarIx], od->xTrajectoryMax);
     od->xTrajectoryMin = fmin(xi[op->fVarIx], od->xTrajectoryMin);
-    runningMean(&od->xTrajectoryMean, xi[op->fVarIx], od->stepcount);
+    od->xTrajectoryMean = runningMeanTime(od->xTrajectoryMean, xi[op->fVarIx], dt, elapsedTime);
     od->dxTrajectoryMax = fmax(dxi[op->fVarIx], od->dxTrajectoryMax);
     od->dxTrajectoryMin = fmin(dxi[op->fVarIx], od->dxTrajectoryMin);
 }
@@ -92,7 +99,8 @@ inline void finalizeFeatures(realtype *ti, realtype xi[], realtype dxi[], realty
 //Perform and post-integration cleanup of observer data to ensure it is ready for continuation if needed
 inline void finalizeObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op, __constant realtype *tspan)
 {
-    //nothing to do
+    realtype T = *ti - tspan[0];
+    od->t_start -= T;
 }
 
 #endif // USE_OBSERVER_BASIC
