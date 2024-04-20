@@ -81,7 +81,7 @@ parameters = {
 
 auxvars = ['ica']
 
-tend=4500
+tend=4000
 features_integrator = clode.FeatureSimulator(
     rhs_equation=lactotroph,
     supplementary_equations=[x_inf, s_inf],
@@ -108,12 +108,8 @@ features_integrator = clode.FeatureSimulator(
 features_integrator.transient()
 output = features_integrator.features()
 
-# events = output.get_timestamps("event")
 up_times = output.get_timestamps("up")
 down_times = output.get_timestamps("down")
-period_count = int(output.get_var_count("period"))
-step_count = int(output.get_var_count("step"))
-active_dip = output.get_var_mean("activeDip")
 
 print(up_times)
 
@@ -127,9 +123,9 @@ trajectory_integrator = clode.TrajectorySimulator(
     stepper=clode.Stepper.dormand_prince,
     t_span=(0.0, tend),
     dt=0.1,
-    dtmax=1.0,
+    dtmax=0.5,
     abstol=1.0e-6,
-    reltol=1.0e-6
+    reltol=1.0e-4
 )
 
 trajectory_integrator.transient()

@@ -27,7 +27,7 @@ class Observer(Enum):
 
 
 # may want other functionality here.
-# - full feature matrix, with names (pandas?)
+# - full feature matrix, with names [numpy sturctured arrays?]
 # - separate diagnostics (period count, step count, min dt, max dt , ...), summarize on print along with observer info/pars?
 class ObserverOutput:
     def __init__(
@@ -40,18 +40,28 @@ class ObserverOutput:
         feature_names: List[str],
     ) -> None:
         self._op = observer_params
-        self.F = feature_array
         self._num_features = num_features
         self._vars = variables
         self._observer_type = observer_type
         self._feature_names = feature_names
 
+        # support indexing F via feature name directly
         F_dtype = np.dtype({"names":feature_names, "formats":[np.float64]*len(feature_names)})
         self.F = rfn.unstructured_to_structured(feature_array, dtype=F_dtype)
+
+    def __repr__(self) -> str:
+        ensemble_size = len(self.F[self._feature_names[0]])
+        num_features = len(self._feature_names)
+        feature_names = self._feature_names
+        return f"ObserverOutput( ensemble size: {ensemble_size}, number of features: {num_features}, feature_names: {feature_names})"
+
+    def to_ndarray(self, **kwargs):
+        return rfn.structured_to_unstructured(self.x, **kwargs)
 
     def get_feature_names(self) -> List[str]:
         return self._feature_names
 
+    # TODO: if we know the shape of the original ensemble (e.g., 1D/2D/3D) could return in that shape
     def _get_var(self, var: str, op: str) -> np.ndarray[Any, np.dtype[np.float64]]:
         try:
             return self.F[" ".join([op, var])]
@@ -86,9 +96,7 @@ class ObserverOutput:
             )
         data = []
         for key_idx in range(0, self._op.max_event_timestamps):
-            key = f"{var} timestamp {key_idx}"
-            index = self._feature_names.index(key)
-            datapoint = self._data[:, index]
+            datapoint = self.F[f"{var} timestamp {key_idx}"]
             if np.all(datapoint == 0):
                 break
             data.append(datapoint)
