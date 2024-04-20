@@ -7,7 +7,7 @@ static ObserverInfo getObserverInfo_nhood2(const ProblemInfo pi, const unsigned 
 {
     ObserverInfo oi;
     oi.define="USE_OBSERVER_NEIGHBORHOOD_2";
-    size_t n_real=(12*pi.nVar + 16 + 3*pi.nAux); //hard coded, because C++ code can't see the N_VAR, N_AUX etc...
+    size_t n_real=(3*pi.nVar*2 + pi.nVar*6 + pi.nAux*3 + 3*4 + 5 ); //hard coded, because C++ code can't see the N_VAR, N_AUX etc...
     size_t n_int=5;
     oi.observerDataSizeFloat=n_real*sizeof(cl_float) + n_int*sizeof(cl_uint);
     oi.observerDataSizeDouble=n_real*sizeof(cl_double) + n_int*sizeof(cl_uint); 
@@ -47,7 +47,6 @@ static ObserverInfo getObserverInfo_nhood2(const ProblemInfo pi, const unsigned 
 
 typedef struct ObserverData_nhood2
 {
-
     realtype tbuffer[3];
     realtype xbuffer[3 * N_VAR];
     realtype dxbuffer[3 * N_VAR];
@@ -73,6 +72,7 @@ typedef struct ObserverData_nhood2
     // realtype xMin[3]; //max/min/mean
     realtype stepDt[3]; //max/min/mean
 
+    realtype t_start;
     realtype tLastEvent;
     realtype xThreshold;
     realtype thisNormXdiff;
@@ -119,13 +119,6 @@ inline void initializeObserverData(realtype *ti, realtype xi[], realtype dxi[], 
         od->auxTrajectoryMin[j] = BIG_REAL;
         od->auxTrajectoryMean[j] = RCONST(0.0); //not needed - set first time anyway.
     }
-    // od->tLastEvent=RCONST(0.0);
-
-    // od->xLastMax = -BIG_REAL;
-    // od->tLastMax = RCONST(0.0);
-
-    // od->xLastMin = BIG_REAL;
-    // od->tLastMin = RCONST(0.0);
 
     od->nMaxima[0] = -BIG_REAL;
     od->nMaxima[1] = BIG_REAL;
@@ -154,6 +147,16 @@ inline void initializeObserverData(realtype *ti, realtype xi[], realtype dxi[], 
     od->stepDt[0] = -BIG_REAL;
     od->stepDt[1] = BIG_REAL;
     od->stepDt[2] = RCONST(0.0);
+
+    od->t_start = *ti;
+    od->tLastEvent=RCONST(0.0);
+    // od->xLastMax = -BIG_REAL;
+    // od->tLastMax = RCONST(0.0);
+    // od->xLastMin = BIG_REAL;
+    // od->tLastMin = RCONST(0.0);
+    od->xThreshold = RCONST(0.0);
+    od->thisNormXdiff = RCONST(0.0);
+    od->lastNormXdiff = RCONST(0.0);
 
     od->thisNMaxima = 0;
     od->eventcount = 0;
@@ -245,11 +248,12 @@ inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dxi[], re
 inline void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
 {    
     ++od->stepcount;
-    
+
     // advance solution buffer
     od->tbuffer[0] = od->tbuffer[1];
     od->tbuffer[1] = od->tbuffer[2];
     od->tbuffer[2] = *ti;
+
     for (int j = 0; j < N_VAR; ++j)
     {
         od->xbuffer[j * 3 + 0] = od->xbuffer[j * 3 + 1];
@@ -260,18 +264,20 @@ inline void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], real
         od->dxbuffer[j * 3 + 2] = dxi[j];
     }
 
-    //record actual dt
-    realtype thisDt = od->tbuffer[2]-od->tbuffer[1];
-    od->stepDt[0] = fmax(thisDt, od->stepDt[0]);
-    od->stepDt[1] = fmin(thisDt, od->stepDt[1]);
-    runningMean(&od->stepDt[2], thisDt, od->stepcount);
+    // dt is available in the calling ode-driver. 
+    realtype dt = od->tbuffer[2]-od->tbuffer[1];
+    realtype elapsedTime = *ti - od->t_start;
 
-    //global extent of all vars, var slopes, and aux vars 
+    od->stepDt[0] = fmax(dt, od->stepDt[0]);
+    od->stepDt[1] = fmin(dt, od->stepDt[1]);
+    runningMean(&od->stepDt[2], dt, od->stepcount);
+
+    //global extent of all vars, var slopes, and aux vars
     for (int j = 0; j < N_VAR; ++j)
     {
         od->xTrajectoryMax[j] = fmax(xi[j], od->xTrajectoryMax[j]);
         od->xTrajectoryMin[j] = fmin(xi[j], od->xTrajectoryMin[j]);
-        runningMean(&od->xTrajectoryMean[j], xi[j], od->stepcount);
+        od->xTrajectoryMean[j] = runningMeanTime(od->xTrajectoryMean[j], xi[j], dt, elapsedTime);
         od->dxTrajectoryMax[j] = fmax(dxi[j], od->dxTrajectoryMax[j]);
         od->dxTrajectoryMin[j] = fmin(dxi[j], od->dxTrajectoryMin[j]);
     }
@@ -279,7 +285,7 @@ inline void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], real
     {
         od->auxTrajectoryMax[j] = fmax(auxi[j], od->auxTrajectoryMax[j]);
         od->auxTrajectoryMin[j] = fmin(auxi[j], od->auxTrajectoryMin[j]);
-        runningMean(&od->auxTrajectoryMean[j], auxi[j], od->stepcount);
+        od->auxTrajectoryMean[j] = runningMeanTime(od->auxTrajectoryMean[j], xi[j], dt, elapsedTime);
     }
 
     if (od->stepcount > 1)
@@ -345,6 +351,7 @@ inline void finalizeObserverData(realtype *ti, realtype xi[], realtype dxi[], re
 {
     //shift all time-based observer members left by [tf-t0]
     realtype T = *ti - tspan[0];
+    od->t_start -= T;
     od->tLastEvent -= T;
     // od->tLastMax-=T;
     // od->tLastMin-=T;

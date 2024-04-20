@@ -1,17 +1,23 @@
 //collection of helper functions useful in feature detectors/RHS function computations.
 
+// TODO: extended precision helpers (TwoSum etc) - in realtype.cl?
+// TODO: attributes(e.g., align, inline, ...), #pragma unroll, etc?
+// TOOD: compiler flags (fma, mad, ...?)
+// - e.g. DEFINE to swap in alternatives? 
+
+// TODO: expand interpolation routines [use slope info to provide better accuracy]
+// - DEFINE to swap in method alternatives [none, linear, quad, etc]
+
+
 #ifndef CL_UTILITIES_H_
 #define CL_UTILITIES_H_
 
 #include "realtype.cl"
 
 //computation done by preprocessor:
-#define MIN(a, b) ((a) < (b) ? (a) : (b)) //TODO: use builtin fmin/fmax (just make sure to not mix arg type)
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
-#define heav(x) ((x) > RCONST(0.0) ? RCONST(1.0) : RCONST(0.0)) //TODO: capitalize? Or use OpenCL step (just make sure to not mix arg type)
-
-//TODO 2sum for accurate summation (e.g. t+=dt...)?
-// https://en.wikipedia.org/wiki/Kahan_summation_algorithm
+#define heav(x) ((x) > RCONST(0.0) ? RCONST(1.0) : RCONST(0.0)) 
 
 //1-norm
 inline realtype norm_1(realtype x[], int N)
@@ -73,6 +79,25 @@ inline void minOfArray(realtype inArray[], int N, realtype *minVal, int *index)
 	}
 }
 
+
+
+/* 
+Online algorithms for feature detection
+Goal: compute features using minimal storage as the solution is numerically approximated
+- running means (should handle non-uniform sampling for adaptive time-stepping)
+-- could implement an online trapezoidal method for running mean?
+- running percentiles - P2 algorithm
+
+other notes
+- may be of interest to use larger solution buffer (>3) along with some notion of "forgetting" old states?
+- check, e.g., online/real-time speech/signal processing literature
+*/
+
+// compensated summation
+
+//TODO 2sum for accurate summation (e.g. t+=dt...)?
+// https://en.wikipedia.org/wiki/Kahan_summation_algorithm
+
 // Neumaier’s algorithm for summation - avoid loss of precision in accumulators
 // - requires adding the correction at the end, once
 // inline void twoSum(realtype *sum, realtype *correction, realtype newValue)
@@ -89,21 +114,11 @@ inline void minOfArray(realtype inArray[], int N, realtype *minVal, int *index)
 // 	*sum = t;
 // }
 
-/* 
-Online algorithms for feature detection
-Goal: compute features using minimal storage as the solution is numerically approximated
-- running means (should handle non-uniform sampling for adaptive time-stepping)
--- could implement an online trapezoidal method for running mean?
-- running percentiles - P2 algorithm
-
-other notes
-- may be of interest to use larger solution buffer (>3) along with some notion of "forgetting" old states?
-- check, e.g., online/real-time speech/signal processing literature
-*/ 
+// TODO: evaluate incremental versions (below) vs running sum (two-sum) then a single division at the end. Need to do so for variance already anyway
 
 //Compute a running mean of a function at possibly non-uniform sample points
 // - mean should be initialized to zero externally (first step: dt=total_delta --> mean=newValue)
-inline realtype runningMeanDt(realtype mean, realtype newValue, realtype dt, realtype total_delta)
+inline realtype runningMeanTime(realtype mean, realtype newValue, realtype dt, realtype total_delta)
 {
 	return mean + (newValue - mean) * dt/total_delta;
 }
@@ -134,6 +149,9 @@ inline void runningMeanVar(realtype *mean, realtype *variance, realtype newValue
 		*variance = *variance + (newValue - tmp) * (newValue - *mean);
 	}
 }
+
+
+// Interpolation routines
 
 //estimate yi at specified ti, using linear interpolation of two values
 inline realtype linearInterp(realtype t0, realtype t1, realtype y0, realtype y1, realtype ti)
@@ -183,8 +201,6 @@ inline void quadraticInterpVertex(realtype t[], realtype y[], realtype *tv, real
 	*yv = b0 + b1 * (*tv - t[0]) + b2 * (*tv - t[0]) * (*tv - t[1]);
 }
 
-//TODO: use slope information!
-// quadratic given slopes, cubic given slopes, ...
 //~ inline realtype cubicInterp(realtype t[], realtype y[], realtype dy[], realtype ti) {
 //~ return yi;
 //~ }

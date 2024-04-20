@@ -72,6 +72,7 @@ typedef struct ObserverData_nhood1
     // realtype xMin[3]; //max/min/mean
     realtype stepDt[3]; //max/min/mean
 
+    realtype t_start;
     realtype tLastEvent;
     realtype thisNormXdiff;
     realtype lastNormXdiff;
@@ -373,6 +374,7 @@ inline void finalizeObserverData(realtype *ti, realtype xi[], realtype dxi[], re
 {
     //shift all time-based observer members left by [tf-t0]
     realtype T = *ti - tspan[0];
+    od->t_start -= T;
     od->tLastEvent -= T;
     // od->tLastMax-=T;
     // od->tLastMin-=T;
