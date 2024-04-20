@@ -12,7 +12,7 @@
 #include "steppers.cl"
 
 __kernel void trajectory(
-    __constant realtype *t_span,         //time vector [t0,tf] - adds (tf-t0) to these at the end
+    __constant realtype *tspan,         //time vector [t0,tf] - adds (tf-t0) to these at the end
     __global realtype *x0,              //initial state 				[nPts*nVar]
     __constant realtype *pars,          //parameter values				[nPts*nPar]
     __constant struct SolverParams *sp, //dtmin/max, tols, etc
@@ -35,7 +35,7 @@ __kernel void trajectory(
     rngData rd;
 
     //get private copy of ODE parameters, initial data, and compute slope at initial state
-    ti = t_span[0];
+    ti = tspan[0];
     dt = d_dt[i];
 
     for (int j = 0; j < N_PAR; ++j)
@@ -64,20 +64,18 @@ __kernel void trajectory(
     t[storeix * nPts + i] = ti;
     for (int j = 0; j < N_VAR; ++j)
         x[storeix * nPts * N_VAR + j * nPts + i] = xi[j];
-
     for (int j = 0; j < N_VAR; ++j)
         dx[storeix * nPts * N_VAR + j * nPts + i] = dxi[j];
-
     for (int j = 0; j < N_AUX; ++j)
         aux[storeix * nPts * N_AUX + j * nPts + i] = auxi[j];
     
 	//time-stepping loop
     unsigned int step = 0;
     int stepflag = 0;
-    while (ti <= t_span[1] && step < sp->max_steps && storeix < sp->max_store)
+    while (ti <= tspan[1] && step < sp->max_steps && storeix < sp->max_store)
     {
 		++step;
-        stepflag = stepper(&ti, xi, dxi, p, sp, &dt, t_span, auxi, wi, &rd);
+        stepflag = stepper(&ti, xi, dxi, p, sp, &dt, tspan, auxi, wi, &rd);
         // if (stepflag!=0)
         //     break;
 
@@ -85,18 +83,13 @@ __kernel void trajectory(
         if (step % sp->nout == 0)
         {
             ++storeix;
-
-            t[storeix * nPts + i] = ti; //adaptive steppers give different timepoints for each trajectory
-
+            t[storeix * nPts + i] = ti;
             for (int j = 0; j < N_VAR; ++j)
                 x[storeix * nPts * N_VAR + j * nPts + i] = xi[j];
-
             for (int j = 0; j < N_VAR; ++j)
                 dx[storeix * nPts * N_VAR + j * nPts + i] = dxi[j];
-
             for (int j = 0; j < N_AUX; ++j)
                 aux[storeix * nPts * N_AUX + j * nPts + i] = auxi[j];
-                
         }
     }
 

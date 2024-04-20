@@ -74,6 +74,12 @@ typedef struct ObserverInfo
 // - composable observers? toggle on only what you want 
 // - how to handle domain-specific use cases? eg. AHP
 
+// TODO: combine observers with same logic but different event functions into one
+// - threshold, nhood (1/2) --> toggle with a define?
+
+// Each observer definition file: declare #define's 
+// - OBSERVER_HAS_EVENTS
+
 ////////////////////////////////////////////////
 // one-pass detectors
 ////////////////////////////////////////////////

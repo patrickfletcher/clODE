@@ -22,6 +22,10 @@ __kernel void odedriver(
     __global int *nStored,
     __global ObserverData *OData,        //Observer data 
     __constant struct ObserverParams *opars,
+    __global realtype *t_event,  // trajectory storage: t, x, dx, aux
+    __global realtype *x_event,
+    __global realtype *dx_event,
+    __global realtype *aux_event,
     __global realtype *F) 
 {
 
@@ -70,10 +74,8 @@ __kernel void odedriver(
         t[storeix * nPts + i] = ti;
         for (int j = 0; j < N_VAR; ++j)
             x[storeix * nPts * N_VAR + j * nPts + i] = xi[j];
-
         for (int j = 0; j < N_VAR; ++j)
             dx[storeix * nPts * N_VAR + j * nPts + i] = dxi[j];
-
         for (int j = 0; j < N_AUX; ++j)
             aux[storeix * nPts * N_AUX + j * nPts + i] = auxi[j];
     }
@@ -87,15 +89,27 @@ __kernel void odedriver(
     {
 		++step;
         stepflag = stepper(&ti, xi, dxi, p, sp, &dt, tspan, auxi, wi, &rd);
-        // if (stepflag!=0)
+        // if (stepflag!=0) //handle numerical problems from time-stepper?
             // break;
 
         if (sp->useObserver){
             eventOccurred = eventFunction(&ti, xi, dxi, auxi, &odata, opars);
             if (eventOccurred)
             {
+                ++eventcount;
+                if (sp->storeEvents)
+                {
+                    ++eventix;
+                    t_event[eventix * nPts + i] = ti;
+                    for (int j = 0; j < N_VAR; ++j)
+                        x_event[eventix * nPts * N_VAR + j * nPts + i] = xi[j];
+                    for (int j = 0; j < N_VAR; ++j)
+                        dx_event[eventix * nPts * N_VAR + j * nPts + i] = dxi[j];
+                    for (int j = 0; j < N_AUX; ++j)
+                        aux_event[eventix * nPts * N_AUX + j * nPts + i] = auxi[j];
+                }
                 terminalEvent = computeEventFeatures(&ti, xi, dxi, auxi, &odata, opars);
-                if (terminalEvent)
+                if (terminalEvent | eventcount == op->maxEventCount)
                     break;
             }
 
@@ -106,15 +120,11 @@ __kernel void odedriver(
         if (sp->storeTrajectory && step % sp->nout == 0)
         {
             ++storeix;
-
             t[storeix * nPts + i] = ti; //adaptive steppers give different timepoints for each trajectory
-
             for (int j = 0; j < N_VAR; ++j)
                 x[storeix * nPts * N_VAR + j * nPts + i] = xi[j];
-
             for (int j = 0; j < N_VAR; ++j)
                 dx[storeix * nPts * N_VAR + j * nPts + i] = dxi[j];
-
             for (int j = 0; j < N_AUX; ++j)
                 aux[storeix * nPts * N_AUX + j * nPts + i] = auxi[j];
         }
