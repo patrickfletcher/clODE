@@ -126,17 +126,17 @@ typedef struct ObserverInfo
 static void getObserverDefineMap(const ProblemInfo pi,
 								 const unsigned int fVarIx,
 								 const unsigned int eVarIx,
-								 const unsigned int nPhase,
+								 const unsigned int nStoredEvents,
 								 std::map<std::string, ObserverInfo> &observerDefineMap,
 								 std::vector<std::string> &availableObserverNames)
 {
     std::map<std::string, ObserverInfo> newMap;
-    newMap["basic"]=getObserverInfo_basic(pi, fVarIx, eVarIx, nPhase);
-    newMap["basicall"]=getObserverInfo_basicAll(pi, fVarIx, eVarIx, nPhase);
-    newMap["localmax"]=getObserverInfo_localmax(pi, fVarIx, eVarIx, nPhase);
-    newMap["nhood1"]=getObserverInfo_nhood1(pi, fVarIx, eVarIx, nPhase);
-    newMap["nhood2"]=getObserverInfo_nhood2(pi, fVarIx, eVarIx, nPhase);
-    newMap["thresh2"]=getObserverInfo_thresh2(pi, fVarIx, eVarIx, nPhase);
+    newMap["basic"]=getObserverInfo_basic(pi, fVarIx, eVarIx, nStoredEvents);
+    newMap["basicall"]=getObserverInfo_basicAll(pi, fVarIx, eVarIx, nStoredEvents);
+    newMap["localmax"]=getObserverInfo_localmax(pi, fVarIx, eVarIx, nStoredEvents);
+    newMap["nhood1"]=getObserverInfo_nhood1(pi, fVarIx, eVarIx, nStoredEvents);
+    newMap["nhood2"]=getObserverInfo_nhood2(pi, fVarIx, eVarIx, nStoredEvents);
+    newMap["thresh2"]=getObserverInfo_thresh2(pi, fVarIx, eVarIx, nStoredEvents);
 
 	//export vector of names for access in C++
 	std::vector<std::string> newNames;

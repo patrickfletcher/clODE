@@ -15,7 +15,7 @@ struct ObserverData_template
 }
 
 #ifdef __cplusplus
-ObserverInfo getFeatureInfo_template(const ProblemInfo pi, const unsigned int fVarIx, const unsigned int eVarIx, const unsigned int nPhase)
+ObserverInfo getFeatureInfo_template(const ProblemInfo pi, const unsigned int fVarIx, const unsigned int eVarIx, const unsigned int nStoredEvents)
 {
     ObserverInfo oi;
     oi.define="USE_OBSERVER_TEMPLATE";
