@@ -41,10 +41,9 @@ class Simulator:
     or it can be used as a base class for other simulators."""
 
     _integrator: SimulatorBase
+    _runtime: OpenCLResource
     _pi: ProblemInfo
     _sp: SolverParams
-    _runtime: OpenCLResource
-    t_span: Tuple[float, float]
     _variables: Optional[Dict[str, np.ndarray]] = None
     _variable_defaults: Dict[str, float]
     _parameters: Optional[Dict[str, np.ndarray]] = None
@@ -52,6 +51,7 @@ class Simulator:
     _ensemble_size: int
     _single_precision: bool
     _stepper: Stepper
+    _t_span: Tuple[float, float]
 
     @property
     def variable_names(self) -> List[str]:
@@ -205,7 +205,7 @@ class Simulator:
         t_span: Tuple[float, float] = (
             0.0,
             1000.0,
-        ),  # tspan <- realistically usually would set this as arg during integrate
+        ),  # t_span <- realistically usually would set this as arg during integrate
         stepper: Stepper = Stepper.rk4,  # stepper <- goes with solver_params?
         single_precision: bool = True,  # precision
         dt: float = 0.1,  # solver_params
@@ -247,7 +247,7 @@ class Simulator:
         )
         self._sp = SolverParams(dt, dtmax, abstol, reltol, max_steps, max_store, nout)
 
-        self.tspan = t_span
+        self._t_span = t_span
 
         # _runtime as an instance variable
         self._runtime = initialize_runtime(
@@ -409,7 +409,7 @@ class Simulator:
         # FeaturesSimulator overrides this
         vars_array, pars_array = self._pack_data()
         self._integrator.initialize(
-            self.tspan,
+            self._t_span,
             vars_array,
             pars_array,
             self._sp,
@@ -443,17 +443,17 @@ class Simulator:
         else:
             self._integrator.seed_rng()
 
-    def set_tspan(self, tspan: Tuple[float, float]) -> None:
+    def set_tspan(self, t_span: Tuple[float, float]) -> None:
         """Set the time span to simulate over.
 
         Args:
-            tspan (Tuple[float, float]): The time span to simulate over.
+            t_span (Tuple[float, float]): The time span to simulate over.
 
         Returns:
             None
         """
-        self.tspan = tspan
-        self._integrator.set_tspan(tspan)
+        self._t_span = t_span
+        self._integrator.set_tspan(t_span)
 
     def set_problem_data(self, x0: np.array, parameters: np.array) -> None:
         """Set the problem data.

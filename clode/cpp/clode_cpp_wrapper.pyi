@@ -299,7 +299,7 @@ class SimulatorBase:
         ...
     def get_xf(self) -> list[float]:
         ...
-    def initialize(self, tspan: list[float], x0: list[float], pars: list[float], solver_params: SolverParams) -> None:
+    def initialize(self, t_span: list[float], x0: list[float], pars: list[float], solver_params: SolverParams) -> None:
         """
         Initialize CLODE
         """

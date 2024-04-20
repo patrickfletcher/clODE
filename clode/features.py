@@ -4,6 +4,7 @@ from enum import Enum
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import numpy as np
+from numpy.lib import recfunctions as rfn
 
 from .function_converter import OpenCLRhsEquation
 from .runtime import (
@@ -32,32 +33,28 @@ class ObserverOutput:
     def __init__(
         self,
         observer_params: ObserverParams,
-        results_array: np.ndarray[Any, np.dtype[np.float64]],
-        num_result_features: int,
+        feature_array: np.ndarray[Any, np.dtype[np.float64]],
+        num_features: int,
         variables: List[str],
         observer_type: Observer,
         feature_names: List[str],
     ) -> None:
         self._op = observer_params
-        self._data = results_array
-        self._num_result_features = num_result_features
+        self.F = feature_array
+        self._num_features = num_features
         self._vars = variables
         self._observer_type = observer_type
         self._feature_names = feature_names
 
-        shape = (
-            self._num_result_features,
-            len(results_array) // self._num_result_features,
-        )
-        self._data = results_array.reshape(shape).transpose()
+        F_dtype = np.dtype({"names":feature_names, "formats":[np.float64]*len(feature_names)})
+        self.F = rfn.unstructured_to_structured(feature_array, dtype=F_dtype)
 
     def get_feature_names(self) -> List[str]:
         return self._feature_names
 
     def _get_var(self, var: str, op: str) -> np.ndarray[Any, np.dtype[np.float64]]:
         try:
-            index = self._feature_names.index(f"{op} {var}")
-            return self._data[:, index : index + 1].squeeze()
+            return self.F[" ".join([op, var])]
         except ValueError:
             raise NotImplementedError(
                 f"{self._observer_type} does not track {op} {var}!"
@@ -141,7 +138,7 @@ class FeatureSimulator(Simulator):
     observer_eps_dx : float, optional
         Threshold for detecting an event when the feature variable crosses the
         lower threshold, by default 1e-7
-    tspan : tuple[float, float], optional
+    t_span : tuple[float, float], optional
         Time span for the simulation, by default (0.0, 1000.0)
     stepper : Stepper, optional
         Stepper to use for the simulation, by default Stepper.euler
@@ -227,7 +224,8 @@ class FeatureSimulator(Simulator):
     >>> model.simulate()
     >>> model.plot()
     >>> plt.show()"""
-
+    
+    _output_F: np.ndarray[Any, np.dtype[np.float64]] | None
     _integrator: FeatureSimulatorBase
 
     def __init__(
@@ -332,7 +330,7 @@ class FeatureSimulator(Simulator):
     def _init_integrator(self) -> None:
         vars_array, pars_array = self._pack_data()
         self._integrator.initialize(
-            self.tspan,
+            self._t_span,
             vars_array,
             pars_array,
             self._sp,
@@ -364,17 +362,27 @@ class FeatureSimulator(Simulator):
         return self.get_observer_results()
 
     def get_observer_results(self) -> ObserverOutput:
-        """Get the feature data.
+        """Get the features measured by the observer
 
         Returns:
-            np.array: The feature data.
+            ObserverOutput: features summarizing trajectories
         """
-        self._result_integrator = self._integrator.get_f()
-        self._num_result_features = self._integrator.get_n_features()
+        self._output_F = self._integrator.get_f()
+        self._num_features = self._integrator.get_n_features()
+        
+        if self._num_features is None:
+            raise ValueError("Must run trajectory() before getting trajectory data")
+        elif self._output_F is None:
+            raise ValueError("Must run trajectory() before getting trajectory data")
+        
+        shape = (self._ensemble_size, self._num_features)
+        arr = np.array(self._output_F[: np.prod(shape)])
+        self._output_F = arr.reshape(shape, order="F")
+
         return ObserverOutput(
             self._op,
-            np.array(self._result_integrator),
-            self._num_result_features,
+            self._output_F,
+            self._num_features,
             self.variable_names,
             self._observer_type,
             self._integrator.get_feature_names(),

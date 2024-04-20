@@ -11,7 +11,7 @@ from .runtime import CLDeviceType, CLVendor, TrajectorySimulatorBase, _clode_roo
 from .solver import Simulator, Stepper
 
 
-class TrajectoryResult:
+class TrajectoryOutput:
     def __init__(
             self, 
             t: np.ndarray[Any, np.dtype[np.float64]], 
@@ -36,8 +36,11 @@ class TrajectoryResult:
         self._aux_variables = aux_variables
 
     def __repr__(self) -> str:
-        return f"TrajectoryResult(length:{len(self.t)}, variables:{self._variables}, aux variables:{self._aux_variables})"
+        return f"TrajectoryOutput( length: {len(self.t)}, variables: {self._variables}, aux variables: {self._aux_variables} )"
     
+    # helper to convert back to unstructured ndarray
+    # --> make this a class property decorator?
+    # alternatively: self.x.view(np.float64).reshape(-1,len(variables))?
     def to_ndarray(self, slot:str, **kwargs):
         if slot=="x":
             return rfn.structured_to_unstructured(self.x, **kwargs)
@@ -90,7 +93,7 @@ class TrajectorySimulator(Simulator):
             parameter_names (List[str]): The names of the parameters to be simulated.
             aux (Optional[List[str]], optional): The names of the auxiliary variables to be simulated. Defaults to None.
             num_noise (int, optional): The number of noise variables to be simulated. Defaults to 0.
-            tspan (Tuple[float, float], optional): The time span to simulate over. Defaults to (0.0, 1000.0).
+            t_span (Tuple[float, float], optional): The time span to simulate over. Defaults to (0.0, 1000.0).
             stepper (Stepper, optional): The stepper to use. Defaults to Stepper.rk4.
             single_precision (bool, optional): Whether to use single precision. Defaults to True.
             dt (float, optional): The initial time step. Defaults to 0.1.
@@ -154,11 +157,11 @@ class TrajectorySimulator(Simulator):
             _clode_root_dir,
         )
 
-    def trajectory(self, update_x0: bool = True) -> List[TrajectoryResult]:
+    def trajectory(self, update_x0: bool = True) -> List[TrajectoryOutput]:
         """Run a trajectory simulation.
 
         Returns:
-            List[TrajectoryResult]
+            List[TrajectoryOutput]
         """
         if not self.is_initialized:
             raise RuntimeError("Simulator is not initialized")
@@ -169,11 +172,11 @@ class TrajectorySimulator(Simulator):
 
         return self.get_trajectory()
 
-    def get_trajectory(self) -> List[TrajectoryResult]:
+    def get_trajectory(self) -> List[TrajectoryOutput]:
         """Get the trajectory data.
 
         Returns:
-            TrajectoryResult
+            TrajectoryOutput
         """
 
         # fetch data from device
@@ -196,9 +199,9 @@ class TrajectorySimulator(Simulator):
             raise ValueError("Must run trajectory() before getting trajectory data")
         
         # time_steps has one column per simulation (to support adaptive steppers)
-        shape = (self._ensemble_size, self._max_store)
-        arr = np.array(self._output_t[: np.prod(shape)])
-        self._time_steps = arr.reshape(shape, order="F").transpose((1, 0))
+        t_shape = (self._ensemble_size, self._max_store)
+        arr = np.array(self._output_t[: np.prod(t_shape)])
+        self._time_steps = arr.reshape(t_shape, order="F").transpose() 
 
         data_shape = (self._ensemble_size, len(self.variable_names), self._max_store)
         arr = np.array(self._output_x[: np.prod(data_shape)])
@@ -218,7 +221,7 @@ class TrajectorySimulator(Simulator):
             xi = self._x_data[:ni, :, i]
             dxi = self._dx_data[:ni, :, i]
             auxi = self._aux_data[:ni, :, i]
-            result = TrajectoryResult(t=ti, x=xi, dx=dxi, aux=auxi, variables=self.variable_names, aux_variables=self.aux_variables)
+            result = TrajectoryOutput(t=ti, x=xi, dx=dxi, aux=auxi, variables=self.variable_names, aux_variables=self.aux_variables)
             results.append(result)
 
         return results[0] if self._ensemble_size==1 else results

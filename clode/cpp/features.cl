@@ -8,7 +8,7 @@
 #include "steppers.cl"
 
 __kernel void features(
-	__constant realtype *tspan,         //time vector [t0,tf] - adds (tf-t0) to these at the end
+	__constant realtype *t_span,         //time vector [t0,tf] - adds (tf-t0) to these at the end
 	__global realtype *x0,              //initial state 				[nPts*nVar]
 	__constant realtype *pars,          //parameter values				[nPts*nPar]
 	__constant struct SolverParams *sp, //dtmin/max, tols, etc
@@ -29,7 +29,7 @@ __kernel void features(
 	rngData rd;
 
 	//get private copy of ODE parameters, initial data, and compute slope at initial state
-	ti = tspan[0];
+	ti = t_span[0];
     dt = d_dt[i];
 
 	for (int j = 0; j < N_PAR; ++j)
@@ -60,10 +60,10 @@ __kernel void features(
     int stepflag = 0;
 	bool eventOccurred;
 	bool terminalEvent;
-	while (ti <= tspan[1] && step < sp->max_steps)
+	while (ti <= t_span[1] && step < sp->max_steps)
 	{
 		++step;
-        stepflag = stepper(&ti, xi, dxi, p, sp, &dt, tspan, auxi, wi, &rd);
+        stepflag = stepper(&ti, xi, dxi, p, sp, &dt, t_span, auxi, wi, &rd);
         // if (stepflag!=0)
             // break;
 
@@ -72,6 +72,8 @@ __kernel void features(
 		eventOccurred = eventFunction(&ti, xi, dxi, auxi, &odata, opars);
 		if (eventOccurred)
 		{
+			// record current state into dedicated event buffers (same pattern as trajectory)
+
 			terminalEvent = computeEventFeatures(&ti, xi, dxi, auxi, &odata, opars);
 			if (terminalEvent)
 				break;
@@ -82,7 +84,7 @@ __kernel void features(
 	finalizeFeatures(&ti, xi, dxi, auxi, &odata, opars, F, i, nPts);
 
 	//finalize observerdata for possible continuation
-	finalizeObserverData(&ti, xi, dxi, auxi, &odata, opars, tspan);
+	finalizeObserverData(&ti, xi, dxi, auxi, &odata, opars, t_span);
 
 	//store the observerData in global memory
 	OData[i] = odata;

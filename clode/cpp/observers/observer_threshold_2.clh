@@ -306,13 +306,13 @@ inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dxi[], re
         runningMean(&od->activeDip[2], thisActiveDip, nPeriods);
     }
 
-    od->tLastEvent = tThisEvent;
-    od->thisNMaxima = 0;
-
 	if (od->eventcount < N_STORE_EVENTS)
     	od->tUpTransition[od->eventcount-1] = tThisEvent;
 
-    if (od->eventcount >= op->maxEventCount)
+    od->tLastEvent = tThisEvent;
+    od->thisNMaxima = 0;
+
+    if (od->eventcount == op->maxEventCount)
         return true;
 
     return false;
@@ -480,10 +480,10 @@ inline void finalizeFeatures(realtype *ti, realtype xi[], realtype dxi[], realty
 }
 
 //Perform and post-integration cleanup of observer data to ensure it is ready for continuation if needed
-inline void finalizeObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op, __constant realtype *tspan)
+inline void finalizeObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op, __constant realtype *t_span)
 {
     //shift all time-based observer members left by [tf-t0]
-    realtype T = *ti - tspan[0];
+    realtype T = *ti - t_span[0];
     od->tLastEvent -= T; //i.e. tLastUp
     od->tThisDown -= T;
     od->tLastMax -= T;
