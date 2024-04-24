@@ -81,7 +81,7 @@ parameters = {
 
 auxvars = ['ica']
 
-tend=4000
+tend=2000
 features_integrator = clode.FeatureSimulator(
     rhs_equation=lactotroph,
     supplementary_equations=[x_inf, s_inf],

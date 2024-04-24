@@ -56,7 +56,7 @@ class ObserverOutput:
         return f"ObserverOutput( ensemble size: {ensemble_size}, number of features: {num_features}, feature_names: {feature_names})"
 
     def to_ndarray(self, **kwargs):
-        return rfn.structured_to_unstructured(self.x, **kwargs)
+        return rfn.structured_to_unstructured(self.F, **kwargs)
 
     def get_feature_names(self) -> List[str]:
         return self._feature_names
@@ -64,7 +64,7 @@ class ObserverOutput:
     # TODO: if we know the shape of the original ensemble (e.g., 1D/2D/3D) could return in that shape
     def _get_var(self, var: str, op: str) -> np.ndarray[Any, np.dtype[np.float64]]:
         try:
-            return self.F[" ".join([op, var])]
+            return self.F[" ".join([op, var])].squeeze()
         except ValueError:
             raise NotImplementedError(
                 f"{self._observer_type} does not track {op} {var}!"
