@@ -30,7 +30,7 @@ static inline ulong rotl(const ulong x, int k)
 	return (x << k) | (x >> (64 - k));
 }
 
-ulong next(__private rngstatetype s[])
+static inline ulong next(__private rngstatetype s[])
 {
 	const ulong s0 = s[0];
 	ulong s1 = s[1];
@@ -53,7 +53,7 @@ ulong next(__private rngstatetype s[])
 typedef ulong rngstatetype;
 #define RNGNORM RCONST(5.421010862427522e-20)
 
-ulong next(ulong s[])
+static inline ulong next(ulong s[])
 {
 	ulong s1 = s[0];
 	const ulong s0 = s[1];
@@ -70,22 +70,22 @@ ulong next(ulong s[])
 // ---- Utilities ------
 
 //hold the RNG's state and other data in a struct
-typedef struct rngData
+struct rngData
 {
 	rngstatetype state[N_RNGSTATE];
 	bool randnUselast;
 	realtype randnLast;
-} rngData;
+};
 
 //return uniform pseudorandom number in [0,1)
-inline realtype rand(__private rngstatetype *state)
+static inline realtype rand(__private rngstatetype *state)
 {
 	rngstatetype result = next(state);
 	return result * RNGNORM;
 };
 
 //return normally distributed pseudorandom number N(0,1)
-inline realtype randn(__private rngData *rd)
+static inline realtype randn(__private struct rngData *rd)
 {
 
 	realtype x1, x2, w, y1;

@@ -2,7 +2,7 @@
 
 //Explicit (Forward) Euler
 #define FIXED_STEPSIZE_EXPLICIT
-inline void do_step(realtype *ti, realtype xi[], realtype k1[], const realtype pars[], const realtype dt, realtype aux[], const realtype wi[])
+static inline void do_step(realtype *ti, realtype xi[], realtype k1[], const realtype pars[], const realtype dt, realtype aux[], const realtype wi[])
 {    
     //k1 passed in
     

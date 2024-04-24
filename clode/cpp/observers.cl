@@ -48,13 +48,13 @@ struct ObserverParams
 
 #ifdef __cplusplus
 //info about available observers for access in C++
-typedef struct ObserverInfo 
+struct ObserverInfo 
 {
 	std::string define;
 	size_t observerDataSizeFloat;
 	size_t observerDataSizeDouble;
 	std::vector<std::string> featureNames;
-} ObserverInfo;
+};
 
 #endif
 
@@ -64,7 +64,6 @@ typedef struct ObserverInfo
 // - 
 
 // TODO:
-// - step-size aware method for <x(t)>
 // - return sequence data: list of features per event
 // - hashing for distinct value counting [binning?] - not same as above
 // - use minimal solution buffer size for task at hand. local extrema: t[3], x[3], dx[2]?
@@ -76,9 +75,6 @@ typedef struct ObserverInfo
 
 // TODO: combine observers with same logic but different event functions into one
 // - threshold, nhood (1/2) --> toggle with a define?
-
-// Each observer definition file: declare #define's 
-// - OBSERVER_HAS_EVENTS
 
 ////////////////////////////////////////////////
 // one-pass detectors
@@ -127,10 +123,10 @@ static void getObserverDefineMap(const ProblemInfo pi,
 								 const unsigned int fVarIx,
 								 const unsigned int eVarIx,
 								 const unsigned int nStoredEvents,
-								 std::map<std::string, ObserverInfo> &observerDefineMap,
+								 std::map<std::string, struct ObserverInfo> &observerDefineMap,
 								 std::vector<std::string> &availableObserverNames)
 {
-    std::map<std::string, ObserverInfo> newMap;
+    std::map<std::string, struct ObserverInfo> newMap;
     newMap["basic"]=getObserverInfo_basic(pi, fVarIx, eVarIx, nStoredEvents);
     newMap["basicall"]=getObserverInfo_basicAll(pi, fVarIx, eVarIx, nStoredEvents);
     newMap["localmax"]=getObserverInfo_localmax(pi, fVarIx, eVarIx, nStoredEvents);

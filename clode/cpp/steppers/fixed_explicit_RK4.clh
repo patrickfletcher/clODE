@@ -2,7 +2,7 @@
 
 //Explicit Runge-Kutta 4 time step
 #define FIXED_STEPSIZE_EXPLICIT
-inline void do_step(realtype *ti, realtype xi[], realtype k1[], const realtype pars[], const realtype dt, realtype aux[], const realtype wi[])
+static inline void do_step(realtype *ti, realtype xi[], realtype k1[], const realtype pars[], const realtype dt, realtype aux[], const realtype wi[])
 {
     realtype tmp[N_VAR], k2[N_VAR], k3[N_VAR], k4[N_VAR];
     realtype h2 = dt * RCONST(0.5);

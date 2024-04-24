@@ -27,7 +27,7 @@ protected:
     std::string observer;
     size_t ObserverParamsSize;
 
-    std::map<std::string, ObserverInfo> observerDefineMap;
+    std::map<std::string, struct ObserverInfo> observerDefineMap;
     std::vector<std::string> featureNames;
     std::vector<std::string> availableObserverNames;
 

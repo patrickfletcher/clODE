@@ -3,7 +3,7 @@
 //Explicit (Forward) Euler
 #define FIXED_STEPSIZE_EXPLICIT
 #define STOCHASTIC_STEPPER
-inline void do_step(realtype *ti, realtype xi[], realtype k1[], const realtype pars[], const realtype dt, realtype aux[], realtype wi[])
+static inline void do_step(realtype *ti, realtype xi[], realtype k1[], const realtype pars[], const realtype dt, realtype aux[], realtype wi[])
 {   
     //k1 passed in
     // getRHS(*ti, xi, pars, k1, aux, wi);

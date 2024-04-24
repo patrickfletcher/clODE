@@ -6,9 +6,9 @@
 // realtype newDt = tNew - *ti; //use the effective part of dt
 
 //Wrapper to handle step-size adaptation.  note: wi should be zeros
-inline int stepper(realtype *ti, realtype xi[], realtype k1[], const realtype pars[], 
+static inline int stepper(realtype *ti, realtype xi[], realtype k1[], const realtype pars[], 
 __constant struct SolverParams *sp, realtype *dt, __constant realtype *tspan, 
-realtype aux[], realtype wi[], __private rngData *rd)
+realtype aux[], realtype wi[], __private struct rngData *rd)
 {
     // xi and ti are updated inside do_step. 
     do_step(ti, xi, k1, pars, *dt, aux, wi);

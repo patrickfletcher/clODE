@@ -3,10 +3,10 @@
 
 
 #ifdef __cplusplus
-//Collect all the info for this observer. Must be a static function when defining function in header, otherwise defined for each time included.
-static ObserverInfo getObserverInfo_thresh2(const ProblemInfo pi, const unsigned int fVarIx, const unsigned int eVarIx, const unsigned int nStoredEvents)
+//Collect all the info for this observer
+static struct ObserverInfo getObserverInfo_thresh2(const ProblemInfo pi, const unsigned int fVarIx, const unsigned int eVarIx, const unsigned int nStoredEvents)
 {
-    ObserverInfo oi;
+    struct ObserverInfo oi;
     oi.define="USE_OBSERVER_THRESHOLD_2";
     size_t n_real = (3*pi.nVar*2 + pi.nVar*5 + pi.nAux*3 + nStoredEvents*2 + 3*8 + 16); //hard coded, because C++ code can't see the N_VAR, N_AUX etc...
     size_t n_int = 4;
@@ -124,7 +124,7 @@ struct ObserverData_thresh2
 typedef struct ObserverData_thresh2 ObserverData;
 
 //set initial values to relevant fields in ObserverData
-inline void initializeObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
+static inline void initializeObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
 {
     od->tbuffer[2] = *ti;
     for (int j = 0; j < N_VAR; ++j)
@@ -207,7 +207,7 @@ inline void initializeObserverData(realtype *ti, realtype xi[], realtype dxi[], 
 }
 
 //restricted per-timestep update of observer data for initializing event detector
-inline void warmupObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
+static inline void warmupObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
 {
     // only need eVarix for thresholds
     od->xGlobalMax = fmax(od->xGlobalMax, xi[op->eVarIx]);
@@ -217,7 +217,7 @@ inline void warmupObserverData(realtype *ti, realtype xi[], realtype dxi[], real
 }
 
 //process warmup data to compute relevant event detector quantities (e.g. thresholds)
-inline void initializeEventDetector(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
+static inline void initializeEventDetector(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
 {
     //threshold in x
     realtype xTrajectoryAmp = od->xGlobalMax - od->xGlobalMin;
@@ -239,7 +239,7 @@ inline void initializeEventDetector(realtype *ti, realtype xi[], realtype dxi[],
 }
 
 //per-timestep check for an event.  Option: refine event (t,x,dx,aux) within the timestep with interpolation
-inline bool eventFunction(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
+static inline bool eventFunction(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
 {
     if (od->stepcount < 2)
         return false;
@@ -256,7 +256,7 @@ inline bool eventFunction(realtype *ti, realtype xi[], realtype dxi[], realtype 
 }
 
 //When an event is detected, computes desired event-based features. returns true if a terminal event was reached
-inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
+static inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
 {
     realtype tThisEvent;
 
@@ -323,7 +323,7 @@ inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dxi[], re
 }
 
 //full per-timestep update of observer data. If an event occurred this timestep, event-based observer data is reset. Per-timestep features are computed here.
-inline void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
+static inline void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
 {
     ++od->stepcount;
 
@@ -432,7 +432,7 @@ inline void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], real
 
 
 //Perform and post-integration cleanup and write desired features into the global array F
-inline void finalizeFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op, __global realtype *F, int i, int nPts)
+static inline void finalizeFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op, __global realtype *F, int i, int nPts)
 {
     //Number of features is determined by this function. Must hardcode that number into the host program in order to allocate memory for F...
     int ix = 0;
@@ -482,7 +482,7 @@ inline void finalizeFeatures(realtype *ti, realtype xi[], realtype dxi[], realty
 }
 
 //Perform and post-integration cleanup of observer data to ensure it is ready for continuation if needed
-inline void finalizeObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op, __constant realtype *tspan)
+static inline void finalizeObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op, __constant realtype *tspan)
 {
     //shift all time-based observer members left by [tf-t0]
     realtype T = *ti - tspan[0];
