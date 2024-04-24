@@ -20,8 +20,7 @@
 #define heav(x) ((x) > RCONST(0.0) ? RCONST(1.0) : RCONST(0.0)) 
 
 //1-norm
-static inline realtype norm_1(realtype x[], int N)
-{
+static inline realtype norm_1(realtype x[], int N) {
 	realtype result = RCONST(0.0);
 	for (int k = 0; k < N; k++)
 		result += fabs(x[k]);
@@ -30,8 +29,7 @@ static inline realtype norm_1(realtype x[], int N)
 }
 
 //2-norm
-static inline realtype norm_2(realtype x[], int N)
-{
+static inline realtype norm_2(realtype x[], int N) {
 	realtype result = RCONST(0.0);
 	for (int k = 0; k < N; k++)
 		result += x[k] * x[k];
@@ -40,8 +38,7 @@ static inline realtype norm_2(realtype x[], int N)
 }
 
 //Inf-norm
-static inline realtype norm_inf(realtype x[], int N)
-{
+static inline realtype norm_inf(realtype x[], int N) {
 	realtype result = RCONST(0.0);
 	for (int k = 0; k < N; k++)
 		result = fmax(fabs(x[k]), result);
@@ -50,8 +47,7 @@ static inline realtype norm_inf(realtype x[], int N)
 }
 
 //Maximum of vector, returns both max and index of max
-static inline void maxOfArray(realtype inArray[], int N, realtype *maxVal, int *index)
-{
+static inline void maxOfArray(realtype inArray[], int N, realtype *maxVal, int *index) {
 	*maxVal = -BIG_REAL;
 	*index = 0;
 	for (int k = 0; k < N; k++)
@@ -65,8 +61,7 @@ static inline void maxOfArray(realtype inArray[], int N, realtype *maxVal, int *
 }
 
 // returns maximum value in a 1D array
-static inline realtype array_max(realtype inArray[], int N)
-{
+static inline realtype array_max(realtype inArray[], int N) {
 	realtype maxVal = -BIG_REAL;
 	for (int k = 0; k < N; k++)
 	{
@@ -77,8 +72,7 @@ static inline realtype array_max(realtype inArray[], int N)
 }
 
 // returns index of maximum value in a 1D array
-static inline int array_argmax(realtype inArray[], int N)
-{
+static inline int array_argmax(realtype inArray[], int N) {
 	realtype maxVal = -BIG_REAL;
 	int index = 0;
 	for (int k = 0; k < N; k++)
@@ -94,8 +88,7 @@ static inline int array_argmax(realtype inArray[], int N)
 
 
 //Minimum of vector, returns both min and index of min
-static inline void minOfArray(realtype inArray[], int N, realtype *minVal, int *index)
-{
+static inline void minOfArray(realtype inArray[], int N, realtype *minVal, int *index) {
 	*minVal = BIG_REAL;
 	*index = 0;
 	for (int k = 0; k < N; k++)
@@ -109,8 +102,7 @@ static inline void minOfArray(realtype inArray[], int N, realtype *minVal, int *
 }
 
 // returns minimum value in a 1D array
-static inline realtype array_min(realtype inArray[], int N)
-{
+static inline realtype array_min(realtype inArray[], int N) {
 	realtype minVal = BIG_REAL;
 	for (int k = 0; k < N; k++)
 	{
@@ -121,8 +113,7 @@ static inline realtype array_min(realtype inArray[], int N)
 }
 
 // returns index of minimum value in a 1D array
-static inline int array_argmin(realtype inArray[], int N)
-{
+static inline int array_argmin(realtype inArray[], int N) {
 	realtype minVal = BIG_REAL;
 	int index = 0;
 	for (int k = 0; k < N; k++)
@@ -174,14 +165,12 @@ other notes
 
 //Compute a running mean of a function at possibly non-uniform sample points
 // - mean should be initialized to zero externally (first step: dt=total_delta --> mean=newValue)
-static inline realtype runningMeanTime(realtype mean, realtype newValue, realtype dt, realtype total_delta)
-{
+static inline realtype runningMeanTime(realtype mean, realtype newValue, realtype dt, realtype total_delta) {
 	return mean + (newValue - mean) * dt/total_delta;
 }
 
 //Compute a running mean for a set of numbers
-static inline void runningMean(realtype *mean, realtype newValue, unsigned int eventCount)
-{
+static inline void runningMean(realtype *mean, realtype newValue, unsigned int eventCount) {
 	if (eventCount == 1) //initialize the mean to the first value
 		*mean = newValue;
 	else if (eventCount > 1) //compute the current value of the running mean
@@ -191,8 +180,7 @@ static inline void runningMean(realtype *mean, realtype newValue, unsigned int e
 //Compute a running mean and variance for a set of numbers
 // https://www.johndcook.com/blog/standard_deviation/
 // NOTE: once the variance value is desired, it must be divided by the final event count!
-static inline void runningMeanVar(realtype *mean, realtype *variance, realtype newValue, unsigned int eventCount)
-{
+static inline void runningMeanVar(realtype *mean, realtype *variance, realtype newValue, unsigned int eventCount) {
 	if (eventCount == 1)
 	{ //initialize the mean to the first value, variance to zero
 		*mean = newValue;
@@ -210,16 +198,14 @@ static inline void runningMeanVar(realtype *mean, realtype *variance, realtype n
 // Interpolation routines
 
 //estimate yi at specified ti, using linear interpolation of two values
-static inline realtype linearInterp(realtype t0, realtype t1, realtype y0, realtype y1, realtype ti)
-{
+static inline realtype linearInterp(realtype t0, realtype t1, realtype y0, realtype y1, realtype ti) {
 	realtype yi = y0 + (ti - t0) * (y1 - y0) / (t1 - t0);
 	return yi;
 }
 
 //estimate yi at specified ti, using linear interpolation between the first or second pair of values, given three values 
 // - the solution buffer in clode keeps t/y values of the most recent 3 time steps
-static inline realtype linearInterpArray(realtype t[], realtype y[], realtype ti)
-{
+static inline realtype linearInterpArray(realtype t[], realtype y[], realtype ti) {
 	realtype yi;
 	if (ti < t[1])
 		yi = y[0] + (ti - t[0]) * (y[1] - y[0]) / (t[1] - t[0]);
@@ -230,8 +216,7 @@ static inline realtype linearInterpArray(realtype t[], realtype y[], realtype ti
 }
 
 //estimate yi at specified ti, using quadratic interpolant of three values
-static inline realtype quadraticInterp(realtype t[], realtype y[], realtype ti)
-{
+static inline realtype quadraticInterp(realtype t[], realtype y[], realtype ti) {
 	realtype b0, b1, b2, yi;
 
 	b0 = y[0];
@@ -245,8 +230,7 @@ static inline realtype quadraticInterp(realtype t[], realtype y[], realtype ti)
 
 //compute vertex of a quadratic interpolant of three values
 // - store result in tv, yv
-static inline void quadraticInterpVertex(realtype t[], realtype y[], realtype *tv, realtype *yv)
-{
+static inline void quadraticInterpVertex(realtype t[], realtype y[], realtype *tv, realtype *yv) {
 	realtype b0, b1, b2;
 
 	b0 = y[0];

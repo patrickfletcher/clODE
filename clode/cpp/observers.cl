@@ -124,8 +124,7 @@ static void getObserverDefineMap(const ProblemInfo pi,
 								 const unsigned int eVarIx,
 								 const unsigned int nStoredEvents,
 								 std::map<std::string, struct ObserverInfo> &observerDefineMap,
-								 std::vector<std::string> &availableObserverNames)
-{
+								 std::vector<std::string> &availableObserverNames) {
     std::map<std::string, struct ObserverInfo> newMap;
     newMap["basic"]=getObserverInfo_basic(pi, fVarIx, eVarIx, nStoredEvents);
     newMap["basicall"]=getObserverInfo_basicAll(pi, fVarIx, eVarIx, nStoredEvents);
