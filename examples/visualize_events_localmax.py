@@ -34,7 +34,7 @@ def fitzhugh_nagumo(
     derivatives[1] = dw
 
 variables = {"V": 1.0, "w": 0.0}
-parameters = {"a": 0.6, "b": 0.8, "current": 0.35, "epsilon": 1.0 / 12.5}
+parameters = {"a": 0.7, "b": 0.8, "current": 0.4, "epsilon": 1.0 / 12.5}
 
 auxvars = []
 
@@ -44,33 +44,28 @@ features_integrator = clode.FeatureSimulator(
     variables=variables,
     parameters=parameters,
     aux=auxvars,
-    stepper=clode.Stepper.rk4,
-    t_span=(0.0, tend),
-    dtmax=1.0,
-    dt=0.1,
-    abstol=1.0e-6,
-    reltol=1.0e-6,
     observer=clode.Observer.local_max,
-    observer_max_event_count=80,
-    observer_max_event_timestamps = 5,
+    stepper=clode.Stepper.dormand_prince,
+    t_span=(0.0, tend),
+    observer_max_event_count=10,
+    observer_max_event_timestamps = 10,
     observer_min_x_amp=0,
     observer_min_imi=0,
     feature_var="V",
+    dtmax=1.0,
+    dt=0.1,
+    abstol=1.0e-6,
+    reltol=1.0e-6
 )
 
 features_integrator.transient()
 features_integrator.set_tspan((0.0, 300.))
 output = features_integrator.features()
 
-print(output.F["step count"])
-
 localmax_times = output.get_event_data("localmax","time")
 localmax_evars = output.get_event_data("localmax","evar")
 localmin_times = output.get_event_data("localmin","time")
 localmin_evars = output.get_event_data("localmin","evar")
-
-print(localmax_times,localmax_evars)
-print(localmin_times,localmin_evars)
 
 # Get the trajectory
 trajectory_integrator = clode.TrajectorySimulator(
@@ -83,7 +78,7 @@ trajectory_integrator = clode.TrajectorySimulator(
     dtmax=1.0,
     dt=0.1,
     abstol=1.0e-6,
-    reltol=1.0e-6,
+    reltol=1.0e-6
 )
 
 trajectory_integrator.transient()

@@ -120,6 +120,7 @@ class Simulator:
         self._variable_defaults = variables
         self._parameter_defaults = parameters
         self._ensemble_size = 1
+        self._ensemble_shape = (1,)
 
         input_file = self._handle_clode_rhs_cl_file(
             src_file, rhs_equation, supplementary_equations
@@ -303,6 +304,7 @@ class Simulator:
             None
         """
         self._ensemble_size = num_repeats
+        self._ensemble_shape = (num_repeats,)
         self._variables = self._create_cl_arrays(self._variable_defaults, num_repeats)
         self._parameters = self._create_cl_arrays(self._parameter_defaults, num_repeats)
 
@@ -312,6 +314,8 @@ class Simulator:
         # else:
         self._init_integrator()
 
+    # TODO: support passing arrays with shapes, and return matching shape for results?
+    # - e.g., two 2D arrays from meshgrid for two-parameter sweep
     def set_ensemble(
         self,
         variables: Optional[
@@ -389,9 +393,9 @@ class Simulator:
             else:
                 local_parameters[key] = self._parameter_defaults[key]
 
+        self._ensemble_size = cl_array_length
         self._variables = self._create_cl_arrays(local_variables, cl_array_length)
         self._parameters = self._create_cl_arrays(local_parameters, cl_array_length)
-        self._ensemble_size = cl_array_length
 
         # if self.is_initialized:
         #     vars_array, pars_array = self._pack_data()

@@ -63,7 +63,7 @@ def lactotroph(
 clode.set_log_level(clode.LogLevel.warn)
 
 variables = {
-    "v": -60,
+    "v": -60.0,
     "n": 0.1,
     "c": 0.1,
 }
@@ -71,11 +71,11 @@ variables = {
 parameters = {
     "gca": 2.5,
     "gk": 2.56,
-    "gsk": 3,
+    "gsk": 3.0,
     "gleak": 0.1,
     "cm": 4.0,
-    "e_leak": -50,
-    "tau_n": 15,
+    "e_leak": -50.0,
+    "tau_n": 15.0,
     "k_c": 0.1,
 }
 
@@ -105,13 +105,15 @@ features_integrator = clode.FeatureSimulator(
     reltol=1.0e-6
 )
 
+features_integrator.set_repeat_ensemble(10)
+
 features_integrator.transient()
 output = features_integrator.features()
 
-up_times = output.get_timestamps("up")
-down_times = output.get_timestamps("down")
+print(output)
 
-print(up_times)
+up_times = output.get_event_data("up","time")
+down_times = output.get_event_data("down","time")
 
 # Get the trajectory
 trajectory_integrator = clode.TrajectorySimulator(
@@ -138,10 +140,10 @@ dvdt = trajectory.dx[var]
 
 plt.plot(t, v)
 # Plot events
-for event in up_times:
+for event in up_times[0,:]:
     plt.axvline(x=event, color="red", linestyle="--")
 
-for event in down_times:
+for event in down_times[0,:]:
     plt.axvline(x=event, color="blue", linestyle="--")
 
 plt.xlabel("t")
@@ -151,23 +153,20 @@ plt.show()
 
 
 # plot the dvdt vs v for the first full period
-start = np.argmax(t>=up_times[0])
-stop = np.argmax(t>=up_times[1])
+first_up_idx = np.argmax(t>=up_times[0,0]) 
+second_up_idx = np.argmax(t>=up_times[0,1])
+first_down_idx = np.argmax(t>=down_times[0,0]) 
 
-plt.plot(v[start:stop], dvdt[start:stop])
+plt.plot(v[first_up_idx:second_up_idx], dvdt[first_up_idx:second_up_idx])
 plt.xlabel(var)
 plt.ylabel(f"d{var}/dt")
 plt.title("Lactotroph model")
 plt.axhline(y=0.0, color="gray", linestyle="-")
 
-# this part won't be needed if we return the state/slope at each event
-first_active_idx = np.argmax(t>up_times[0]) 
-first_inactive_idx = np.argmax(t>down_times[0]) 
+plt.axvline(x=v[first_up_idx], color="red", linestyle="--")
+plt.axhline(y=dvdt[first_up_idx], color="orange", linestyle="--")
 
-plt.axvline(x=v[first_active_idx], color="red", linestyle="--")
-plt.axhline(y=dvdt[first_active_idx], color="orange", linestyle="--")
-
-plt.axvline(x=v[first_inactive_idx], color="blue", linestyle="--")
-plt.axhline(y=dvdt[first_inactive_idx], color="green", linestyle="--")
+plt.axvline(x=v[first_down_idx], color="blue", linestyle="--")
+plt.axhline(y=dvdt[first_down_idx], color="green", linestyle="--")
 
 plt.show()

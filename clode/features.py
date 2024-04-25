@@ -62,22 +62,22 @@ class ObserverOutput:
         return self._feature_names
 
     # TODO: if we know the shape of the original ensemble (e.g., 1D/2D/3D) could return in that shape
-    def _get_var(self, var: str, op: str) -> np.ndarray[Any, np.dtype[np.float64]]:
+    def _get_var(self, var: str) -> np.ndarray[Any, np.dtype[np.float64]]:
         try:
-            return self.F[" ".join([op, var])].squeeze()
+            return self.F[var]
         except ValueError:
             raise NotImplementedError(
-                f"{self._observer_type} does not track {op} {var}!"
+                f"{self._observer_type} does not track {var}!"
             )
 
     def get_var_max(self, var: str) -> np.ndarray[Any, np.dtype[np.float64]]:
-        return self._get_var(var, "max")
+        return self._get_var(" ".join(["max", var]))
 
     def get_var_min(self, var: str) -> np.ndarray[Any, np.dtype[np.float64]]:
-        return self._get_var(var, "min")
+        return self._get_var(" ".join(["min", var]))
 
     def get_var_mean(self, var: str) -> np.ndarray[Any, np.dtype[np.float64]]:
-        return self._get_var(var, "mean")
+        return self._get_var(" ".join(["mean", var]))
 
     def get_var_max_slope(self, var: str) -> np.ndarray[Any, np.dtype[np.float64]]:
         return self.get_var_max(f"d{var}/dt")
@@ -86,21 +86,40 @@ class ObserverOutput:
         return self.get_var_min(f"d{var}/dt")
 
     def get_var_count(self, var: str) -> np.ndarray[Any, np.dtype[np.float64]]:
-        return self._get_var("count", var)
+        return self._get_var(" ".join([var, "count"]))
 
-    def get_timestamps(self, var: str = "event") -> np.ndarray[Any, np.dtype[np.float64]]:
-        first_key = f"{var} timestamp 0"
-        if first_key not in self._feature_names:
+    def get_event_data(self, name:str, type:Optional[str] = "time") -> np.ndarray[Any, np.dtype[np.float64]]:
+        # event data feature names have format: "{name} event {time/var} {event idx}"
+        # name - distinguish event types (up/down, localmax/localmin) in some observers, others (nhood2) just track single type
+        # type - use to extract only event time or event var [e.g., var = eVar value at event time]
+        #
+        # return: for now, force user to specify one name that makes sense, optionally type
+        event_features = [f for f in self._feature_names if name in f and "event" in f and "count" not in f]
+        if len(event_features)==0:
             raise NotImplementedError(
-                f"{self._observer_type} does not track {var} timestamps!"
+                f"{self._observer_type} does not track {name} events!"
             )
         data = []
-        for key_idx in range(0, self._op.max_event_timestamps):
-            datapoint = self.F[f"{var} timestamp {key_idx}"]
+        for event_idx in range(0, self._op.max_event_timestamps):
+            datapoint = self._get_var(f"{name} event {type} {event_idx}")
             if np.all(datapoint == 0):
                 break
             data.append(datapoint)
-        return np.concatenate(data) if data else []
+        return np.stack(data, axis=1) if data else []
+    
+    def get_timestamps(self, var: str = "event") -> np.ndarray[Any, np.dtype[np.float64]]:
+        first_key = f"{var} event time 0"
+        if first_key not in self._feature_names:
+            raise NotImplementedError(
+                f"{self._observer_type} does not track {var} event times!"
+            )
+        data = []
+        for key_idx in range(0, self._op.max_event_timestamps):
+            datapoint = self._get_var(f"{var} event time {key_idx}")
+            if np.all(datapoint == 0):
+                break
+            data.append(datapoint)
+        return np.stack(data, axis=1) if data else []
 
 
 class FeatureSimulator(Simulator):
@@ -264,7 +283,7 @@ class FeatureSimulator(Simulator):
         event_var: str = "",
         feature_var: str = "",
         observer_max_event_count: int = 100,
-        observer_max_event_timestamps: int = 5,
+        observer_max_event_timestamps: int = 0,
         observer_min_x_amp: float = 0.0,
         observer_min_imi: float = 0.0,
         observer_neighbourhood_radius: float = 0.05,
