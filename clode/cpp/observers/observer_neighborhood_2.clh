@@ -223,7 +223,7 @@ static inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dx
     od->tLastEvent = tThisEvent;
     od->thisNMaxima = 0;
 
-    if (od->eventcount >= op->maxEventCount){
+    if (od->eventcount == op->maxEventCount){
         return true;
     }
     return false; //not terminal

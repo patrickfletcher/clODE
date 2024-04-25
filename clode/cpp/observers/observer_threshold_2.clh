@@ -43,8 +43,8 @@ static struct ObserverInfo getObserverInfo_thresh2(const ProblemInfo pi, const u
         oi.featureNames.push_back("mean " + pi.auxNames[j]);
     }
     for (int j = 0; j < nStoredEvents; ++j) {
-		oi.featureNames.push_back("up timestamp " + std::to_string(j));
-		oi.featureNames.push_back("down timestamp " + std::to_string(j));
+		oi.featureNames.push_back("up event time " + std::to_string(j));
+		oi.featureNames.push_back("down event time " + std::to_string(j));
 	}
     oi.featureNames.push_back("event count");
     oi.featureNames.push_back("step count");
@@ -292,7 +292,7 @@ static inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dx
         runningMean(&od->activeDip[2], thisActiveDip, nPeriods);
     }
 
-	if (od->eventcount < N_STORE_EVENTS)
+	if (od->eventcount <= N_STORE_EVENTS)
     	od->tUpTransition[od->eventcount-1] = tThisEvent;
 
     od->tLastEvent = tThisEvent;
@@ -391,10 +391,9 @@ static inline void updateObserverData(realtype *ti, realtype xi[], realtype dxi[
                 // od->tThisDown = linearInterp(od->xbuffer[2], xi[op->fVarIx], od->tbuffer[2], *ti, od->xDown);
                 od->inUpstate = 0;
                 
-                if (od->eventcount > 0 && od->eventcount < N_STORE_EVENTS)
-                {
+                if (od->eventcount > 0 && od->eventcount <= N_STORE_EVENTS)
                     od->tDownTransition[od->eventcount-1] = od->tThisDown;
-                }
+                
                 od->fVarDownstateMean = xi[op->fVarIx];
             }
         }
