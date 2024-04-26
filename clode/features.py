@@ -64,7 +64,7 @@ class ObserverOutput:
     # TODO: if we know the shape of the original ensemble (e.g., 1D/2D/3D) could return in that shape
     def _get_var(self, var: str) -> np.ndarray[Any, np.dtype[np.float64]]:
         try:
-            return self.F[var]
+            return self.F[var].squeeze()
         except ValueError:
             raise NotImplementedError(
                 f"{self._observer_type} does not track {var}!"
