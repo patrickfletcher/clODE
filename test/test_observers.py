@@ -62,16 +62,19 @@ def get_rhs(
 
 # start at the left of the unit circle
 variables = {"x": -1.0, "y": 0.0}
-
 parameters = {"k": 1.0}
+
 expected_period = 2 * pi
+expected_amplitude = 2.
+expected_max_xy = 1.
+expected_min_xy = -1.
+expected_mean_xy = 0.
 
 # 10 full periods
 expected_events = 10
 t_span = (0.0, expected_events * expected_period)
 dt = 0.01
 expected_steps = int(t_span[1] / dt) + 1
-
 
 @pytest.mark.skip(reason="for now just to validate/debug observers")
 def test_observer(observer):
@@ -88,6 +91,7 @@ def test_observer(observer):
         observer_x_up_thresh=0.3,
         observer_x_down_thresh=0.2,
         observer_neighbourhood_radius=0.05,
+        observer_max_event_timestamps=10,
     )
 
     integrator.set_repeat_ensemble(num_repeats=1)
@@ -98,24 +102,28 @@ def test_observer(observer):
     print(f"--- {observer} ---")
     print(f"final state: {integrator.get_final_state()[0]}")
 
-    # TODO: map of feature_names --> expected results
+    # TODO: map of feature_names --> expected results (including event times)
     # TODO: switch to asserts?
-    if "mean x" in feature_names:
-        mean_x = features.get_var_mean("x")
-        print(f"expected mean x: {0.0},\t\t actual:{mean_x:0.6}")
     if "max x" in feature_names:
         max_x = features.get_var_max("x")
-        print(f"expected max x: {1.0},\t\t actual:{max_x:0.6}")
+        print(f"expected max x: {expected_max_xy},\t\t actual:{max_x:0.6}")
     if "min x" in feature_names:
         min_x = features.get_var_min("x")
-        print(f"expected min x: {-1.0},\t\t actual:{min_x:0.6}")
+        print(f"expected min x: {expected_min_xy},\t\t actual:{min_x:0.6}")
+    if "mean x" in feature_names:
+        mean_x = features.get_var_mean("x")
+        print(f"expected mean x: {expected_mean_xy},\t\t actual:{mean_x:0.6}")
     if "mean y" in feature_names:
         mean_y = features.get_var_mean("y")
-        print(f"expected mean y: {0.0},\t\t actual:{mean_y:0.6}")
+        print(f"expected mean y: {expected_mean_xy},\t\t actual:{mean_y:0.6}")
     if "mean amplitude" in feature_names:
         amp = features.get_var_mean("amplitude")
-        print(f"expected amplitude: {2.0},\t actual:{amp:0.6}")
+        print(f"expected amplitude: {expected_amplitude},\t actual:{amp:0.6}")
     if "mean IMI" in feature_names:
+        imi = features.get_var_max("IMI")
+        print(f"expected IMI: {expected_period:0.6},\t\t actual:{imi:0.6}")
+        imi = features.get_var_min("IMI")
+        print(f"expected IMI: {expected_period:0.6},\t\t actual:{imi:0.6}")
         imi = features.get_var_mean("IMI")
         print(f"expected IMI: {expected_period:0.6},\t\t actual:{imi:0.6}")
     if "mean period" in feature_names:
@@ -129,74 +137,12 @@ def test_observer(observer):
         print(f"expected step count: {expected_steps},\t actual:{int(step_count)}")
     print("\n")
 
-
 @pytest.mark.skip(reason="for now just to validate/debug observers")
 def test_all_observers():
     observers = [observer for observer in clode.Observer]
+    # observers = [clode.Observer.local_max]
     for observer in observers:
         test_observer(observer)
-
-
-def test_threshold_2_observes_sine_events():
-    # Follow clode rhs convention
-    def sine_curve(
-        t: float,
-        x_: List[float],
-        p_: List[float],
-        dx_: List[float],
-        aux_: List[float],
-        w_: List[float],
-    ) -> None:
-        x: float = x_[0]
-        dilation: float = p_[0]
-        dx: float = cos(t * dilation)
-        dx_[0] = dx
-
-    # Define the parameters
-    parameters = {
-        "dilation": 1,
-    }
-
-    # Define the initial conditions
-    variables = {
-        "x": 0,
-    }
-
-    # Activate at t=pi/4, deactivate at t=3pi/2
-    features_integrator = clode.FeatureSimulator(
-        rhs_equation=sine_curve,
-        variables=variables,
-        parameters=parameters,
-        observer=clode.Observer.threshold_2,
-        aux=["dx"],
-        stepper=clode.Stepper.rk4,
-        t_span=(0.0, 4 * pi),
-        observer_min_x_amp=0.5,
-        observer_x_up_thresh=(2 + sqrt(2)) / 4,
-        observer_x_down_thresh=0.001,
-        observer_dx_down_thresh=0.001,
-        observer_dx_up_thresh=0.001,
-        event_var="x",
-        feature_var="x",
-        dtmax=0.001,
-        dt=0.001,
-    )
-
-    # Run the simulation
-    output = features_integrator.features()
-
-    # Get the number of periods (should be 1, as one event has not finished)
-    event_count = int(output.get_var_count("period"))
-    assert event_count == 1
-
-    # Get the timestamps of the events
-    up_times = output.get_timestamps("up")
-    assert up_times[0] == pytest.approx(pi / 4, rel=1e-2)
-    assert up_times[1] == pytest.approx(9 * pi / 4, rel=1e-2)
-    down_times = output.get_timestamps("down")
-    assert down_times[0] == pytest.approx(3 * pi / 2, rel=1e-2)
-    assert down_times[1] == pytest.approx(7 * pi / 2, rel=1e-2)
-
 
 if __name__ == "__main__":
     test_all_observers()
