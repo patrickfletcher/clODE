@@ -14,14 +14,13 @@
 
 #include "realtype.cl"
 
-//computation done by preprocessor:
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
-#define heav(x) ((x) > RCONST(0.0) ? RCONST(1.0) : RCONST(0.0)) 
+#define heav(x) ((x) > ZERO ? ONE : ZERO) 
 
 //1-norm
 static inline realtype norm_1(realtype x[], int N) {
-	realtype result = RCONST(0.0);
+	realtype result = ZERO;
 	for (int k = 0; k < N; k++)
 		result += fabs(x[k]);
 
@@ -30,7 +29,7 @@ static inline realtype norm_1(realtype x[], int N) {
 
 //2-norm
 static inline realtype norm_2(realtype x[], int N) {
-	realtype result = RCONST(0.0);
+	realtype result = ZERO;
 	for (int k = 0; k < N; k++)
 		result += x[k] * x[k];
 
@@ -39,7 +38,7 @@ static inline realtype norm_2(realtype x[], int N) {
 
 //Inf-norm
 static inline realtype norm_inf(realtype x[], int N) {
-	realtype result = RCONST(0.0);
+	realtype result = ZERO;
 	for (int k = 0; k < N; k++)
 		result = fmax(fabs(x[k]), result);
 
@@ -184,7 +183,7 @@ static inline void runningMeanVar(realtype *mean, realtype *variance, realtype n
 	if (eventCount == 1)
 	{ //initialize the mean to the first value, variance to zero
 		*mean = newValue;
-		*variance = RCONST(0.0);
+		*variance = ZERO;
 	}
 	else if (eventCount > 1)
 	{ //compute the current value of the running mean and variance

@@ -53,14 +53,14 @@ static inline void initializeObserverData(realtype *ti, realtype xi[], realtype 
     for (int j = 0; j < N_VAR; ++j) {
         od->xTrajectoryMax[j] = -BIG_REAL;
         od->xTrajectoryMin[j] = BIG_REAL;
-        od->xTrajectoryMean[j] = RCONST(0.0);
+        od->xTrajectoryMean[j] = ZERO;
         od->dxTrajectoryMax[j] = -BIG_REAL;
         od->dxTrajectoryMin[j] = BIG_REAL;
     }
     for (int j = 0; j < N_AUX; ++j) {
         od->auxTrajectoryMax[j] = -BIG_REAL;
         od->auxTrajectoryMin[j] = BIG_REAL;
-        od->auxTrajectoryMean[j] = RCONST(0.0);
+        od->auxTrajectoryMean[j] = ZERO;
     }
     od->t_last = *ti;
     od->t_start = *ti;

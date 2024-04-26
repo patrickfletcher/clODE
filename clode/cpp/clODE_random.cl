@@ -99,10 +99,10 @@ static inline realtype randn(__private struct rngData *rd)
 	{
 		do
 		{
-			x1 = RCONST(2.0) * rand(rd->state) - RCONST(1.0);
-			x2 = RCONST(2.0) * rand(rd->state) - RCONST(1.0);
+			x1 = RCONST(2.0) * rand(rd->state) - ONE;
+			x2 = RCONST(2.0) * rand(rd->state) - ONE;
 			w = x1 * x1 + x2 * x2;
-		} while (w >= RCONST(1.0));
+		} while (w >= ONE);
 
 		w = sqrt((-RCONST(2.0) * log(w)) / w);
 		y1 = x1 * w;

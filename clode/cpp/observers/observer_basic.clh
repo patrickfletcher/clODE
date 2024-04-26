@@ -34,7 +34,7 @@ typedef struct ObserverData_basic ObserverData;
 static inline void initializeObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op) {
     od->xTrajectoryMax = -BIG_REAL;
     od->xTrajectoryMin = BIG_REAL;
-    od->xTrajectoryMean = RCONST(0.0);
+    od->xTrajectoryMean = ZERO;
     od->dxTrajectoryMax = -BIG_REAL;
     od->dxTrajectoryMin = BIG_REAL;
     od->t_last = *ti;

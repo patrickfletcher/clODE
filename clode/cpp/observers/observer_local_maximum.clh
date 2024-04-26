@@ -99,34 +99,34 @@ static inline void initializeObserverData(realtype *ti, realtype xi[], realtype 
     for (int j = 0; j < N_VAR; ++j) {
         od->xTrajectoryMax[j] = -BIG_REAL;
         od->xTrajectoryMin[j] = BIG_REAL;
-        od->xTrajectoryMean[j] = RCONST(0.0); 
+        od->xTrajectoryMean[j] = ZERO; 
         od->dxTrajectoryMax[j] = -BIG_REAL;
         od->dxTrajectoryMin[j] = BIG_REAL;
     }
     for (int j = 0; j < N_AUX; ++j) {
         od->auxTrajectoryMax[j] = -BIG_REAL;
         od->auxTrajectoryMin[j] = BIG_REAL;
-        od->auxTrajectoryMean[j] = RCONST(0.0);
+        od->auxTrajectoryMean[j] = ZERO;
     }
 
     for (int j = 0; j < N_STORE_EVENTS; ++j) {
-		od->tMaxList[j] = RCONST(0.0);
-		od->xMaxList[j] = RCONST(0.0);
-		od->tMinList[j] = RCONST(0.0);
-		od->xMinList[j] = RCONST(0.0);
+		od->tMaxList[j] = ZERO;
+		od->xMaxList[j] = ZERO;
+		od->tMinList[j] = ZERO;
+		od->xMinList[j] = ZERO;
 	}
 
     od->IMI[0] = -BIG_REAL;
     od->IMI[1] = BIG_REAL;
-    od->IMI[2] = RCONST(0.0);
+    od->IMI[2] = ZERO;
 
     od->amp[0] = -BIG_REAL;
     od->amp[1] = BIG_REAL;
-    od->amp[2] = RCONST(0.0);
+    od->amp[2] = ZERO;
 
     od->t_start = *ti;
-    od->tLastMax = RCONST(0.0);
-    od->tLastMin = RCONST(0.0);
+    od->tLastMax = ZERO;
+    od->tLastMin = ZERO;
     od->xLastMin = BIG_REAL;
 
     od->eventcount = 0;
@@ -287,12 +287,12 @@ static inline void updateObserverData(realtype *ti, realtype xi[], realtype dxi[
 //Perform and post-integration cleanup and write desired features into the global array F
 static inline void finalizeFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op, __global realtype *F, int i, int nPts) {
     int ix = 0;
-    F[ix++ * nPts + i] = od->eventcount > 1 ? od->IMI[0] : RCONST(0.0);
-    F[ix++ * nPts + i] = od->eventcount > 1 ? od->IMI[1] : RCONST(0.0);
-    F[ix++ * nPts + i] = od->eventcount > 1 ? od->IMI[2] : RCONST(0.0);
-    F[ix++ * nPts + i] = od->eventcount > 1 ? od->amp[0] : RCONST(0.0);
-    F[ix++ * nPts + i] = od->eventcount > 1 ? od->amp[1] : RCONST(0.0);
-    F[ix++ * nPts + i] = od->eventcount > 1 ? od->amp[2] : RCONST(0.0);
+    F[ix++ * nPts + i] = od->eventcount > 1 ? od->IMI[0] : ZERO;
+    F[ix++ * nPts + i] = od->eventcount > 1 ? od->IMI[1] : ZERO;
+    F[ix++ * nPts + i] = od->eventcount > 1 ? od->IMI[2] : ZERO;
+    F[ix++ * nPts + i] = od->eventcount > 1 ? od->amp[0] : ZERO;
+    F[ix++ * nPts + i] = od->eventcount > 1 ? od->amp[1] : ZERO;
+    F[ix++ * nPts + i] = od->eventcount > 1 ? od->amp[2] : ZERO;
     for (int j = 0; j < N_VAR; ++j) {
         F[ix++ * nPts + i] = od->xTrajectoryMax[j];
         F[ix++ * nPts + i] = od->xTrajectoryMin[j];

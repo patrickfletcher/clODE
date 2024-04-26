@@ -46,7 +46,7 @@ __kernel void initializeObserver(
 #ifdef STOCHASTIC_STEPPER
         wi[j] = randn(&rd) / sqrt(dt);
 #else
-        wi[j] = RCONST(0.0);
+        wi[j] = ZERO;
 #endif
 
     //get the slope and aux at initial point

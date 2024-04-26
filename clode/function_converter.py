@@ -812,7 +812,7 @@ class OpenCLConverter(ast.NodeTransformer):
     mutable_args: Optional[Union[List[str], List[int]]] = None
     function_name: Optional[str] = None
 
-    def __init__(self, entry_function_name: str = "get_rhs"):
+    def __init__(self, entry_function_name: str = "getRHS"):
         # Initialize any necessary variables
         self.entry_function_name = entry_function_name
         self.syntax_tree = OpenCLSyntaxTree()
