@@ -6,60 +6,103 @@ from typing import List
 
 # clode.set_log_level(clode.LogLevel.debug)
 
-# 1. first pass to get the period of each oscillator
-# 2. set perturbation times as linspace(0, T0), i.e. phase in [0,1]
-# 3. second pass with perturbations, record k event times
-# 4. post-processing to get the perturbed periods and delta phase (T0-T1)/T0 
+def x_inf(v: float, vx: float, sx: float) -> float:
+    return 1.0 / (1.0 + exp((vx - v) / sx))
 
-def fitzhugh_nagumo(
-    time: float,
-    variables: List[float],
-    parameters: List[float],
-    derivatives: List[float],
-    aux: List[float],
-    wiener: List[float],
+def s_inf(c: float, k_s: float) -> float:
+    c2: float = c * c
+    return c2 / (c2 + k_s * k_s)
+
+def lactotroph(
+    t: float,
+    x_: List[float],
+    p_: List[float],
+    dx_: List[float],
+    aux_: List[float],
+    w_: List[float],
 ) -> None:
-    V: float = variables[0]
-    w: float = variables[1]
+    v: float = x_[0]
+    n: float = x_[1]
+    c: float = x_[2]
 
-    a: float = parameters[0]
-    b: float = parameters[1]
-    current: float = parameters[2]
-    epsilon: float = parameters[3]
+    gca: float = p_[0]
+    gk: float = p_[1]
+    gsk: float = p_[2]
+    gleak: float = p_[3]
+    cm: float = p_[4]
+    e_leak: float = p_[5]
+    tau_n: float = p_[6]
+    k_c: float = p_[7]
 
-    dV: float = V - V ** 3 / 3 - w + current
-    dw: float = epsilon * (V + a - b * w)
+    e_ca: float = 60
+    e_k: float = -75
 
-    derivatives[0] = dV
-    derivatives[1] = dw
+    vm: float = -20
+    vn: float = -5
+    sm: float = 12
+    sn: float = 10
 
-variables = {"V": 1.0, "w": 0.0}
-parameters = {"a": 0.7, "b": 0.8, "current": 0.4, "epsilon": 1.0 / 12.5}
+    f_c: float = 0.01
+    alpha: float = 0.0015
+    k_s: float = 0.4
 
-auxvars = []
+    ica: float = gca * x_inf(v, vm, sm) * (v - e_ca)
+    ik: float = gk * n * (v - e_k)
+    isk: float = gsk * s_inf(c, k_s) * (v - e_k)
+    ileak: float = gleak * (v - e_leak)
+    current: float = ica + ik + isk + ileak
 
-tend=1000
+    dv: float = -current / cm
+    dn: float = (x_inf(v, vn, sn) - n) / tau_n
+    dc: float = -f_c * (alpha * ica + k_c * c)
+
+    dx_[0] = dv
+    dx_[1] = dn
+    dx_[2] = dc
+    aux_[0] = ica
+    # aux_[1] = ik
+
+clode.set_log_level(clode.LogLevel.warn)
+
+variables = {
+    "v": -60.0,
+    "n": 0.1,
+    "c": 0.1,
+}
+
+parameters = {
+    "gca": 2.0,
+    "gk": 3.0,
+    "gsk": 1.5,
+    "gleak": 0.,
+    "cm": 4.0,
+    "e_leak": -50.0,
+    "tau_n": 30.0,
+    "k_c": 0.1,
+}
+
+auxvars = ['ica']
+
+tend=2000
 features_integrator = clode.FeatureSimulator(
-    rhs_equation=fitzhugh_nagumo,
+    rhs_equation=lactotroph,
+    supplementary_equations=[x_inf, s_inf],
     variables=variables,
     parameters=parameters,
     aux=auxvars,
-    observer=clode.Observer.local_max,
     stepper=clode.Stepper.dormand_prince,
     t_span=(0.0, tend),
-    observer_max_event_count=10,
-    observer_max_event_timestamps = 10,
-    observer_min_x_amp=0,
-    observer_min_imi=0,
-    feature_var="V",
-    dtmax=1.0,
     dt=0.1,
+    dtmax=1.0,
     abstol=1.0e-6,
-    reltol=1.0e-6
+    reltol=1.0e-4,
+    observer=clode.Observer.local_max,
+    feature_var="v",
+    observer_max_event_count=100,
+    observer_max_event_timestamps = 10,
 )
 
 features_integrator.transient()
-features_integrator.set_tspan((0.0, 300.))
 output = features_integrator.features()
 
 localmax_times = output.get_event_data("localmax","time")
@@ -69,23 +112,23 @@ localmin_evars = output.get_event_data("localmin","evar")
 
 # Get the trajectory
 trajectory_integrator = clode.TrajectorySimulator(
-    rhs_equation=fitzhugh_nagumo,
+    rhs_equation=lactotroph,
+    supplementary_equations=[x_inf, s_inf],
     variables=variables,
     parameters=parameters,
     aux=auxvars,
     stepper=clode.Stepper.dormand_prince,
     t_span=(0.0, tend),
-    dtmax=1.0,
     dt=0.1,
+    dtmax=1.0,
     abstol=1.0e-6,
-    reltol=1.0e-6
+    reltol=1.0e-4,
 )
 
 trajectory_integrator.transient()
-trajectory_integrator.set_tspan((0.0, 300.))
 trajectory = trajectory_integrator.trajectory()
 
-var = "V"
+var = "v"
 t = trajectory.t
 v = trajectory.x[var]
 dvdt = trajectory.dx[var]

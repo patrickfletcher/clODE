@@ -94,25 +94,21 @@ features_integrator = clode.FeatureSimulator(
     dtmax=1.0,
     abstol=1.0e-6,
     reltol=1.0e-4,
-    observer=clode.Observer.threshold_2,
+    observer=clode.Observer.neighbourhood_2,
     event_var="v",
     feature_var="v",
-    observer_x_up_thresh=0.2,
-    observer_dx_up_thresh=0.,
     observer_x_down_thresh=0.1,
-    observer_dx_down_thresh=0.,
-    observer_max_event_count=2,
+    observer_neighbourhood_radius=0.05,
+    observer_max_event_count=10,
+    observer_max_event_timestamps = 10,
 )
-
-features_integrator.set_repeat_ensemble(10)
 
 features_integrator.transient()
 output = features_integrator.features()
 
-print(output)
+event_times = output.get_event_data("nhood","time")[0]
 
-up_times = output.get_event_data("up","time")
-down_times = output.get_event_data("down","time")
+print(event_times)
 
 # Get the trajectory
 trajectory_integrator = clode.TrajectorySimulator(
@@ -132,40 +128,28 @@ trajectory_integrator = clode.TrajectorySimulator(
 trajectory_integrator.transient()
 trajectory = trajectory_integrator.trajectory()
 
-var = "v"
+vars = list(variables.keys())
+
 t = trajectory.t
-v = trajectory.x[var]
-dvdt = trajectory.dx[var]
+v = trajectory.x["v"]
+n = trajectory.x["n"]
+c = trajectory.x["c"]
 
-plt.plot(t, v)
-# Plot events
-for event in up_times[0,:]:
-    plt.axvline(x=event, color="red", linestyle="--")
+nhood_center_v = output.F["nhood center v"]
+nhood_center_n = output.F["nhood center n"]
+nhood_center_c = output.F["nhood center c"]
 
-for event in down_times[0,:]:
-    plt.axvline(x=event, color="blue", linestyle="--")
+# Plot trajectory with event markers in state space
+ax = plt.subplot(1, 1, 1, projection='3d')
+ax.plot(c, n, v)
+ax.plot(nhood_center_c, nhood_center_n, nhood_center_v, 'bo')
 
-plt.xlabel("t")
-plt.ylabel(var)
+for event_time in event_times:
+    exit_ix = np.argmax(t>event_time)
+    ax.plot(c[exit_ix], n[exit_ix], v[exit_ix],'r>')
+
+ax.set_xlabel("c")
+ax.set_ylabel("n")
+ax.set_zlabel("v")
 plt.show()
 # pass
-
-
-# plot the dvdt vs v for the first full period
-first_up_idx = np.argmax(t>=up_times[0,0]) 
-second_up_idx = np.argmax(t>=up_times[0,1])
-first_down_idx = np.argmax(t>=down_times[0,0]) 
-
-plt.plot(v[first_up_idx:second_up_idx], dvdt[first_up_idx:second_up_idx])
-plt.xlabel(var)
-plt.ylabel(f"d{var}/dt")
-plt.title("Lactotroph model")
-plt.axhline(y=0.0, color="gray", linestyle="-")
-
-plt.axvline(x=v[first_up_idx], color="red", linestyle="--")
-plt.axhline(y=dvdt[first_up_idx], color="orange", linestyle="--")
-
-plt.axvline(x=v[first_down_idx], color="blue", linestyle="--")
-plt.axhline(y=dvdt[first_down_idx], color="green", linestyle="--")
-
-plt.show()
