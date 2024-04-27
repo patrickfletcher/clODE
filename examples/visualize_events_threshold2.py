@@ -82,6 +82,11 @@ parameters = {
 auxvars = ['ica']
 
 tend=2000
+x_up_thresh=0.2
+dx_up_thresh=0.
+x_down_thresh=0.1
+dx_down_thresh=0.
+
 features_integrator = clode.FeatureSimulator(
     rhs_equation=lactotroph,
     supplementary_equations=[x_inf, s_inf],
@@ -97,14 +102,13 @@ features_integrator = clode.FeatureSimulator(
     observer=clode.Observer.threshold_2,
     event_var="v",
     feature_var="v",
-    observer_x_up_thresh=0.2,
-    observer_dx_up_thresh=0.,
-    observer_x_down_thresh=0.1,
-    observer_dx_down_thresh=0.,
-    observer_max_event_count=2,
+    observer_x_up_thresh=x_up_thresh,
+    observer_dx_up_thresh=dx_up_thresh,
+    observer_x_down_thresh=x_down_thresh,
+    observer_dx_down_thresh=dx_down_thresh,
+    observer_max_event_count=5,
+    observer_max_event_timestamps=5,
 )
-
-features_integrator.set_repeat_ensemble(10)
 
 features_integrator.transient()
 output = features_integrator.features()
@@ -139,10 +143,10 @@ dvdt = trajectory.dx[var]
 
 plt.plot(t, v)
 # Plot events
-for event in up_times[0,:]:
+for event in up_times:
     plt.axvline(x=event, color="red", linestyle="--")
 
-for event in down_times[0,:]:
+for event in down_times:
     plt.axvline(x=event, color="blue", linestyle="--")
 
 plt.xlabel("t")
@@ -152,20 +156,33 @@ plt.show()
 
 
 # plot the dvdt vs v for the first full period
-first_up_idx = np.argmax(t>=up_times[0,0]) 
-second_up_idx = np.argmax(t>=up_times[0,1])
-first_down_idx = np.argmax(t>=down_times[0,0]) 
+first_up_idx = np.argmax(t>=up_times[0]) 
+second_up_idx = np.argmax(t>=up_times[1])
+first_down_idx = np.argmax(t>=down_times[0])
 
-plt.plot(v[first_up_idx:second_up_idx], dvdt[first_up_idx:second_up_idx])
+plt.plot(v[first_up_idx:second_up_idx], dvdt[first_up_idx:second_up_idx],'.-')
+plt.plot(v[first_up_idx], dvdt[first_up_idx], 'ro')
+plt.plot(v[first_down_idx], dvdt[first_down_idx], 'bs')
 plt.xlabel(var)
 plt.ylabel(f"d{var}/dt")
-plt.title("Lactotroph model")
 plt.axhline(y=0.0, color="gray", linestyle="-")
 
-plt.axvline(x=v[first_up_idx], color="red", linestyle="--")
-plt.axhline(y=dvdt[first_up_idx], color="orange", linestyle="--")
+# now plot v and dvdt actual thresholds
+min_v = output.F["min v"]
+max_v = output.F["max v"]
+range_v = max_v - min_v
+min_dvdt = output.F["min dv/dt"]
+max_dvdt = output.F["max dv/dt"]
 
-plt.axvline(x=v[first_down_idx], color="blue", linestyle="--")
-plt.axhline(y=dvdt[first_down_idx], color="green", linestyle="--")
+up_v = min_v + x_up_thresh * range_v
+down_v = min_v + x_down_thresh * range_v if x_down_thresh>0 else up_v
+up_dvdt = dx_up_thresh * max_dvdt if dx_up_thresh>0 else 0
+down_dvdt = dx_down_thresh * min_dvdt if dx_down_thresh>0 else min_dvdt
+
+plt.axvline(x=up_v, color="red", linestyle="--")
+plt.axhline(y=up_dvdt, color="orange", linestyle="--")
+
+plt.axvline(x=down_v, color="blue", linestyle="--")
+plt.axhline(y=down_dvdt, color="green", linestyle="--")
 
 plt.show()

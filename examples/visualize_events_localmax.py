@@ -98,7 +98,7 @@ features_integrator = clode.FeatureSimulator(
     reltol=1.0e-4,
     observer=clode.Observer.local_max,
     feature_var="v",
-    observer_max_event_count=100,
+    observer_max_event_count=10,
     observer_max_event_timestamps = 10,
 )
 
