@@ -118,7 +118,7 @@ def test_opencl_builtins() -> None:
         aux[37] = log10(x0 + 1)
         aux[38] = 0.0  # logb(x0 + 1)
         aux[39] = 0.0  # mad(x0, x1, x2)
-        # aux[40] = nan()
+        aux[40] = 0.0 # nan()
         aux[41] = nextafter(x0, x1)
         aux[42] = pow(x0, x1)
         aux[43] = pown(x0, p0)
