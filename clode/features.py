@@ -64,8 +64,7 @@ class ObserverOutput:
     # TODO: if we know the shape of the original ensemble (e.g., 1D/2D/3D) could return in that shape
     def _get_var(self, var: str) -> np.ndarray[Any, np.dtype[np.float64]]:
         try:
-            data = self.F[var].squeeze()
-            return data[np.newaxis] if len(data.shape)==0 else data
+            return self.F[var].squeeze()
         except ValueError:
             raise NotImplementedError(
                 f"{self._observer_type} does not track {var}!"
@@ -105,6 +104,7 @@ class ObserverOutput:
             datapoint = self._get_var(f"{name} event {type} {event_idx}")
             if np.all(datapoint == 0):
                 break
+            datapoint = datapoint[np.newaxis] if len(datapoint.shape)==0 else datapoint
             data.append(datapoint)
         return np.stack(data, axis=1).squeeze() if data else []
     
@@ -119,6 +119,7 @@ class ObserverOutput:
             datapoint = self._get_var(f"{var} event time {key_idx}")
             if np.all(datapoint == 0):
                 break
+            datapoint = datapoint[np.newaxis] if len(datapoint.shape)==0 else datapoint
             data.append(datapoint)
         return np.stack(data, axis=1).squeeze() if data else []
 

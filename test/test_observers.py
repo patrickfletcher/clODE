@@ -94,8 +94,6 @@ def test_observer(observer):
         observer_max_event_timestamps=10,
     )
 
-    integrator.set_repeat_ensemble(num_repeats=1)
-
     features = integrator.features()
     feature_names = features.get_feature_names()
 
