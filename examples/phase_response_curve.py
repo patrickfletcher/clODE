@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import clode
-from clode import exp
+from clode import exp, heaviside
 from typing import List
 
 # clode.set_log_level(clode.LogLevel.debug)
@@ -12,33 +12,39 @@ from typing import List
 # 4. post-processing to get the perturbed periods and delta phase (T0-T1)/T0 
 
 def fitzhugh_nagumo(
-    time: float,
-    variables: List[float],
-    parameters: List[float],
-    derivatives: List[float],
+    t: float,
+    x: List[float],
+    p: List[float],
+    dx: List[float],
     aux: List[float],
     wiener: List[float],
 ) -> None:
-    V: float = variables[0]
-    w: float = variables[1]
+    v: float = x[0]
+    w: float = x[1]
 
-    a: float = parameters[0]
-    b: float = parameters[1]
-    current: float = parameters[2]
-    epsilon: float = parameters[3]
+    a: float = 0.7
+    b: float = 0.8
+    epsilon: float = 1.0 / 12.5
 
-    dV: float = V - V ** 3 / 3 - w + current
-    dw: float = epsilon * (V + a - b * w)
+    strength: float = p[0]
+    t_on: float = p[1]
+    duration: float = p[2]
 
-    derivatives[0] = dV
-    derivatives[1] = dw
+    t_off: float = t_on+duration
+    stim: float = strength * (heaviside(t-t_on)-heaviside(t-t_off))
 
-variables = {"V": 1.0, "w": 0.0}
-parameters = {"a": 0.6, "b": 0.8, "current": 0.35, "epsilon": 1.0 / 12.5}
+    dv: float = v - v ** 3 / 3 - w + 0.4 + stim
+    dw: float = epsilon * (v + a - b * w)
 
+    dx[0] = dv
+    dx[1] = dw
+
+variables = {"v": 1.0, "w": 0.0}
+parameters = {"strength": 0., "t_on": 0.0, "duration": 1.0}
 auxvars = []
 
-tend=1000
+# Set up the solver. 
+tend=2000
 features_integrator = clode.FeatureSimulator(
     rhs_equation=fitzhugh_nagumo,
     variables=variables,
@@ -46,62 +52,47 @@ features_integrator = clode.FeatureSimulator(
     aux=auxvars,
     stepper=clode.Stepper.rk4,
     t_span=(0.0, tend),
-    dtmax=1.0,
-    dt=0.1,
-    abstol=1.0e-6,
-    reltol=1.0e-6,
-    observer=clode.Observer.local_max,
-    observer_max_event_count=80,
-    observer_max_event_timestamps = 5,
-    observer_min_x_amp=0,
-    observer_min_imi=0,
-    feature_var="V",
+    dt=0.01,
+    observer=clode.Observer.neighbourhood_2,
+    observer_max_event_count = 4,
+    observer_max_event_timestamps = 4,
+    feature_var="v",
 )
 
+# Integrate first to forget the initial condition
 features_integrator.transient()
-features_integrator.set_tspan((0.0, 300.))
+
+# Now we integrate using events to stop the simulation at the beginning of a period
 output = features_integrator.features()
 
-print(output.F["step count"])
+period = output.F["mean period"][0]
+print(period)
 
-localmax_times = output.get_event_data("localmax","time")
-localmax_evars = output.get_event_data("localmax","evar")
-localmin_times = output.get_event_data("localmin","time")
-localmin_evars = output.get_event_data("localmin","evar")
+# make the grid of stimulus inputs: vary t_on, strength(?)
+num_perturbation_times = 1024
+on_times = period + np.linspace(0, period, num_perturbation_times)
 
-print(localmax_times,localmax_evars)
-print(localmin_times,localmin_evars)
+# num_strengths = 5
+# strengths = np.linspace(0.0,0.1,num_strengths)
+strengths = 0.05
 
-# Get the trajectory
-trajectory_integrator = clode.TrajectorySimulator(
-    rhs_equation=fitzhugh_nagumo,
-    variables=variables,
-    parameters=parameters,
-    aux=auxvars,
-    stepper=clode.Stepper.dormand_prince,
-    t_span=(0.0, tend),
-    dtmax=1.0,
-    dt=0.1,
-    abstol=1.0e-6,
-    reltol=1.0e-6,
-)
+X0 = features_integrator.get_final_state().repeat(num_perturbation_times, axis=0)
 
-trajectory_integrator.transient()
-trajectory_integrator.set_tspan((0.0, 300.))
-trajectory = trajectory_integrator.trajectory()
+features_integrator.set_ensemble(variables = X0, parameters = {"t_on": on_times, "strength": strengths})
+features_integrator.set_tspan((0.0, 5*period))
 
-var = "V"
-t = trajectory.t
-v = trajectory.x[var]
-dvdt = trajectory.dx[var]
+output = features_integrator.features()
 
-# Plot trajectory with event markers
+event_times = output.get_event_data("nhood","time")
+
+periods_perturb = np.diff(event_times, axis=1)
+# print(periods_perturb)
+
+stim_phase = (on_times - period)/period 
+delta_phase = (period - periods_perturb)/period
+
 ax = plt.subplot(1, 1, 1)
-ax.plot(t, v)
-ax.plot(localmax_times, localmax_evars, 'rv')
-ax.plot(localmin_times, localmin_evars, 'b^')
-
-plt.xlabel("t")
-plt.ylabel(var)
+ax.plot(stim_phase, delta_phase[:,0])
+plt.xlabel("phase ($\phi$)")
+plt.ylabel("$\Delta\phi$")
 plt.show()
-# pass
