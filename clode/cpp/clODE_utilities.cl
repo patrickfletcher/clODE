@@ -16,7 +16,7 @@
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
-#define heav(x) ((x) > ZERO ? ONE : ZERO) 
+#define heaviside(x) ((x) >= ZERO ? ONE : ZERO) 
 
 //1-norm
 static inline realtype norm_1(realtype x[], int N) {

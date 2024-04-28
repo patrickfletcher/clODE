@@ -34,6 +34,7 @@ from clode import (
     fmod,
     gamma,
     hypot,
+    heaviside,
     ilogb,
     ldexp,
     lgamma,
@@ -106,7 +107,7 @@ def test_opencl_builtins() -> None:
         aux[26] = 0.0  # fma(x0, x1, x2)
         aux[27] = fmod(x0, x1 + 1)
         # aux[28] = fract(x0) # Compile error
-        aux[28] = t
+        aux[28] = heaviside(t - 0.5)
         aux[29] = gamma(x0 + 1)
         aux[30] = hypot(x0, x1)
         aux[31] = float(ilogb(x0 + 1))
@@ -170,6 +171,8 @@ def test_opencl_builtins() -> None:
             assert np.isclose(
                 cl_aux_arr[t_index], aux_arr[i], atol=1e-7
             ), f"Assertion failed for {auxi} at time {t}, expected {aux_arr[i]}, got {cl_aux_arr[t_index]}"
+            if i==28:
+                print(cl_aux_arr[t_index], aux_arr[i])
 
-# if __name__ == "__main__":
-#     test_opencl_builtins()
+if __name__ == "__main__":
+    test_opencl_builtins()

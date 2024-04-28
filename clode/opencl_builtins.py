@@ -82,6 +82,8 @@ def fdim(x: float, y: float) -> float:
 def ilogb(x: float) -> int:
     return int(log2(x))
 
+def heaviside(x: float) -> float:
+    return 1.0 if x >= 0.0 else 0.0
 
 # OpenCL returns nan
 # def logb(x: float) -> float:
@@ -162,6 +164,7 @@ __all__ = [
     "fmod",
     # "fract",
     "gamma",
+    "heaviside",
     "hypot",
     "ilogb",
     "ldexp",
