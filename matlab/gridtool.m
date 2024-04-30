@@ -319,8 +319,8 @@ classdef gridtool < handle %matlab.mixin.SetGet
             if isempty(app.clo_g)
                 
             else %to avoid reverting to default sp and op:
-                app.clo_g.setNewProblem(app.prob);
-                app.clo_t.setNewProblem(app.prob);
+                app.clo_g.setProblemInfo(app.prob);
+                app.clo_t.setProblemInfo(app.prob);
                 
                 %remove grid.name to allow new grid to be set below
                 app.listenerGrid.Enabled=0;

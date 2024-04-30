@@ -119,10 +119,10 @@ classdef clODE < cppclass
         % new and delete are inherited
         
         %set a new problem - must initialize again!
-        function setNewProblem(obj, newprob)
+        function setProblemInfo(obj, newprob)
             newprob = clODE.purifyProblemStruct(newprob);
             if ~strcmp(newprob,obj.prob)
-                obj.cppmethod('setnewproblem', newprob);
+                obj.cppmethod('setProblemInfo', newprob);
                 obj.prob=newprob;
                 obj.clBuilt=false;
                 obj.clInitialized=false;

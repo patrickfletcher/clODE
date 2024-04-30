@@ -32,7 +32,7 @@ enum class Action
 {
     New,
     Delete,
-    SetNewProblem,
+    setProblemInfo,
     SetStepper,
     SetPrecision,
     SetOpenCL,
@@ -61,7 +61,7 @@ const std::map<std::string, Action> actionTypeMap =
 {
     { "new",            Action::New },
     { "delete",         Action::Delete },
-    { "setnewproblem",  Action::SetNewProblem },
+    { "setProblemInfo",  Action::setProblemInfo },
     { "setstepper",     Action::SetStepper },
     { "setprecision",   Action::SetPrecision },
     { "setopencl",      Action::SetOpenCL },
@@ -183,9 +183,9 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
         plhs[0] = mxCreateLogicalScalar(instanceTab.empty()); // info
         break;
     }
-    case Action::SetNewProblem:
+    case Action::setProblemInfo:
 	{ //inputs: prob
-        instance->setNewProblem(getMatlabProblemStruct(prhs[2]));
+        instance->setProblemInfo(getMatlabProblemStruct(prhs[2]));
         break;
 	}
     case Action::SetStepper:
