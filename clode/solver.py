@@ -10,12 +10,11 @@ from .runtime import (
     CLDeviceType,
     CLVendor,
     OpenCLResource,
-    ProblemInfo,
-    SimulatorBase,
-    SolverParams,
     _clode_root_dir,
     initialize_runtime,
 )
+from clode.cpp.clode_cpp_wrapper import SolverParams, ProblemInfo, SimulatorBase
+
 from .xpp_parser import convert_xpp_file
 
 

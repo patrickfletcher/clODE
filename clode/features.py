@@ -7,13 +7,8 @@ import numpy as np
 from numpy.lib import recfunctions as rfn
 
 from .function_converter import OpenCLRhsEquation
-from .runtime import (
-    CLDeviceType,
-    CLVendor,
-    FeatureSimulatorBase,
-    ObserverParams,
-    _clode_root_dir,
-)
+from .runtime import CLDeviceType, CLVendor, _clode_root_dir
+from clode.cpp.clode_cpp_wrapper import ObserverParams, FeatureSimulatorBase
 from .solver import Simulator, Stepper
 
 
