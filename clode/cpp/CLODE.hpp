@@ -103,8 +103,10 @@ struct ProblemInfo
 
 class CLODE
 {
-
-protected:
+// note: ISOc++ advises against protected data... rework?
+// https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#Rh-protected
+  
+protected:  
     //Problem details
     ProblemInfo prob;
     std::string clRHSfilename;
@@ -141,8 +143,9 @@ protected:
     //flag to indicate whether kernel can be executed
     bool clInitialized = false;
 
-    
+    void setClodeRoot(const std::string clodeRoot);
     void setCLbuildOpts(std::string extraBuildOpts = "");
+    void buildProgram(std::string extraBuildOpts = ""); //build the program object (inherited by subclasses)
     std::string getStepperDefine();
     SolverParams<cl_float> solverParamsToFloat(SolverParams<cl_double> sp);
 
@@ -157,21 +160,20 @@ public:
     CLODE(ProblemInfo prob, std::string stepper, bool clSinglePrecision, unsigned int platformID, unsigned int deviceID, const std::string clodeRoot);
     virtual ~CLODE();
 
-    //Set functions: trigger rebuild etc
-    void setNewProblem(ProblemInfo prob);               //requires rebuild: pars/vars. Opencl context OK
-    void setStepper(std::string newStepper);            //requires rebuild: Host + Device data OK
-    void setPrecision(bool clSinglePrecision);          //requires rebuild: all device vars. Opencl context OK
-    void setOpenCL(OpenCLResource opencl);              //requires rebuild: all device vars. Host problem data OK
+    // Setters that trigger need to rebuild CL program
+    void setProblemInfo(ProblemInfo prob);               //Opencl context OK
+    void setStepper(std::string newStepper);            //Host + Device data OK
+    void setPrecision(bool clSinglePrecision);          //reset all device vars. Opencl context OK
+    void setOpenCL(OpenCLResource opencl);              //reset all device vars. Host problem data OK
     void setOpenCL(unsigned int platformID, unsigned int deviceID);
-    void setClodeRoot(const std::string clodeRoot);
 
-    void buildProgram(std::string extraBuildOpts = ""); //build the program object (inherited by subclasses)
     virtual void buildCL(); // build program and create kernel objects - overloaded by subclasses to include any extra kernels
 
     // set all problem data needed to run
     virtual void initialize(std::vector<cl_double> newTspan, std::vector<cl_double> newX0, std::vector<cl_double> newPars, SolverParams<cl_double> newSp);
 	bool isInitialized() { return clInitialized; };
 
+    // no need to rebuild CL program
     void setNpts(cl_int newNpts); //resizes the nPts-dependent input variables
     void setProblemData(std::vector<cl_double> newX0, std::vector<cl_double> newPars); //set both pars and X0 to change nPts
     void setTspan(std::vector<cl_double> newTspan);
@@ -192,16 +194,18 @@ public:
     void shiftTspan(); //t0 <- tf, tf<-(tf + tf-t0)
     void shiftX0();    //d_x0 <- d_xf (device to device transfer)
 
-    std::vector<cl_double> getTspan() { return tspan; };
-    std::vector<cl_double> getX0();
-    std::vector<cl_double> getXf();
-    std::string getProgramString();
-    std::vector<std::string> getAvailableSteppers() { return availableSteppers; };
-
-    void printStatus();
-
     // Getters
     const ProblemInfo getProblemInfo() const { return prob; };
+    const std::vector<cl_double> getTspan() const { return tspan; };
+    const SolverParams<cl_double> getSolverParams() const{ return sp; };
+    const std::vector<cl_double> getPars() const { return pars; };
+    const std::vector<cl_double> getX0();
+    const std::vector<cl_double> getXf();
+    const std::vector<std::string> getAvailableSteppers() const { return availableSteppers; };
+
+    const std::string getProgramString();
+    void printStatus();
+
 };
 
 #endif //CLODE_HPP_

@@ -36,7 +36,7 @@ protected:
     std::vector<cl_double> F;
     ObserverParams<cl_double> op;
     size_t Felements;
-    bool doObserverInitialization = true;
+    bool observerInitialized = false;
 
     cl::Buffer d_odata, d_op, d_F;
     cl::Kernel cl_initializeObserver;
@@ -46,7 +46,6 @@ protected:
     std::string observerName;
 
     ObserverParams<cl_float> observerParamsToFloat(ObserverParams<cl_double> op);
-
     std::string getObserverBuildOpts();
     void updateObserverDefineMap(); // update host variables representing feature detector: nFeatures, featureNames, observerDataSize
     void resizeFeaturesVariables(); //d_odata and d_F depend on nPts. nPts change invalidates d_odata
@@ -56,23 +55,23 @@ public:
     CLODEfeatures(ProblemInfo prob, std::string stepper, std::string observer, ObserverParams<cl_double> op, bool clSinglePrecision, unsigned int platformID, unsigned int deviceID, const std::string clodeRoot);
     virtual ~CLODEfeatures();
 
-    //build program, set all problem data needed to run
-    using CLODE::initialize;
-    virtual void initialize(std::vector<cl_double> newTspan, std::vector<cl_double> newX0, std::vector<cl_double> newPars, SolverParams<cl_double> newSp, ObserverParams<cl_double> newOp);
+    void buildCL() override; // build program and create kernel objects
+
+    //not an override - different signature
+    void initialize(std::vector<cl_double> newTspan, std::vector<cl_double> newX0, std::vector<cl_double> newPars, SolverParams<cl_double> newSp, ObserverParams<cl_double> newOp);
 
     void setObserverParams(ObserverParams<cl_double> newOp);
     void setObserver(std::string newObserver); //requires rebuild: program, kernel, kernel args. Host + Device data OK
 
-    virtual void buildCL(); // build program and create kernel objects
-
     //simulation routine.
     void initializeObserver();                 //initialize Observer struct: possibly integrate forward an interval of duration (tf-t0), rewinds to t0
     void features();                           //integrate forward using stored tspan, x0, pars, and solver pars
-    void features(bool newDoObserverInitFlag); //allow manually forcing re-init of observer data
+    void features(bool reinitialize_observer); //allow manually forcing re-init of observer data
+    bool isObserverInitialized(){ return observerInitialized; };
 
     //Get functions
+    const ObserverParams<cl_double> getObserverParams() const{ return op; };
     const std::string getObserverName() const { return observerName; }
-    const std::string getProgramString();
     const std::vector<cl_double> getF();
     const int getNFeatures() const { return nFeatures; };
     const std::vector<std::string> getFeatureNames() const { return featureNames;};

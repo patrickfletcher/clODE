@@ -13,7 +13,7 @@
 CLODE::CLODE(ProblemInfo prob, std::string stepper, bool clSinglePrecision, OpenCLResource opencl, const std::string clodeRoot)
 {
 	getStepperDefineMap(stepperDefineMap, availableSteppers); //from steppers.cl
-	setNewProblem(prob);
+	setProblemInfo(prob);
 	setStepper(stepper);
 	setPrecision(clSinglePrecision);
     setClodeRoot(clodeRoot);
@@ -26,7 +26,7 @@ CLODE::CLODE(ProblemInfo prob, std::string stepper, bool clSinglePrecision, Open
 CLODE::CLODE(ProblemInfo prob, std::string stepper, bool clSinglePrecision, unsigned int platformID, unsigned int deviceID, const std::string clodeRoot)
 {
 	getStepperDefineMap(stepperDefineMap, availableSteppers); //from steppers.cl
-	setNewProblem(prob);
+	setProblemInfo(prob);
 	setStepper(stepper);
 	setPrecision(clSinglePrecision);
     setClodeRoot(clodeRoot);
@@ -40,7 +40,7 @@ CLODE::~CLODE()
 {
 }
 
-void CLODE::setNewProblem(ProblemInfo newProb)
+void CLODE::setProblemInfo(ProblemInfo newProb)
 { //TODO: not equality check for ProblemInfo struct, error checking: at least one variable!
 	prob=newProb;
 	clRHSfilename = newProb.clRHSfilename;
@@ -532,7 +532,7 @@ void CLODE::transient()
 	}
 }
 
-std::vector<cl_double> CLODE::getX0()
+const std::vector<cl_double> CLODE::getX0()
 {
 
 	if (clSinglePrecision)
@@ -549,7 +549,7 @@ std::vector<cl_double> CLODE::getX0()
 	return x0;
 }
 
-std::vector<cl_double> CLODE::getXf()
+const std::vector<cl_double> CLODE::getXf()
 {
 
 	if (clSinglePrecision)
@@ -567,9 +567,9 @@ std::vector<cl_double> CLODE::getXf()
 }
 
 
-std::string CLODE::getProgramString() 
+// will be populated once buildCL is run
+const std::string CLODE::getProgramString() 
 {
-	setCLbuildOpts();
 	return buildOptions+clprogramstring+ODEsystemsource; 
 }
 

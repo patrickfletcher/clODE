@@ -241,31 +241,40 @@ PYBIND11_MODULE(clode_cpp_wrapper, m) {
                     	py::arg("cl_single_precision"),
                     	py::arg("opencl_resource"),
                     	py::arg("clode_root"))
+            .def("set_problem_info", static_cast<void (CLODE::*)(ProblemInfo)>(&CLODE::setProblemInfo))
+            .def("set_stepper", static_cast<void (CLODE::*)(std::string)>(&CLODE::setStepper))
+            .def("set_precision", static_cast<void (CLODE::*)(bool)>(&CLODE::setPrecision))
+            .def("set_opencl", static_cast<void (CLODE::*)(OpenCLResource opencl)>(&CLODE::setOpenCL))
+            .def("set_opencl", static_cast<void (CLODE::*)(unsigned int platformID, unsigned int deviceID)>(&CLODE::setOpenCL))
+            .def("build_cl", &CLODE::buildCL)
             .def("initialize", static_cast<void (CLODE::*)
                     (std::vector<double>,
                      std::vector<double>,
                      std::vector<double>,
                      SolverParams<double>)>
-            (&CLODE::initialize), "Initialize CLODE", py::arg("tspan"), py::arg("x0"), py::arg("pars"), py::arg("solver_params"))
-            .def("seed_rng", static_cast<void (CLODE::*)(int)>(&CLODE::seedRNG), "Seed RNG", py::arg("seed"))
-            .def("seed_rng", static_cast<void (CLODE::*)()>(&CLODE::seedRNG), "Seed RNG")
-            .def("build_cl", &CLODE::buildCL)
-            .def("set_tspan", static_cast<void (CLODE::*)(std::vector<double>)>(&CLODE::setTspan))
+                    (&CLODE::initialize), 
+                "Initialize CLODE", py::arg("tspan"), py::arg("x0"), py::arg("pars"), py::arg("solver_params"))
+            .def("is_initialized", &CLODE::isInitialized)
+            .def("set_npts", static_cast<void (CLODE::*)(int)>(&CLODE::setNpts), py::arg("npts"))
             .def("set_problem_data", static_cast<void (CLODE::*)(std::vector<double>, std::vector<double>)>(&CLODE::setProblemData))
+            .def("set_tspan", static_cast<void (CLODE::*)(std::vector<double>)>(&CLODE::setTspan))
             .def("set_x0", static_cast<void (CLODE::*)(std::vector<double>)>(&CLODE::setX0))
             .def("set_pars", static_cast<void (CLODE::*)(std::vector<double>)>(&CLODE::setPars))
             .def("set_solver_params", static_cast<void (CLODE::*)(SolverParams<double>)>(&CLODE::setSolverParams))
+            .def("seed_rng", static_cast<void (CLODE::*)()>(&CLODE::seedRNG), "Seed RNG")
+            .def("seed_rng", static_cast<void (CLODE::*)(int)>(&CLODE::seedRNG), "Seed RNG", py::arg("seed"))
             .def("transient", &CLODE::transient)
             .def("shift_tspan", &CLODE::shiftTspan)
             .def("shift_x0", &CLODE::shiftX0)
+            .def("get_problem_info", &CLODE::getProblemInfo)
             .def("get_tspan", &CLODE::getTspan)
+            .def("get_solver_params", &CLODE::getSolverParams)
+            .def("get_pars", &CLODE::getPars)
             .def("get_x0", &CLODE::getX0)
             .def("get_xf", &CLODE::getXf)
             .def("get_available_steppers", &CLODE::getAvailableSteppers)
-            .def("get_problem_info", &CLODE::getProblemInfo)
             .def("get_program_string", &CLODE::getProgramString)
-            .def("print_status", &CLODE::printStatus)
-            .def("is_initialized", &CLODE::isInitialized);
+            .def("print_status", &CLODE::printStatus);
 
 
     // clODE features specialization 
@@ -313,12 +322,7 @@ PYBIND11_MODULE(clode_cpp_wrapper, m) {
                           bool,
                           OpenCLResource &,
                           std::string &>())
-            .def("initialize", static_cast<void (CLODEfeatures::*)
-                    (std::vector<double>,
-                     std::vector<double>,
-                     std::vector<double>,
-                     SolverParams<double>)>
-                     (&CLODEfeatures::initialize), "Initialize FeatureSimulatorBase")
+            .def("build_cl", &CLODEfeatures::buildCL)
             .def("initialize", static_cast<void (CLODEfeatures::*)
                                                     (std::vector<double>,
                                                     std::vector<double>,
@@ -326,14 +330,17 @@ PYBIND11_MODULE(clode_cpp_wrapper, m) {
                                                     SolverParams<double>,
                                                     ObserverParams<double>)>
                                                     (&CLODEfeatures::initialize), "Initialize FeatureSimulatorBase")
-            .def("build_cl", &CLODEfeatures::buildCL)
-            .def("features", static_cast<void (CLODEfeatures::*)(bool)>(&CLODEfeatures::features)) //CLODEfeatures specializations
-            .def("features", static_cast<void (CLODEfeatures::*)()>(&CLODEfeatures::features))
             .def("set_observer_params", static_cast<void (CLODEfeatures::*)(ObserverParams<double>)>(&CLODEfeatures::setObserverParams))
+            .def("set_observer", static_cast<void (CLODEfeatures::*)(std::string)>(&CLODEfeatures::setObserver))
+            .def("initialize_observer", &CLODEfeatures::initializeObserver)
+            .def("is_observer_initialized", &CLODEfeatures::isObserverInitialized)
+            .def("features", static_cast<void (CLODEfeatures::*)(bool)>(&CLODEfeatures::features))
+            .def("features", static_cast<void (CLODEfeatures::*)()>(&CLODEfeatures::features))
+            .def("get_observer_params", &CLODEfeatures::getObserverParams)
             .def("get_observer_name", &CLODEfeatures::getObserverName)
+            .def("get_f", &CLODEfeatures::getF)
             .def("get_n_features", &CLODEfeatures::getNFeatures)
             .def("get_feature_names", &CLODEfeatures::getFeatureNames)
-            .def("get_f", &CLODEfeatures::getF)
             .def("get_available_observers", &CLODEfeatures::getAvailableObservers)
             .def("__repr__", [](const CLODEfeatures &c) {
                 return "<CLODEfeatures (observer="

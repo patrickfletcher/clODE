@@ -69,18 +69,6 @@ void CLODEfeatures::buildCL()
 }
 
 
-const std::string CLODEfeatures::getProgramString()
-{
-	observerBuildOpts = " -D" + observerDefineMap.at(observer).define;
-	observerBuildOpts += " -DN_STORE_EVENTS=" + std::to_string((long long)op.maxEventTimestamps);
-	setCLbuildOpts(observerBuildOpts);
-	return buildOptions + clprogramstring + ODEsystemsource;
-}
-
-// void CLODEfeatures::initialize(std::vector<cl_double> newTspan, std::vector<cl_double> newX0, std::vector<cl_double> newPars, SolverParams<cl_double> newSp) {
-//     throw std::runtime_error("CLODEfeatures requires the newOp parameter!");
-// }
-
 //initialize everything
 void CLODEfeatures::initialize(std::vector<cl_double> newTspan, std::vector<cl_double> newX0, std::vector<cl_double> newPars, SolverParams<cl_double> newSp, ObserverParams<cl_double> newOp)
 {
@@ -95,7 +83,7 @@ void CLODEfeatures::initialize(std::vector<cl_double> newTspan, std::vector<cl_d
 	setSolverParams(newSp);
 	setObserverParams(newOp);
 
-	doObserverInitialization = true;
+	observerInitialized = false;
 	clInitialized = true;
 	spdlog::debug("initialize clODEfeatures.");
 }
@@ -232,7 +220,7 @@ void CLODEfeatures::initializeObserver()
 
 	if (clInitialized)
 	{
-		// spdlog::info("do init={}",doObserverInitialization?"true":"false");
+		// spdlog::info("do init={}",observerInitialized?"false":"true");
 		//resize output variables - will only occur if nPts has changed
 		resizeFeaturesVariables();
 
@@ -254,7 +242,7 @@ void CLODEfeatures::initializeObserver()
 			// spdlog::info("Enqueue error code: {}",CLErrorString(opencl.error).c_str());
 			opencl.error = opencl.getQueue().finish();
 			// spdlog::info("Finish Queue error code: {}",CLErrorString(opencl.error).c_str());
-			doObserverInitialization = false;
+			observerInitialized = true;
 		}
 		catch (cl::Error &er)
 		{
@@ -270,9 +258,9 @@ void CLODEfeatures::initializeObserver()
 }
 
 //overload to allow manual re-initialization of observer data at any time.
-void CLODEfeatures::features(bool newDoObserverInitFlag)
+void CLODEfeatures::features(bool reinitialize_observer)
 {
-	doObserverInitialization = newDoObserverInitFlag;
+	observerInitialized = !reinitialize_observer;
 
 	features();
 }
@@ -282,11 +270,11 @@ void CLODEfeatures::features()
 
 	if (clInitialized)
 	{
-		// spdlog::info("do init={}",doObserverInitialization?"true":"false");
+		// spdlog::info("do init={}",observerInitialized?"false":"true");
 		//resize output variables - will only occur if nPts has changed
 		resizeFeaturesVariables();
 
-		if (doObserverInitialization)
+		if (!observerInitialized)
 			initializeObserver();
 
 		try
