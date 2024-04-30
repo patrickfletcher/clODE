@@ -213,11 +213,19 @@ class LoggerSingleton:
     def set_log_pattern(self, arg0: str) -> None:
         ...
 class ObserverParams:
+    dx_down_threshold: float
+    dx_up_threshold: float
     e_var_ix: int
+    eps_dx: float
     f_var_ix: int
     max_event_count: int
     max_event_timestamps: int
-    def __init__(self, arg0: int, arg1: int, arg2: int, arg3: int, arg4: float, arg5: float, arg6: float, arg7: float, arg8: float, arg9: float, arg10: float, arg11: float) -> None:
+    min_amp: float
+    min_imi: float
+    nhood_radius: float
+    x_down_threshold: float
+    x_up_threshold: float
+    def __init__(self, e_var_ix: int = 0, f_var_ix: int = 0, max_event_count: int = 100, max_event_timestamps: int = 10, min_amp: float = 0.0, min_imi: float = 0.0, nhood_radius: float = 0.05, x_up_threshold: float = 0.2, x_down_threshold: float = 0.2, dx_up_threshold: float = 0.0, dx_down_threshold: float = 0.0, eps_dx: float = 0.0) -> None:
         ...
     def __repr__(self) -> str:
         ...

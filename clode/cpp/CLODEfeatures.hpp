@@ -60,7 +60,7 @@ public:
     //not an override - different signature
     void initialize(std::vector<cl_double> newTspan, std::vector<cl_double> newX0, std::vector<cl_double> newPars, SolverParams<cl_double> newSp, ObserverParams<cl_double> newOp);
 
-    void setObserverParams(ObserverParams<cl_double> newOp);
+    void setObserverParams(ObserverParams<cl_double> newOp); //requires rebuild: maxEventTimestamps in ObserverData... TODO: ideally decouple this!
     void setObserver(std::string newObserver); //requires rebuild: program, kernel, kernel args. Host + Device data OK
 
     //simulation routine.

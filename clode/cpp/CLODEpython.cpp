@@ -293,23 +293,43 @@ PYBIND11_MODULE(clode_cpp_wrapper, m) {
             double,
             double,
             double>
-            ()
+            (),
+            py::arg("e_var_ix") = 0,
+            py::arg("f_var_ix") = 0,
+            py::arg("max_event_count") = 100,
+            py::arg("max_event_timestamps") = 10,
+            py::arg("min_amp") = 0.,
+            py::arg("min_imi") = 0.,
+            py::arg("nhood_radius") = 0.05,
+            py::arg("x_up_threshold") = 0.2,
+            py::arg("x_down_threshold") = 0.2,
+            py::arg("dx_up_threshold") = 0.,
+            py::arg("dx_down_threshold") = 0.,
+            py::arg("eps_dx") = 0.
     ).def_readwrite("e_var_ix", &ObserverParams<double>::eVarIx)
     .def_readwrite("f_var_ix", &ObserverParams<double>::fVarIx)
     .def_readwrite("max_event_count", &ObserverParams<double>::maxEventCount)
     .def_readwrite("max_event_timestamps", &ObserverParams<double>::maxEventTimestamps)
+    .def_readwrite("min_amp", &ObserverParams<double>::minXamp)
+    .def_readwrite("min_imi", &ObserverParams<double>::minIMI)
+    .def_readwrite("nhood_radius", &ObserverParams<double>::nHoodRadius)
+    .def_readwrite("x_up_threshold", &ObserverParams<double>::xUpThresh)
+    .def_readwrite("x_down_threshold", &ObserverParams<double>::xDownThresh)
+    .def_readwrite("dx_up_threshold", &ObserverParams<double>::dxUpThresh)
+    .def_readwrite("dx_down_threshold", &ObserverParams<double>::dxDownThresh)
+    .def_readwrite("eps_dx", &ObserverParams<double>::eps_dx)
     .def("__repr__", [](const ObserverParams<double> &p) {
         return "<observer_params(e_var_ix=" + std::to_string(p.eVarIx) +
                ", f_var_ix=" + std::to_string(p.fVarIx) +
                ", max_event_count=" + std::to_string(p.maxEventCount) +
                ", max_event_timestamps=" + std::to_string(p.maxEventTimestamps) +
-               ", minXamp=" + std::to_string(p.minXamp) +
-               ", minIMI=" + std::to_string(p.minIMI) +
-               ", nHoodRadius=" + std::to_string(p.nHoodRadius) +
-               ", xUpThresh=" + std::to_string(p.xUpThresh) +
-               ", xDownThresh=" + std::to_string(p.xDownThresh) +
-               ", dxUpThresh=" + std::to_string(p.dxUpThresh) +
-               ", dxDownThresh=" + std::to_string(p.dxDownThresh) +
+               ", min_amp=" + std::to_string(p.minXamp) +
+               ", min_imi=" + std::to_string(p.minIMI) +
+               ", nhood_radius=" + std::to_string(p.nHoodRadius) +
+               ", x_up_threshold=" + std::to_string(p.xUpThresh) +
+               ", x_down_threshold=" + std::to_string(p.xDownThresh) +
+               ", dx_up_threshold=" + std::to_string(p.dxUpThresh) +
+               ", dx_down_threshold=" + std::to_string(p.dxDownThresh) +
                ", eps_dx=" + std::to_string(p.eps_dx) +
                ")>";
     });
