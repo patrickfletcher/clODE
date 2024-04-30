@@ -1,19 +1,23 @@
-
+# This is the package public interface (expose objects for "from clode import X")
+# - keep only main simulation items here?
+# - keep CL-related things in runtime?
 from clode.runtime import (
     CLDeviceType,
     CLVendor,
     DeviceInfo,
     PlatformInfo,
     LogLevel,
-    ProblemInfo,
-    SolverParams,
-    ObserverParams,
     get_log_level,
     initialize_runtime,
     print_opencl,
     query_opencl,
     set_log_level,
     set_log_pattern,
+)
+from clode.cpp.clode_cpp_wrapper import (
+    SolverParams,
+    ObserverParams,
+    ProblemInfo,
 )
 from clode.solver import Simulator, Stepper
 from clode.features import FeatureSimulator, Observer, ObserverOutput

@@ -2,22 +2,15 @@ from __future__ import annotations
 
 import os
 
-from clode.cpp import clode_cpp_wrapper as _clode
 from clode.cpp.clode_cpp_wrapper import (
     CLDeviceType,
     CLVendor,
     DeviceInfo,
     PlatformInfo,
-    LogLevel,
-    ProblemInfo,
-    SolverParams,
-    ObserverParams,
     OpenCLResource,
-    SimulatorBase,
-    FeatureSimulatorBase,
-    TrajectorySimulatorBase,
     print_opencl,
     query_opencl,
+    LogLevel,
     get_logger,
 )
 
@@ -58,8 +51,6 @@ def initialize_runtime(
         return OpenCLResource(device_type, vendor)
 
 
-
-
 def get_log_level() -> LogLevel:
     return get_logger().get_log_level()
 
@@ -79,19 +70,13 @@ __all__ = [
     "CLVendor",
     "DeviceInfo",
     "PlatformInfo",
-    "DEFAULT_LOG_LEVEL",
-    "get_log_level",
+    "OpenCLResource",
     "initialize_runtime",
+    "print_opencl",
+    "query_opencl",
+    "DEFAULT_LOG_LEVEL",
     "LogLevel",
     "set_log_level",
     "set_log_pattern",
-    "ProblemInfo",
-    "SolverParams",
-    "ObserverParams",
-    "SimulatorBase",
-    "OpenCLResource",
-    "FeatureSimulatorBase",
-    "TrajectorySimulatorBase",
-    "print_opencl",
-    "query_opencl",
+    "get_log_level",
 ]
