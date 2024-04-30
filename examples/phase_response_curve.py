@@ -54,8 +54,8 @@ features_integrator = clode.FeatureSimulator(
     t_span=(0.0, tend),
     dt=0.01,
     observer=clode.Observer.neighbourhood_2,
-    observer_max_event_count = 4,
-    observer_max_event_timestamps = 4,
+    observer_max_event_count = 3,
+    observer_max_event_timestamps = 3,
     feature_var="v",
 )
 
@@ -71,23 +71,17 @@ print(period)
 # make the grid of stimulus inputs: vary t_on, strength(?)
 num_perturbation_times = 1024
 on_times = period + np.linspace(0, period, num_perturbation_times)
+strength = 0.08
 
-# num_strengths = 5
-# strengths = np.linspace(0.0,0.1,num_strengths)
-strengths = 0.05
-
+# would be nice to just set parameters and not have to restart at default X0!
 X0 = features_integrator.get_final_state().repeat(num_perturbation_times, axis=0)
+features_integrator.set_ensemble(variables = X0, parameters = {"t_on": on_times, "strength": strength})
 
-features_integrator.set_ensemble(variables = X0, parameters = {"t_on": on_times, "strength": strengths})
 features_integrator.set_tspan((0.0, 5*period))
 
 output = features_integrator.features()
-
 event_times = output.get_event_data("nhood","time")
-
 periods_perturb = np.diff(event_times, axis=1)
-# print(periods_perturb)
-
 stim_phase = (on_times - period)/period 
 delta_phase = (period - periods_perturb)/period
 

@@ -26,6 +26,8 @@ class Stepper(Enum):
     dormand_prince = "dopri5"
     stochastic_euler = "seuler"
 
+# NOTE: defaults for solverParams are in two places. Prefer the struct defaults?
+
 # TODO[API]: remember the shape of the ensemble input data so that results can be returned in the same shape
 # - support 1D, 2D, 3D (map these to appropriate NDRanges) e.g., grids
 # - anything else maps to 1D, but could still be converted back to the input shape...
@@ -39,22 +41,24 @@ class Simulator:
 
     This class is used to simulate transient behavior of a system of ODEs.
 
-    It can be used directly to find separatrix solutions
-    and variable steady states,
-    or it can be used as a base class for other simulators."""
+    It provides the functionality to advance a numerical solution without storing any intermediate state.  
+    It can be used if only the final state is of interest, or as a base class for other simulators."""
 
     _integrator: SimulatorBase
     _runtime: OpenCLResource
-    _pi: ProblemInfo
-    _sp: SolverParams
-    _variables: Optional[Dict[str, np.ndarray]] = None
-    _variable_defaults: Dict[str, float]
-    _parameters: Optional[Dict[str, np.ndarray]] = None
-    _parameter_defaults: Dict[str, float]
-    _ensemble_size: int
     _single_precision: bool
     _stepper: Stepper
+    _sp: SolverParams
     _t_span: Tuple[float, float]
+    _pi: ProblemInfo
+    _variable_defaults: Dict[str, float]
+    _variables: Optional[Dict[str, np.ndarray]] = None 
+    _parameter_defaults: Dict[str, float]
+    _parameters: Optional[Dict[str, np.ndarray]] = None
+    _ensemble_size: int
+    _device_initial_state: Optional[np.ndarray] = None
+    _device_final_state: Optional[np.ndarray] = None
+    _device_parameters: Optional[np.ndarray] = None
 
     @property
     def variable_names(self) -> List[str]:
@@ -82,8 +86,8 @@ class Simulator:
         Returns:
             bool: Whether the simulator is initialized.
         """
-        # return self._integrator.is_initialized()
-        return True
+        return self._integrator.is_initialized()
+        # return True
 
     def __init__(
         self,
@@ -127,10 +131,8 @@ class Simulator:
 
         if aux is None:
             aux = []
-
-        self._max_store = max_store
-
         self.aux_variables = aux
+
         self._pi = ProblemInfo(
             input_file,
             self.variable_names,
@@ -404,36 +406,9 @@ class Simulator:
         # self.seed_rng(seed)
 
 
-    # Retrieve initial/final state from the device
+    def _validate_problem_data(self, parameters, variables):
+        pass
 
-    # TODO: should be a property? numpy structured for access via variable name?
-    def get_initial_state(self):
-        """Get the final state of the simulation.
-
-        Returns:
-            np.array: The final state of the simulation.
-        """
-        self._initial_state = self._integrator.get_x0()
-        initial_state = np.array(self._initial_state)
-        return initial_state.reshape(
-            (len(self._variables), len(initial_state) // len(self._variables))
-        ).transpose()
-
-    # TODO: should be a property? numpy structured for access via variable name?
-    def get_final_state(self):
-        """Get the final state of the simulation.
-
-        Returns:
-            np.array: The final state of the simulation.
-        """
-        self._final_state = self._integrator.get_xf()
-        final_state = np.array(self._final_state)
-        return final_state.reshape(
-            (len(self.variable_names), len(final_state) // len(self.variable_names))
-        ).transpose()
-
-
-    # other member functions that interact with the backend
 
     def _build_integrator(self) -> None:
         self._integrator = SimulatorBase(
@@ -454,7 +429,26 @@ class Simulator:
             self._sp,
         )
 
-    # TODO: interact with backend?
+
+    # Set both initial conditions and parameters at the same time. This method supports changing ensemble size, 
+    # and does not require re-building CL program
+    def set_problem_data(self, x0: np.array, parameters: np.array) -> None:
+        """Set the problem data.
+
+        Args:
+            x0 (np.array): The initial conditions.
+            parameters (np.array): The parameters.
+
+        Returns:
+            None
+        """
+        
+        raise NotImplementedError
+
+    # Low-level setters for initial condition/parameters. These are not allowed to change ensemble_size; does not require re-building CL program.
+    # - verify that new value array matches (or can be broadcast to match) current ensemble_size
+    # - ensure correct order/packing (as in pack_data), flatten. 
+
     def set_initial_conditions(
         self, initial_conditions: dict[str, Union[float, np.ndarray, List[float]]]
     ) -> None:
@@ -466,8 +460,87 @@ class Simulator:
         Returns:
             None
         """
-        self._initial_conditions = initial_conditions
+        # self._device_initial_state = initial_conditions
+        pass
 
+    def set_parameters(self, parameters: np.ndarray) -> None:
+        """Set the parameters.
+
+        Args:
+            parameters (np.array): The parameters.
+
+        Returns:
+            None
+        """
+        # self._device_parameters = parameters
+        # self._integrator.set_pars(parameters)
+        pass
+
+
+    # Changing tspan does not require re-building CL program
+    def set_tspan(self, t_span: Tuple[float, float]) -> None:
+        """Set the time span to simulate over.
+
+        Args:
+            t_span (Tuple[float, float]): The time span to simulate over.
+
+        Returns:
+            None
+        """
+        self._t_span = t_span
+        self._integrator.set_tspan(t_span)
+
+    def get_tspan(self) -> tuple[float,float]:
+        return self._integrator.get_tspan()
+
+
+    # Changing solver parameters does not require re-building CL program
+    # NOTE: int inputs to float are autocast, but not float --> int. Should we cast here and warn?
+    # TODO: would be nice to separate options based on stepper types. 
+    # - abstol/reltol/dtmax only relevant to adaptive solvers. Additional options will be needed when steppers are expanded...
+    # - Similarly, max_store/nout are only relevant to trajectory
+    def set_solver_parameters(
+        self, 
+        sp: Optional[SolverParams] = None,
+        dt: Optional[float] = None, 
+        dtmax: Optional[float] = None, 
+        abstol: Optional[float] = None, 
+        reltol: Optional[float] = None, 
+        max_steps: Optional[int] = None, 
+        max_store: Optional[int] = None, 
+        nout: Optional[int] = None,
+    ) -> None:
+        """Update any of the solver parameters and push to device
+
+        Args:
+            parameters (np.array): The parameters.
+
+        Returns:
+            None
+        """
+        if sp is not None:
+            self._sp = sp
+        else:
+            if dt is not None:
+                self._sp.dt = dt
+            if dtmax is not None:
+                self._sp.dtmax = dtmax
+            if abstol is not None:
+                self._sp.abstol = abstol
+            if reltol is not None:
+                self._sp.reltol = reltol
+            if max_steps is not None:
+                self._sp.max_steps = max_steps
+            if max_store is not None:
+                self._sp.max_store = max_store
+            if nout is not None:
+                self._sp.nout = nout
+        self._integrator.set_solver_params(self._sp)
+
+    def get_solver_parameters(self):
+        return self._integrator.get_solver_params()
+    
+    # Seeding RNG does not require re-building CL program
     def seed_rng(self, seed: int | None = None) -> None:
         """Seed the random number generator.
 
@@ -483,80 +556,8 @@ class Simulator:
         else:
             self._integrator.seed_rng()
 
-    def set_tspan(self, t_span: Tuple[float, float]) -> None:
-        """Set the time span to simulate over.
 
-        Args:
-            t_span (Tuple[float, float]): The time span to simulate over.
-
-        Returns:
-            None
-        """
-        self._t_span = t_span
-        self._integrator.set_tspan(t_span)
-
-    # TODO: not implemented
-    def set_problem_data(self, x0: np.array, parameters: np.array) -> None:
-        """Set the problem data.
-
-        Args:
-            x0 (np.array): The initial conditions.
-            parameters (np.array): The parameters.
-
-        Returns:
-            None
-        """
-        # self._integrator.set_problem_data(
-        #     x0.transpose().flatten(),
-        #     parameters.transpose().flatten(),
-        # )
-        raise NotImplementedError
-
-    # TODO: not implemented
-    def set_x0(self, x0: np.array) -> None:
-        """Set the initial conditions.
-
-        Args:
-            x0 (np.array): The initial conditions.
-
-        Returns:
-            None
-        """
-        # self._integrator.set_x0(
-        #     x0.transpose().flatten(),
-        # )
-        raise NotImplementedError
-
-    # TODO: not implemented
-    def set_parameters(self, parameters: np.array) -> None:
-        """Set the parameters.
-
-        Args:
-            parameters (np.array): The parameters.
-
-        Returns:
-            None
-        """
-        # self._integrator.set_pars(
-        #     parameters.transpose().flatten(),
-        # )
-        raise NotImplementedError
-
-    # TODO: not implemented
-    def set_solver_parameters(
-        self,
-    ) -> None:
-        """Set the solver parameters.
-
-        Args:
-            parameters (np.array): The parameters.
-
-        Returns:
-            None
-        """
-        raise NotImplementedError
-
-    def transient(self, update_x0: bool = True) -> None:
+    def transient(self, update_x0: bool = True, fetch_final_state: bool = False) -> Optional[np.ndarray]:
         """Run a transient simulation.
 
         Args:
@@ -570,6 +571,9 @@ class Simulator:
         self._integrator.transient()
         if update_x0:
             self.shift_x0()
+        if fetch_final_state:
+            return self.get_final_state()
+
 
     def shift_tspan(self) -> None:
         """Shift the time span to the current time plus the time period.
@@ -579,6 +583,7 @@ class Simulator:
         """
         self._integrator.shift_tspan()
 
+
     def shift_x0(self) -> None:
         """Shift the initial conditions to the current variable values.
 
@@ -586,6 +591,35 @@ class Simulator:
             None
         """
         self._integrator.shift_x0()
+
+
+    def get_initial_state(self) -> np.ndarray:
+        """Get the final state of the simulation.
+
+        Returns:
+            np.array: The final state of the simulation.
+        """
+        initial_state = np.array(self._integrator.get_x0())
+        initial_state = initial_state.reshape(
+            (len(self._variable_defaults), len(initial_state) // len(self._variable_defaults))
+            ).transpose()
+        self._device_initial_state = initial_state
+        return initial_state
+
+
+    def get_final_state(self) -> np.ndarray:
+        """Get the final state of the simulation.
+
+        Returns:
+            np.array: The final state of the simulation.
+        """
+        final_state = np.array(self._integrator.get_xf())
+        final_state = final_state.reshape(
+            (len(self.variable_names), len(final_state) // len(self.variable_names))
+            ).transpose()
+        self._device_final_state = final_state
+        return final_state
+
 
     def get_available_steppers(self) -> List[str]:
         """Get the available time steppers.

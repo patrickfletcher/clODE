@@ -141,6 +141,9 @@ class TrajectorySimulator(Simulator):
             device_ids=device_ids,
         )
 
+        self._max_store = self._sp.max_store
+        self._n_out = self._sp.nout
+
         self._x_data = None
         self._time_steps = None
         self._output_t = None
@@ -158,8 +161,12 @@ class TrajectorySimulator(Simulator):
             _clode_root_dir,
         )
 
-    def trajectory(self, update_x0: bool = True) -> List[TrajectoryOutput]:
+    def trajectory(self, update_x0: bool = True, fetch_results:bool = True) -> Optional[List[TrajectoryOutput]|TrajectoryOutput]:
         """Run a trajectory simulation.
+        
+        Args:
+        update_x0 (bool): After the simulation, whether to overwrite the initial state buffer with the final state
+        fetch_results (bool): Whether to fetch the feature results from the device and return them here
 
         Returns:
             List[TrajectoryOutput]
@@ -170,10 +177,11 @@ class TrajectorySimulator(Simulator):
         self._integrator.trajectory()
         if update_x0:
             self.shift_x0()
+        if fetch_results:
+            return self.get_trajectory()
+        return None
 
-        return self.get_trajectory()
-
-    def get_trajectory(self) -> List[TrajectoryOutput]:
+    def get_trajectory(self) -> List[TrajectoryOutput]|TrajectoryOutput:
         """Get the trajectory data.
 
         Returns:

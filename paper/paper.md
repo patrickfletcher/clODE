@@ -34,6 +34,12 @@ The Python interface was developed using [@pybind11].
 
 # Statement of need
 
+- Not the only python-GPGPU ODE solver... 
+  - in deep learning is becoming popular, and pytorch implementations already exist. [torchdiffeq](https://github.com/rtqichen/torchdiffeq)? also [torchode](https://github.com/martenlienen/torchode)
+  - [CudaPyInt](https://pythonhosted.org/CudaPyInt/index.html) - not maintained...
+  - [diffeqpy](https://github.com/SciML/diffeqpy) - a python wrapper for the excellent Julia package DifferentialEquations.jl (does a wrapper for DiffEqGPU.jl?)
+  - what about Numba?
+
 A large number of research questions concern ODEs, and scientists often
 want to understand the aggregate influence of their parameters.
 For meaningful statistical analysis, researchers need to run

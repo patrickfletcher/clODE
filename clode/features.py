@@ -361,16 +361,87 @@ class FeatureSimulator(Simulator):
             self._op,
         )
 
+
+    # Changing solver parameters does not require re-building CL program
+    def set_observer_parameters(
+        self, 
+        op: Optional[ObserverParams] = None,
+        e_var_ix: Optional[int|str] = None,
+        f_var_ix: Optional[int|str] = None,
+        max_event_count: Optional[int] = None,
+        max_event_timestamps: Optional[int] = None,
+        min_amp: Optional[float] = None,
+        min_imi: Optional[float] = None,
+        nhood_radius: Optional[float] = None,
+        x_up_threshold: Optional[float] = None,
+        x_down_threshold: Optional[float] = None,
+        dx_up_threshold: Optional[float] = None,
+        dx_down_threshold: Optional[float] = None,
+        eps_dx: Optional[float] = None,
+    ) -> None:
+        """Update any of the solver parameters and push to device
+
+        Args:
+            parameters (np.array): The parameters.
+
+        Returns:
+            None
+        """
+        if op is not None:
+            self._op = op
+        else:
+            if e_var_ix is not None:
+                if isinstance(e_var_ix, str):
+                    e_var_ix = self.variable_names.index(e_var_ix)
+                self._op.e_var_ix = e_var_ix
+            if e_var_ix is not None:
+                if isinstance(f_var_ix, str):
+                    f_var_ix = self.variable_names.index(f_var_ix)
+                self._op.f_var_ix = f_var_ix
+            if max_event_count is not None:
+                self._op.max_event_count = max_event_count
+            if max_event_timestamps is not None:
+                self._op.max_event_timestamps = max_event_timestamps  #NOTE! This invalidates the CL program!!
+            if min_amp is not None:
+                self._op.min_amp = min_amp
+            if min_imi is not None:
+                self._op.min_imi = min_imi
+            if nhood_radius is not None:
+                self._op.nhood_radius = nhood_radius
+            if x_up_threshold is not None:
+                self._op.x_up_threshold = x_up_threshold
+            if x_down_threshold is not None:
+                self._op.x_down_threshold = x_down_threshold
+            if dx_up_threshold is not None:
+                self._op.dx_up_threshold = dx_up_threshold
+            if dx_down_threshold is not None:
+                self._op.dx_down_threshold = dx_down_threshold
+            if eps_dx is not None:
+                self._op.eps_dx = eps_dx
+        self._integrator.set_observer_params(self._op)
+
+    def get_observer_parameters(self):
+        return self._integrator.get_observer_params()
+    
+
     def get_feature_names(self) -> List[str]:
         return self._integrator.get_feature_names()
 
     def features(
-        self, initialize_observer: Optional[bool] = None, update_x0: bool = True
-    ) -> ObserverOutput:
+        self, 
+        initialize_observer: Optional[bool] = None, 
+        update_x0: bool = True,
+        fetch_results: bool = True,
+    ) -> Optional[ObserverOutput]:
         """Run a simulation with feature detection.
-
+        
+        Args:
+        initialize_observer (bool): Whether the observer data be initialized
+        update_x0 (bool): After the simulation, whether to overwrite the initial state buffer with the final state
+        fetch_results (bool): Whether to fetch the feature results from the device and return them here
+        
         Returns:
-            None
+            ObserverOutput | None
         """
         if not self.is_initialized:
             raise RuntimeError("Simulator is not initialized")
@@ -382,14 +453,15 @@ class FeatureSimulator(Simulator):
             self._integrator.features()
         if update_x0:
             self.shift_x0()
-
-        return self.get_observer_results()
+        if fetch_results:
+            return self.get_observer_results()
+        return None
 
     def get_observer_results(self) -> ObserverOutput:
         """Get the features measured by the observer
 
         Returns:
-            ObserverOutput: features summarizing trajectories
+            ObserverOutput: object containing features that summarize trajectories
         """
         self._output_F = self._integrator.get_f()
         self._num_features = self._integrator.get_n_features()
