@@ -3,7 +3,7 @@ CLODE C++/Python interface
 """
 from __future__ import annotations
 import typing
-__all__ = ['CLDeviceType', 'CLVendor', 'DEVICE_TYPE_ACCELERATOR', 'DEVICE_TYPE_ALL', 'DEVICE_TYPE_CPU', 'DEVICE_TYPE_CUSTOM', 'DEVICE_TYPE_DEFAULT', 'DEVICE_TYPE_GPU', 'DeviceInfo', 'FeatureSimulatorBase', 'LogLevel', 'LoggerSingleton', 'ObserverParams', 'OpenCLResource', 'PlatformInfo', 'ProblemInfo', 'SimulatorBase', 'SolverParams', 'TrajectorySimulatorBase', 'VENDOR_AMD', 'VENDOR_ANY', 'VENDOR_INTEL', 'VENDOR_NVIDIA', 'critical', 'debug', 'err', 'get_logger', 'info', 'off', 'print_opencl', 'query_opencl', 'trace', 'warn']
+__all__ = ['CLDeviceType', 'CLVendor', 'DEVICE_TYPE_ACCELERATOR', 'DEVICE_TYPE_ALL', 'DEVICE_TYPE_CPU', 'DEVICE_TYPE_CUSTOM', 'DEVICE_TYPE_DEFAULT', 'DEVICE_TYPE_GPU', 'DeviceInfo', 'FeatureSimulatorBase', 'LogLevel', 'LoggerSingleton', 'ObserverParams', 'OpenCLResource', 'PlatformInfo', 'ProblemInfo', 'SimulatorBase', 'SolverParams', 'TrajectorySimulatorBase', 'VENDOR_AMD', 'VENDOR_ANY', 'VENDOR_INTEL', 'VENDOR_NVIDIA', 'critical', 'debug', 'err', 'get_logger', 'info', 'off', 'query_opencl', 'trace', 'warn']
 class CLDeviceType:
     """
     Members:
@@ -225,7 +225,7 @@ class ObserverParams:
     nhood_radius: float
     x_down_threshold: float
     x_up_threshold: float
-    def __init__(self, e_var_ix: int = 0, f_var_ix: int = 0, max_event_count: int = 100, max_event_timestamps: int = 10, min_amp: float = 0.0, min_imi: float = 0.0, nhood_radius: float = 0.05, x_up_threshold: float = 0.2, x_down_threshold: float = 0.2, dx_up_threshold: float = 0.0, dx_down_threshold: float = 0.0, eps_dx: float = 0.0) -> None:
+    def __init__(self, e_var_ix: int = 0, f_var_ix: int = 0, max_event_count: int = 100, max_event_timestamps: int = 0, min_amp: float = 0.0, min_imi: float = 0.0, nhood_radius: float = 0.05, x_up_threshold: float = 0.2, x_down_threshold: float = 0.2, dx_up_threshold: float = 0.0, dx_down_threshold: float = 0.0, eps_dx: float = 0.0) -> None:
         ...
     def __repr__(self) -> str:
         ...
@@ -335,8 +335,6 @@ class SimulatorBase:
         """
         Seed RNG
         """
-    def set_npts(self, npts: int) -> None:
-        ...
     @typing.overload
     def set_opencl(self, arg0: OpenCLResource) -> None:
         ...
@@ -400,13 +398,13 @@ class TrajectorySimulatorBase(SimulatorBase):
         """
     def trajectory(self) -> None:
         ...
+def _print_opencl() -> None:
+    """
+    Print OpenCL devices
+    """
 def get_logger() -> LoggerSingleton:
     """
     Get logger singleton instance
-    """
-def print_opencl() -> None:
-    """
-    Print OpenCL devices
     """
 def query_opencl() -> list[PlatformInfo]:
     """

@@ -8,7 +8,7 @@ from clode.cpp.clode_cpp_wrapper import (
     DeviceInfo,
     PlatformInfo,
     OpenCLResource,
-    print_opencl,
+    _print_opencl,
     query_opencl,
     LogLevel,
     get_logger,
@@ -64,6 +64,13 @@ def set_log_pattern(pattern: str) -> None:
 
 
 set_log_level(DEFAULT_LOG_LEVEL)
+
+
+def print_opencl():
+    old_level = get_log_level()
+    set_log_level(LogLevel.info)
+    _print_opencl()
+    set_log_level(old_level)
 
 __all__ = [
     "CLDeviceType",

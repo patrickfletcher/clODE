@@ -689,12 +689,16 @@ class Simulator:
         """Get the clODE OpenCL program string"""
         return self._integrator.get_program_string()
 
-    #TODO: this requires correct logger setting - default doesn't print
     def print_status(self) -> None:
         """Print the simulator status info"""
+        old_level = get_log_level()
+        set_log_level(LogLevel.info)
         self._integrator.print_status()
+        set_log_level(old_level)
 
-    #TODO: this requires correct logger setting - default doesn't print
     def print_devices(self) -> None:
         """Print the available devices"""
+        old_level = get_log_level()
+        set_log_level(LogLevel.info)
         self._runtime.print_devices()
+        set_log_level(old_level)

@@ -165,8 +165,7 @@ PYBIND11_MODULE(clode_cpp_wrapper, m) {
         }, "Platform info string representation");
 
     m.def("query_opencl", &queryOpenCL, "Query OpenCL devices");
-    m.def("print_opencl", overload_cast_<>()(&printOpenCL), "Print OpenCL devices");
-
+    m.def("_print_opencl", overload_cast_<>()(&printOpenCL), "Print OpenCL devices");
 
     // core clODE solver 
     /****************************************************/
