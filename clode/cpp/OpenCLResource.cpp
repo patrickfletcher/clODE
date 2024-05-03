@@ -2,7 +2,7 @@
  * OpenCLResource.cpp
  *
  *  Copyright 2017 Patrick Fletcher <patrick.fletcher@nih.gov>
- * 
+ *
  */
 
 #include "OpenCLResource.hpp"
@@ -13,7 +13,7 @@
 
 #include "spdlog/spdlog.h"
 
-/******************************** 
+/********************************
  * OpenCLResource Member Functions
  ********************************/
 
@@ -54,7 +54,7 @@ OpenCLResource::OpenCLResource(e_cl_device_type type, cl_vendor vendor)
 OpenCLResource::OpenCLResource(int argc, char **argv)
 {
 
-    //modified from openCLUtilities to include accelerators as a devicetype
+    // modified from openCLUtilities to include accelerators as a devicetype
     cl_deviceType type = CL_DEVICE_TYPE_ALL;
     cl_vendor vendor = VENDOR_ANY;
     int nValidArgs = 0;
@@ -125,12 +125,12 @@ OpenCLResource::OpenCLResource(unsigned int platformID, std::vector<unsigned int
     initializeOpenCL();
 };
 
-//modified from openCLUtilities
-//TODO: check various possibilities on default? eg: any Accel, any non-intel GPU, intel GPU, any CPU
+// modified from openCLUtilities
+// TODO: check various possibilities on default? eg: any Accel, any non-intel GPU, intel GPU, any CPU
 void OpenCLResource::getPlatformAndDevices(cl_deviceType type, cl_vendor vendor)
 {
 
-    //query all platform and device info, store as a vector of structs
+    // query all platform and device info, store as a vector of structs
     //~ std::vector<platformInfo> pinfo=queryOpenCL();
 
     // Get available platforms
@@ -169,7 +169,7 @@ void OpenCLResource::getPlatformAndDevices(cl_deviceType type, cl_vendor vendor)
             }
         }
 
-        platforms = tempPlatforms; //keep only the platforms with correct vendor
+        platforms = tempPlatforms; // keep only the platforms with correct vendor
     }
 
     std::vector<cl::Device> tempDevices;
@@ -178,7 +178,7 @@ void OpenCLResource::getPlatformAndDevices(cl_deviceType type, cl_vendor vendor)
         try
         {
             platforms[i].getDevices(type, &tempDevices);
-            //TODO: apply extra device filters (eg. extensionSupported,enoughMem,...) here?
+            // TODO: apply extra device filters (eg. extensionSupported,enoughMem,...) here?
             tempID = i;
             break;
         }
@@ -191,11 +191,11 @@ void OpenCLResource::getPlatformAndDevices(cl_deviceType type, cl_vendor vendor)
     if (tempID == -1)
         throw cl::Error(1, "No compatible OpenCL platform found");
 
-    //we found a platform with compatible device(s) to use
+    // we found a platform with compatible device(s) to use
     platform = platforms[tempID];
     devices = tempDevices;
 
-    //get info for the selected plaform and device(s)
+    // get info for the selected plaform and device(s)
     platform_info = getPlatformInfo(platform, devices);
 }
 
@@ -234,14 +234,13 @@ void OpenCLResource::getPlatformAndDevices(unsigned int platformID, std::vector<
         }
     }
 
-    //get info for the selected plaform and device(s)
+    // get info for the selected plaform and device(s)
     platform_info = getPlatformInfo(platform, devices);
 }
 
-//create the OpenCL context from the device list, and a queue for each device
+// create the OpenCL context from the device list, and a queue for each device
 void OpenCLResource::initializeOpenCL()
 {
-
     try
     {
         context = cl::Context(devices);
@@ -257,25 +256,25 @@ void OpenCLResource::initializeOpenCL()
     spdlog::debug("OpenCLResource Created");
 }
 
-//attempt to build OpenCL program given as a string, build options empty if not supplied.
+// attempt to build OpenCL program given as a string, build options empty if not supplied.
 void OpenCLResource::buildProgramFromString(std::string sourceStr, std::string buildOptions)
 {
-	spdlog::debug("Building program from string");
-	spdlog::trace(sourceStr.c_str());
-	spdlog::debug(buildOptions.c_str());
+    spdlog::debug("Building program from string");
+    spdlog::trace(sourceStr.c_str());
+    spdlog::debug(buildOptions.c_str());
     cl::Program::Sources source(1, std::make_pair(sourceStr.c_str(), sourceStr.length()));
     std::string buildLog;
     cl_int builderror;
     try
     {
         program = cl::Program(context, source, &error);
-        spdlog::debug("Program Object creation error code: {}",CLErrorString(error).c_str());
+        spdlog::debug("Program Object creation error code: {}", CLErrorString(error).c_str());
 
         builderror = program.build(devices, buildOptions.c_str());
-        spdlog::debug("Program Object build error code: {}",CLErrorString(builderror).c_str());
+        spdlog::debug("Program Object build error code: {}", CLErrorString(builderror).c_str());
 
         std::string kernelnames;
-        program.getInfo(CL_PROGRAM_KERNEL_NAMES,&kernelnames);
+        program.getInfo(CL_PROGRAM_KERNEL_NAMES, &kernelnames);
         spdlog::debug("Kernels built:   {}", kernelnames.c_str());
     }
     catch (cl::Error &er)
@@ -289,7 +288,7 @@ void OpenCLResource::buildProgramFromString(std::string sourceStr, std::string b
                 program.getBuildInfo(devices[i], CL_PROGRAM_BUILD_LOG, &buildLog);
                 spdlog::error("OpenCL build log, Device {}:", i);
                 spdlog::error("{}", buildLog.c_str());
-                //spdlog::error(std::__fs::filesystem::current_path().c_str());
+                // spdlog::error(std::__fs::filesystem::current_path().c_str());
             }
         }
         throw er;
@@ -298,14 +297,19 @@ void OpenCLResource::buildProgramFromString(std::string sourceStr, std::string b
 
 void OpenCLResource::buildProgramFromSource(std::string filename, std::string buildOptions)
 {
-	spdlog::debug("Building program from source file");
-	spdlog::trace(filename.c_str());
-	spdlog::debug(buildOptions.c_str());
+    spdlog::debug("Building program from source file");
+    spdlog::trace(filename.c_str());
+    spdlog::debug(buildOptions.c_str());
     std::string sourceStr = read_file(filename);
     buildProgramFromString(sourceStr, buildOptions);
 }
 
-//prints the selected platform and devices information (queried on the fly)
+// void OpenCLResource::writeProgramBinary()
+// {
+//     write_file("cl_program.ptx", program.getInfo<CL_PROGRAM_BINARIES>()[0]); // save binary (ptx file)
+// }
+
+// prints the selected platform and devices information (queried on the fly)
 void OpenCLResource::print()
 {
     std::string tmp;
@@ -314,11 +318,11 @@ void OpenCLResource::print()
     printPlatformInfo(platform_info);
 }
 
-/******************************** 
+/********************************
  * Other functions
  ********************************/
 
-//get info of all devices on all platforms
+// get info of all devices on all platforms
 std::vector<platformInfo> queryOpenCL()
 {
 
@@ -337,7 +341,7 @@ std::vector<platformInfo> queryOpenCL()
     return pinfo;
 }
 
-//get info of a given cl::Platform and its devices (optionally only devices of a given type, default is CL_DEVICE_TYPE_ALL)
+// get info of a given cl::Platform and its devices (optionally only devices of a given type, default is CL_DEVICE_TYPE_ALL)
 platformInfo getPlatformInfo(cl::Platform platform, std::vector<cl::Device> devices)
 {
 
@@ -347,7 +351,7 @@ platformInfo getPlatformInfo(cl::Platform platform, std::vector<cl::Device> devi
     platform.getInfo(CL_PLATFORM_VERSION, &pinfo.version);
 
     if (devices.size() == 0)
-    { //get all the devices
+    { // get all the devices
         platform.getDevices(CL_DEVICE_TYPE_ALL, &devices);
     }
 
@@ -359,13 +363,13 @@ platformInfo getPlatformInfo(cl::Platform platform, std::vector<cl::Device> devi
     return pinfo;
 }
 
-//get info for given cl::Device
+// get info for given cl::Device
 deviceInfo getDeviceInfo(cl::Device device)
 {
 
     deviceInfo dinfo;
 
-    //Get device info for this compute resource
+    // Get device info for this compute resource
     device.getInfo(CL_DEVICE_NAME, &dinfo.name);
     device.getInfo(CL_DEVICE_VENDOR, &dinfo.vendor);
     device.getInfo(CL_DEVICE_VERSION, &dinfo.version);
@@ -401,7 +405,19 @@ deviceInfo getDeviceInfo(cl::Device device)
     return dinfo;
 }
 
-//print information about all platforms and devices found
+// TODO: kernel info
+
+// /* cl_kernel_work_group_info */
+// #define CL_KERNEL_WORK_GROUP_SIZE                   0x11B0
+// #define CL_KERNEL_COMPILE_WORK_GROUP_SIZE           0x11B1
+// #define CL_KERNEL_LOCAL_MEM_SIZE                    0x11B2
+// #define CL_KERNEL_PREFERRED_WORK_GROUP_SIZE_MULTIPLE 0x11B3
+// #define CL_KERNEL_PRIVATE_MEM_SIZE                  0x11B4
+// #ifdef CL_VERSION_1_2
+// #define CL_KERNEL_GLOBAL_WORK_SIZE                  0x11B5
+// #endif
+
+// print information about all platforms and devices found
 void printOpenCL()
 {
 
@@ -410,7 +426,7 @@ void printOpenCL()
     printOpenCL(pinfo);
 }
 
-//print information about all platforms and devices found, given pre-queried array of platformInfo structs
+// print information about all platforms and devices found, given pre-queried array of platformInfo structs
 void printOpenCL(std::vector<platformInfo> pinfo)
 {
 
@@ -423,7 +439,7 @@ void printOpenCL(std::vector<platformInfo> pinfo)
     spdlog::info("");
 }
 
-//print information about a platform and its devices given pre-queried info in platformInfo struct
+// print information about a platform and its devices given pre-queried info in platformInfo struct
 void printPlatformInfo(platformInfo pinfo)
 {
     spdlog::info("Name:    {}", pinfo.name.c_str());
@@ -437,14 +453,14 @@ void printPlatformInfo(platformInfo pinfo)
     }
 }
 
-//print info about a specific cl::Device
+// print info about a specific cl::Device
 void printDeviceInfo(cl::Device device)
 {
     deviceInfo dinfo = getDeviceInfo(device);
     printDeviceInfo(dinfo);
 }
 
-//print info about a specific cl::Device given pre-queried info in deviceInfo struct
+// print info about a specific cl::Device given pre-queried info in deviceInfo struct
 void printDeviceInfo(deviceInfo dinfo)
 {
     spdlog::info("  Name:   {}", dinfo.name.c_str());
@@ -570,8 +586,13 @@ std::string read_file(std::string filename)
         spdlog::error("Cannot find file {}", filename.c_str());
         throw cl::Error(1, "Failed to open OpenCL source file");
     }
-    std::string sourceStr(std::istreambuf_iterator<char>(sourceFile), (std::istreambuf_iterator<char>())); //second arg is "end of stream" iterator
+    std::string sourceStr(std::istreambuf_iterator<char>(sourceFile), (std::istreambuf_iterator<char>()));
     sourceFile.close();
-    // spdlog::info(sourceStr.c_str());
     return sourceStr;
 }
+
+// void write_file(const std::string& filename, const std::string& content="") {
+// 	std::ofstream file(filename, std::ios::out);
+// 	file.write(content.c_str(), content.length());
+// 	file.close();
+// }

@@ -48,7 +48,7 @@ protected:
     ObserverParams<cl_float> observerParamsToFloat(ObserverParams<cl_double> op);
     std::string getObserverBuildOpts();
     void updateObserverDefineMap(); // update host variables representing feature detector: nFeatures, featureNames, observerDataSize
-    void resizeFeaturesVariables(); //d_odata and d_F depend on nPts. nPts change invalidates d_odata
+    void resizeFeaturesVariables(); // d_odata and d_F depend on nPts. nPts change invalidates d_odata
 
 public:
     CLODEfeatures(ProblemInfo prob, std::string stepper, std::string observer, ObserverParams<cl_double> op, bool clSinglePrecision, OpenCLResource opencl, const std::string clodeRoot);
@@ -57,25 +57,25 @@ public:
 
     void buildCL() override; // build program and create kernel objects
 
-    //not an override - different signature
+    // not an override - different signature
     void initialize(std::vector<cl_double> newTspan, std::vector<cl_double> newX0, std::vector<cl_double> newPars, SolverParams<cl_double> newSp, ObserverParams<cl_double> newOp);
 
-    void setObserverParams(ObserverParams<cl_double> newOp); //requires rebuild: maxEventTimestamps in ObserverData... TODO: ideally decouple this!
-    void setObserver(std::string newObserver); //requires rebuild: program, kernel, kernel args. Host + Device data OK
+    void setObserverParams(ObserverParams<cl_double> newOp); // requires rebuild: maxEventTimestamps in ObserverData... TODO: ideally decouple this!
+    void setObserver(std::string newObserver);               // requires rebuild: program, kernel, kernel args. Host + Device data OK
 
-    //simulation routine.
-    void initializeObserver();                 //initialize Observer struct: possibly integrate forward an interval of duration (tf-t0), rewinds to t0
-    void features();                           //integrate forward using stored tspan, x0, pars, and solver pars
-    void features(bool reinitialize_observer); //allow manually forcing re-init of observer data
-    bool isObserverInitialized(){ return observerInitialized; };
+    // simulation routine.
+    void initializeObserver();                 // initialize Observer struct: possibly integrate forward an interval of duration (tf-t0), rewinds to t0
+    void features();                           // integrate forward using stored tspan, x0, pars, and solver pars
+    void features(bool reinitialize_observer); // allow manually forcing re-init of observer data
+    bool isObserverInitialized() { return observerInitialized; };
 
-    //Get functions
-    const ObserverParams<cl_double> getObserverParams() const{ return op; };
+    // Get functions
+    const ObserverParams<cl_double> getObserverParams() const { return op; };
     const std::string getObserverName() const { return observerName; }
     const std::vector<cl_double> getF();
     const int getNFeatures() const { return nFeatures; };
-    const std::vector<std::string> getFeatureNames() const { return featureNames;};
-    const std::vector<std::string> getAvailableObservers() const { return availableObserverNames;};
+    const std::vector<std::string> getFeatureNames() const { return featureNames; };
+    const std::vector<std::string> getAvailableObservers() const { return availableObserverNames; };
 };
 
-#endif //CLODE_FEATURES_HPP_
+#endif // CLODE_FEATURES_HPP_

@@ -85,35 +85,22 @@ struct ProblemInfo
         this->nAux = auxNamesIn.size();
     }
 
-    std::vector<std::string> getVarNames()
-    {
-        return this->varNames;
-    }
-
-    std::vector<std::string> getParNames()
-    {
-        return this->parNames;
-    }
-
-    std::vector<std::string> getAuxNames()
-    {
-        return this->auxNames;
-    }
+    std::vector<std::string> getVarNames() { return this->varNames; }
+    std::vector<std::string> getParNames() { return this->parNames; }
+    std::vector<std::string> getAuxNames() { return this->auxNames; }
 };
 
 class CLODE
 {
-// note: ISOc++ advises against protected data... rework?
-// https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#Rh-protected
-  
-protected:  
-    //Problem details
+
+protected:
+    // Problem details
     ProblemInfo prob;
     std::string clRHSfilename;
     cl_int nVar, nPar, nAux, nWiener;
-    cl_int nPts = 1;
+    cl_int nPts = 0;
 
-    //Stepper specification
+    // Stepper specification
     std::string stepper;
     std::vector<std::string> availableSteppers;
     std::map<std::string, std::string> stepperDefineMap;
@@ -121,11 +108,11 @@ protected:
     bool clSinglePrecision;
     size_t realSize;
 
-    //Compute device(s)
+    // Compute device(s)
     OpenCLResource opencl;
     std::string clodeRoot;
 
-    cl_int nRNGstate = 2; //TODO: different RNGs could be selected like steppers...?
+    cl_int nRNGstate = 2; // TODO: different RNGs could be selected like steppers...?
 
     SolverParams<cl_double> sp;
     std::vector<cl_double> tspan, x0, pars, xf, dt;
@@ -133,19 +120,20 @@ protected:
 
     std::vector<cl_ulong> RNGstate;
 
-    //Device variables
-    cl::Buffer d_tspan, d_x0, d_pars, d_sp, d_xf, d_RNGstate, d_dt;
+    // Device variables
+    cl::Buffer d_tspan, d_sp, d_pars, d_x0, d_xf, d_RNGstate, d_dt;
 
-    //kernel object
+    // kernel object
     std::string clprogramstring, buildOptions, ODEsystemsource;
     cl::Kernel cl_transient;
 
-    //flag to indicate whether kernel can be executed
+    // flag to indicate whether kernel can be executed
     bool clInitialized = false;
 
     void setClodeRoot(const std::string clodeRoot);
     void setCLbuildOpts(std::string extraBuildOpts = "");
-    void buildProgram(std::string extraBuildOpts = ""); //build the program object (inherited by subclasses)
+    void buildProgram(std::string extraBuildOpts = ""); // build the program object (inherited by subclasses)
+    void setNpts(cl_int newNpts);                       // resizes the nPts-dependent input variables - can't be called alone as it doesn't populate the arrays with data
     std::string getStepperDefine();
     SolverParams<cl_float> solverParamsToFloat(SolverParams<cl_double> sp);
 
@@ -153,59 +141,56 @@ protected:
     //~ CLODE( const CLODE& other ); // non construction-copyable
     //~ CLODE& operator=( const CLODE& ); // non copyable
 
-
 public:
-    //for now, require all arguments. TODO: convenience constructors?
+    // for now, require all arguments. TODO: convenience constructors?
     CLODE(ProblemInfo prob, std::string stepper, bool clSinglePrecision, OpenCLResource opencl, const std::string clodeRoot);
     CLODE(ProblemInfo prob, std::string stepper, bool clSinglePrecision, unsigned int platformID, unsigned int deviceID, const std::string clodeRoot);
     virtual ~CLODE();
 
     // Setters that trigger need to rebuild CL program
-    void setProblemInfo(ProblemInfo prob);               //Opencl context OK
-    void setStepper(std::string newStepper);            //Host + Device data OK
-    void setPrecision(bool clSinglePrecision);          //reset all device vars. Opencl context OK
-    void setOpenCL(OpenCLResource opencl);              //reset all device vars. Host problem data OK
+    void setProblemInfo(ProblemInfo prob);     // Opencl context OK
+    void setStepper(std::string newStepper);   // Host + Device data OK
+    void setPrecision(bool clSinglePrecision); // reset all device vars. Opencl context OK
+    void setOpenCL(OpenCLResource opencl);     // reset all device vars. Host problem data OK
     void setOpenCL(unsigned int platformID, unsigned int deviceID);
 
     virtual void buildCL(); // build program and create kernel objects - overloaded by subclasses to include any extra kernels
 
     // set all problem data needed to run
     virtual void initialize(std::vector<cl_double> newTspan, std::vector<cl_double> newX0, std::vector<cl_double> newPars, SolverParams<cl_double> newSp);
-	bool isInitialized() { return clInitialized; };
+    bool isInitialized() { return clInitialized; };
 
     // no need to rebuild CL program
-    void setNpts(cl_int newNpts); //resizes the nPts-dependent input variables
-    void setProblemData(std::vector<cl_double> newX0, std::vector<cl_double> newPars); //set both pars and X0 to change nPts
+    void setProblemData(std::vector<cl_double> newX0, std::vector<cl_double> newPars); // set both pars and X0 to change nPts
     void setTspan(std::vector<cl_double> newTspan);
-    void setX0(std::vector<cl_double> newX0);     //no change in nPts: newX0 must match nPts
-    void setPars(std::vector<cl_double> newPars); //no change in nPts: newPars must match nPts
+    void setX0(std::vector<cl_double> newX0);     // no change in nPts: newX0 must match nPts
+    void setPars(std::vector<cl_double> newPars); // no change in nPts: newPars must match nPts
     void setSolverParams(SolverParams<cl_double> newSp);
 
     void seedRNG();
-    void seedRNG(cl_int mySeed); //overload for setting reproducible seeds
+    void seedRNG(cl_int mySeed); // overload for setting reproducible seeds
 
-    //simulation routine. TODO: overloads?
-    void transient(); //integrate forward using stored tspan, x0, pars, and solver pars
+    // simulation routine. TODO: overloads?
+    void transient(); // integrate forward using stored tspan, x0, pars, and solver pars
     // void transient(std::vector<cl_double> newTspan); //integrate forward using stored x0, pars, and solver pars
     // void transient(std::vector<cl_double> newTspan, std::vector<cl_double> newX0); //integrate forward using stored pars, and solver pars
     // void transient(std::vector<cl_double> newTspan, std::vector<cl_double> newX0, std::vector<cl_double> newPars); //integrate forward using stored solver pars
     // void transient(std::vector<cl_double> newTspan, std::vector<cl_double> newX0, std::vector<cl_double> newPars, SolverParams<cl_double> newSp);
 
-    void shiftTspan(); //t0 <- tf, tf<-(tf + tf-t0)
-    void shiftX0();    //d_x0 <- d_xf (device to device transfer)
+    void shiftTspan(); // t0 <- tf, tf<-(tf + tf-t0)
+    void shiftX0();    // d_x0 <- d_xf (device to device transfer)
 
     // Getters
     const ProblemInfo getProblemInfo() const { return prob; };
     const std::vector<cl_double> getTspan() const { return tspan; };
-    const SolverParams<cl_double> getSolverParams() const{ return sp; };
+    const SolverParams<cl_double> getSolverParams() const { return sp; };
     const std::vector<cl_double> getPars() const { return pars; };
     const std::vector<cl_double> getX0();
     const std::vector<cl_double> getXf();
     const std::vector<std::string> getAvailableSteppers() const { return availableSteppers; };
 
-    const std::string getProgramString() const { return buildOptions+clprogramstring+ODEsystemsource; };
+    const std::string getProgramString() const { return buildOptions + clprogramstring + ODEsystemsource; };
     void printStatus();
-
 };
 
-#endif //CLODE_HPP_
+#endif // CLODE_HPP_

@@ -8,10 +8,10 @@ from numpy.lib import recfunctions as rfn
 
 from .function_converter import OpenCLRhsEquation
 from .runtime import CLDeviceType, CLVendor, _clode_root_dir
-from clode.cpp.clode_cpp_wrapper import TrajectorySimulatorBase
+from clode.cpp.clode_cpp_wrapper import SolverParams, TrajectorySimulatorBase
 from .solver import Simulator, Stepper
 
-
+# TODO: better even - use getitem?  trajectory["t"], trajectory["varname"], trajectory["dvar/dt"], ...
 class TrajectoryOutput:
     def __init__(
             self, 
@@ -79,6 +79,7 @@ class TrajectorySimulator(Simulator):
         max_steps: int = 1000000,
         max_store: int = 1000000,
         nout: int = 1,
+        solver_parameters: SolverParams = None,
         device_type: CLDeviceType | None = None,
         vendor: CLVendor | None = None,
         platform_id: int | None = None,
@@ -134,6 +135,7 @@ class TrajectorySimulator(Simulator):
             max_steps=max_steps,
             max_store=max_store,
             nout=nout,
+            solver_parameters = solver_parameters,
             device_type=device_type,
             vendor=vendor,
             platform_id=platform_id,
@@ -152,7 +154,7 @@ class TrajectorySimulator(Simulator):
         self._output_aux = None
         self._aux_data = None
 
-    def _build_integrator(self) -> None:
+    def _create_integrator(self) -> None:
         self._integrator = TrajectorySimulatorBase(
             self._pi,
             self._stepper.value,
@@ -160,8 +162,6 @@ class TrajectorySimulator(Simulator):
             self._runtime,
             _clode_root_dir,
         )
-        self._integrator.build_cl()
-        self._cl_program_is_valid = True
 
     # TODO[feature]: chunk time - keep max_store to a reasonable level (device-dependent), loop solve/get until t_span is covered.
     def trajectory(self, 
@@ -179,9 +179,12 @@ class TrajectorySimulator(Simulator):
         Returns:
             List[TrajectoryOutput]
         """
+        # if not self._cl_program_is_valid:
+        #     self._integrator.build_cl()
+        #     self._cl_program_is_valid = True
 
-        if not self.is_initialized:
-            raise RuntimeError("Simulator is not initialized")
+        # if not self.is_initialized:
+        #     raise RuntimeError("Simulator is not initialized")
 
         if t_span is not None:
             self.set_tspan(t_span=t_span)

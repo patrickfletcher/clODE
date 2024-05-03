@@ -12,14 +12,17 @@ from .runtime import (
     OpenCLResource,
     _clode_root_dir,
     initialize_runtime,
+    get_log_level,
+    set_log_level,
+    LogLevel,
 )
 from clode.cpp.clode_cpp_wrapper import SolverParams, ProblemInfo, SimulatorBase
 
 from .xpp_parser import convert_xpp_file
 
 
-# TODO[API]: different steppers use different parameters subsets. Expose only relevant. Model with classes/mixins?
-# - StepperBase + mixins --> each stepper as python class. Dict {"name": class} from "get_available_steppers()"
+# TODO[API]: different steppers use different parameters subsets. Model with classes/mixins?
+# - StepperBase + mixins --> each stepper as python class.
 class Stepper(Enum):
     euler = "euler"
     heun = "heun"
@@ -29,8 +32,7 @@ class Stepper(Enum):
     stochastic_euler = "seuler"
 
 # TODO[API]: defaults for solverParams are copied in each constructor plus wrapper. Should be only ONE place globally.
-# - Prefer the struct defaults? Create a default config?
-DEFAULT_SOLVER_PARAMS = SolverParams(dt=0.1, dtmax=1.0, abstol=1e-6, reltol=1e-4, max_steps=100000, max_store=100000, nout=1)
+# - Prefer the struct defaults?
 
 class Simulator:
     """Base class for simulating an ensemble of instances of an ODE system.
@@ -62,8 +64,9 @@ class Simulator:
     _ensemble_size: int # C++ layer: nPts
     _ensemble_shape: Tuple #support 1D (anything), and 2D+ grids. Outputs can be reshaped to match (e.g., 2D grid on two parameters, return state, features as 2D)
     _ensemble_parameters: Optional[np.ndarray] = None     #2D array shape (ensemble_size, num_parameters)
-    _ensemble_initial_state: Optional[np.ndarray] = None  #2D array shape (ensemble_size, num_variables)
-    _ensemble_final_state: Optional[np.ndarray] = None    #2D array shape (ensemble_size, num_variables)
+    _device_initial_state: Optional[np.ndarray] = None  #2D array shape (ensemble_size, num_variables)
+    _device_final_state: Optional[np.ndarray] = None    #2D array shape (ensemble_size, num_variables)
+
 
     @property
     def variable_names(self) -> List[str]:
@@ -125,7 +128,7 @@ class Simulator:
         nout: int = 1,              # -- only for trajectory
         solver_parameters: SolverParams = None,
         t_span: Tuple[float, float] = (0.0, 1000.0),  # more natural to set in simulation function calls
-        device_type: CLDeviceType | None = None, #---device/ctx setup--- feels annoying here [do like pyopencl: "make_some_context()"]
+        device_type: CLDeviceType | None = None, #---device/ctx setup--- 
         vendor: CLVendor | None = None,
         platform_id: int | None = None,
         device_id: int | None = None,
@@ -135,16 +138,6 @@ class Simulator:
         input_file = self._handle_clode_rhs_cl_file(
             src_file, rhs_equation, supplementary_equations
         )
-
-        self._stepper = stepper
-        self._single_precision = single_precision
-        self._sp = SolverParams(dt, dtmax, abstol, reltol, max_steps, max_store, nout)
-        self._t_span = t_span
-
-        self._variable_defaults = variables
-        self._parameter_defaults = parameters
-        self._ensemble_size = 1
-        self._ensemble_shape = (1,)
 
         if aux is None:
             aux = []
@@ -156,6 +149,8 @@ class Simulator:
             aux,
             num_noise,
         )
+        self._stepper = stepper
+        self._single_precision = single_precision
 
         # _runtime as an instance variable
         self._runtime = initialize_runtime(
@@ -166,8 +161,41 @@ class Simulator:
             device_ids,
         )
 
-        self._build_integrator()
-        self._init_integrator()
+        #derived classes override this to call appropriate pybind constructors.
+        self._create_integrator() 
+        self._build_cl_program()
+
+        #set solver_parameters and sync to device
+        if solver_parameters is not None:
+            self._sp = solver_parameters
+        else:
+            self._sp = SolverParams(dt, dtmax, abstol, reltol, max_steps, max_store, nout)
+        self.set_solver_parameters()
+        
+        #set initial state and parameters, sync to device
+        self._variable_defaults = variables
+        self._initial_state = np.array(list(self._variable_defaults.values()), dtype=np.float64, ndmin=2)
+        self._parameter_defaults = parameters
+        self._parameters = np.array(list(self._parameter_defaults.values()), dtype=np.float64, ndmin=2)
+        self.set_problem_data(self._initial_state, self._parameters)
+
+        #set tspan and sync to device
+        self.set_tspan(t_span=t_span)
+
+
+    def _create_integrator(self) -> None:
+        self._integrator = SimulatorBase(
+            self._pi,
+            self._stepper.value,
+            self._single_precision,
+            self._runtime,
+            _clode_root_dir,
+        )
+
+
+    def _build_cl_program(self):
+        self._integrator.build_cl() 
+        self._cl_program_is_valid = True
 
 
     def _handle_clode_rhs_cl_file(
@@ -206,7 +234,6 @@ class Simulator:
     
 
     # Ensemble setter methods
-
     def _find_ensemble_size(
         self,
         variables: Optional[
@@ -262,6 +289,7 @@ class Simulator:
             raise ValueError("No variables or parameters specified")
         return array_length
 
+
     def _create_cl_arrays(
         self, data: Dict[str, Union[float, np.ndarray, List[float]]], array_length: int
     ) -> Dict[str, np.ndarray]:
@@ -294,16 +322,16 @@ class Simulator:
         # Pack the varibles, transpose and flatten
         # so that they are in the correct format for the OpenCL kernel
         if self._variables is not None:
-            vars_array = np.array(list(self._variables.values()))
+            vars_array = np.array(list(self._variables.values()), dtype=np.float64, ndmin=2)
         else:
-            vars_array = np.array(list(self._variable_defaults.values()))
+            vars_array = np.array(list(self._variable_defaults.values()), dtype=np.float64, ndmin=2)
 
         if self._parameters is not None:
-            pars_array = np.array(list(self._parameters.values()))
+            pars_array = np.array(list(self._parameters.values()), dtype=np.float64, ndmin=2)
         else:
-            pars_array = np.array(list(self._parameter_defaults.values()))
+            pars_array = np.array(list(self._parameter_defaults.values()), dtype=np.float64, ndmin=2)
 
-        return vars_array.flatten(), pars_array.flatten()
+        return vars_array, pars_array
 
 
     def set_repeat_ensemble(self, num_repeats: int) -> None:
@@ -320,11 +348,10 @@ class Simulator:
         self._variables = self._create_cl_arrays(self._variable_defaults, num_repeats)
         self._parameters = self._create_cl_arrays(self._parameter_defaults, num_repeats)
 
-        # if self.is_initialized:
-        #     vars_array, pars_array = self._pack_data()
-        #     self._integrator.set_problem_data(vars_array, pars_array)
-        # else:
-        self._init_integrator()
+        print(self._variables, self._parameters)
+        vars_array, pars_array = self._pack_data()
+        print(vars_array.shape, pars_array.shape)
+        self.set_problem_data(vars_array, pars_array)
 
 
     def set_ensemble(
@@ -408,12 +435,8 @@ class Simulator:
         self._variables = self._create_cl_arrays(local_variables, cl_array_length)
         self._parameters = self._create_cl_arrays(local_parameters, cl_array_length)
 
-        # if self.is_initialized:
-        #     vars_array, pars_array = self._pack_data()
-        #     self._integrator.set_problem_data(vars_array, pars_array)
-        # else:
-        self._init_integrator()
-        # self.seed_rng(seed)
+        vars_array, pars_array = self._pack_data()
+        self._integrator.set_problem_data(vars_array, pars_array)
 
 
     # TODO: support passing arrays with shapes, and return matching shape for results?
@@ -426,54 +449,49 @@ class Simulator:
         pass
 
 
+    # common utility to unpack convenience inputs for setting problem data. 
+    # - inputs: scalars, vectors, full matrices. separate convenience fcn for meshgrid
+    # Cases relative to currently set pars/x0:
+    # 1. current size = 1 (initial ensemble - set to defaults)
+    # - input: {'name':array-like, ...} - verify common size, repeat missing/scalars [use device x0, params]
+    # 2. current size >1 (existing ensemble) new inputs must match existing
+    # 3. Always new ensemble (repeat missing defaults):
+    # - both full
+    # - >=1 par + >=1 var, new N != current size - fill in with original defaults
+    # - force_new = True (treat as 1. using original defaults)
+    
+    # - both full arrays, partial dict for both pars and vars, force_new=True
     def _validate_problem_data(self, parameters, variables):
         pass
 
 
-    def _build_integrator(self) -> None:
-        self._integrator = SimulatorBase(
-            self._pi,
-            self._stepper.value,
-            self._single_precision,
-            self._runtime,
-            _clode_root_dir,
-        )
-        self._integrator.build_cl()
-        self._cl_program_is_valid = True
+    # this is really "set_ensemble"
+    def set_problem_data(self, initial_state: Optional[np.ndarray] = None, parameters: Optional[np.ndarray] = None) -> None:
+        """Set both initial state and parameters at the same time. 
 
-    def _init_integrator(self) -> None:
-        # FeaturesSimulator overrides this
-        vars_array, pars_array = self._pack_data()
-        self._integrator.initialize(
-            self._t_span,
-            vars_array,
-            pars_array,
-            self._sp,
-        )
+        This method supports changing ensemble size, but initial state and parameters must be
+        completely specified as ndarrays with the same number of rows.
 
-
-    # Low-level functions for granular control.
-    # - verify that new value array matches (or can be broadcast to match) current ensemble_size
-    # - ensure correct order/packing (as in pack_data), flatten. 
-
-    def set_problem_data(self, initial_state: np.array, parameters: np.array) -> None:
-        """Set the problem data.
-
-        Set both initial state and parameters at the same time. 
-        This method supports changing ensemble size and does not require re-building CL program
+        Updates device buffers to a valid state for simulation.
 
         Args:
-            initial_state (np.array): The initial state.
-            parameters (np.array): The parameters.
+            initial_state (np.array): The initial state. shape=(ensemble_size, num_vars)
+            parameters (np.array): The parameters. shape=(ensemble_size, num_pars)
 
         Returns:
             None
         """
-        
-        raise NotImplementedError
+        if initial_state.shape[0] != parameters.shape[0]:
+            raise ValueError(f"initial_state and parameters must have the same number of rows")
+        self._ensemble_size = initial_state.shape[0]
+        self._ensemble_shape = (self._ensemble_size,)
+        self._initial_state = initial_state
+        self._parameters = parameters
+        self._integrator.set_problem_data(self._initial_state.flatten(order='F'), self._parameters.flatten(order='F'))
+
 
     def set_parameters(self, parameters: np.ndarray) -> None:
-        """Set the parameters.
+        """Set the ensemble parameters.
 
         New ensemble parameters must match the current initial state dimensions.
 
@@ -485,9 +503,11 @@ class Simulator:
         ----------
             None
         """
-        # self._device_parameters = parameters
-        # self._integrator.set_pars(parameters)
-        pass
+        initial_state = self.get_initial_state()
+        if parameters.shape[0] != initial_state.shape[0]:
+            raise ValueError(f"parameters must have the same number of rows as initial_state")
+        self._parameters = parameters
+        self._integrator.set_pars(parameters.flatten(order='F'))
 
 
     def set_initial_state(
@@ -503,11 +523,12 @@ class Simulator:
         Returns:
             None
         """
-        # self._device_initial_state = initial_state
-        pass
+        if initial_state.shape[0] != self._parameters.shape[0]:
+            raise ValueError(f"initial_state must have the same number of rows as parameters")
+        self._initial_state = initial_state
+        self._integrator.set_x0(initial_state.flatten(order='F'))
 
 
-    # Changing tspan does not require re-building CL program
     def set_tspan(self, t_span: Tuple[float, float]) -> None:
         """Set the time span to simulate over.
 
@@ -520,10 +541,11 @@ class Simulator:
         self._t_span = t_span
         self._integrator.set_tspan(t_span)
 
+
     def get_tspan(self) -> tuple[float,float]:
         '''Returns the simulation time span currently set on the device'''
         self._t_span = self._integrator.get_tspan()
-    
+
 
     def shift_tspan(self) -> None:
         """Shift the time span to the current time plus the time period."""
@@ -538,7 +560,7 @@ class Simulator:
     # - Similarly, max_store/nout are only relevant to trajectory
     def set_solver_parameters(
         self, 
-        sp: Optional[SolverParams] = None,
+        solver_parameters: Optional[SolverParams] = None,
         dt: Optional[float] = None, 
         dtmax: Optional[float] = None, 
         abstol: Optional[float] = None, 
@@ -554,8 +576,8 @@ class Simulator:
         Returns:
             None
         """
-        if sp is not None:
-            self._sp = sp
+        if solver_parameters is not None:
+            self._sp = solver_parameters
         else:
             if dt is not None:
                 self._sp.dt = dt
@@ -573,10 +595,11 @@ class Simulator:
                 self._sp.nout = nout
         self._integrator.set_solver_params(self._sp)
 
+
     def get_solver_parameters(self):
         return self._integrator.get_solver_params()
     
-    # Seeding RNG does not require re-building CL program
+    
     def seed_rng(self, seed: int | None = None) -> None:
         """Seed the random number generator.
 
@@ -612,22 +635,23 @@ class Simulator:
         # Lazy rebuild - would also need to verify device data is set
         # if not self._cl_program_is_valid:
         #     self._integrator.build_cl()
+        #     self._cl_program_is_valid = True
 
         #this should be a verification that all args have been set (lazily do so here if needed?)
-        if not self.is_initialized:
-            raise RuntimeError("Simulator is not initialized")
+        # if not self.is_initialized:
+        #     raise RuntimeError("Simulator is not initialized")
         
         if t_span is not None:
             self.set_tspan(t_span=t_span)
 
         self._integrator.transient()
-        # invalidates _ensemble_final_state
-        self._ensemble_final_state = None
+        # invalidates _device_final_state
+        self._device_final_state = None
 
         if update_x0:
             self._integrator.shift_x0()
-            # invalidates _ensemble_initial_state (?)
-            self._ensemble_initial_state = None
+            # invalidates _device_initial_state (?)
+            self._device_initial_state = None
 
         if fetch_results:
             return self.get_final_state()
@@ -643,12 +667,12 @@ class Simulator:
         Returns:
             np.array: The initial state of the simulation.
         """
-        if self._ensemble_initial_state is None:    
+        if self._device_initial_state is None:    
             initial_state = np.array(self._integrator.get_x0(), dtype=np.float64)
-            self._ensemble_initial_state = initial_state.reshape(
+            self._device_initial_state = initial_state.reshape(
                 (self._ensemble_size, self.num_variables),
                 order='F')
-        return self._ensemble_initial_state
+        return self._device_initial_state
 
 
     def get_final_state(self) -> np.ndarray:
@@ -659,13 +683,12 @@ class Simulator:
         Returns:
             np.array: The final state of the simulation.
         """
-        if self._ensemble_final_state is None:    
+        if self._device_final_state is None:    
             final_state = np.array(self._integrator.get_xf(), dtype=np.float64)
-            self._ensemble_final_state = final_state.reshape(
+            self._device_final_state = final_state.reshape(
                 (self._ensemble_size, self.num_variables),
                 order='F')
-        return self._ensemble_final_state
-
+        return self._device_final_state
 
 
     def get_max_memory_alloc_size(self) -> int:
@@ -676,7 +699,6 @@ class Simulator:
         """Get whether the device supports double precision"""
         return self._runtime.get_double_support()
     
-
     def get_available_steppers(self) -> List[str]:
         """Get the list of valid time stepper names"""
         return self._integrator.get_available_steppers()
