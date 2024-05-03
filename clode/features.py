@@ -279,7 +279,7 @@ class FeatureSimulator(Simulator):
         device_ids: List[int] | None = None,
         event_var: str = "",
         feature_var: str = "",
-        observer_max_event_count: int = 100,
+        observer_max_event_count: int = 100,  #TODO: defaults are set in two places - here and ObserverParam wrapper
         observer_max_event_timestamps: int = 0,
         observer_min_x_amp: float = 0.0,
         observer_min_imi: float = 0.0,
@@ -350,6 +350,8 @@ class FeatureSimulator(Simulator):
             self._runtime,
             _clode_root_dir,
         )
+        self._integrator.build_cl()
+        self._cl_program_is_valid = True
 
     def _init_integrator(self) -> None:
         vars_array, pars_array = self._pack_data()
@@ -361,15 +363,21 @@ class FeatureSimulator(Simulator):
             self._op,
         )
 
+    def set_observer(self, observer_type:Observer):
+        '''Change the observer'''
+        if observer_type != self._observer_type:
+            self._integrator.set_observer(observer_type)
+            self._cl_program_is_valid = False
+
 
     # Changing solver parameters does not require re-building CL program
     def set_observer_parameters(
         self, 
         op: Optional[ObserverParams] = None,
-        e_var_ix: Optional[int|str] = None,
-        f_var_ix: Optional[int|str] = None,
+        event_var: Optional[str] = None,
+        feature_var: Optional[str] = None,
         max_event_count: Optional[int] = None,
-        max_event_timestamps: Optional[int] = None,
+        max_event_timestamps: Optional[int] = None, #NOTE! Changing this invalidates the CL program!!
         min_amp: Optional[float] = None,
         min_imi: Optional[float] = None,
         nhood_radius: Optional[float] = None,
@@ -390,18 +398,16 @@ class FeatureSimulator(Simulator):
         if op is not None:
             self._op = op
         else:
-            if e_var_ix is not None:
-                if isinstance(e_var_ix, str):
-                    e_var_ix = self.variable_names.index(e_var_ix)
-                self._op.e_var_ix = e_var_ix
-            if e_var_ix is not None:
-                if isinstance(f_var_ix, str):
-                    f_var_ix = self.variable_names.index(f_var_ix)
-                self._op.f_var_ix = f_var_ix
+            if event_var is not None:
+                self._op.e_var_ix = self.variable_names.index(event_var)
+            if feature_var is not None:
+                self._op.f_var_ix = self.variable_names.index(feature_var)
             if max_event_count is not None:
                 self._op.max_event_count = max_event_count
-            if max_event_timestamps is not None:
-                self._op.max_event_timestamps = max_event_timestamps  #NOTE! This invalidates the CL program!!
+            if max_event_timestamps is not None: 
+                if self._op.max_event_timestamps != max_event_timestamps:
+                    self._cl_program_is_valid = False             #NOTE! Changing max_event_timestamps invalidates the CL program!!
+                self._op.max_event_timestamps = max_event_timestamps  
             if min_amp is not None:
                 self._op.min_amp = min_amp
             if min_imi is not None:
@@ -421,21 +427,23 @@ class FeatureSimulator(Simulator):
         self._integrator.set_observer_params(self._op)
 
     def get_observer_parameters(self):
+        '''Get the current observer parameter struct'''
         return self._integrator.get_observer_params()
     
-
     def get_feature_names(self) -> List[str]:
+        '''Get the list of feature names for the current observer'''
         return self._integrator.get_feature_names()
 
-    def features(
-        self, 
-        initialize_observer: Optional[bool] = None, 
-        update_x0: bool = True,
-        fetch_results: bool = True,
-    ) -> Optional[ObserverOutput]:
+    def features(self, 
+                 t_span:Optional[Tuple[float, float]] = None, 
+                 initialize_observer: Optional[bool] = None, 
+                 update_x0: bool = True, 
+                 fetch_results: bool = True,
+        ) -> Optional[ObserverOutput]:
         """Run a simulation with feature detection.
         
         Args:
+        t_span (tuple[float, float]): Time interval for integration.
         initialize_observer (bool): Whether the observer data be initialized
         update_x0 (bool): After the simulation, whether to overwrite the initial state buffer with the final state
         fetch_results (bool): Whether to fetch the feature results from the device and return them here
@@ -443,19 +451,29 @@ class FeatureSimulator(Simulator):
         Returns:
             ObserverOutput | None
         """
+        # if not self._cl_program_is_valid:
+        #     self._integrator.build_cl()
+
         if not self.is_initialized:
             raise RuntimeError("Simulator is not initialized")
 
+        if t_span is not None:
+            self.set_tspan(t_span=t_span)
+
         if initialize_observer is not None:
-            print("Reinitializing observer")
+            print(f"Setting {initialize_observer=}")
             self._integrator.features(initialize_observer)
         else:
             self._integrator.features()
+        # invalidate _device_features
+        # invalidate _device_final_state
+
         if update_x0:
-            self.shift_x0()
+            self._integrator.shift_x0()
+            # invalidate _device_initial_state
+
         if fetch_results:
             return self.get_observer_results()
-        return None
 
     def get_observer_results(self) -> ObserverOutput:
         """Get the features measured by the observer

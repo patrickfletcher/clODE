@@ -566,14 +566,6 @@ const std::vector<cl_double> CLODE::getXf()
 	return xf;
 }
 
-
-// will be populated once buildCL is run
-const std::string CLODE::getProgramString() 
-{
-	return buildOptions+clprogramstring+ODEsystemsource; 
-}
-
-
 void CLODE::printStatus()
 {
 	opencl.print();

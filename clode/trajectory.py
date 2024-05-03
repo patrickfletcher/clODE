@@ -20,7 +20,7 @@ class TrajectoryOutput:
             dx: np.ndarray[Any, np.dtype[np.float64]], 
             aux: np.ndarray[Any, np.dtype[np.float64]], 
             variables: list[str], 
-            aux_variables: list[str],
+            aux_names: list[str],
             ) -> None:
         
         self.t = t
@@ -29,15 +29,15 @@ class TrajectoryOutput:
         self.x = rfn.unstructured_to_structured(x, dtype=x_dtype)
         self.dx = rfn.unstructured_to_structured(dx, dtype=x_dtype)
 
-        if len(aux_variables)>0:
-            aux_dtype = np.dtype({"names":aux_variables, "formats":[np.float64]*len(aux_variables)})
+        if len(aux_names)>0:
+            aux_dtype = np.dtype({"names":aux_names, "formats":[np.float64]*len(aux_names)})
             self.aux = rfn.unstructured_to_structured(aux, dtype=aux_dtype)
 
         self._variables = variables
-        self._aux_variables = aux_variables
+        self._aux_names = aux_names
 
     def __repr__(self) -> str:
-        return f"TrajectoryOutput( length: {len(self.t)}, variables: {self._variables}, aux variables: {self._aux_variables} )"
+        return f"TrajectoryOutput( length: {len(self.t)}, variables: {self._variables}, aux variables: {self._aux_names} )"
     
     # helper to convert back to unstructured ndarray
     # --> make this a class property decorator?
@@ -160,27 +160,44 @@ class TrajectorySimulator(Simulator):
             self._runtime,
             _clode_root_dir,
         )
+        self._integrator.build_cl()
+        self._cl_program_is_valid = True
 
-    def trajectory(self, update_x0: bool = True, fetch_results:bool = True) -> Optional[List[TrajectoryOutput]|TrajectoryOutput]:
+    # TODO[feature]: chunk time - keep max_store to a reasonable level (device-dependent), loop solve/get until t_span is covered.
+    def trajectory(self, 
+                   t_span:Optional[Tuple[float, float]] = None, 
+                   update_x0: bool = True, 
+                   fetch_results:bool = True,
+        ) -> Optional[List[TrajectoryOutput]|TrajectoryOutput]:
         """Run a trajectory simulation.
         
         Args:
+        t_span (tuple[float, float]): Time interval for integration.
         update_x0 (bool): After the simulation, whether to overwrite the initial state buffer with the final state
         fetch_results (bool): Whether to fetch the feature results from the device and return them here
 
         Returns:
             List[TrajectoryOutput]
         """
+
         if not self.is_initialized:
             raise RuntimeError("Simulator is not initialized")
 
+        if t_span is not None:
+            self.set_tspan(t_span=t_span)
+
         self._integrator.trajectory()
+        # invalidate _device_t, _device_x, _device_dx, _device_aux, _device_final_state
+        # self._device_t = self._device_x = self._device_dx = self._device_aux = self._device_final_state = None
+
         if update_x0:
-            self.shift_x0()
+            self._integrator.shift_x0()
+            # invalidate _device_initial_state
+
         if fetch_results:
             return self.get_trajectory()
-        return None
 
+    # TODO: specialize? support individual getters too
     def get_trajectory(self) -> List[TrajectoryOutput]|TrajectoryOutput:
         """Get the trajectory data.
 
@@ -218,7 +235,7 @@ class TrajectorySimulator(Simulator):
         arr = np.array(self._output_dx[: np.prod(data_shape)])
         self._dx_data = arr.reshape(data_shape, order="F").transpose((2, 1, 0))
 
-        aux_shape = (self._ensemble_size, len(self.aux_variables), self._max_store)
+        aux_shape = (self._ensemble_size, len(self.aux_names), self._max_store)
         arr = np.array(self._output_aux[: np.prod(aux_shape)])
         self._aux_data = arr.reshape(aux_shape, order="F").transpose((2, 1, 0))
 
@@ -230,7 +247,7 @@ class TrajectorySimulator(Simulator):
             xi = self._x_data[:ni, :, i]
             dxi = self._dx_data[:ni, :, i]
             auxi = self._aux_data[:ni, :, i]
-            result = TrajectoryOutput(t=ti, x=xi, dx=dxi, aux=auxi, variables=self.variable_names, aux_variables=self.aux_variables)
+            result = TrajectoryOutput(t=ti, x=xi, dx=dxi, aux=auxi, variables=self.variable_names, aux_names=self.aux_names)
             results.append(result)
 
         return results[0] if self._ensemble_size==1 else results

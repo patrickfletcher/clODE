@@ -279,7 +279,10 @@ class PlatformInfo:
         """
 class ProblemInfo:
     aux: list[str]
+    num_aux: int
     num_noise: int
+    num_par: int
+    num_var: int
     pars: list[str]
     src_file: str
     vars: list[str]

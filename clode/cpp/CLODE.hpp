@@ -203,7 +203,7 @@ public:
     const std::vector<cl_double> getXf();
     const std::vector<std::string> getAvailableSteppers() const { return availableSteppers; };
 
-    const std::string getProgramString();
+    const std::string getProgramString() const { return buildOptions+clprogramstring+ODEsystemsource; };
     void printStatus();
 
 };
