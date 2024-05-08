@@ -79,12 +79,14 @@ int main(int argc, char **argv)
 	op.eVarIx=0;
 	op.fVarIx=0;
 	op.maxEventCount=100;
-	op.minXamp=1;
+	op.maxEventTimestamps=0;
+	op.minXamp=0.0;
+	op.minIMI=0.0;
 	op.nHoodRadius=0.01;
 	op.xUpThresh=0.3;
 	op.xDownThresh=0.2;
-	op.dxUpThresh=0;
-	op.dxDownThresh=0;
+	op.dxUpThresh=0.0;
+	op.dxDownThresh=0.0;
 	op.eps_dx=1e-7;
 
 	
@@ -103,8 +105,9 @@ int main(int argc, char **argv)
 	//copy problem data to the device
 
     clo.buildCL();
-	clo.initialize(tspan, x0, pars, sp, op);
-
+	clo.setSolverParams(sp);
+	clo.setProblemData(x0, pars);
+	clo.setTspan(tspan);
 	clo.seedRNG(mySeed);
 	
 	//run the simulation 

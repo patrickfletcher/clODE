@@ -89,12 +89,11 @@ int main(int argc, char **argv)
 	CLODE clo(prob, stepper, CLSinglePrecision, opencl, CLODE_ROOT);
 
     clo.buildCL();
-
-    //copy problem data to the device
-	clo.initialize(tspan, x0, pars, sp); 
+	clo.setSolverParams(sp);
+	clo.setProblemData(x0, pars);
+	clo.setTspan(tspan);
 	
-	// std::cout<<"here"<<std::endl;
-	// clo.seedRNG(mySeed);
+	clo.seedRNG();
 	
 	//run the simulation 
 	clo.transient();
