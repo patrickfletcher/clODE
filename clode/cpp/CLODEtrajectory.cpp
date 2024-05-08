@@ -36,25 +36,10 @@ void CLODEtrajectory::buildCL()
 	}
 	catch (cl::Error &er)
 	{
-		spdlog::error("CLODEtrajectory::initializeTrajectoryKernel():{}({})", er.what(), CLErrorString(er.err()).c_str());
+		spdlog::error("CLODEtrajectory::buildCL() create kernels:{}({})", er.what(), CLErrorString(er.err()).c_str());
 		throw er;
 	}
-	spdlog::debug("initialize trajectory kernel");
-}
-
-// initialize everything
-void CLODEtrajectory::initialize(std::vector<cl_double> newTspan, std::vector<cl_double> newX0, std::vector<cl_double> newPars, SolverParams<cl_double> newSp)
-{
-	clInitialized = false;
-
-	setTspan(newTspan);
-	setProblemData(newX0, newPars); // will set nPts
-	setSolverParams(newSp);
-	// set up output variables, depends on sp.max_store, nPts, nVar, nAux
-	resizeTrajectoryVariables();
-
-	clInitialized = true;
-	spdlog::debug("initialize clODEtrajectory");
+	spdlog::debug("Created trajectory kernels");
 }
 
 void CLODEtrajectory::resizeTrajectoryVariables()

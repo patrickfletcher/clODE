@@ -259,9 +259,6 @@ PYBIND11_MODULE(clode_cpp_wrapper, m)
         .def("set_opencl", static_cast<void (CLODE::*)(OpenCLResource opencl)>(&CLODE::setOpenCL))
         .def("set_opencl", static_cast<void (CLODE::*)(unsigned int platformID, unsigned int deviceID)>(&CLODE::setOpenCL))
         .def("build_cl", &CLODE::buildCL)
-        .def("initialize", static_cast<void (CLODE::*)(std::vector<double>, std::vector<double>, std::vector<double>, SolverParams<double>)>(&CLODE::initialize),
-             "Initialize CLODE", py::arg("tspan"), py::arg("x0"), py::arg("pars"), py::arg("solver_params"))
-        .def("is_initialized", &CLODE::isInitialized)
         .def("set_problem_data", static_cast<void (CLODE::*)(std::vector<double>, std::vector<double>)>(&CLODE::setProblemData))
         .def("set_tspan", static_cast<void (CLODE::*)(std::vector<double>)>(&CLODE::setTspan))
         .def("set_x0", static_cast<void (CLODE::*)(std::vector<double>)>(&CLODE::setX0))
@@ -346,7 +343,6 @@ PYBIND11_MODULE(clode_cpp_wrapper, m)
                       OpenCLResource &,
                       std::string &>())
         .def("build_cl", &CLODEfeatures::buildCL)
-        .def("initialize", static_cast<void (CLODEfeatures::*)(std::vector<double>, std::vector<double>, std::vector<double>, SolverParams<double>, ObserverParams<double>)>(&CLODEfeatures::initialize), "Initialize FeatureSimulatorBase")
         .def("set_observer_params", static_cast<void (CLODEfeatures::*)(ObserverParams<double>)>(&CLODEfeatures::setObserverParams))
         .def("set_observer", static_cast<void (CLODEfeatures::*)(std::string)>(&CLODEfeatures::setObserver))
         .def("initialize_observer", &CLODEfeatures::initializeObserver)
@@ -373,7 +369,6 @@ PYBIND11_MODULE(clode_cpp_wrapper, m)
                       bool,
                       OpenCLResource &,
                       std::string &>())
-        .def("initialize", static_cast<void (CLODEtrajectory::*)(std::vector<double>, std::vector<double>, std::vector<double>, SolverParams<double>)>(&CLODEtrajectory::initialize), "Initialize TrajectorySimulatorBase")
         .def("build_cl", &CLODEtrajectory::buildCL)
         .def("trajectory", &CLODEtrajectory::trajectory) // CLODEtrajectory specializations
         .def("get_t", &CLODEtrajectory::getT)

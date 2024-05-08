@@ -156,10 +156,6 @@ public:
 
     virtual void buildCL(); // build program and create kernel objects - overloaded by subclasses to include any extra kernels
 
-    // set all problem data needed to run
-    virtual void initialize(std::vector<cl_double> newTspan, std::vector<cl_double> newX0, std::vector<cl_double> newPars, SolverParams<cl_double> newSp);
-    bool isInitialized() { return clInitialized; };
-
     // no need to rebuild CL program
     void setProblemData(std::vector<cl_double> newX0, std::vector<cl_double> newPars); // set both pars and X0 to change nPts
     void setTspan(std::vector<cl_double> newTspan);

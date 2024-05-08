@@ -141,10 +141,6 @@ class FeatureSimulatorBase(SimulatorBase):
         ...
     def get_observer_params(self) -> ObserverParams:
         ...
-    def initialize(self, arg0: list[float], arg1: list[float], arg2: list[float], arg3: SolverParams, arg4: ObserverParams) -> None:
-        """
-        Initialize FeatureSimulatorBase
-        """
     def initialize_observer(self) -> None:
         ...
     def is_observer_initialized(self) -> bool:
@@ -317,12 +313,6 @@ class SimulatorBase:
         ...
     def get_xf(self) -> list[float]:
         ...
-    def initialize(self, tspan: list[float], x0: list[float], pars: list[float], solver_params: SolverParams) -> None:
-        """
-        Initialize CLODE
-        """
-    def is_initialized(self) -> bool:
-        ...
     def print_status(self) -> None:
         ...
     @typing.overload
@@ -392,10 +382,6 @@ class TrajectorySimulatorBase(SimulatorBase):
         ...
     def get_x(self) -> list[float]:
         ...
-    def initialize(self, arg0: list[float], arg1: list[float], arg2: list[float], arg3: SolverParams) -> None:
-        """
-        Initialize TrajectorySimulatorBase
-        """
     def trajectory(self) -> None:
         ...
 def _print_opencl() -> None:

@@ -59,30 +59,11 @@ void CLODEfeatures::buildCL()
 	}
 	catch (cl::Error &er)
 	{
-		spdlog::error("CLODEfeatures::initializeFeaturesKernel:{}({})", er.what(), CLErrorString(er.err()).c_str());
+		spdlog::error("CLODEfeatures::buildCL(): create kernels{}({})", er.what(), CLErrorString(er.err()).c_str());
 		throw er;
 	}
-	spdlog::debug("initialize features kernel");
+	spdlog::debug("created features kernels");
 	spdlog::debug("Using observer: {}", observer.c_str());
-}
-
-// initialize everything
-void CLODEfeatures::initialize(std::vector<cl_double> newTspan, std::vector<cl_double> newX0, std::vector<cl_double> newPars, SolverParams<cl_double> newSp, ObserverParams<cl_double> newOp)
-{
-	clInitialized = false;
-
-	// at the time of initialize, make sure observerDataSize and nFeatures are up to date (for d_F, d_odata)
-	updateObserverDefineMap();
-
-	setTspan(newTspan);
-	setProblemData(newX0, newPars); // will set nPts
-	resizeFeaturesVariables();		// set up d_F and d_odata too, which depend on nPts
-	setSolverParams(newSp);
-	setObserverParams(newOp);
-
-	observerInitialized = false;
-	clInitialized = true;
-	spdlog::debug("initialize clODEfeatures.");
 }
 
 void CLODEfeatures::setObserver(std::string newObserver)

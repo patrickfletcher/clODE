@@ -39,9 +39,6 @@ public:
 
     void buildCL() override; // build program and create kernel objects
 
-    // build program, set all problem data needed to run
-    void initialize(std::vector<cl_double> newTspan, std::vector<cl_double> newX0, std::vector<cl_double> newPars, SolverParams<cl_double> newSp) override;
-
     // simulation routine. TODO: overloads?
     void trajectory(); // integrate forward an interval of duration (tf-t0)
 

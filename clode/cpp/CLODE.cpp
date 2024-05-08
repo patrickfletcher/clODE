@@ -164,23 +164,10 @@ void CLODE::buildCL()
 	}
 	catch (cl::Error &er)
 	{
-		spdlog::error("CLODE::initializeTransientKernel():{}({})", er.what(), CLErrorString(er.err()).c_str());
+		spdlog::error("CLODE::buildCL(): create kernels{}({})", er.what(), CLErrorString(er.err()).c_str());
 		throw er;
 	}
-	spdlog::debug("buildCL");
-}
-
-// initialize everything: build the program, create the kernels, and set all needed problem data.
-void CLODE::initialize(std::vector<cl_double> newTspan, std::vector<cl_double> newX0, std::vector<cl_double> newPars, SolverParams<cl_double> newSp)
-{
-	clInitialized = false;
-
-	setTspan(newTspan);
-	setProblemData(newX0, newPars); // will call setNpts
-	setSolverParams(newSp);
-
-	clInitialized = true;
-	spdlog::debug("initialize clODE");
+	spdlog::debug("Created kernel");
 }
 
 // resize all the nPts dependent variables, only if nPts changed
@@ -201,9 +188,9 @@ void CLODE::setNpts(cl_int newNpts)
 		x0elements = nVar * nPts;
 		parselements = nPar * nPts;
 
-		// RNGelements = nRNGstate * nPts;
+		RNGelements = nRNGstate * nPts;
 		// cl::Buffer doesn't like zero-sized arrays:
-		RNGelements = nWiener > 0 ? nWiener * nRNGstate * nPts : 1;
+		// RNGelements = nWiener > 0 ? nWiener * nRNGstate * nPts : 1;
 
 		// resize host variables
 		x0.resize(x0elements);
@@ -213,7 +200,6 @@ void CLODE::setNpts(cl_int newNpts)
 
 		dt.resize(nPts);
 		std::fill(dt.begin(), dt.end(), sp.dt);
-		std::vector<cl_float> dtF(dt.begin(), dt.end());
 
 		xf.resize(x0elements);
 		// new device variables
@@ -227,8 +213,10 @@ void CLODE::setNpts(cl_int newNpts)
 
 			// resize and fill dt buffer
 			d_dt = cl::Buffer(opencl.getContext(), CL_MEM_READ_WRITE, realSize * nPts, NULL, &opencl.error);
-			if (clSinglePrecision)
+			if (clSinglePrecision) {
+				std::vector<cl_float> dtF(dt.begin(), dt.end());
 				opencl.error = copy(opencl.getQueue(), dtF.begin(), dtF.end(), d_dt);
+			}
 			else
 				opencl.error = copy(opencl.getQueue(), dt.begin(), dt.end(), d_dt);
 
@@ -243,7 +231,7 @@ void CLODE::setNpts(cl_int newNpts)
 
 		// seed RNG must occur after device variable d_RNGstate is resized
 		seedRNG();
-		spdlog::debug("set nPts");
+		spdlog::debug("set nPts={}", nPts);
 	}
 }
 
