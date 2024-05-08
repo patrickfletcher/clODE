@@ -68,6 +68,7 @@ __kernel void odedriver(
     getRHS(ti, xi, p, dxi, auxi, wi); 
 
     //store the initial point
+    unsigned int storeix = 0;
     if (sp->storeTrajectory == 1)
     {
         int storeix = 0;
@@ -82,6 +83,8 @@ __kernel void odedriver(
 
 	//time-stepping loop
     unsigned int step = 0;
+    unsigned int eventcount = 0;
+    unsigned int eventstoreix = 0;
     int stepflag = 0;
     bool eventOccurred;
     bool terminalEvent;
@@ -97,16 +100,15 @@ __kernel void odedriver(
             if (eventOccurred)
             {
                 ++eventcount;
-                if (sp->storeEvents)
+                if (eventcount < op->maxEventTimestamps)
                 {
-                    ++eventix;
-                    t_event[eventix * nPts + i] = ti;
+                    t_event[eventcount * nPts + i] = ti;
                     for (int j = 0; j < N_VAR; ++j)
-                        x_event[eventix * nPts * N_VAR + j * nPts + i] = xi[j];
+                        x_event[eventcount * nPts * N_VAR + j * nPts + i] = xi[j];
                     for (int j = 0; j < N_VAR; ++j)
-                        dx_event[eventix * nPts * N_VAR + j * nPts + i] = dxi[j];
+                        dx_event[eventcount * nPts * N_VAR + j * nPts + i] = dxi[j];
                     for (int j = 0; j < N_AUX; ++j)
-                        aux_event[eventix * nPts * N_AUX + j * nPts + i] = auxi[j];
+                        aux_event[eventcount * nPts * N_AUX + j * nPts + i] = auxi[j];
                 }
                 terminalEvent = computeEventFeatures(&ti, xi, dxi, auxi, &odata, opars);
                 if (terminalEvent | eventcount == op->maxEventCount)
@@ -117,7 +119,7 @@ __kernel void odedriver(
         }
 
         //store every sp.nout'th step after the initial point
-        if (sp->storeTrajectory && step % sp->nout == 0)
+        if (step % sp->nout == 0)
         {
             ++storeix;
             t[storeix * nPts + i] = ti; //adaptive steppers give different timepoints for each trajectory

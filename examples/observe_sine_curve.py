@@ -21,13 +21,13 @@ parameters = {
     "dilation": 1,
 }
 
-# Define the initial conditions
+# Define the initial state
 variables = {
     "x": 0,
 }
 
 #Activate at t=pi/4, deactivate at t=3pi/2
-features_integrator = clode.FeatureSimulator(
+feature_simulator = clode.FeatureSimulator(
     rhs_equation=sine_curve,
     variables=variables,
     parameters=parameters,
@@ -47,7 +47,7 @@ features_integrator = clode.FeatureSimulator(
 )
 
 # Run the simulation
-output = features_integrator.features()
+output = feature_simulator.features()
 
 # Get the number of events (should be 2)
 event_count = int(output.get_var_count("period"))

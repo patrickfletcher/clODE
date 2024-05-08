@@ -1,8 +1,14 @@
-import numpy as np
-import clode
-import time
+''' Benchmark: Time for solution of Lorenz system, 1000 steps of RK4
+
+    For now tests only "transient" with no intermediate storage.
+    TODO: test with trajectory and observers
+'''
+
 from typing import List
+import time
+import numpy as np
 import matplotlib.pyplot as plt
+import clode
 
 def lorenz(
     t: float,
@@ -15,7 +21,7 @@ def lorenz(
     x: float = var[0]
     y: float = var[1]
     z: float = var[2]
-    
+
     r: float = par[0]
     s: float = par[1]
     beta: float = par[2]
@@ -28,13 +34,13 @@ def lorenz(
     dvar[2] = dz
 
 def test_lorenz_rk4(platform_id, device_id, num_pts, reps):
-    
+
     parameters = {"r": 27.0, "s": 10.0, "beta": 8.0/3.0}
     variables = {"x": 1.0, "y": 1.0, "z": 1.0}
-    
+
     t_span = (0.0, 10.0)
 
-    src_file = "test/lorenz.cl"
+    # src_file = "test/lorenz.cl"
     integrator = clode.Simulator(
         # src_file=src_file,
         rhs_equation=lorenz,
@@ -49,10 +55,10 @@ def test_lorenz_rk4(platform_id, device_id, num_pts, reps):
     )
 
     t_average = []
-    print(f"Time for 1000 RK4 steps of the Lorenz system. {reps} repetitions.\n(N, min, median, max time)")
+    print(f"Lorenz system, 1000 RK4 steps, {reps} repetitions.\nN, min (s), median (s), max (s)")
     for num in num_pts:
         times = []
-        
+
         integrator.set_repeat_ensemble(num_repeats=num)
 
         #warm-up passes - seems to make output more reliable
@@ -64,7 +70,7 @@ def test_lorenz_rk4(platform_id, device_id, num_pts, reps):
             integrator.transient(update_x0=False)
             times.append(time.perf_counter() - t0)
 
-        t_mean = sum(times)/reps
+        # t_mean = sum(times)/reps
         t_min = min(times)
         t_max = max(times)
         t_median = np.median(times)
@@ -72,7 +78,7 @@ def test_lorenz_rk4(platform_id, device_id, num_pts, reps):
         t_average.append(t_median)
 
     return t_average
-    
+
 
 # if using 'bazel test ...'
 if __name__ == "__main__":
@@ -80,19 +86,19 @@ if __name__ == "__main__":
     ocl_info = clode.runtime.query_opencl()
     # ocl_info = ocl_info[:3]
 
-    num_pts = [int(2**n) for n in np.arange(0,18)]
-    reps = 50
-    
+    N = [int(2**n) for n in np.arange(0,18)]
+    REPS = 50
+
     device_names = []
     for i, ocl in enumerate(ocl_info):
         if ocl.device_count==0:
             continue
         print("\n", ocl)
         for j, dev in enumerate(ocl.device_info):
-            t_average = test_lorenz_rk4(platform_id=i, device_id=j, num_pts=num_pts, reps=reps)
-            plt.plot(num_pts, t_average)
+            median_time = test_lorenz_rk4(platform_id=i, device_id=j, num_pts=N, reps=REPS)
+            plt.plot(N, median_time)
             device_names.append(dev.name)
-    
+
     plt.legend(device_names)
     plt.xscale('log')
     plt.yscale('log')

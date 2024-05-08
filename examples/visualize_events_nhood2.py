@@ -1,9 +1,12 @@
+''' Example showing the event trigger for the neighborhood2 observer '''
+from typing import List
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.patches import Ellipse
 import clode
 from clode import exp
-from typing import List
+
+# clode.set_log_level(clode.LogLevel.debug)
 
 def x_inf(v: float, vx: float, sx: float) -> float:
     return 1.0 / (1.0 + exp((vx - v) / sx))
@@ -61,8 +64,6 @@ def lactotroph(
     aux_[0] = ica
     # aux_[1] = ik
 
-clode.set_log_level(clode.LogLevel.warn)
-
 variables = {
     "v": -60.0,
     "n": 0.1,
@@ -82,34 +83,37 @@ parameters = {
 
 auxvars = ['ica']
 
-tend=2000
-nhood_radius=0.05
-features_integrator = clode.FeatureSimulator(
+# reuse these for both features and trajectories
+stepper = clode.Stepper.dormand_prince
+sp = clode.SolverParams(dt=0.1, dtmax=10.0, abstol=1.0e-6, reltol=1.0e-4)
+t_span=(0., 2000.)
+
+observer=clode.Observer.neighbourhood_2
+
+# create the integrator
+feature_simulator = clode.FeatureSimulator(
     rhs_equation=lactotroph,
     supplementary_equations=[x_inf, s_inf],
     variables=variables,
     parameters=parameters,
     aux=auxvars,
-    stepper=clode.Stepper.dormand_prince,
-    t_span=(0.0, tend),
-    dt=0.1,
-    dtmax=1.0,
-    abstol=1.0e-6,
-    reltol=1.0e-4,
-    observer=clode.Observer.neighbourhood_2,
-    event_var="c",
-    feature_var="v",
-    observer_x_down_thresh=0.05,
-    observer_neighbourhood_radius=nhood_radius,
-    observer_max_event_count=10,
-    observer_max_event_timestamps = 10,
+    stepper=stepper,
+    solver_parameters = sp,
+    observer=observer,
+    observer_max_event_timestamps=10,
 )
 
-features_integrator.transient()
-output = features_integrator.features()
+nhood_radius=0.05
+feature_simulator.set_observer_parameters(
+    event_var="c",
+    feature_var="v",
+    nhood_radius=nhood_radius,
+    x_down_threshold=0.05)
+
+feature_simulator.transient(t_span=t_span)
+output = feature_simulator.features()
 
 event_times = output.get_event_data("nhood","time")
-
 print(event_times)
 
 # Get the trajectory
@@ -119,25 +123,20 @@ trajectory_integrator = clode.TrajectorySimulator(
     variables=variables,
     parameters=parameters,
     aux=auxvars,
-    stepper=clode.Stepper.dormand_prince,
-    t_span=(0.0, tend),
-    dt=0.1,
-    dtmax=2.0,
-    abstol=1.0e-6,
-    reltol=1.0e-4,
+    stepper=stepper,
+    solver_parameters=sp,
+    t_span=t_span,
 )
 
 trajectory_integrator.transient()
 trajectory = trajectory_integrator.trajectory()
-
-vars = list(variables.keys())
 
 t = trajectory.t
 v = trajectory.x["v"]
 n = trajectory.x["n"]
 c = trajectory.x["c"]
 
-# trajectory 
+# trajectory
 plt.plot(t, v)
 # Plot events
 for event in event_times:
@@ -175,4 +174,3 @@ ax.set_xlabel("c")
 ax.set_ylabel("n")
 ax.set_zlabel("v")
 plt.show()
-# pass

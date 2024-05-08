@@ -84,7 +84,7 @@ parameters = {
 auxvars = ['ica']
 
 tend=2000
-features_integrator = clode.FeatureSimulator(
+feature_simulator = clode.FeatureSimulator(
     rhs_equation=lactotroph,
     supplementary_equations=[x_inf, s_inf],
     variables=variables,
@@ -102,8 +102,8 @@ features_integrator = clode.FeatureSimulator(
     observer_max_event_timestamps = 10,
 )
 
-features_integrator.transient()
-output = features_integrator.features()
+feature_simulator.transient()
+output = feature_simulator.features()
 
 localmax_times = output.get_event_data("localmax","time")
 localmax_evars = output.get_event_data("localmax","evar")

@@ -87,7 +87,7 @@ dx_up_thresh=0.
 x_down_thresh=0.1
 dx_down_thresh=0.
 
-features_integrator = clode.FeatureSimulator(
+feature_simulator = clode.FeatureSimulator(
     rhs_equation=lactotroph,
     supplementary_equations=[x_inf, s_inf],
     variables=variables,
@@ -110,8 +110,8 @@ features_integrator = clode.FeatureSimulator(
     observer_max_event_timestamps=5,
 )
 
-features_integrator.transient()
-output = features_integrator.features()
+feature_simulator.transient()
+output = feature_simulator.features()
 
 print(output)
 
