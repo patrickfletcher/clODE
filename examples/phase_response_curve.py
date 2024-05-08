@@ -45,7 +45,7 @@ auxvars = []
 
 # Set up the solver. 
 tend=2000
-features_integrator = clode.FeatureSimulator(
+feature_simulator = clode.FeatureSimulator(
     rhs_equation=fitzhugh_nagumo,
     variables=variables,
     parameters=parameters,
@@ -60,26 +60,30 @@ features_integrator = clode.FeatureSimulator(
 )
 
 # Integrate first to forget the initial condition
-features_integrator.transient()
+feature_simulator.transient()
 
 # Now we integrate using events to stop the simulation at the beginning of a period
-output = features_integrator.features()
+output = feature_simulator.features()
 
 period = output.F["mean period"][0]
 print(period)
 
 # make the grid of stimulus inputs: vary t_on, strength(?)
-num_perturbation_times = 1024
+num_perturbation_times = 4
 on_times = period + np.linspace(0, period, num_perturbation_times)
 strength = 0.08
 
+print(feature_simulator.get_initial_state())
+print(feature_simulator.get_final_state())
+
 # would be nice to just set parameters and not have to restart at default X0!
-X0 = features_integrator.get_final_state().repeat(num_perturbation_times, axis=0)
-features_integrator.set_ensemble(variables = X0, parameters = {"t_on": on_times, "strength": strength})
+feature_simulator.set_ensemble(parameters = {"t_on": on_times, "strength": strength})
 
-features_integrator.set_tspan((0.0, 5*period))
+print(feature_simulator.get_initial_state())
 
-output = features_integrator.features()
+feature_simulator.set_tspan((0.0, 5*period))
+
+output = feature_simulator.features()
 event_times = output.get_event_data("nhood","time")
 periods_perturb = np.diff(event_times, axis=1)
 stim_phase = (on_times - period)/period 

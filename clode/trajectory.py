@@ -232,7 +232,7 @@ class TrajectorySimulator(Simulator):
         arr = np.array(self._output_t[: np.prod(t_shape)])
         self._time_steps = arr.reshape(t_shape, order="F").transpose() 
 
-        data_shape = (self._ensemble_size, len(self.variable_names), self._max_store)
+        data_shape = (self._ensemble_size, self.num_variables, self._max_store)
         arr = np.array(self._output_x[: np.prod(data_shape)])
         self._x_data = arr.reshape(data_shape, order="F").transpose((2, 1, 0))
         arr = np.array(self._output_dx[: np.prod(data_shape)])

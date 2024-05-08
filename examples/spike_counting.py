@@ -4,6 +4,7 @@ from typing import List
 
 import clode
 from clode import exp
+# clode.set_log_level(clode.LogLevel.debug)
 
 def get_rhs(t: float,
             x: List[float],
@@ -63,23 +64,18 @@ integrator = clode.FeatureSimulator(
     observer=clode.Observer.threshold_2,
     observer_x_up_thresh=0.5,
     observer_x_down_thresh=0.05,
-    observer_min_x_amp=1.0,
-    observer_min_imi=0.0,
-    observer_max_event_count=50,
 )
 
 # set up the ensemble of systems
-nx = 256
-ny = 256
-nPts = nx * ny
+nx = ny = 128
 gca = np.linspace(550.0, 1050.0, nx)
 kpmca = np.linspace(0.095, 0.155, ny)
-px, py = np.meshgrid(gca, kpmca)
+# px, py = np.meshgrid(gca, kpmca)
+# ensemble_parameters = {"gca" : px.flatten(), "kpmca" : py.flatten()} #gkca will have default value
+# integrator.set_ensemble(parameters=ensemble_parameters)
 
-ensemble_parameters = {"gca" : px.flatten(), "kpmca" : py.flatten()} #gkca will have default value
-ensemble_parameters_names = list(ensemble_parameters.keys())
-
-integrator.set_ensemble(parameters=ensemble_parameters)
+ensemble_parameters = {"gca" : gca, "kpmca" : kpmca} 
+px, py = integrator.set_grid_ensemble(parameters=ensemble_parameters)
 
 integrator.set_tspan((0.0, 50000.0))
 integrator.transient()
@@ -94,6 +90,7 @@ feature = np.reshape(feature, (nx, ny))
 plt.pcolormesh(px, py, feature, shading='nearest', vmax=12)
 plt.title("peaks")
 plt.colorbar()
+ensemble_parameters_names = list(ensemble_parameters.keys())
 plt.xlabel(ensemble_parameters_names[0])
 plt.ylabel(ensemble_parameters_names[1])
 plt.axis("tight")
@@ -124,14 +121,10 @@ integrator_traj = clode.TrajectorySimulator(
     max_store = max_store,
 )
 
-traj_parameters = {"gca":points[:, 0], "kpmca": points[:, 1]}
+integrator_traj.set_ensemble(parameters = {"gca":points[:, 0], "kpmca": points[:, 1]})
 
-integrator_traj.set_ensemble(parameters = traj_parameters)
-
-integrator_traj.set_tspan((0.0, 50000.0))
-integrator_traj.transient()
-integrator_traj.set_tspan((0.0, 10000.0))
-trajectories = integrator_traj.trajectory()
+integrator_traj.transient(t_span=(0.0, 50000.0))
+trajectories = integrator_traj.trajectory(t_span=(0.0, 10000.0))
 
 fig, ax = plt.subplots(4, 1, sharex=True, sharey=True)
 for i, trajectory in enumerate(trajectories):

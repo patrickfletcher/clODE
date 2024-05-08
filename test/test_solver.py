@@ -51,11 +51,13 @@ def test_set_get_nobuild():
     print(simulator.get_solver_parameters())
     print(simulator.is_initialized)
     
+    simulator.set_repeat_ensemble(3)
     print(simulator.get_initial_state())
-    print(simulator.get_final_state())
+    print(simulator.get_final_state().shape)
 
-    simulator.print_devices()
-    simulator.print_status()
+
+    # simulator.print_devices()
+    # simulator.print_status()
 
 def run_tests():
     test_set_get_nobuild()
