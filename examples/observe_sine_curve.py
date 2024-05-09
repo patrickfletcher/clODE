@@ -31,31 +31,33 @@ feature_simulator = clode.FeatureSimulator(
     rhs_equation=sine_curve,
     variables=variables,
     parameters=parameters,
-    observer=clode.Observer.threshold_2,
     aux=['dx'],
+    observer=clode.Observer.threshold_2,
     stepper=clode.Stepper.rk4,
+    dtmax=0.001,
+    dt=0.001,
     t_span=(0.0, 4 * pi),
+    event_var="x",
+    feature_var="x",
     observer_min_x_amp=0.5,
     observer_x_up_thresh=(2+sqrt(2))/4,
     observer_x_down_thresh=0.001,
     observer_dx_down_thresh=0.001,
     observer_dx_up_thresh=0.001,
-    event_var="x",
-    feature_var="x",
-    dtmax=0.001,
-    dt=0.001,
+    observer_max_event_count=100,
+    observer_max_event_timestamps=3,
 )
 
 # Run the simulation
 output = feature_simulator.features()
 
 # Get the number of events (should be 2)
-event_count = int(output.get_var_count("period"))
+event_count = int(output.get_var_count("event"))
 print(event_count)
 
 # Get the timestamps of the events
-up_times = output.get_timestamps("up")
-down_times = output.get_timestamps("down")
+up_times = output.get_event_data("up")
+down_times = output.get_event_data("down")
 pass
 
 

@@ -110,7 +110,7 @@ class ObserverOutput:
         ]
         if len(event_features) == 0:
             raise NotImplementedError(
-                f"{self._observer_type} does not track {name} events!"
+                f"{self._observer_type} does not track {name} event {type}s!"
             )
         data = []
         for event_idx in range(0, self._op.max_event_timestamps):
