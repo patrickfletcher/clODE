@@ -58,7 +58,7 @@ void CLODEtrajectory::resizeTrajectoryVariables()
 
 	size_t currentTelements = currentStoreAlloc * nPts;
 
-	// only resize device variables if size changed, or if not yet initialized
+	// only resize device variables if size changed
 	if (nStoreMax != currentStoreAlloc || telements != currentTelements)
 	{
 

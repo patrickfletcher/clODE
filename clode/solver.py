@@ -115,11 +115,6 @@ class Simulator:
         """The number of Wiener variables in the system"""
         return self._pi.num_noise
 
-    @property
-    def is_initialized(self) -> bool:
-        """Get whether the simulator is initialized"""
-        return self._integrator.is_initialized()
-
     def __init__(
         self,
         variables: Dict[str, float],
@@ -611,10 +606,6 @@ class Simulator:
         #     self._integrator.build_cl()
         #     self._cl_program_is_valid = True
 
-        # this should be a verification that all args have been set (lazily do so here if needed?)
-        # if not self.is_initialized:
-        #     raise RuntimeError("Simulator is not initialized")
-
         if t_span is not None:
             self.set_tspan(t_span=t_span)
 
@@ -704,14 +695,14 @@ class Simulator:
 
     def print_status(self) -> None:
         """Print the simulator status info"""
-        old_level = get_log_level()
-        set_log_level(LogLevel.info)
+        # old_level = get_log_level()
+        # set_log_level(LogLevel.info)
         self._integrator.print_status()
-        set_log_level(old_level)
+        # set_log_level(old_level)
 
     def print_devices(self) -> None:
         """Print the available devices"""
-        old_level = get_log_level()
-        set_log_level(LogLevel.info)
+        # old_level = get_log_level()
+        # set_log_level(LogLevel.info)
         self._runtime.print_devices()
-        set_log_level(old_level)
+        # set_log_level(old_level)

@@ -127,9 +127,6 @@ protected:
     std::string clprogramstring, buildOptions, ODEsystemsource;
     cl::Kernel cl_transient;
 
-    // flag to indicate whether kernel can be executed
-    bool clInitialized = false;
-
     void setClodeRoot(const std::string clodeRoot);
     void setCLbuildOpts(std::string extraBuildOpts = "");
     void buildProgram(std::string extraBuildOpts = ""); // build the program object (inherited by subclasses)

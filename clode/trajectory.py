@@ -178,9 +178,6 @@ class TrajectorySimulator(Simulator):
         #     self._integrator.build_cl()
         #     self._cl_program_is_valid = True
 
-        # if not self.is_initialized:
-        #     raise RuntimeError("Simulator is not initialized")
-
         if t_span is not None:
             self.set_tspan(t_span=t_span)
 

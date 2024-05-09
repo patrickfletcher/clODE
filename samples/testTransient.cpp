@@ -98,9 +98,6 @@ int main(int argc, char **argv)
 	//run the simulation 
 	clo.transient();
 	
-	// clo.initialize(tspan, x0, pars, sp); 
-	// clo.initializeProblem(tspan, x0, pars); 
-	
 	// clo.transient(); 
 	// clo.transient(pars);
 	// clo.transient(tspan, x0);

@@ -6,7 +6,6 @@ from clode import SolverParams, ObserverParams
 
 '''
 Test the Simulator class API
-- setters that cause cl_initialized=False (requiring CL program rebuild)
 - set/get that move data between host/device, not invalidating CL program
 - appropriate manipulation of initial condition and parameter arrays to/from expected device layout
 '''

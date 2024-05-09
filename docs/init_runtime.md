@@ -5,7 +5,7 @@ maintains its own OpenCL runtime. This is so
 that users can initialize multiple runtimes
 across different devices.
 
-## Automatic initialisation
+## Automatic initialization
 
 The simplest way to initialize the clODE runtime is to call
 CLODEFeatures and CLODETrajectory without any runtime-specific

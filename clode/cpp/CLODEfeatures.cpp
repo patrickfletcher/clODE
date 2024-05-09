@@ -158,7 +158,7 @@ void CLODEfeatures::resizeFeaturesVariables()
 		throw std::invalid_argument("nPts is too large");
 	}
 
-	// resize device variables if nPts changed, or if not yet initialized
+	// resize device variables if nPts changed
 	if (Felements != currentFelements)
 	{
 
