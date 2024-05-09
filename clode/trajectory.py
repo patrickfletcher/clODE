@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import numpy as np
+
 # from numpy.typing import NDArray
 from numpy.lib import recfunctions as rfn
 
@@ -11,26 +12,33 @@ from .runtime import CLDeviceType, CLVendor, _clode_root_dir
 from clode.cpp.clode_cpp_wrapper import SolverParams, TrajectorySimulatorBase
 from .solver import Simulator, Stepper
 
+
 # TODO: better even - use getitem?  trajectory["t"], trajectory["varname"], trajectory["dvar/dt"], ...
 class TrajectoryOutput:
     def __init__(
-            self, 
-            t: np.ndarray[Any, np.dtype[np.float64]], 
-            x: np.ndarray[Any, np.dtype[np.float64]], 
-            dx: np.ndarray[Any, np.dtype[np.float64]], 
-            aux: np.ndarray[Any, np.dtype[np.float64]], 
-            variable_names: list[str], 
-            aux_names: list[str],
-            ) -> None:
-        
+        self,
+        t: np.ndarray[Any, np.dtype[np.float64]],
+        x: np.ndarray[Any, np.dtype[np.float64]],
+        dx: np.ndarray[Any, np.dtype[np.float64]],
+        aux: np.ndarray[Any, np.dtype[np.float64]],
+        variable_names: list[str],
+        aux_names: list[str],
+    ) -> None:
+
+        print(t.shape, x.shape, dx.shape, aux.shape)
+
         self.t = t
 
-        x_dtype = np.dtype({"names":variable_names, "formats":[np.float64]*len(variable_names)})
+        x_dtype = np.dtype(
+            {"names": variable_names, "formats": [np.float64] * len(variable_names)}
+        )
         self.x = rfn.unstructured_to_structured(x, dtype=x_dtype)
         self.dx = rfn.unstructured_to_structured(dx, dtype=x_dtype)
 
-        if len(aux_names)>0:
-            aux_dtype = np.dtype({"names":aux_names, "formats":[np.float64]*len(aux_names)})
+        if len(aux_names) > 0:
+            aux_dtype = np.dtype(
+                {"names": aux_names, "formats": [np.float64] * len(aux_names)}
+            )
             self.aux = rfn.unstructured_to_structured(aux, dtype=aux_dtype)
 
         self._variable_names = variable_names
@@ -38,21 +46,22 @@ class TrajectoryOutput:
 
     def __repr__(self) -> str:
         return f"TrajectoryOutput( length: {len(self.t)}, variable names: {self._variable_names}, aux variable names: {self._aux_names} )"
-    
+
     # helper to convert back to unstructured ndarray
     # --> make this a class property decorator?
     # alternatively: self.x.view(np.float64).reshape(-1,len(variables))?
-    def to_ndarray(self, slot:str, **kwargs):
-        if slot=="x":
+    def to_ndarray(self, slot: str, **kwargs):
+        if slot == "x":
             return rfn.structured_to_unstructured(self.x, **kwargs)
-        elif slot=="dx":
+        elif slot == "dx":
             return rfn.structured_to_unstructured(self.dx, **kwargs)
-        elif slot=="aux":
+        elif slot == "aux":
             return rfn.structured_to_unstructured(self.aux, **kwargs)
-        
+
+
 class TrajectorySimulator(Simulator):
-    """Simulator class that stores trajectories
-    """    
+    """Simulator class that stores trajectories"""
+
     _device_t: np.ndarray[Any, np.dtype[np.float64]] | None
     _device_x: np.ndarray[Any, np.dtype[np.float64]] | None
     _device_dx: np.ndarray[Any, np.dtype[np.float64]] | None
@@ -133,7 +142,7 @@ class TrajectorySimulator(Simulator):
             max_steps=max_steps,
             max_store=max_store,
             nout=nout,
-            solver_parameters = solver_parameters,
+            solver_parameters=solver_parameters,
             device_type=device_type,
             vendor=vendor,
             platform_id=platform_id,
@@ -159,13 +168,14 @@ class TrajectorySimulator(Simulator):
         )
 
     # TODO[feature]: chunk time - keep max_store to a reasonable level (device-dependent), loop solve/get until t_span is covered.
-    def trajectory(self, 
-                   t_span:Optional[Tuple[float, float]] = None, 
-                   update_x0: bool = True, 
-                   fetch_results:bool = True,
-        ) -> Optional[List[TrajectoryOutput]|TrajectoryOutput]:
+    def trajectory(
+        self,
+        t_span: Optional[Tuple[float, float]] = None,
+        update_x0: bool = True,
+        fetch_results: bool = True,
+    ) -> Optional[List[TrajectoryOutput] | TrajectoryOutput]:
         """Run a trajectory simulation.
-        
+
         Args:
         t_span (tuple[float, float]): Time interval for integration.
         update_x0 (bool): After the simulation, whether to overwrite the initial state buffer with the final state
@@ -193,7 +203,7 @@ class TrajectorySimulator(Simulator):
             return self.get_trajectory()
 
     # TODO: specialize? support individual getters too
-    def get_trajectory(self) -> List[TrajectoryOutput]|TrajectoryOutput:
+    def get_trajectory(self) -> List[TrajectoryOutput] | TrajectoryOutput:
         """Get the trajectory data.
 
         Returns:
@@ -218,31 +228,38 @@ class TrajectorySimulator(Simulator):
             raise ValueError("Must run trajectory() before getting trajectory data")
         elif self._device_aux is None:
             raise ValueError("Must run trajectory() before getting trajectory data")
-        
+
         # time_steps has one column per simulation (to support adaptive steppers)
         t_shape = (self._ensemble_size, self._max_store)
         arr = np.array(self._device_t[: np.prod(t_shape)])
-        self._device_t = arr.reshape(t_shape, order="F").transpose() 
+        self._device_t = arr.reshape(t_shape, order="F")
 
         data_shape = (self._ensemble_size, self.num_variables, self._max_store)
         arr = np.array(self._device_x[: np.prod(data_shape)])
-        self._device_x = arr.reshape(data_shape, order="F").transpose((2, 1, 0))
+        self._device_x = arr.reshape(data_shape, order="F")
         arr = np.array(self._device_dx[: np.prod(data_shape)])
-        self._device_dx = arr.reshape(data_shape, order="F").transpose((2, 1, 0))
+        self._device_dx = arr.reshape(data_shape, order="F")
 
         aux_shape = (self._ensemble_size, len(self.aux_names), self._max_store)
         arr = np.array(self._device_aux[: np.prod(aux_shape)])
-        self._device_aux = arr.reshape(aux_shape, order="F").transpose((2, 1, 0))
+        self._device_aux = arr.reshape(aux_shape, order="F")
 
         # list of trajectories, each stored as dict:
         results = list()
         for i in range(self._ensemble_size):
             ni = self._device_n_stored[i]
-            ti = self._device_t[:ni, i]
-            xi = self._device_x[:ni, :, i]
-            dxi = self._device_dx[:ni, :, i]
-            auxi = self._device_aux[:ni, :, i]
-            result = TrajectoryOutput(t=ti, x=xi, dx=dxi, aux=auxi, variable_names=self.variable_names, aux_names=self.aux_names)
+            ti = self._device_t[i, :ni].transpose()
+            xi = self._device_x[i, :, :ni].transpose()
+            dxi = self._device_dx[i, :, :ni].transpose()
+            auxi = self._device_aux[i, :, :ni].transpose()
+            result = TrajectoryOutput(
+                t=ti,
+                x=xi,
+                dx=dxi,
+                aux=auxi,
+                variable_names=self.variable_names,
+                aux_names=self.aux_names,
+            )
             results.append(result)
 
-        return results[0] if self._ensemble_size==1 else results
+        return results[0] if self._ensemble_size == 1 else results

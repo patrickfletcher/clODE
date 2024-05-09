@@ -264,7 +264,9 @@ class Simulator:
         valid_previous_size = previous_size == num_repeats | previous_size == 1
         self._ensemble_size = num_repeats
         self._ensemble_shape = (num_repeats, 1)
-        initial_state, parameters = self._make_problem_data(valid_previous_size=valid_previous_size)
+        initial_state, parameters = self._make_problem_data(
+            valid_previous_size=valid_previous_size
+        )
         self._set_problem_data(initial_state=initial_state, parameters=parameters)
 
     # TODO: refactor some parts?
@@ -430,7 +432,7 @@ class Simulator:
         if valid_previous_size:
             default_parameters = self._device_parameters
         parameter_array = np.tile(default_parameters, (self._ensemble_size, 1))
-        
+
         # possibly overwrite some or all of the arrays
         if isinstance(variables, np.ndarray):
             initial_state_array = variables
