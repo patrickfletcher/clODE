@@ -70,12 +70,10 @@ integrator = clode.FeatureSimulator(
 nx = ny = 128
 gca = np.linspace(550.0, 1050.0, nx)
 kpmca = np.linspace(0.095, 0.155, ny)
-# px, py = np.meshgrid(gca, kpmca)
-# ensemble_parameters = {"gca" : px.flatten(), "kpmca" : py.flatten()} #gkca will have default value
-# integrator.set_ensemble(parameters=ensemble_parameters)
+gca_grid, kpmca_grid = np.meshgrid(gca, kpmca)
 
-ensemble_parameters = {"gca" : gca, "kpmca" : kpmca} 
-px, py = integrator.set_grid_ensemble(parameters=ensemble_parameters)
+# the 2D grid shape is noted internally, and features will be returned in this shape
+integrator.set_ensemble(parameters= {"gca" : gca_grid, "kpmca" : kpmca_grid})
 
 integrator.set_tspan((0.0, 50000.0))
 integrator.transient()
@@ -84,15 +82,14 @@ integrator.features()
 
 features = integrator.get_observer_results()
 
-feature = features.get_var_max("peaks")
-feature = np.reshape(feature, (nx, ny))
+# the feature output knows to return the feature with shape matching the 2D grid input
+max_peaks = features.get_var_max("peaks")
 
-plt.pcolormesh(px, py, feature, shading='nearest', vmax=12)
+plt.pcolormesh(gca_grid, kpmca_grid, max_peaks, shading='nearest', vmax=12)
 plt.title("peaks")
 plt.colorbar()
-ensemble_parameters_names = list(ensemble_parameters.keys())
-plt.xlabel(ensemble_parameters_names[0])
-plt.ylabel(ensemble_parameters_names[1])
+plt.xlabel("gca")
+plt.ylabel("kpmca")
 plt.axis("tight")
 
 # highlight a few example points - we'll get their trajectories next

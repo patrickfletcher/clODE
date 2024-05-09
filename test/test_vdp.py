@@ -103,5 +103,5 @@ def test_vdp_dormand_prince_python_rhs():
 if __name__ == "__main__":
     # print(clode)
     # sys.exit(pytest.main(sys.argv[1:]))
-    clode.set_log_level(clode.LogLevel.debug)
+    # clode.set_log_level(clode.LogLevel.debug)
     vdp_dormand_prince(end=100)

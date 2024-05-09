@@ -19,13 +19,13 @@ class TrajectoryOutput:
             x: np.ndarray[Any, np.dtype[np.float64]], 
             dx: np.ndarray[Any, np.dtype[np.float64]], 
             aux: np.ndarray[Any, np.dtype[np.float64]], 
-            variables: list[str], 
+            variable_names: list[str], 
             aux_names: list[str],
             ) -> None:
         
         self.t = t
 
-        x_dtype = np.dtype({"names":variables, "formats":[np.float64]*len(variables)})
+        x_dtype = np.dtype({"names":variable_names, "formats":[np.float64]*len(variable_names)})
         self.x = rfn.unstructured_to_structured(x, dtype=x_dtype)
         self.dx = rfn.unstructured_to_structured(dx, dtype=x_dtype)
 
@@ -33,11 +33,11 @@ class TrajectoryOutput:
             aux_dtype = np.dtype({"names":aux_names, "formats":[np.float64]*len(aux_names)})
             self.aux = rfn.unstructured_to_structured(aux, dtype=aux_dtype)
 
-        self._variables = variables
+        self._variable_names = variable_names
         self._aux_names = aux_names
 
     def __repr__(self) -> str:
-        return f"TrajectoryOutput( length: {len(self.t)}, variables: {self._variables}, aux variables: {self._aux_names} )"
+        return f"TrajectoryOutput( length: {len(self.t)}, variable names: {self._variable_names}, aux variable names: {self._aux_names} )"
     
     # helper to convert back to unstructured ndarray
     # --> make this a class property decorator?
@@ -51,27 +51,24 @@ class TrajectoryOutput:
             return rfn.structured_to_unstructured(self.aux, **kwargs)
         
 class TrajectorySimulator(Simulator):
-    _time_steps: np.ndarray[Any, np.dtype[np.float64]] | None
-    _output_t: np.ndarray[Any, np.dtype[np.float64]] | None
-    _output_x: np.ndarray[Any, np.dtype[np.float64]] | None
-    _output_dx: np.ndarray[Any, np.dtype[np.float64]] | None
-    _output_aux: np.ndarray[Any, np.dtype[np.float64]] | None
-    _x_data: np.ndarray[Any, np.dtype[np.float64]] | None
-    _aux_data: np.ndarray[Any, np.dtype[np.float64]] | None
+    """Simulator class that stores trajectories
+    """    
+    _device_t: np.ndarray[Any, np.dtype[np.float64]] | None
+    _device_x: np.ndarray[Any, np.dtype[np.float64]] | None
+    _device_dx: np.ndarray[Any, np.dtype[np.float64]] | None
+    _device_aux: np.ndarray[Any, np.dtype[np.float64]] | None
     _integrator: TrajectorySimulatorBase
 
     def __init__(
         self,
         variables: Dict[str, float],
         parameters: Dict[str, float],
+        aux: Optional[List[str]] = None,
+        num_noise: int = 0,
         src_file: Optional[str] = None,
         rhs_equation: Optional[OpenCLRhsEquation] = None,
         supplementary_equations: Optional[List[Callable[[Any], Any]]] = None,
-        aux: Optional[List[str]] = None,
-        num_noise: int = 0,
-        t_span: Tuple[float, float] = (0.0, 1000.0),
         stepper: Stepper = Stepper.rk4,
-        single_precision: bool = True,
         dt: float = 0.1,
         dtmax: float = 1.0,
         abstol: float = 1e-6,
@@ -79,15 +76,16 @@ class TrajectorySimulator(Simulator):
         max_steps: int = 1000000,
         max_store: int = 1000000,
         nout: int = 1,
-        solver_parameters: SolverParams = None,
-        device_type: CLDeviceType | None = None,
-        vendor: CLVendor | None = None,
-        platform_id: int | None = None,
-        device_id: int | None = None,
-        device_ids: List[int] | None = None,
+        solver_parameters: Optional[SolverParams] = None,
+        t_span: Tuple[float, float] = (0.0, 1000.0),
+        single_precision: bool = True,
+        device_type: Optional[CLDeviceType] = None,
+        vendor: Optional[CLVendor] = None,
+        platform_id: Optional[int] = None,
+        device_id: Optional[int] = None,
+        device_ids: Optional[List[int]] = None,
     ) -> None:
-        # We use Google-style docstrings: https://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_google.html
-        """Initialize a CLODE trajectory object.
+        """Construct a CLODE trajectory object.
 
         Args:
             src_file (str): The path to the source file to be simulated.  If the file ends with ".xpp", it will be converted to a CLODE source file.
@@ -146,13 +144,10 @@ class TrajectorySimulator(Simulator):
         self._max_store = self._sp.max_store
         self._n_out = self._sp.nout
 
-        self._x_data = None
-        self._time_steps = None
-        self._output_t = None
-        self._output_x = None
-        self._output_dx = None
-        self._output_aux = None
-        self._aux_data = None
+        self._device_t = None
+        self._device_x = None
+        self._device_dx = None
+        self._device_aux = None
 
     def _create_integrator(self) -> None:
         self._integrator = TrajectorySimulatorBase(
@@ -209,48 +204,48 @@ class TrajectorySimulator(Simulator):
         """
 
         # fetch data from device
-        self._n_stored = self._integrator.get_n_stored()
-        self._output_t = self._integrator.get_t()
-        self._output_x = self._integrator.get_x()
-        self._output_dx = self._integrator.get_dx()
-        self._output_aux = self._integrator.get_aux()
+        self._device_n_stored = self._integrator.get_n_stored()
+        self._device_t = self._integrator.get_t()
+        self._device_x = self._integrator.get_x()
+        self._device_dx = self._integrator.get_dx()
+        self._device_aux = self._integrator.get_aux()
 
-        # Check for None values
-        if self._n_stored is None:
+        # Check for None values - never can happen, as the C++ layer will always return something
+        if self._device_n_stored is None:
             raise ValueError("Must run trajectory() before getting trajectory data")
-        elif self._output_t is None:
+        elif self._device_t is None:
             raise ValueError("Must run trajectory() before getting trajectory data")
-        elif self._output_x is None:
+        elif self._device_x is None:
             raise ValueError("Must run trajectory() before getting trajectory data")
-        elif self._output_dx is None:
+        elif self._device_dx is None:
             raise ValueError("Must run trajectory() before getting trajectory data")
-        elif self._output_aux is None:
+        elif self._device_aux is None:
             raise ValueError("Must run trajectory() before getting trajectory data")
         
         # time_steps has one column per simulation (to support adaptive steppers)
         t_shape = (self._ensemble_size, self._max_store)
-        arr = np.array(self._output_t[: np.prod(t_shape)])
-        self._time_steps = arr.reshape(t_shape, order="F").transpose() 
+        arr = np.array(self._device_t[: np.prod(t_shape)])
+        self._device_t = arr.reshape(t_shape, order="F").transpose() 
 
         data_shape = (self._ensemble_size, self.num_variables, self._max_store)
-        arr = np.array(self._output_x[: np.prod(data_shape)])
-        self._x_data = arr.reshape(data_shape, order="F").transpose((2, 1, 0))
-        arr = np.array(self._output_dx[: np.prod(data_shape)])
-        self._dx_data = arr.reshape(data_shape, order="F").transpose((2, 1, 0))
+        arr = np.array(self._device_x[: np.prod(data_shape)])
+        self._device_x = arr.reshape(data_shape, order="F").transpose((2, 1, 0))
+        arr = np.array(self._device_dx[: np.prod(data_shape)])
+        self._device_dx = arr.reshape(data_shape, order="F").transpose((2, 1, 0))
 
         aux_shape = (self._ensemble_size, len(self.aux_names), self._max_store)
-        arr = np.array(self._output_aux[: np.prod(aux_shape)])
-        self._aux_data = arr.reshape(aux_shape, order="F").transpose((2, 1, 0))
+        arr = np.array(self._device_aux[: np.prod(aux_shape)])
+        self._device_aux = arr.reshape(aux_shape, order="F").transpose((2, 1, 0))
 
         # list of trajectories, each stored as dict:
         results = list()
         for i in range(self._ensemble_size):
-            ni = self._n_stored[i]
-            ti = self._time_steps[:ni, i]
-            xi = self._x_data[:ni, :, i]
-            dxi = self._dx_data[:ni, :, i]
-            auxi = self._aux_data[:ni, :, i]
-            result = TrajectoryOutput(t=ti, x=xi, dx=dxi, aux=auxi, variables=self.variable_names, aux_names=self.aux_names)
+            ni = self._device_n_stored[i]
+            ti = self._device_t[:ni, i]
+            xi = self._device_x[:ni, :, i]
+            dxi = self._device_dx[:ni, :, i]
+            auxi = self._device_aux[:ni, :, i]
+            result = TrajectoryOutput(t=ti, x=xi, dx=dxi, aux=auxi, variable_names=self.variable_names, aux_names=self.aux_names)
             results.append(result)
 
         return results[0] if self._ensemble_size==1 else results

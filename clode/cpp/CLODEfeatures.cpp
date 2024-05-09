@@ -177,6 +177,8 @@ void CLODEfeatures::resizeFeaturesVariables()
 			throw er;
 		}
 		spdlog::debug("resize F, d_F, d_odata with: nPts={}, nF={}", nPts, nFeatures);
+
+		observerInitialized = false;
 	}
 }
 
@@ -205,13 +207,13 @@ void CLODEfeatures::initializeObserver()
 		// spdlog::info("Enqueue error code: {}",CLErrorString(opencl.error).c_str());
 		opencl.error = opencl.getQueue().finish();
 		// spdlog::info("Finish Queue error code: {}",CLErrorString(opencl.error).c_str());
-		observerInitialized = true;
 	}
 	catch (cl::Error &er)
 	{
 		spdlog::error("CLODEfeatures::initializeObserver:{}({})", er.what(), CLErrorString(er.err()).c_str());
 		throw er;
 	}
+	observerInitialized = true;
 	spdlog::debug("run initializeObserver");
 }
 

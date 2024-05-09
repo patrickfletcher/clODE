@@ -171,8 +171,6 @@ def test_opencl_builtins() -> None:
             assert np.isclose(
                 cl_aux_arr[t_index], aux_arr[i], atol=1e-7
             ), f"Assertion failed for {auxi} at time {t}, expected {aux_arr[i]}, got {cl_aux_arr[t_index]}"
-            if i==28:
-                print(cl_aux_arr[t_index], aux_arr[i])
 
 if __name__ == "__main__":
     test_opencl_builtins()

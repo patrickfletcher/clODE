@@ -8,13 +8,18 @@ from numpy.lib import recfunctions as rfn
 
 from .function_converter import OpenCLRhsEquation
 from .runtime import CLDeviceType, CLVendor, _clode_root_dir
-from clode.cpp.clode_cpp_wrapper import SolverParams, ObserverParams, FeatureSimulatorBase
+from clode.cpp.clode_cpp_wrapper import (
+    SolverParams,
+    ObserverParams,
+    FeatureSimulatorBase,
+)
 from .solver import Simulator, Stepper
 
 
 # TODO[API]: defaults for ObserverParams are here and in wrapper. Should be only ONE place globally.
 # - Prefer the struct defaults? Create a default config?
 # TODO[API]: Observer param subsets are specific to different observers. Should model each as a class
+
 
 class Observer(Enum):
     basic = "basic"
@@ -47,7 +52,9 @@ class ObserverOutput:
         self._ensemble_shape = ensemble_shape
 
         # support indexing F via feature name directly
-        F_dtype = np.dtype({"names":feature_names, "formats":[np.float64]*len(feature_names)})
+        F_dtype = np.dtype(
+            {"names": feature_names, "formats": [np.float64] * len(feature_names)}
+        )
         self.F = rfn.unstructured_to_structured(feature_array, dtype=F_dtype)
 
     def __repr__(self) -> str:
@@ -62,14 +69,13 @@ class ObserverOutput:
     def get_feature_names(self) -> List[str]:
         return self._feature_names
 
-    # TODO: if we know the shape of the original ensemble (e.g., 1D/2D/3D) could return in that shape
     def _get_var(self, var: str) -> np.ndarray[Any, np.dtype[np.float64]]:
         try:
-            return self.F[var].squeeze()
+            result = self.F[var].squeeze().reshape(self._ensemble_shape)
+            result = result[0] if result.size == 1 else result
+            return result
         except ValueError:
-            raise NotImplementedError(
-                f"{self._observer_type} does not track {var}!"
-            )
+            raise NotImplementedError(f"{self._observer_type} does not track {var}!")
 
     def get_var_max(self, var: str) -> np.ndarray[Any, np.dtype[np.float64]]:
         return self._get_var(" ".join(["max", var]))
@@ -89,14 +95,20 @@ class ObserverOutput:
     def get_var_count(self, var: str) -> np.ndarray[Any, np.dtype[np.float64]]:
         return self._get_var(" ".join([var, "count"]))
 
-    def get_event_data(self, name:str, type:Optional[str] = "time") -> np.ndarray[Any, np.dtype[np.float64]]:
+    def get_event_data(
+        self, name: str, type: Optional[str] = "time"
+    ) -> np.ndarray[Any, np.dtype[np.float64]]:
         # event data feature names have format: "{name} event {time/var} {event idx}"
         # name - distinguish event types (up/down, localmax/localmin) in some observers, others (nhood2) just track single type
         # type - use to extract event time or event var [e.g., var = eVar value at event time]
         #
         # return: for now, force user to specify one name that makes sense, optionally type
-        event_features = [f for f in self._feature_names if name in f and "event" in f and "count" not in f]
-        if len(event_features)==0:
+        event_features = [
+            f
+            for f in self._feature_names
+            if name in f and "event" in f and "count" not in f
+        ]
+        if len(event_features) == 0:
             raise NotImplementedError(
                 f"{self._observer_type} does not track {name} events!"
             )
@@ -105,11 +117,12 @@ class ObserverOutput:
             datapoint = self._get_var(f"{name} event {type} {event_idx}")
             if np.all(datapoint == 0):
                 break
-            datapoint = datapoint[np.newaxis] if len(datapoint.shape)==0 else datapoint
             data.append(datapoint)
-        return np.stack(data, axis=1).squeeze() if data else []
-    
-    def get_timestamps(self, var: str = "event") -> np.ndarray[Any, np.dtype[np.float64]]:
+        return np.stack(data, axis=-1).squeeze()
+
+    def get_timestamps(
+        self, var: str = "event"
+    ) -> np.ndarray[Any, np.dtype[np.float64]]:
         first_key = f"{var} event time 0"
         if first_key not in self._feature_names:
             raise NotImplementedError(
@@ -120,14 +133,16 @@ class ObserverOutput:
             datapoint = self._get_var(f"{var} event time {key_idx}")
             if np.all(datapoint == 0):
                 break
-            datapoint = datapoint[np.newaxis] if len(datapoint.shape)==0 else datapoint
+            datapoint = (
+                datapoint[np.newaxis] if len(datapoint.shape) == 0 else datapoint
+            )
             data.append(datapoint)
         return np.stack(data, axis=1).squeeze() if data else []
 
 
+# TODO[mkdocs] - make consistent
 class FeatureSimulator(Simulator):
-    """
-    A class for computing features from a CLODE model.
+    """Simulator class that stores trajectory features, computed on-the-fly
 
     Parameters
     ----------
@@ -254,23 +269,20 @@ class FeatureSimulator(Simulator):
     >>> model.simulate()
     >>> model.plot()
     >>> plt.show()"""
-    
-    _output_F: np.ndarray[Any, np.dtype[np.float64]] | None
+
+    _device_features: np.ndarray[Any, np.dtype[np.float64]] | None
     _integrator: FeatureSimulatorBase
 
     def __init__(
         self,
         variables: Dict[str, float],
         parameters: Dict[str, float],
+        aux: Optional[List[str]] = None,
+        num_noise: int = 0,
         src_file: Optional[str] = None,
         rhs_equation: Optional[OpenCLRhsEquation] = None,
         supplementary_equations: Optional[List[Callable[[Any], Any]]] = None,
-        aux: Optional[List[str]] = None,
-        num_noise: int = 0,
-        t_span: Tuple[float, float] = (0.0, 1000.0),
         stepper: Stepper = Stepper.rk4,
-        observer: Observer = Observer.basic_all_variables,
-        single_precision: bool = True,
         dt: float = 0.1,
         dtmax: float = 1.0,
         abstol: float = 1e-6,
@@ -278,15 +290,18 @@ class FeatureSimulator(Simulator):
         max_steps: int = 10000000,
         max_store: int = 10000000,
         nout: int = 1,
-        solver_parameters: SolverParams = None,
-        device_type: CLDeviceType | None = None,
-        vendor: CLVendor | None = None,
-        platform_id: int | None = None,
-        device_id: int | None = None,
-        device_ids: List[int] | None = None,
+        solver_parameters: Optional[SolverParams] = None,
+        t_span: Tuple[float, float] = (0.0, 1000.0),
+        single_precision: bool = True,
+        device_type: Optional[CLDeviceType] = None,
+        vendor: Optional[CLVendor] = None,
+        platform_id: Optional[int] = None,
+        device_id: Optional[int] = None,
+        device_ids: Optional[List[int]] = None,
+        observer: Observer = Observer.basic_all_variables,
         event_var: str = "",
         feature_var: str = "",
-        observer_max_event_count: int = 100,  #TODO: defaults are set in two places - here and ObserverParam wrapper
+        observer_max_event_count: int = 100,  # TODO: defaults are set in two places - here and ObserverParam wrapper
         observer_max_event_timestamps: int = 0,
         observer_min_x_amp: float = 0.0,
         observer_min_imi: float = 0.0,
@@ -308,7 +323,7 @@ class FeatureSimulator(Simulator):
             list(variables.keys()).index(feature_var) if feature_var != "" else 0
         )
 
-        #can't sync yet because observer_max_event_timestamps is needed for building cl program.
+        # can't sync yet because observer_max_event_timestamps is needed for building cl program.
         if observer_parameters is not None:
             self._op = observer_parameters
         else:
@@ -345,7 +360,7 @@ class FeatureSimulator(Simulator):
             max_steps=max_steps,
             max_store=max_store,
             nout=nout,
-            solver_parameters = solver_parameters,
+            solver_parameters=solver_parameters,
             device_type=device_type,
             vendor=vendor,
             platform_id=platform_id,
@@ -354,35 +369,34 @@ class FeatureSimulator(Simulator):
         )
         # op could come after super_init if max_event_timestamps treated like trajectory max_store
 
-
     def _create_integrator(self) -> None:
         self._integrator = FeatureSimulatorBase(
             self._pi,
             self._stepper.value,
             self._observer_type.value,
-            self._op, #remove from constructor & add set_observer_pars below.  
+            self._op,  # remove from constructor & add set_observer_pars below.
             self._single_precision,
             self._runtime,
             _clode_root_dir,
         )
-        # self.set_observer_parameters() 
+        # self.set_observer_parameters()
 
-
-    def set_observer(self, observer_type:Observer):
-        '''Change the observer'''
+    def set_observer(self, observer_type: Observer):
+        """Change the observer"""
         if observer_type != self._observer_type:
             self._integrator.set_observer(observer_type)
             self._cl_program_is_valid = False
 
-
     # Changing solver parameters does not require re-building CL program
     def set_observer_parameters(
-        self, 
+        self,
         op: Optional[ObserverParams] = None,
         event_var: Optional[str] = None,
         feature_var: Optional[str] = None,
         max_event_count: Optional[int] = None,
-        max_event_timestamps: Optional[int] = None, #NOTE! Changing this invalidates the CL program!!
+        max_event_timestamps: Optional[
+            int
+        ] = None,  # NOTE! Changing this invalidates the CL program!!
         min_amp: Optional[float] = None,
         min_imi: Optional[float] = None,
         nhood_radius: Optional[float] = None,
@@ -409,10 +423,10 @@ class FeatureSimulator(Simulator):
                 self._op.f_var_ix = self.variable_names.index(feature_var)
             if max_event_count is not None:
                 self._op.max_event_count = max_event_count
-            if max_event_timestamps is not None: 
+            if max_event_timestamps is not None:
                 if self._op.max_event_timestamps != max_event_timestamps:
-                    self._cl_program_is_valid = False             #NOTE! Changing max_event_timestamps invalidates the CL program!!
-                self._op.max_event_timestamps = max_event_timestamps  
+                    self._cl_program_is_valid = False  # NOTE! Changing max_event_timestamps invalidates the CL program!!
+                self._op.max_event_timestamps = max_event_timestamps
             if min_amp is not None:
                 self._op.min_amp = min_amp
             if min_imi is not None:
@@ -432,27 +446,28 @@ class FeatureSimulator(Simulator):
         self._integrator.set_observer_params(self._op)
 
     def get_observer_parameters(self):
-        '''Get the current observer parameter struct'''
+        """Get the current observer parameter struct"""
         return self._integrator.get_observer_params()
-    
+
     def get_feature_names(self) -> List[str]:
-        '''Get the list of feature names for the current observer'''
+        """Get the list of feature names for the current observer"""
         return self._integrator.get_feature_names()
 
-    def features(self, 
-                 t_span:Optional[Tuple[float, float]] = None, 
-                 initialize_observer: Optional[bool] = None, 
-                 update_x0: bool = True, 
-                 fetch_results: bool = True,
-        ) -> Optional[ObserverOutput]:
+    def features(
+        self,
+        t_span: Optional[Tuple[float, float]] = None,
+        initialize_observer: Optional[bool] = None,
+        update_x0: bool = True,
+        fetch_results: bool = True,
+    ) -> Optional[ObserverOutput]:
         """Run a simulation with feature detection.
-        
+
         Args:
         t_span (tuple[float, float]): Time interval for integration.
         initialize_observer (bool): Whether the observer data be initialized
         update_x0 (bool): After the simulation, whether to overwrite the initial state buffer with the final state
         fetch_results (bool): Whether to fetch the feature results from the device and return them here
-        
+
         Returns:
             ObserverOutput | None
         """
@@ -487,21 +502,22 @@ class FeatureSimulator(Simulator):
         Returns:
             ObserverOutput: object containing features that summarize trajectories
         """
-        self._output_F = self._integrator.get_f()
+        self._device_features = self._integrator.get_f()
         self._num_features = self._integrator.get_n_features()
-        
+
         if self._num_features is None:
             raise ValueError("Must run trajectory() before getting trajectory data")
-        elif self._output_F is None:
+        elif self._device_features is None:
             raise ValueError("Must run trajectory() before getting trajectory data")
-        
+
         shape = (self._ensemble_size, self._num_features)
-        arr = np.array(self._output_F[: np.prod(shape)])
-        self._output_F = arr.reshape(shape, order="F")
+        self._device_features = np.array(
+            self._device_features[: np.prod(shape)]
+        ).reshape(shape, order="F")
 
         return ObserverOutput(
             self._op,
-            self._output_F,
+            self._device_features,
             self._num_features,
             self.variable_names,
             self._observer_type,

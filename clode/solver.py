@@ -1,9 +1,14 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Any, Dict, List, Literal, Callable, Optional, Tuple, Union, Mapping
-
 import numpy as np
+
+# TODO[typing] - standardize typing throughout the package
+from typing import Any, Dict, List, Callable, Optional, Tuple, Union, Mapping
+
+# - npt.NDArray[np.float64], npt.ArrayLike
+# https://numpy.org/neps/nep-0029-deprecation_policy.html
+import numpy.typing as npt
 
 from .function_converter import OpenCLConverter, OpenCLRhsEquation
 from .runtime import (
@@ -36,8 +41,10 @@ class Stepper(Enum):
 # TODO[API]: defaults for solverParams are copied in each constructor plus wrapper.
 # Should be only ONE place globally.
 # - Prefer the struct defaults?
-
-
+# TODO[API]: set_ensemble and set_repeats
+# when possible, convention to use (keep/broadcast) previous params/initial_state?
+# - goes with convention to advance initial_state by default
+# - when not possible, the defaults will be used as basis for new ensembles
 class Simulator:
     """Base class for simulating an ensemble of instances of an ODE system.
 
@@ -62,9 +69,6 @@ class Simulator:
     _variable_defaults: Dict[str, float]
     _parameter_defaults: Dict[str, float]
 
-    _variables: Optional[Dict[str, np.ndarray]] = None
-    _parameters: Optional[Dict[str, np.ndarray]] = None
-
     _ensemble_size: int  # C++ layer: nPts
     _ensemble_shape: Tuple
 
@@ -75,6 +79,7 @@ class Simulator:
     _device_initial_state: Optional[np.ndarray] = None
     _device_final_state: Optional[np.ndarray] = None
 
+    # TODO[mkdocs] - put these below init?
     @property
     def variable_names(self) -> List[str]:
         """The list of ODE variable names"""
@@ -117,29 +122,29 @@ class Simulator:
 
     def __init__(
         self,
-        variables: Dict[str, float],  # ---ivp---v
+        variables: Dict[str, float],
         parameters: Dict[str, float],
         aux: Optional[List[str]] = None,
         num_noise: int = 0,
-        src_file: str | None = None,
-        rhs_equation: OpenCLRhsEquation | None = None,
-        supplementary_equations: List[Callable[[Any], Any]] | None = None,  # ---ivp---^
-        single_precision: bool = True,  # --> device/ctx setup?
-        stepper: Stepper = Stepper.rk4,  # ---stepper---v
+        src_file: Optional[str] = None,
+        rhs_equation: Optional[OpenCLRhsEquation] = None,
+        supplementary_equations: List[Callable[[Any], Any]] | None = None,
+        stepper: Stepper = Stepper.rk4,
         dt: float = 0.1,
         dtmax: float = 1.0,
         abstol: float = 1e-6,
         reltol: float = 1e-3,
-        max_steps: int = 1000000,  # ---stepper---^
-        max_store: int = 1000000,  # -- trajectory---v
-        nout: int = 1,  # -- trajectory---^
+        max_steps: int = 1000000,
+        max_store: int = 1000000,
+        nout: int = 1,
         solver_parameters: Optional[SolverParams] = None,
         t_span: Tuple[float, float] = (0.0, 1000.0),
-        device_type: CLDeviceType | None = None,  # ---device/ctx setup---
-        vendor: CLVendor | None = None,
-        platform_id: int | None = None,
-        device_id: int | None = None,
-        device_ids: List[int] | None = None,
+        single_precision: bool = True,
+        device_type: Optional[CLDeviceType] = None,
+        vendor: Optional[CLVendor] = None,
+        platform_id: Optional[int] = None,
+        device_id: Optional[int] = None,
+        device_ids: Optional[List[int]] = None,
     ) -> None:
 
         input_file = self._handle_clode_rhs_cl_file(
@@ -181,21 +186,24 @@ class Simulator:
             )
         self.set_solver_parameters()
 
+        # set tspan and sync to device
+        self.set_tspan(t_span=t_span)
+
         # set initial state and parameters, sync to device
         self._variable_defaults = variables
         self._parameter_defaults = parameters
-        self._device_initial_state = np.array(
-            list(self._variable_defaults.values()), dtype=np.float64, ndmin=2
-        )
-        self._device_parameters = np.array(
-            list(self._parameter_defaults.values()), dtype=np.float64, ndmin=2
-        )
+
+        # use set_repeat_ensemble(1)?
         self._ensemble_size = 1
         self._ensemble_shape = (1,)
-        self._set_problem_data(self._device_initial_state, self._device_parameters)
+        default_initial_state = np.array(
+            list(self._variable_defaults.values()), dtype=np.float64, ndmin=2
+        )
+        default_parameters = np.array(
+            list(self._parameter_defaults.values()), dtype=np.float64, ndmin=2
+        )
+        self._set_problem_data(default_initial_state, default_parameters)
 
-        # set tspan and sync to device
-        self.set_tspan(t_span=t_span)
         # ---> now the simulator is ready to go
 
     def _create_integrator(self) -> None:
@@ -257,12 +265,15 @@ class Simulator:
         Returns:
             None
         """
-
+        previous_size = self._ensemble_size
+        valid_previous_size = previous_size == num_repeats | previous_size == 1
         self._ensemble_size = num_repeats
         self._ensemble_shape = (num_repeats, 1)
-        initial_state, parameters = self._make_default_problem_data()
+        initial_state, parameters = self._make_problem_data(valid_previous_size=valid_previous_size)
         self._set_problem_data(initial_state=initial_state, parameters=parameters)
 
+    # TODO: refactor some parts?
+    # TODO[typing]
     def set_ensemble(
         self,
         variables: Optional[
@@ -296,149 +307,10 @@ class Simulator:
             variables (np.array | dict): The initial state
             parameters (np.array | dict): The parameters
         """
-        self._validate_ensemble_args(variables=variables, parameters=parameters)
-        previous_ensemble_size = self._ensemble_size
+        if variables is None and parameters is None:
+            raise ValueError(f"initial_state and parameters cannot both be None")
 
-        var_size = 1
-        if isinstance(variables, np.ndarray):
-            var_size = variables.shape[0]
-        elif isinstance(variables, Mapping):
-            vars = {
-                self.variables.index(k): v for k, v in parameters.items() if len(v) > 1
-            }
-            if len(vars) > 0:
-                var_size = np.unique([len(v) for v in vars.values()])
-                if len(var_size) > 1:
-                    raise ValueError(
-                        "Arrays specified for initial states must have the same length"
-                    )
-                var_size = par_size[0]
-
-        par_size = 1
-        if isinstance(parameters, np.ndarray):
-            par_size = parameters.shape[0]
-        elif isinstance(parameters, Mapping):
-            pars = {
-                self.parameter_names.index(k): v
-                for k, v in parameters.items()
-                if len(v) > 1
-            }
-            if len(pars) > 0:
-                par_size = np.unique([len(v) for v in pars.values()])
-                if len(par_size) > 1:
-                    raise ValueError(
-                        "Arrays specified for parameters must have the same length"
-                    )
-                par_size = par_size[0]
-
-        if var_size != 1 and par_size != 1 and var_size != par_size:
-            raise ValueError(
-                "Arrays specified for parameters and initial states must have the same length"
-            )
-
-        self._ensemble_size = max(var_size, par_size)
-        self._ensemble_shape = (self._ensemble_size, 1)
-
-        use_current_state = (self._ensemble_size == previous_ensemble_size) | (
-            previous_ensemble_size == 1
-        )
-
-        vars_array, pars_array = self._make_default_problem_data(
-            use_current_state=use_current_state
-        )
-
-        if isinstance(parameters, np.ndarray):
-            pars_array = parameters
-        elif isinstance(parameters, Mapping):
-            for index, value in pars.items():
-                pars_array[:, index] = np.array(value)
-
-        if isinstance(variables, np.ndarray):
-            vars_array = variables
-        elif isinstance(variables, Mapping):
-            for index, value in vars.items():
-                vars_array[:, index] = np.array(value)
-
-        self._set_problem_data(vars_array, pars_array)
-
-    def set_grid_ensemble(
-        self,
-        variables: Optional[Mapping[str, Union[np.ndarray, float, List[float]]]] = None,
-        parameters: Optional[
-            Mapping[str, Union[np.ndarray, float, List[float]]]
-        ] = None,
-        indexing: Literal["xy", "ij"] = "xy",
-    ) -> tuple[np.ndarray, ...]:
-        """Creates a grid ensmble using Numpy's meshgrid.
-
-        Specify parameters and/or variables with which to make the grid via dictionaries
-        mapping names to gridpoint arrays to be used as arguments to meshgrid.
-
-        The resulting ensemble size is the product of lengths of the specified vectors.
-
-        Args:
-            variables (mapping[str, array-like], optional): the variables
-            parameters (mapping[str, array-like], optional): the parameters
-            indexing (['xy', 'ij'], optional): use cartesian ('xy') or matrix ('ij') indexing (see meshgrid)
-
-        Returns:
-            None
-
-        """
-        # 0. Find ensemble size and shape: shape=(len(p1),len(p2),...), size=prod(shape)
-        # 1. generate fully specified arrays with ensemble_size rows
-        # 2. replace specified columns with flattened coordinate arrays
-
-        self._validate_ensemble_args(variables=variables, parameters=parameters)
-
-        grid_values = []
-        if parameters is not None:
-            grid_pars = {
-                self.parameter_names.index(k): v
-                for k, v in parameters.items()
-                if len(v) > 1
-            }
-            grid_values += list(grid_pars.values())
-
-        if variables is not None:
-            grid_vars = {
-                self.variable_names.index(k): v
-                for k, v in variables.items()
-                if len(v) > 1
-            }
-            grid_values += list(grid_vars.values())
-
-        self._ensemble_shape = tuple([len(v) for v in grid_values])
-        self._ensemble_size = np.prod(self._ensemble_shape)
-
-        vars_array, pars_array = self._make_default_problem_data()
-
-        grid_arrays = np.meshgrid(*grid_values, indexing=indexing)
-
-        mesh_index = 0
-        if parameters is not None:
-            for index in grid_pars.keys():
-                pars_array[:, index] = grid_arrays[mesh_index].flatten(order="F")
-                mesh_index += 1
-
-        if variables is not None:
-            for index in grid_vars.keys():
-                vars_array[:, index] = grid_arrays[mesh_index].flatten(order="F")
-                mesh_index += 1
-
-        self._set_problem_data(vars_array, pars_array)
-        return tuple(grid_arrays)
-
-    def _validate_ensemble_args(
-        self,
-        variables: Optional[
-            Union[np.ndarray, Mapping[str, Union[float, List[float], np.ndarray]]]
-        ] = None,
-        parameters: Optional[
-            Union[np.ndarray, Mapping[str, Union[float, List[float], np.ndarray]]]
-        ] = None,
-    ) -> None:
-
+        # validate variables argument
         if isinstance(variables, np.ndarray):
             if len(variables.shape) != 2 or variables.shape[1] != self.num_variables:
                 raise ValueError(
@@ -448,7 +320,12 @@ class Simulator:
             unknown_variables = set(variables.keys()) - set(self.variable_names)
             if len(unknown_variables) > 0:
                 raise ValueError(f"Unknown variable name(s): {unknown_variables}")
+        elif variables is not None:
+            raise ValueError(
+                f"Expected np.ndarray or Mapping for variables, but got {type(variables)}"
+            )
 
+        # validate parameters argument
         if isinstance(parameters, np.ndarray):
             if len(parameters.shape) != 2 or parameters.shape[1] != self.num_parameters:
                 raise ValueError(
@@ -458,17 +335,90 @@ class Simulator:
             unknown_parameters = set(parameters.keys()) - set(self.parameter_names)
             if len(unknown_parameters) > 0:
                 raise ValueError(f"Unknown parameter name(s): {unknown_parameters}")
+        elif parameters is not None:
+            raise ValueError(
+                f"Expected np.ndarray or Mapping for parameters, but got {type(variables)}"
+            )
 
-        if isinstance(variables, np.ndarray) and isinstance(parameters, np.ndarray):
-            if variables.shape[0] != parameters.shape[0]:
+        # get the shape and size from variables
+        var_size = 1
+        var_shape = (1,)
+        if isinstance(variables, np.ndarray):
+            var_size = variables.shape[0]
+            var_shape = (var_size, 1)
+        elif isinstance(variables, Mapping):
+            variables = {k: np.array(v, dtype=np.float64) for k, v in variables.items()}
+            # size/shape from dict. scalars have size=1, shape=()
+            var_sizes = [v.size for v in variables.values() if v.size > 1]
+            var_shapes = [v.shape for v in variables.values() if v.size > 1]
+            if len(set(var_shapes)) > 1:
+                shapes = {k: v.shape for k, v in variables.items() if v.size > 1}
+                raise ValueError(f"Shape of arrays for variables don't match: {shapes}")
+            if len(var_sizes) > 0:
+                var_size = var_sizes[0]
+                var_shape = var_shapes[0]
+
+        # get the shape and size from parameters
+        par_size = 1
+        par_shape = (1,)
+        if isinstance(parameters, np.ndarray):
+            par_size = parameters.shape[0]
+            par_shape = (par_size, 1)
+        elif isinstance(parameters, Mapping):
+            parameters = {
+                k: np.array(v, dtype=np.float64) for k, v in parameters.items()
+            }
+            # size/shape from dict. scalars have size=1, shape=()
+            par_sizes = [v.size for v in parameters.values() if v.size > 1]
+            par_shapes = [v.shape for v in parameters.values() if v.size > 1]
+            if len(set(par_shapes)) > 1:
+                shapes = {k: v.shape for k, v in parameters.items() if v.size > 1}
                 raise ValueError(
-                    f"initial_state and parameters must have the same number of rows"
+                    f"Shape of arrays for parameters don't match: {shapes}"
+                )
+            if len(par_sizes) > 0:
+                par_size = par_sizes[0]
+                par_shape = par_shapes[0]
+
+        # size and shape must match
+        # TODO: shape check? only for dict case...
+        if var_size > 1 and par_size > 1:
+            if var_size != par_size or var_size != par_size:
+                raise ValueError(
+                    "Arrays specified for parameters and initial states must have the same size"
                 )
 
-    def _make_default_problem_data(
-        self, use_current_state: bool = False
+        previous_size = self._ensemble_size
+        new_size = var_size if var_size > 1 else par_size
+        new_shape = var_shape if var_size > 1 else par_shape
+
+        valid_previous_size = (previous_size == new_size) | (previous_size == 1)
+        if valid_previous_size:
+            self.get_initial_state()  # stores in self._device_initial_state
+
+        # make problem data
+        self._ensemble_size = new_size
+        self._ensemble_shape = new_shape
+        vars_array, pars_array = self._make_problem_data(
+            variables=variables,
+            parameters=parameters,
+            valid_previous_size=valid_previous_size,
+        )
+        self._set_problem_data(vars_array, pars_array)
+
+    # TODO: when to keep/broadcast current vs default values?
+    # TODO: maybe should just be make_problem_data, supporting var/par args
+    # TODO[typing]
+    def _make_problem_data(
+        self,
+        variables: Optional[dict[str, np.ndarray]] = None,
+        parameters: Optional[dict[str, np.ndarray]] = None,
+        valid_previous_size: bool = False,
     ) -> tuple[np.ndarray, np.ndarray]:
         """Create initial state and parameter arrays from default values
+
+        The resulting arrays by convention have shapes (ensemble_size, num_variables)
+        and (ensemble_size, num_parameters)
 
         Args:
             use_current_state (bool, optional): _description_. Defaults to False.
@@ -476,20 +426,38 @@ class Simulator:
         Returns:
             tuple[np.ndarray, np.ndarray]: the initial state and parameter arrays
         """
-
         default_initial_state = list(self._variable_defaults.values())
-        if use_current_state:
-            default_initial_state = self.get_initial_state().squeeze()
+        if valid_previous_size:
+            default_initial_state = self._device_initial_state
+        initial_state_array = np.tile(default_initial_state, (self._ensemble_size, 1))
 
-        initial_state = np.tile(
-            default_initial_state,
-            (self._ensemble_size, 1),
-        )
-        parameters = np.tile(
-            list(self._parameter_defaults.values()),
-            (self._ensemble_size, 1),
-        )
-        return initial_state, parameters
+        default_parameters = list(self._parameter_defaults.values())
+        if valid_previous_size:
+            default_parameters = self._device_parameters
+        parameter_array = np.tile(default_parameters, (self._ensemble_size, 1))
+        
+        # possibly overwrite some or all of the arrays
+        if isinstance(variables, np.ndarray):
+            initial_state_array = variables
+        elif isinstance(variables, Mapping):
+            for key, value in variables.items():
+                index = self.variable_names.index(key)
+                value = (
+                    np.repeat(value, self._ensemble_size) if value.size == 1 else value
+                )
+                initial_state_array[:, index] = np.array(value.flatten())
+
+        if isinstance(parameters, np.ndarray):
+            parameter_array = parameters
+        elif isinstance(parameters, Mapping):
+            for key, value in parameters.items():
+                index = self.parameter_names.index(key)
+                value = (
+                    np.repeat(value, self._ensemble_size) if value.size == 1 else value
+                )
+                parameter_array[:, index] = np.array(value.flatten())
+
+        return initial_state_array, parameter_array
 
     def _set_problem_data(
         self, initial_state: np.ndarray, parameters: np.ndarray
@@ -503,7 +471,6 @@ class Simulator:
             initial_state (np.array): The initial state. shape=(ensemble_size, num_variables)
             parameters (np.array): The parameters. shape=(ensemble_size, num_parameters)
         """
-
         self._device_initial_state = initial_state
         self._device_parameters = parameters
         self._integrator.set_problem_data(
