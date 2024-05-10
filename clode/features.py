@@ -311,7 +311,7 @@ class FeatureSimulator(Simulator):
         observer_dx_up_thresh: float = 0,
         observer_dx_down_thresh: float = 0,
         observer_eps_dx: float = 0.0,
-        observer_parameters: ObserverParams = None,
+        observer_parameters: Optional[ObserverParams] = None,
     ) -> None:
 
         self._observer_type = observer

@@ -9,9 +9,6 @@
 CLODEfeatures::CLODEfeatures(ProblemInfo prob, std::string stepper, std::string observer, ObserverParams<cl_double> op, bool clSinglePrecision, OpenCLResource opencl, const std::string clodeRoot)
 	: CLODE(prob, stepper, clSinglePrecision, opencl, clodeRoot), observer(observer)
 {
-	// default fVarIx and eVarIx to allow first query of observer define map (exposes availableObservers, fNames)
-	op.fVarIx = 0;
-	op.eVarIx = 0;
 	setObserverParams(op);
 	updateObserverDefineMap();
 
@@ -23,9 +20,6 @@ CLODEfeatures::CLODEfeatures(ProblemInfo prob, std::string stepper, std::string 
 CLODEfeatures::CLODEfeatures(ProblemInfo prob, std::string stepper, std::string observer, ObserverParams<cl_double> op, bool clSinglePrecision, unsigned int platformID, unsigned int deviceID, const std::string clodeRoot)
 	: CLODE(prob, stepper, clSinglePrecision, platformID, deviceID, clodeRoot), observer(observer)
 {
-	// default fVarIx and eVarIx to allow first query of observer define map
-	op.fVarIx = 0;
-	op.eVarIx = 0;
 	setObserverParams(op);
 	updateObserverDefineMap();
 

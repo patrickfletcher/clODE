@@ -25,8 +25,6 @@ class TrajectoryOutput:
         aux_names: list[str],
     ) -> None:
 
-        print(t.shape, x.shape, dx.shape, aux.shape)
-
         self.t = t
 
         x_dtype = np.dtype(
