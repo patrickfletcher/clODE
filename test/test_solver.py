@@ -64,8 +64,8 @@ def test_set_ensemble():
     # init_vars = variables
     # init_vars = np.zeros((3,2))
     # pars = parameters
-    pars={"a": [[0.5, 1.0],[2.0, 3.0]], "b": 1.1, "c": np.linspace(0, 5.,4)}
-    # pars={"a": [[0.5, 1.0],[1.5,2],[2.5, 3.0]], "b": 1.1, "c": [[0,1],[2,3],[4,5]]}
+    # pars={"a": [[0.5, 1.0],[2.0, 3.0]], "b": 1.1, "c": np.linspace(0, 5.,4)}
+    pars={"a": [[0.5, 1.0],[1.5,2],[2.5, 3.0]], "b": 1.1, "c": [[0,1],[2,3],[4,5]]}
     simulator.set_ensemble(variables=init_vars, parameters=pars)
     print(simulator._device_initial_state)
     print(simulator._device_parameters)
@@ -82,6 +82,8 @@ def test_set_repeat_ensemble():
 
 def run_tests():
     test_set_get_nobuild()
+    test_set_ensemble()
+    test_set_repeat_ensemble()
 
 if __name__=="__main__":
     run_tests()

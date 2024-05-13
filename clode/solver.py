@@ -260,12 +260,8 @@ class Simulator:
         Returns:
             None
         """
-        previous_size = self._ensemble_size
-        valid_previous_size = previous_size == num_repeats | previous_size == 1
-        self._ensemble_size = num_repeats
-        self._ensemble_shape = (num_repeats, 1)
         initial_state, parameters = self._make_problem_data(
-            valid_previous_size=valid_previous_size
+            new_size=num_repeats, new_shape=(num_repeats, 1)
         )
         self._set_problem_data(initial_state=initial_state, parameters=parameters)
 
@@ -385,32 +381,26 @@ class Simulator:
                     "Arrays specified for parameters and initial states must have the same size"
                 )
 
-        previous_size = self._ensemble_size
+        # print(var_size, var_shape, par_size, par_shape)
         new_size = var_size if var_size > 1 else par_size
         new_shape = var_shape if var_size > 1 else par_shape
 
-        valid_previous_size = (previous_size == new_size) | (previous_size == 1)
-        if valid_previous_size:
-            self.get_initial_state()  # stores in self._device_initial_state
-
-        # make problem data
-        self._ensemble_size = new_size
-        self._ensemble_shape = new_shape
         vars_array, pars_array = self._make_problem_data(
             variables=variables,
             parameters=parameters,
-            valid_previous_size=valid_previous_size,
+            new_size=new_size,
+            new_shape=new_shape,
         )
         self._set_problem_data(vars_array, pars_array)
 
     # TODO: when to keep/broadcast current vs default values?
-    # TODO: maybe should just be make_problem_data, supporting var/par args
     # TODO[typing]
     def _make_problem_data(
         self,
         variables: Optional[dict[str, np.ndarray]] = None,
         parameters: Optional[dict[str, np.ndarray]] = None,
-        valid_previous_size: bool = False,
+        new_size: Optional[int] = None,
+        new_shape: Optional[tuple[int, ...]] = None,
     ) -> tuple[np.ndarray, np.ndarray]:
         """Create initial state and parameter arrays from default values
 
@@ -423,15 +413,26 @@ class Simulator:
         Returns:
             tuple[np.ndarray, np.ndarray]: the initial state and parameter arrays
         """
-        default_initial_state = list(self._variable_defaults.values())
-        if valid_previous_size:
-            default_initial_state = self._device_initial_state
-        initial_state_array = np.tile(default_initial_state, (self._ensemble_size, 1))
 
-        default_parameters = list(self._parameter_defaults.values())
+        previous_size = self._ensemble_size
+        valid_previous_size = (previous_size == new_size) | (previous_size == 1)
+
         if valid_previous_size:
-            default_parameters = self._device_parameters
-        parameter_array = np.tile(default_parameters, (self._ensemble_size, 1))
+            initial_state_array = self.get_initial_state()
+            parameter_array = self._device_parameters
+        else:
+            initial_state_array = np.array(
+                list(self._variable_defaults.values()), dtype=np.float64, ndmin=2
+            )
+            parameter_array = np.array(
+                list(self._parameter_defaults.values()), dtype=np.float64, ndmin=2
+            )
+
+        if initial_state_array.shape[0] == 1:
+            initial_state_array = np.tile(initial_state_array, (new_size, 1))
+
+        if parameter_array.shape[0] == 1:
+            parameter_array = np.tile(parameter_array, (new_size, 1))
 
         # possibly overwrite some or all of the arrays
         if isinstance(variables, np.ndarray):
@@ -439,9 +440,7 @@ class Simulator:
         elif isinstance(variables, Mapping):
             for key, value in variables.items():
                 index = self.variable_names.index(key)
-                value = (
-                    np.repeat(value, self._ensemble_size) if value.size == 1 else value
-                )
+                value = np.repeat(value, new_size) if value.size == 1 else value
                 initial_state_array[:, index] = np.array(value.flatten())
 
         if isinstance(parameters, np.ndarray):
@@ -449,11 +448,11 @@ class Simulator:
         elif isinstance(parameters, Mapping):
             for key, value in parameters.items():
                 index = self.parameter_names.index(key)
-                value = (
-                    np.repeat(value, self._ensemble_size) if value.size == 1 else value
-                )
+                value = np.repeat(value, new_size) if value.size == 1 else value
                 parameter_array[:, index] = np.array(value.flatten())
 
+        self._ensemble_size = new_size
+        self._ensemble_shape = new_shape
         return initial_state_array, parameter_array
 
     def _set_problem_data(
