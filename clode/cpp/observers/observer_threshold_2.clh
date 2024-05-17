@@ -383,7 +383,7 @@ static inline void updateObserverData(realtype *ti, realtype xi[], realtype dxi[
 
         if (od->inUpstate) {
             //Check for downward threshold crossing
-            if (xi[op->fVarIx] <= od->xDown && dxi[op->fVarIx] >= od->dxDown) {
+            if (xi[op->eVarIx] <= od->xDown && dxi[op->eVarIx] >= od->dxDown) {
                 //simplest: time and state of trajectory point that landed in the neighborhood.
                 od->tThisDown=*ti;
 
