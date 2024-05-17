@@ -414,6 +414,9 @@ class Simulator:
             tuple[np.ndarray, np.ndarray]: the initial state and parameter arrays
         """
 
+        if len(new_shape) == 1:
+            new_shape = (new_size, 1)
+
         previous_size = self._ensemble_size
         valid_previous_size = (previous_size == new_size) | (previous_size == 1)
 
@@ -429,10 +432,10 @@ class Simulator:
             )
 
         if initial_state_array.shape[0] == 1:
-            initial_state_array = np.tile(initial_state_array, (new_size, 1))
+            initial_state_array = np.tile(initial_state_array, new_shape)
 
         if parameter_array.shape[0] == 1:
-            parameter_array = np.tile(parameter_array, (new_size, 1))
+            parameter_array = np.tile(parameter_array, new_shape)
 
         # possibly overwrite some or all of the arrays
         if isinstance(variables, np.ndarray):
