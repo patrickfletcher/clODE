@@ -33,8 +33,8 @@ from clode import (
     floor,
     fmod,
     gamma,
-    hypot,
     heaviside,
+    hypot,
     ilogb,
     ldexp,
     lgamma,
@@ -119,7 +119,7 @@ def test_opencl_builtins() -> None:
         aux[37] = log10(x0 + 1)
         aux[38] = 0.0  # logb(x0 + 1)
         aux[39] = 0.0  # mad(x0, x1, x2)
-        aux[40] = 0.0 # nan()
+        aux[40] = 0.0  # nan()
         aux[41] = nextafter(x0, x1)
         aux[42] = pow(x0, x1)
         aux[43] = pown(x0, p0)
@@ -171,6 +171,7 @@ def test_opencl_builtins() -> None:
             assert np.isclose(
                 cl_aux_arr[t_index], aux_arr[i], atol=1e-7
             ), f"Assertion failed for {auxi} at time {t}, expected {aux_arr[i]}, got {cl_aux_arr[t_index]}"
+
 
 if __name__ == "__main__":
     test_opencl_builtins()

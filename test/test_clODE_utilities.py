@@ -9,7 +9,7 @@
 
 # running means, variances [useful for stochastic too]
 # - for sets, for time-average
-# - test problems? 
+# - test problems?
 
 # interpolation [none: event timestamp is ti, linear, etc...]
 # - harmonic oscillator's true value vs event value. dt may affect...

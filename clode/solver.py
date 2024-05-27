@@ -1,28 +1,29 @@
 from __future__ import annotations
 
 from enum import Enum
-import numpy as np
 
 # TODO[typing] - standardize typing throughout the package
-from typing import Any, Dict, List, Callable, Optional, Tuple, Union, Mapping
+from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple, Union
+
+import numpy as np
 
 # - npt.NDArray[np.float64], npt.ArrayLike
 # https://numpy.org/neps/nep-0029-deprecation_policy.html
 import numpy.typing as npt
 
+from clode.cpp.clode_cpp_wrapper import ProblemInfo, SimulatorBase, SolverParams
+
 from .function_converter import OpenCLConverter, OpenCLRhsEquation
 from .runtime import (
     CLDeviceType,
     CLVendor,
+    LogLevel,
     OpenCLResource,
     _clode_root_dir,
-    initialize_runtime,
     get_log_level,
+    initialize_runtime,
     set_log_level,
-    LogLevel,
 )
-from clode.cpp.clode_cpp_wrapper import SolverParams, ProblemInfo, SimulatorBase
-
 from .xpp_parser import convert_xpp_file
 
 

@@ -7,9 +7,10 @@ import numpy as np
 # from numpy.typing import NDArray
 from numpy.lib import recfunctions as rfn
 
+from clode.cpp.clode_cpp_wrapper import SolverParams, TrajectorySimulatorBase
+
 from .function_converter import OpenCLRhsEquation
 from .runtime import CLDeviceType, CLVendor, _clode_root_dir
-from clode.cpp.clode_cpp_wrapper import SolverParams, TrajectorySimulatorBase
 from .solver import Simulator, Stepper
 
 

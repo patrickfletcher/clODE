@@ -5,16 +5,17 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import numpy as np
 from numpy.lib import recfunctions as rfn
+from typing_extensions import deprecated
+
+from clode.cpp.clode_cpp_wrapper import (
+    FeatureSimulatorBase,
+    ObserverParams,
+    SolverParams,
+)
 
 from .function_converter import OpenCLRhsEquation
 from .runtime import CLDeviceType, CLVendor, _clode_root_dir
-from clode.cpp.clode_cpp_wrapper import (
-    SolverParams,
-    ObserverParams,
-    FeatureSimulatorBase,
-)
 from .solver import Simulator, Stepper
-
 
 # TODO[API]: defaults for ObserverParams are here and in wrapper. Should be only ONE place globally.
 # - Prefer the struct defaults? Create a default config?
@@ -104,9 +105,11 @@ class ObserverOutput:
         #
         # return: for now, force user to specify one name that makes sense, optionally type
         event_features = [
-            f
-            for f in self._feature_names
-            if name in f and "event" in f and "count" not in f
+            feature_name
+            for feature_name in self._feature_names
+            if name in feature_name
+            and "event" in feature_name
+            and "count" not in feature_name
         ]
         if len(event_features) == 0:
             raise NotImplementedError(
@@ -120,6 +123,7 @@ class ObserverOutput:
             data.append(datapoint)
         return np.stack(data, axis=-1).squeeze()
 
+    @deprecated("Use get_event_data instead")
     def get_timestamps(
         self, var: str = "event"
     ) -> np.ndarray[Any, np.dtype[np.float64]]:

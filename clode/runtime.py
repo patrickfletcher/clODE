@@ -6,17 +6,18 @@ from clode.cpp.clode_cpp_wrapper import (
     CLDeviceType,
     CLVendor,
     DeviceInfo,
-    PlatformInfo,
-    OpenCLResource,
-    _print_opencl,
-    query_opencl,
     LogLevel,
+    OpenCLResource,
+    PlatformInfo,
+    _print_opencl,
     get_logger,
+    query_opencl,
 )
 
 _clode_root_dir: str = os.path.join(os.path.dirname(__file__), "cpp", "")
 
 DEFAULT_LOG_LEVEL = LogLevel.warn
+
 
 def initialize_runtime(
     device_type: CLDeviceType | None,
@@ -71,6 +72,7 @@ def print_opencl():
     set_log_level(LogLevel.info)
     _print_opencl()
     set_log_level(old_level)
+
 
 __all__ = [
     "CLDeviceType",

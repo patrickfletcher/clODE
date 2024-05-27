@@ -43,7 +43,7 @@ clode.set_log_level(clode.LogLevel.info)
 # - starting at (-1.0, 0.0) should start in the up-state; triggers on first rotation
 # - number of periods = event count - 1
 
-# harmonic oscillator. 
+# harmonic oscillator.
 # Solution: x=cos(t), y=sin(t)
 def get_rhs(
     t: float,
@@ -65,16 +65,17 @@ variables = {"x": -1.0, "y": 0.0}
 parameters = {"k": 1.0}
 
 expected_period = 2 * pi
-expected_amplitude = 2.
-expected_max_xy = 1.
-expected_min_xy = -1.
-expected_mean_xy = 0.
+expected_amplitude = 2.0
+expected_max_xy = 1.0
+expected_min_xy = -1.0
+expected_mean_xy = 0.0
 
 # 10 full periods
 expected_events = 10
 t_span = (0.0, expected_events * expected_period)
 dt = 0.01
 expected_steps = int(t_span[1] / dt) + 1
+
 
 @pytest.mark.skip(reason="for now just to validate/debug observers")
 def test_observer(observer):
@@ -135,12 +136,14 @@ def test_observer(observer):
         print(f"expected step count: {expected_steps},\t actual:{int(step_count)}")
     print("\n")
 
+
 @pytest.mark.skip(reason="for now just to validate/debug observers")
 def test_all_observers():
     observers = [observer for observer in clode.Observer]
     # observers = [clode.Observer.local_max]
     for observer in observers:
         test_observer(observer)
+
 
 if __name__ == "__main__":
     test_all_observers()

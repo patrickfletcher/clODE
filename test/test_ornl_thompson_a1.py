@@ -1,13 +1,15 @@
 from math import exp
+
 import numpy as np
 
 import clode
 
 # test type: numerical accuracy (compare simulation to exact solution)
 
+
 def ornl_thompson_a1_exact(t: float):
-    y1 = 4. * (t + 1. / 8. * exp(-8. * t) - 1. / 8.)
-    y2 = 4. * (1. - exp(-8. * t))
+    y1 = 4.0 * (t + 1.0 / 8.0 * exp(-8.0 * t) - 1.0 / 8.0)
+    y2 = 4.0 * (1.0 - exp(-8.0 * t))
     return y1, y2
 
 
