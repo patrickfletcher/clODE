@@ -60,6 +60,7 @@ research project.
 
 There are several other ODE solvers available in Python, but none
 of them are designed for on-the-fly feature extraction. These include:
+
 - SciPy's `odeint` and `solve_ivp` functions, which are high-level
     python wrappers for the Fortran-based ODEPACK library [@2020SciPy-NMeth].
 - PyDSTool, which is designed for symbolic manipulation of ODEs.
@@ -71,6 +72,7 @@ of them are designed for on-the-fly feature extraction. These include:
     GPU acceleration of smaller systems [@lienen2022torchode].
 
 Additionally, faster solvers could be implemented in several helper languages:
+
 - numba, which is a just-in-time compiler for Python.
     The speedup of numba is however insufficient.
 - TensorFlow, and Torch, which are deep learning libraries
