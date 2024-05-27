@@ -5,7 +5,6 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import numpy as np
 from numpy.lib import recfunctions as rfn
-from typing_extensions import deprecated
 
 from clode.cpp.clode_cpp_wrapper import (
     FeatureSimulatorBase,
@@ -123,7 +122,7 @@ class ObserverOutput:
             data.append(datapoint)
         return np.stack(data, axis=-1).squeeze()
 
-    @deprecated("Use get_event_data instead")
+    # TODO deprecate function
     def get_timestamps(
         self, var: str = "event"
     ) -> np.ndarray[Any, np.dtype[np.float64]]:
