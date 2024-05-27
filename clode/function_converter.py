@@ -87,6 +87,7 @@ _opencl_builtins = {
     "mod": OpenCLBuiltin(2, "fmod", OpenCLType("realtype")),
     # "fract": OpenCLBuiltin(1, "fract", OpenCLType("realtype")), # OpenCL Compiler error
     # "frexp": OpenCLBuiltin(2, "frexp", OpenCLType("realtype")),
+    "heaviside": OpenCLBuiltin(1, "heaviside", OpenCLType("realtype")),
     "hypot": OpenCLBuiltin(2, "hypot", OpenCLType("realtype")),
     "ilogb": OpenCLBuiltin(1, "ilogb", OpenCLType("int")),
     "ldexp": OpenCLBuiltin(2, "ldexp", OpenCLType("realtype")),
@@ -812,7 +813,7 @@ class OpenCLConverter(ast.NodeTransformer):
     mutable_args: Optional[Union[List[str], List[int]]] = None
     function_name: Optional[str] = None
 
-    def __init__(self, entry_function_name: str = "get_rhs"):
+    def __init__(self, entry_function_name: str = "getRHS"):
         # Initialize any necessary variables
         self.entry_function_name = entry_function_name
         self.syntax_tree = OpenCLSyntaxTree()

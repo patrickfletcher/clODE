@@ -4,6 +4,7 @@ from typing import List
 
 import clode
 from clode import exp
+# clode.set_log_level(clode.LogLevel.debug)
 
 def get_rhs(t: float,
             x: List[float],
@@ -63,23 +64,16 @@ integrator = clode.FeatureSimulator(
     observer=clode.Observer.threshold_2,
     observer_x_up_thresh=0.5,
     observer_x_down_thresh=0.05,
-    observer_min_x_amp=1.0,
-    observer_min_imi=0.0,
-    observer_max_event_count=50,
 )
 
 # set up the ensemble of systems
-nx = 512
-ny = 512
-nPts = nx * ny
+nx = ny = 128
 gca = np.linspace(550.0, 1050.0, nx)
 kpmca = np.linspace(0.095, 0.155, ny)
-px, py = np.meshgrid(gca, kpmca)
+gca_grid, kpmca_grid = np.meshgrid(gca, kpmca)
 
-ensemble_parameters = {"gca" : px.flatten(), "kpmca" : py.flatten()} #gkca will have default value
-ensemble_parameters_names = list(ensemble_parameters.keys())
-
-integrator.set_ensemble(parameters=ensemble_parameters)
+# the 2D grid shape is noted internally, and features will be returned in this shape
+integrator.set_ensemble(parameters= {"gca" : gca_grid, "kpmca" : kpmca_grid})
 
 integrator.set_tspan((0.0, 50000.0))
 integrator.transient()
@@ -88,14 +82,14 @@ integrator.features()
 
 features = integrator.get_observer_results()
 
-feature = features.get_var_max("peaks")
-feature = np.reshape(feature, (nx, ny))
+# the feature output knows to return the feature with shape matching the 2D grid input
+max_peaks = features.get_var_max("peaks")
 
-plt.pcolormesh(px, py, feature, shading='nearest', vmax=12)
+plt.pcolormesh(gca_grid, kpmca_grid, max_peaks, shading='nearest', vmax=12)
 plt.title("peaks")
 plt.colorbar()
-plt.xlabel(ensemble_parameters_names[0])
-plt.ylabel(ensemble_parameters_names[1])
+plt.xlabel("gca")
+plt.ylabel("kpmca")
 plt.axis("tight")
 
 # highlight a few example points - we'll get their trajectories next
@@ -124,21 +118,15 @@ integrator_traj = clode.TrajectorySimulator(
     max_store = max_store,
 )
 
-traj_parameters = {"gca":points[:, 0], "kpmca": points[:, 1]}
+integrator_traj.set_ensemble(parameters = {"gca":points[:, 0], "kpmca": points[:, 1]})
 
-integrator_traj.set_ensemble(parameters = traj_parameters)
-
-integrator_traj.set_tspan((0.0, 50000.0))
-integrator_traj.transient()
-integrator_traj.set_tspan((0.0, 10000.0))
-integrator_traj.trajectory()
-
-trajectories = integrator_traj.get_trajectory()
+integrator_traj.transient(t_span=(0.0, 50000.0))
+trajectories = integrator_traj.trajectory(t_span=(0.0, 10000.0))
 
 fig, ax = plt.subplots(4, 1, sharex=True, sharey=True)
 for i, trajectory in enumerate(trajectories):
-    ax[i].plot(trajectory.t / 1000.0, trajectory.x[:, 0])
+    ax[i].plot(trajectory.t / 1000.0, trajectory.x["v"])
 
 ax[1].set_ylabel("v")
-ax[-1].set_xlabel('time (s)')
+ax[-1].set_xlabel("time (s)")
 plt.show()

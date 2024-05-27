@@ -15,7 +15,7 @@ __kernel void features(
 	__global realtype *xf,              //final state 				[nPts*nVar]
 	__global ulong *RNGstate,           //state for RNG					[nPts*nRNGstate]
     __global realtype *d_dt,            //array of dt values, one per solver
-	__global ObserverData *OData,		//for continue
+	__global ObserverData *OData,		//Observer data
 	__constant struct ObserverParams *opars,
 	__global realtype *F)
 {
@@ -26,11 +26,11 @@ __kernel void features(
     realtype p[N_PAR], xi[N_VAR], dxi[N_VAR];
     realtype auxi[N_AUX>0?N_AUX:1];
     realtype wi[N_WIENER>0?N_WIENER:1];
-	rngData rd;
+	struct rngData rd;
 
 	//get private copy of ODE parameters, initial data, and compute slope at initial state
 	ti = tspan[0];
-	dt = sp->dt;
+    dt = d_dt[i];
 
 	for (int j = 0; j < N_PAR; ++j)
 		p[j] = pars[j * nPts + i];
@@ -41,44 +41,43 @@ __kernel void features(
 	for (int j = 0; j < N_RNGSTATE; ++j)
 		rd.state[j] = RNGstate[j * nPts + i];
 
-	rd.randnUselast = 0;
+	ObserverData odata = OData[i]; 
 
+    // generate random numbers if needed
+    rd.randnUselast = 0;
     for (int j = 0; j < N_WIENER; ++j)
 #ifdef STOCHASTIC_STEPPER
         wi[j] = randn(&rd) / sqrt(dt);
 #else
-        wi[j] = RCONST(0.0);
+        wi[j] = ZERO;
 #endif
-	getRHS(ti, xi, p, dxi, auxi, wi); //slope at initial point, needed for FSAL steppers (bs23, dorpri5)
 
-	ObserverData odata = OData[i]; //private copy of observer data
+    //get the slope and aux at initial point
+    getRHS(ti, xi, p, dxi, auxi, wi); 
 
-	//time-stepping loop, main time interval
-    int step = 0;
+	//time-stepping loop
+    unsigned int step = 0;
     int stepflag = 0;
 	bool eventOccurred;
 	bool terminalEvent;
-	while (ti < tspan[1] && step < sp->max_steps)
+	while (ti <= tspan[1] && step < sp->max_steps)
 	{
 		++step;
-		//++odata.stepcount; //do this in updateObserverData always
         stepflag = stepper(&ti, xi, dxi, p, sp, &dt, tspan, auxi, wi, &rd);
         // if (stepflag!=0)
             // break;
 
-		//TODO: Update solution buffers here?
+		updateObserverData(&ti, xi, dxi, auxi, &odata, opars); 
 
 		eventOccurred = eventFunction(&ti, xi, dxi, auxi, &odata, opars);
 		if (eventOccurred)
 		{
+			// record current state into dedicated event buffers (same pattern as trajectory)
+
 			terminalEvent = computeEventFeatures(&ti, xi, dxi, auxi, &odata, opars);
 			if (terminalEvent)
-			{
 				break;
-			};
 		}
-
-		updateObserverData(&ti, xi, dxi, auxi, &odata, opars); 
 	}
 
 	//readout features of interest and write to global F:
@@ -99,5 +98,5 @@ __kernel void features(
 		RNGstate[j * nPts + i] = rd.state[j];
 
     // update dt to its final value (for adaptive stepper continue)
-    // d_dt[i] = dt;
+    d_dt[i] = dt;
 }

@@ -1,24 +1,35 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+
+# TODO[typing] - standardize typing throughout the package
+from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple, Union
 
 import numpy as np
+
+# - npt.NDArray[np.float64], npt.ArrayLike
+# https://numpy.org/neps/nep-0029-deprecation_policy.html
+import numpy.typing as npt
+
+from clode.cpp.clode_cpp_wrapper import ProblemInfo, SimulatorBase, SolverParams
 
 from .function_converter import OpenCLConverter, OpenCLRhsEquation
 from .runtime import (
     CLDeviceType,
     CLVendor,
+    LogLevel,
     OpenCLResource,
-    ProblemInfo,
-    SimulatorBase,
-    SolverParams,
     _clode_root_dir,
+    get_log_level,
     initialize_runtime,
+    set_log_level,
 )
 from .xpp_parser import convert_xpp_file
 
 
+# TODO[API]: different steppers use different parameters subsets.
+# Model with classes/mixins?
+# - StepperBase + mixins --> each stepper as python class.
 class Stepper(Enum):
     euler = "euler"
     heun = "heun"
@@ -28,134 +39,181 @@ class Stepper(Enum):
     stochastic_euler = "seuler"
 
 
-# base solver class with only transient()
+# TODO[API]: defaults for solverParams are copied in each constructor plus wrapper.
+# Should be only ONE place globally.
+# - Prefer the struct defaults?
+# TODO[API]: set_ensemble and set_repeats
+# when possible, convention to use (keep/broadcast) previous params/initial_state?
+# - goes with convention to advance initial_state by default
+# - when not possible, the defaults will be used as basis for new ensembles
 class Simulator:
-    """Base class for all simulators.
+    """Base class for simulating an ensemble of instances of an ODE system.
 
-    This class is used to simulate transient behavior of a system of ODEs.
-
-    It can be used directly to find separatrix solutions
-    and variable steady states,
-    or it can be used as a base class for other simulators."""
+    It provides the core functionality for advancing the simulation in time without
+    storing any intermediate state. May be used directly when only the final state is
+    of interest, or as a base class for other simulators.
+    """
 
     _integrator: SimulatorBase
-    _pi: ProblemInfo
-    _sp: SolverParams
     _runtime: OpenCLResource
-    t_span: Tuple[float, float]
-    _variables: Optional[Dict[str, np.ndarray]] = None
-    _variable_defaults: Dict[str, float]
-    _parameters: Optional[Dict[str, np.ndarray]] = None
-    _parameter_defaults: Dict[str, float]
-    _ensemble_size: int
     _single_precision: bool
     _stepper: Stepper
+    _pi: ProblemInfo
 
+    # changes to the above items require rebuilding the CL program.
+    # Flag them and rebuild if necessary on simulation function call
+    _cl_program_is_valid: bool = False
+
+    _sp: SolverParams
+    _t_span: Tuple[float, float]
+
+    _variable_defaults: Dict[str, float]
+    _parameter_defaults: Dict[str, float]
+
+    _ensemble_size: int  # C++ layer: nPts
+    _ensemble_shape: Tuple
+
+    # 2D array shape (ensemble_size, num_parameters)
+    _device_parameters: Optional[np.ndarray] = None
+
+    # 2D array shape (ensemble_size, num_variables)
+    _device_initial_state: Optional[np.ndarray] = None
+    _device_final_state: Optional[np.ndarray] = None
+
+    # TODO[mkdocs] - put these below init?
     @property
     def variable_names(self) -> List[str]:
-        """Get the variable names.
+        """The list of ODE variable names"""
+        return self._pi.vars
 
-        Returns:
-            List[str]: The variable names.
-        """
-        return list(self._variable_defaults.keys())
+    @property
+    def num_variables(self) -> int:
+        """The number of ODE state variables"""
+        return self._pi.num_var
 
     @property
     def parameter_names(self) -> List[str]:
-        """Get the parameter names.
-
-        Returns:
-            List[str]: The parameter names.
-        """
-        return list(self._parameter_defaults.keys())
+        """The list of ODE system parameter names"""
+        return self._pi.pars
 
     @property
-    def is_initialized(self) -> bool:
-        """Get whether the simulator is initialized.
+    def num_parameters(self) -> int:
+        """The number of ODE system parameters"""
+        return self._pi.num_par
 
-        Returns:
-            bool: Whether the simulator is initialized.
-        """
-        # return self._integrator.is_initialized()
-        return True
+    @property
+    def aux_names(self) -> List[str]:
+        """The list of auxiliary variable names"""
+        return self._pi.aux
 
-    def _find_ensemble_size(
+    @property
+    def num_aux(self) -> int:
+        """The number of auxiliary variables"""
+        return self._pi.num_aux
+
+    @property
+    def num_noise(self) -> int:
+        """The number of Wiener variables in the system"""
+        return self._pi.num_noise
+
+    def __init__(
         self,
-        variables: Optional[
-            Dict[str, Union[float, np.ndarray[np.dtype[np.float64]], List[float]]]
-        ],
-        parameters: Optional[
-            Dict[str, Union[float, np.ndarray[np.dtype[np.float64]], List[float]]]
-        ],
-    ) -> int:
-        """Find the length of the arrays to be passed to the OpenCL kernel.
+        variables: Dict[str, float],
+        parameters: Dict[str, float],
+        aux: Optional[List[str]] = None,
+        num_noise: int = 0,
+        src_file: Optional[str] = None,
+        rhs_equation: Optional[OpenCLRhsEquation] = None,
+        supplementary_equations: List[Callable[[Any], Any]] | None = None,
+        stepper: Stepper = Stepper.rk4,
+        dt: float = 0.1,
+        dtmax: float = 1.0,
+        abstol: float = 1e-6,
+        reltol: float = 1e-3,
+        max_steps: int = 1000000,
+        max_store: int = 1000000,
+        nout: int = 1,
+        solver_parameters: Optional[SolverParams] = None,
+        t_span: Tuple[float, float] = (0.0, 1000.0),
+        single_precision: bool = True,
+        device_type: Optional[CLDeviceType] = None,
+        vendor: Optional[CLVendor] = None,
+        platform_id: Optional[int] = None,
+        device_id: Optional[int] = None,
+        device_ids: Optional[List[int]] = None,
+    ) -> None:
 
-        Args:
-            variables (Dict[str, Union[float, np.ndarray, List[float]]]): The variables.
-            parameters (Dict[str, Union[float, np.ndarray, List[float]]]): The parameters.
+        input_file = self._handle_clode_rhs_cl_file(
+            src_file, rhs_equation, supplementary_equations
+        )
 
-        Returns:
-            int: The length of the arrays to be passed to the OpenCL kernel.
-        """
-        array_length: Optional[int] = None
+        if aux is None:
+            aux = []
 
-        if variables is None:
-            array_length = 1
+        self._pi = ProblemInfo(
+            input_file,
+            list(variables.keys()),
+            list(parameters.keys()),
+            aux,
+            num_noise,
+        )
+        self._stepper = stepper
+        self._single_precision = single_precision
+
+        # _runtime as an instance variable
+        self._runtime = initialize_runtime(
+            device_type,
+            vendor,
+            platform_id,
+            device_id,
+            device_ids,
+        )
+
+        # derived classes override this to call appropriate pybind constructors.
+        self._create_integrator()
+        self._build_cl_program()
+
+        # set solver_parameters and sync to device
+        if solver_parameters is not None:
+            self._sp = solver_parameters
         else:
-            for key, value in variables.items():
-                if isinstance(value, (np.ndarray, List)):
-                    if array_length is None or array_length == 1:
-                        array_length = len(value)
-                    elif array_length != len(value):
-                        raise ValueError(
-                            f"Variable {key} has length {len(value)} "
-                            f"but previous variables have length {array_length}"
-                        )
-                elif isinstance(value, float):
-                    if array_length is None:
-                        array_length = 1
+            self._sp = SolverParams(
+                dt, dtmax, abstol, reltol, max_steps, max_store, nout
+            )
+        self.set_solver_parameters()
 
-        if parameters is None:
-            array_length = 1 if array_length is None else array_length
-        else:
-            for key, value in parameters.items():
-                if isinstance(value, (np.ndarray, List)):
-                    if array_length is None or array_length == 1:
-                        array_length = len(value)
-                    elif array_length != len(value):
-                        raise ValueError(
-                            f"Parameter {key} has length {len(value)} "
-                            f"but previous parameters have length {array_length}"
-                        )
-                elif isinstance(value, float):
-                    if array_length is None:
-                        array_length = 1
-        if array_length is None:
-            raise ValueError("No variables or parameters specified")
-        return array_length
+        # set tspan and sync to device
+        self.set_tspan(t_span=t_span)
 
-    def _create_cl_arrays(
-        self, data: Dict[str, Union[float, np.ndarray, List[float]]], array_length: int
-    ) -> Dict[str, np.ndarray]:
-        cl_data: Dict[str, np.ndarray] = {}
-        for key, value in data.items():
-            array: np.ndarray
+        # set initial state and parameters, sync to device
+        self._variable_defaults = variables
+        self._parameter_defaults = parameters
 
-            if isinstance(value, float):
-                array = np.full(array_length, value)
-            elif isinstance(value, np.ndarray):
-                array = value
-            elif isinstance(value, List):
-                array = np.array(value)
-            else:
-                raise ValueError(f"Invalid type for {key}")
-            # Check that array is the correct length
-            if len(array) != array_length:
-                raise ValueError(
-                    f"Array {key} has length {len(array)} but should have length {array_length}"
-                )
-            cl_data[key] = array
-        return cl_data
+        # use set_repeat_ensemble(1)?
+        self._ensemble_size = 1
+        self._ensemble_shape = (1,)
+        default_initial_state = np.array(
+            list(self._variable_defaults.values()), dtype=np.float64, ndmin=2
+        )
+        default_parameters = np.array(
+            list(self._parameter_defaults.values()), dtype=np.float64, ndmin=2
+        )
+        self._set_problem_data(default_initial_state, default_parameters)
+
+        # ---> now the simulator is ready to go
+
+    def _create_integrator(self) -> None:
+        self._integrator = SimulatorBase(
+            self._pi,
+            self._stepper.value,
+            self._single_precision,
+            self._runtime,
+            _clode_root_dir,
+        )
+
+    def _build_cl_program(self):
+        self._integrator.build_cl()
+        self._cl_program_is_valid = True
 
     def _handle_clode_rhs_cl_file(
         self,
@@ -191,99 +249,11 @@ class Simulator:
 
         return input_file
 
-    def __init__(
-        self,
-        variables: Dict[str, float],
-        parameters: Dict[str, float],
-        src_file: str | None = None,
-        rhs_equation: OpenCLRhsEquation | None = None,
-        supplementary_equations: List[Callable[[Any], Any]] | None = None,
-        aux: Optional[List[str]] = None,
-        num_noise: int = 0,
-        t_span: Tuple[float, float] = (
-            0.0,
-            1000.0,
-        ),  # tspan <- realistically usually would set this as arg during integrate
-        stepper: Stepper = Stepper.rk4,  # stepper <- goes with solver_params?
-        single_precision: bool = True,  # precision
-        dt: float = 0.1,  # solver_params
-        dtmax: float = 1.0,
-        abstol: float = 1e-6,
-        reltol: float = 1e-3,
-        max_steps: int = 1000000,
-        max_store: int = 1000000,
-        nout: int = 1,
-        device_type: CLDeviceType | None = None,  # device selection
-        vendor: CLVendor | None = None,
-        platform_id: int | None = None,
-        device_id: int | None = None,
-        device_ids: List[int] | None = None,
-    ) -> None:
-        self._stepper = stepper
-        self._single_precision = single_precision
-
-        self._variable_defaults = variables
-        self._parameter_defaults = parameters
-        self._ensemble_size = 1
-
-        input_file = self._handle_clode_rhs_cl_file(
-            src_file, rhs_equation, supplementary_equations
-        )
-
-        if aux is None:
-            aux = []
-
-        self._max_store = max_store
-
-        self.aux_variables = aux
-        self._pi = ProblemInfo(
-            input_file,
-            self.variable_names,
-            self.parameter_names,
-            aux,
-            num_noise,
-        )
-        self._sp = SolverParams(dt, dtmax, abstol, reltol, max_steps, max_store, nout)
-
-        self.tspan = t_span
-
-        # _runtime as an instance variable
-        self._runtime = initialize_runtime(
-            device_type,
-            vendor,
-            platform_id,
-            device_id,
-            device_ids,
-        )
-
-        self._build_integrator()
-
-        self._integrator.build_cl()
-
-        self._init_integrator()
-
-    def _pack_data(self) -> Tuple[np.ndarray, np.ndarray]:
-        """Pack the data into a tuple.
-
-        Returns:
-            Tuple[np.ndarray, np.ndarray]: The packed data.
-        """
-        # Pack the varibles, transpose and flatten
-        # so that they are in the correct format for the OpenCL kernel
-        if self._variables is not None:
-            vars_array = np.array(list(self._variables.values()))
-        else:
-            vars_array = np.array(list(self._variable_defaults.values()))
-
-        if self._parameters is not None:
-            pars_array = np.array(list(self._parameters.values()))
-        else:
-            pars_array = np.array(list(self._parameter_defaults.values()))
-
-        return vars_array.flatten(), pars_array.flatten()
-
     def set_repeat_ensemble(self, num_repeats: int) -> None:
-        """Set the number of repeats for the ensemble.
+        """Create an ensemble with identical parameters and initial states.
+
+        This method uses the default parameters and initial state only. For other
+        options, see set_ensemble.
 
         Args:
             num_repeats (int): The number of repeats for the ensemble.
@@ -291,140 +261,318 @@ class Simulator:
         Returns:
             None
         """
-        self._ensemble_size = num_repeats
+        initial_state, parameters = self._make_problem_data(
+            new_size=num_repeats, new_shape=(num_repeats, 1)
+        )
+        self._set_problem_data(initial_state=initial_state, parameters=parameters)
 
-        self._variables = self._create_cl_arrays(self._variable_defaults, num_repeats)
-
-        self._parameters = self._create_cl_arrays(self._parameter_defaults, num_repeats)
-
-        # if self.is_initialized:
-        #     vars_array, pars_array = self._pack_data()
-        #     self._integrator.set_problem_data(vars_array, pars_array)
-        # else:
-        self._init_integrator()
-
+    # TODO: refactor some parts?
+    # TODO[typing]
     def set_ensemble(
         self,
         variables: Optional[
-            Union[
-                np.ndarray[np.dtype[np.float64]],
-                Dict[str, Union[np.ndarray[np.dtype[np.float64]], List[float]]],
-            ]
+            Union[np.ndarray, Mapping[str, Union[float, List[float], np.ndarray]]]
         ] = None,
         parameters: Optional[
-            Union[
-                np.ndarray[np.dtype[np.float64]],
-                Dict[str, Union[np.ndarray[np.dtype[np.float64]], List[float]]],
-            ]
+            Union[np.ndarray, Mapping[str, Union[float, List[float], np.ndarray]]]
         ] = None,
-        seed: Optional[int] = None,
     ) -> None:
-        if isinstance(variables, np.ndarray):
-            # We test that the array is the correct length
-            if len(variables.shape) != 2:
-                raise ValueError("Variables must be a matrix")
-            if variables.shape[1] != len(self.variable_names):
-                raise ValueError(
-                    f"Variables must have {len(self.variable_names)} columns"
-                )
-            variables = {
-                key: variables[:, index]
-                for index, key in enumerate(self.variable_names)
-            }
-        if isinstance(parameters, np.ndarray):
-            # We test that the array is the correct length
-            if len(parameters.shape) != 2:
-                raise ValueError("Parameters must be a matrix")
-            if parameters.shape[1] != len(self.parameter_names):
-                raise ValueError(
-                    f"Parameters must have {len(self.parameter_names)} columns"
-                )
-            parameters = {
-                key: parameters[:, index]
-                for index, key in enumerate(self.parameter_names)
-            }
+        """Set the parameters and/or initial states an ensemble ODE problem, possibly
+        changing the ensemble size.
 
-        cl_array_length = self._find_ensemble_size(variables, parameters)
+        Generates initial state and parameter arrays with shapes (ensemble_size,
+        num_variables) and (ensemble_size, num_parameters), respectively, with one row
+        per initial value problem.
 
-        # Implicitly create arrays of the correct length
-        # Discard self._variables and self._parameters
-        local_variables: Dict[
-            str, Union[float, np.ndarray[np.dtype[np.float64]], List[float]]
-        ] = {}
+        Specifying full arrays or dictionaries mapping parameter/variable names to
+        values are supported. The values may be scalars or 1D arrays of a constant
+        length. This array length sets the new ensemble_size, and any scalars will be
+        broadcast to form fully specified arrays.
 
-        # Keys can be missing in variables but not in self._variable_defaults
-        if variables is not None:
-            for key in variables.keys():
-                if key not in self._variable_defaults:
-                    raise KeyError(f"Key {key} not in ODE variable defaults!")
+        Unspecified values will be taken from the parameter and initial state default
+        values. In the case of initial state values, the most recent state from
+        simulation will be preferred in the following cases: - when expanding the
+        ensemble from size 1 - when the ensemble size does not change
 
-        for key in self._variable_defaults.keys():
-            if variables is not None and key in variables:
-                local_variables[key] = variables[key]
-            else:
-                local_variables[key] = self._variable_defaults[key]
-
-        local_parameters: Dict[
-            str, Union[float, np.ndarray[np.dtype[np.float64]], List[float]]
-        ] = {}
-
-        # Keys can be missing in parameters but not in self._parameter_defaults
-        if parameters is not None:
-            for key in parameters.keys():
-                if key not in self._parameter_defaults:
-                    raise KeyError(f"Key {key} not in ODE parameter defaults!")
-
-        for key in self._parameter_defaults.keys():
-            if parameters is not None and key in parameters:
-                local_parameters[key] = parameters[key]
-            else:
-                local_parameters[key] = self._parameter_defaults[key]
-
-        self._variables = self._create_cl_arrays(local_variables, cl_array_length)
-
-        self._parameters = self._create_cl_arrays(local_parameters, cl_array_length)
-
-        self._ensemble_size = cl_array_length
-
-        # if self.is_initialized:
-        #     vars_array, pars_array = self._pack_data()
-        #     self._integrator.set_problem_data(vars_array, pars_array)
-        # else:
-        self._init_integrator()
-
-        # self.seed_rng(seed)
-
-    def _build_integrator(self) -> None:
-        self._integrator = SimulatorBase(
-            self._pi,
-            self._stepper.value,
-            self._single_precision,
-            self._runtime,
-            _clode_root_dir,
-        )
-
-    def _init_integrator(self) -> None:
-        # FeaturesSimulator overrides this
-        vars_array, pars_array = self._pack_data()
-        self._integrator.initialize(
-            self.tspan,
-            vars_array,
-            pars_array,
-            self._sp,
-        )
-
-    def set_initial_conditions(
-        self, initial_conditions: dict[str, Union[float, np.ndarray, List[float]]]
-    ) -> None:
-        """Set the initial conditions.
+        To override the above behaviour and use the default initial state, specify the
+        default initial state as an argument.
 
         Args:
-            initial_conditions (dict[str, Union[float, np.ndarray, List[float]]]): The initial conditions.
+            variables (np.array | dict): The initial state
+            parameters (np.array | dict): The parameters
+        """
+        if variables is None and parameters is None:
+            raise ValueError(f"initial_state and parameters cannot both be None")
+
+        # validate variables argument
+        if isinstance(variables, np.ndarray):
+            if len(variables.shape) != 2 or variables.shape[1] != self.num_variables:
+                raise ValueError(
+                    f"initial_state must be a matrix with {self.num_variables} columns"
+                )
+        elif isinstance(variables, Mapping):
+            unknown_variables = set(variables.keys()) - set(self.variable_names)
+            if len(unknown_variables) > 0:
+                raise ValueError(f"Unknown variable name(s): {unknown_variables}")
+        elif variables is not None:
+            raise ValueError(
+                f"Expected np.ndarray or Mapping for variables, but got {type(variables)}"
+            )
+
+        # validate parameters argument
+        if isinstance(parameters, np.ndarray):
+            if len(parameters.shape) != 2 or parameters.shape[1] != self.num_parameters:
+                raise ValueError(
+                    f"parameters must be a matrix with {self.num_parameters} columns"
+                )
+        elif isinstance(parameters, Mapping):
+            unknown_parameters = set(parameters.keys()) - set(self.parameter_names)
+            if len(unknown_parameters) > 0:
+                raise ValueError(f"Unknown parameter name(s): {unknown_parameters}")
+        elif parameters is not None:
+            raise ValueError(
+                f"Expected np.ndarray or Mapping for parameters, but got {type(variables)}"
+            )
+
+        # get the shape and size from variables
+        var_size = 1
+        var_shape = (1,)
+        if isinstance(variables, np.ndarray):
+            var_size = variables.shape[0]
+            var_shape = (var_size, 1)
+        elif isinstance(variables, Mapping):
+            variables = {k: np.array(v, dtype=np.float64) for k, v in variables.items()}
+            # size/shape from dict. scalars have size=1, shape=()
+            var_sizes = [v.size for v in variables.values() if v.size > 1]
+            var_shapes = [v.shape for v in variables.values() if v.size > 1]
+            if len(set(var_shapes)) > 1:
+                shapes = {k: v.shape for k, v in variables.items() if v.size > 1}
+                raise ValueError(f"Shape of arrays for variables don't match: {shapes}")
+            if len(var_sizes) > 0:
+                var_size = var_sizes[0]
+                var_shape = var_shapes[0]
+
+        # get the shape and size from parameters
+        par_size = 1
+        par_shape = (1,)
+        if isinstance(parameters, np.ndarray):
+            par_size = parameters.shape[0]
+            par_shape = (par_size, 1)
+        elif isinstance(parameters, Mapping):
+            parameters = {
+                k: np.array(v, dtype=np.float64) for k, v in parameters.items()
+            }
+            # size/shape from dict. scalars have size=1, shape=()
+            par_sizes = [v.size for v in parameters.values() if v.size > 1]
+            par_shapes = [v.shape for v in parameters.values() if v.size > 1]
+            if len(set(par_shapes)) > 1:
+                shapes = {k: v.shape for k, v in parameters.items() if v.size > 1}
+                raise ValueError(
+                    f"Shape of arrays for parameters don't match: {shapes}"
+                )
+            if len(par_sizes) > 0:
+                par_size = par_sizes[0]
+                par_shape = par_shapes[0]
+
+        # size and shape must match
+        # TODO: shape check? only for dict case...
+        if var_size > 1 and par_size > 1:
+            if var_size != par_size or var_size != par_size:
+                raise ValueError(
+                    "Arrays specified for parameters and initial states must have the same size"
+                )
+
+        # print(var_size, var_shape, par_size, par_shape)
+        new_size = var_size if var_size > 1 else par_size
+        new_shape = var_shape if var_size > 1 else par_shape
+
+        vars_array, pars_array = self._make_problem_data(
+            variables=variables,
+            parameters=parameters,
+            new_size=new_size,
+            new_shape=new_shape,
+        )
+        self._set_problem_data(vars_array, pars_array)
+
+    # TODO: when to keep/broadcast current vs default values?
+    # TODO[typing]
+    def _make_problem_data(
+        self,
+        variables: Optional[dict[str, np.ndarray]] = None,
+        parameters: Optional[dict[str, np.ndarray]] = None,
+        new_size: Optional[int] = None,
+        new_shape: Optional[tuple[int, ...]] = None,
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """Create initial state and parameter arrays from default values
+
+        The resulting arrays by convention have shapes (ensemble_size, num_variables)
+        and (ensemble_size, num_parameters)
+
+        Args:
+            use_current_state (bool, optional): _description_. Defaults to False.
 
         Returns:
-            None
+            tuple[np.ndarray, np.ndarray]: the initial state and parameter arrays
         """
-        self._initial_conditions = initial_conditions
+
+        if len(new_shape) == 1:
+            new_shape = (new_size, 1)
+
+        previous_size = self._ensemble_size
+        valid_previous_size = (previous_size == new_size) | (previous_size == 1)
+
+        if valid_previous_size:
+            initial_state_array = self.get_initial_state()
+            parameter_array = self._device_parameters
+        else:
+            initial_state_array = np.array(
+                list(self._variable_defaults.values()), dtype=np.float64, ndmin=2
+            )
+            parameter_array = np.array(
+                list(self._parameter_defaults.values()), dtype=np.float64, ndmin=2
+            )
+
+        if initial_state_array.shape[0] == 1:
+            initial_state_array = np.tile(initial_state_array, new_shape)
+
+        if parameter_array.shape[0] == 1:
+            parameter_array = np.tile(parameter_array, new_shape)
+
+        # possibly overwrite some or all of the arrays
+        if isinstance(variables, np.ndarray):
+            initial_state_array = variables
+        elif isinstance(variables, Mapping):
+            for key, value in variables.items():
+                index = self.variable_names.index(key)
+                value = np.repeat(value, new_size) if value.size == 1 else value
+                initial_state_array[:, index] = np.array(value.flatten())
+
+        if isinstance(parameters, np.ndarray):
+            parameter_array = parameters
+        elif isinstance(parameters, Mapping):
+            for key, value in parameters.items():
+                index = self.parameter_names.index(key)
+                value = np.repeat(value, new_size) if value.size == 1 else value
+                parameter_array[:, index] = np.array(value.flatten())
+
+        self._ensemble_size = new_size
+        self._ensemble_shape = new_shape
+        return initial_state_array, parameter_array
+
+    def _set_problem_data(
+        self, initial_state: np.ndarray, parameters: np.ndarray
+    ) -> None:
+        """Set both initial state and parameters at the same time.
+
+        This method supports changing ensemble size, but initial state and parameters
+        must be completely specified as ndarrays with the same number of rows.
+
+        Args:
+            initial_state (np.array): The initial state. shape=(ensemble_size, num_variables)
+            parameters (np.array): The parameters. shape=(ensemble_size, num_parameters)
+        """
+        self._device_initial_state = initial_state
+        self._device_parameters = parameters
+        self._integrator.set_problem_data(
+            initial_state.flatten(order="F"),
+            parameters.flatten(order="F"),
+        )
+
+    def _set_parameters(self, parameters: np.ndarray) -> None:
+        """Set the ensemble parameters without changing ensemble size.
+
+        New ensemble parameters must match the current ensemble size.
+
+        Args:
+            parameters (np.array): The parameters. shape=(ensemble_size, num_parameters)
+        """
+        self._device_parameters = parameters
+        self._integrator.set_pars(parameters.flatten(order="F"))
+
+    def _set_initial_state(self, initial_state: np.ndarray) -> None:
+        """Set the initial state without changing ensemble size.
+
+        New ensemble initial_state must match the current ensemble size.
+
+        Args:
+            initial_state (np.ndarray): The initial state. shape=(ensemble_size, num_variables)
+        """
+        self._device_initial_state = initial_state
+        self._integrator.set_x0(initial_state.flatten(order="F"))
+
+    def set_tspan(self, t_span: tuple[float, float]) -> None:
+        """Set the time span of the simulation.
+
+        Args:
+            t_span (tuple[float, float]): The time span.
+        """
+        self._t_span = t_span
+        self._integrator.set_tspan(t_span)
+
+    def get_tspan(self) -> tuple[float, float]:
+        """Returns the simulation time span currently set on the device.
+
+        Returns:
+            tuple[float, float]: The time span
+        """
+        self._t_span = self._integrator.get_tspan()
+
+    def shift_tspan(self) -> None:
+        """Shift the time span to the current time plus the time period."""
+        self._integrator.shift_tspan()
+        self._t_span = self._integrator.get_tspan()
+
+    def set_solver_parameters(
+        self,
+        solver_parameters: Optional[SolverParams] = None,
+        dt: Optional[float] = None,
+        dtmax: Optional[float] = None,
+        abstol: Optional[float] = None,
+        reltol: Optional[float] = None,
+        max_steps: Optional[int] = None,
+        max_store: Optional[int] = None,
+        nout: Optional[int] = None,
+    ) -> None:
+        """Update solver parameters and push to the device.
+
+        A full solver parameters struct or individual fields may be specified
+
+        Args:
+            solver_parameters (SolverParams, optional): A solver parameters structure. Defaults to None.
+            dt (float, optional): The time step. Defaults to None.
+            dtmax (float, optional): Maximum time step for adaptive solvers. Defaults to None.
+            abstol (float, optional): Absolute tolerance for adaptive solvers. Defaults to None.
+            reltol (float, optional): Relative tolerance for adaptive solvers. Defaults to None.
+            max_steps (int, optional): Maximum number of time steps. Defaults to None.
+            max_store (int, optional): Maximum steps to store for trajectories. Defaults to None.
+            nout (int, optional): Store interval, in number of steps, for trajectories. Defaults to None.
+        """
+        if solver_parameters is not None:
+            self._sp = solver_parameters
+        else:
+            if dt is not None:
+                self._sp.dt = dt
+            if dtmax is not None:
+                self._sp.dtmax = dtmax
+            if abstol is not None:
+                self._sp.abstol = abstol
+            if reltol is not None:
+                self._sp.reltol = reltol
+            if max_steps is not None:
+                self._sp.max_steps = max_steps
+            if max_store is not None:
+                self._sp.max_store = max_store
+            if nout is not None:
+                self._sp.nout = nout
+        self._integrator.set_solver_params(self._sp)
+
+    def get_solver_parameters(self):
+        """Get the current ensemble parameters from the OpenCL device
+
+        Returns:
+            SolverParams: The solver parameters structure
+        """
+        return self._integrator.get_solver_params()
 
     def seed_rng(self, seed: int | None = None) -> None:
         """Seed the random number generator.
@@ -441,182 +589,125 @@ class Simulator:
         else:
             self._integrator.seed_rng()
 
-    def set_tspan(self, tspan: Tuple[float, float]) -> None:
-        """Set the time span to simulate over.
-
-        Args:
-            tspan (Tuple[float, float]): The time span to simulate over.
-
-        Returns:
-            None
-        """
-        self.tspan = tspan
-        self._integrator.set_tspan(tspan)
-
-    def set_problem_data(self, x0: np.array, parameters: np.array) -> None:
-        """Set the problem data.
-
-        Args:
-            x0 (np.array): The initial conditions.
-            parameters (np.array): The parameters.
-
-        Returns:
-            None
-        """
-        # self._integrator.set_problem_data(
-        #     x0.transpose().flatten(),
-        #     parameters.transpose().flatten(),
-        # )
-        raise NotImplementedError
-
-    def set_x0(self, x0: np.array) -> None:
-        """Set the initial conditions.
-
-        Args:
-            x0 (np.array): The initial conditions.
-
-        Returns:
-            None
-        """
-        # self._integrator.set_x0(
-        #     x0.transpose().flatten(),
-        # )
-        raise NotImplementedError
-
-    def set_parameters(self, parameters: np.array) -> None:
-        """Set the parameters.
-
-        Args:
-            parameters (np.array): The parameters.
-
-        Returns:
-            None
-        """
-        # self._integrator.set_pars(
-        #     parameters.transpose().flatten(),
-        # )
-        raise NotImplementedError
-
-    def set_solver_parameters(
+    def transient(
         self,
-    ) -> None:
-        """Set the solver parameters.
-
-        Args:
-            parameters (np.array): The parameters.
-
-        Returns:
-            None
-        """
-        raise NotImplementedError
-
-    def transient(self, update_x0: bool = True) -> None:
+        t_span: Optional[Tuple[float, float]] = None,
+        update_x0: bool = True,
+        fetch_results: bool = False,
+    ) -> Optional[np.ndarray]:
         """Run a transient simulation.
 
         Args:
-            update_x0 (bool, optional): Whether to update the initial conditions. Defaults to True.
+            t_span (tuple[float, float]): Time interval for integration.
+            update_x0 (bool, optional): Whether to update the initial state. Defaults to True.
+            fetch_results (bool): Whether to fetch the feature results from the device and return them here
 
         Returns:
             None
         """
-        if not self.is_initialized:
-            raise RuntimeError("Simulator is not initialized")
+
+        # Lazy rebuild - would also need to verify device data is set
+        # if not self._cl_program_is_valid:
+        #     self._integrator.build_cl()
+        #     self._cl_program_is_valid = True
+
+        if t_span is not None:
+            self.set_tspan(t_span=t_span)
+
         self._integrator.transient()
+        # invalidates _device_final_state
+        self._device_final_state = None
+
         if update_x0:
-            self.shift_x0()
+            self._integrator.shift_x0()
+            # invalidates _device_initial_state (?)
+            self._device_initial_state = None
 
-    def shift_tspan(self) -> None:
-        """Shift the time span to the current time plus the time period.
+        if fetch_results:
+            return self.get_final_state()
+            # Note that this triggers a device-to-host transfer.
 
-        Returns:
-            None
-        """
-        self._integrator.shift_tspan()
+    def get_initial_state(self) -> np.ndarray:
+        """Get the initial state of the simulation from the device.
 
-    def shift_x0(self) -> None:
-        """Shift the initial conditions to the current variable values.
-
-        Returns:
-            None
-        """
-        self._integrator.shift_x0()
-
-    def get_initial_state(self):
-        """Get the final state of the simulation.
+        Note that this triggers a device-to-host transfer.
 
         Returns:
-            np.array: The final state of the simulation.
+            np.array: The initial state of the simulation.
         """
-        self._initial_state = self._integrator.get_x0()
-        initial_state = np.array(self._initial_state)
-        return initial_state.reshape(
-            (len(self._variables), len(initial_state) // len(self._variables))
-        ).transpose()
+        if self._device_initial_state is None:
+            initial_state = np.array(self._integrator.get_x0(), dtype=np.float64)
+            self._device_initial_state = initial_state.reshape(
+                (self._ensemble_size, self.num_variables), order="F"
+            )
+        return self._device_initial_state
 
-    def get_final_state(self):
-        """Get the final state of the simulation.
+    def get_final_state(self) -> np.ndarray:
+        """Get the final state of the simulation from the device.
+
+        Note that this triggers a device-to-host transfer.
 
         Returns:
             np.array: The final state of the simulation.
         """
-        self._final_state = self._integrator.get_xf()
-        final_state = np.array(self._final_state)
-        return final_state.reshape(
-            (len(self.variable_names), len(final_state) // len(self.variable_names))
-        ).transpose()
+        if self._device_final_state is None:
+            final_state = np.array(self._integrator.get_xf(), dtype=np.float64)
+            self._device_final_state = final_state.reshape(
+                (self._ensemble_size, self.num_variables), order="F"
+            )
+        return self._device_final_state
+
+    def get_max_memory_alloc_size(self, deviceID: int = 0) -> int:
+        """Get the device maximum memory allocation size
+
+        Args:
+            deviceID (int, optional): The device ID. Defaults to 0.
+
+        Returns:
+            int: The maximum size of memory allocation in GB
+        """
+        return self._runtime.get_max_memory_alloc_size(deviceID)
+
+    def get_double_support(self, deviceID: int = 0) -> bool:
+        """Get whether the device supports double precision
+
+        Args:
+            deviceID (int, optional): The device ID. Defaults to 0.
+
+        Returns:
+            bool: Whether the device supports double precision
+        """
+        return self._runtime.get_double_support(deviceID)
+
+    def get_device_cl_version(self, deviceID: int = 0) -> str:
+        """Get the device OpenCL version
+
+        Args:
+            deviceID (int, optional): The device ID. Defaults to 0.
+
+        Returns:
+            str: the device CL version
+        """
+        return self._runtime.get_device_cl_version(deviceID)
 
     def get_available_steppers(self) -> List[str]:
-        """Get the available time steppers.
-
-        Returns:
-            List[str]
-        """
+        """Get the list of valid time stepper names"""
         return self._integrator.get_available_steppers()
 
     def get_program_string(self) -> str:
-        """Get the program string.
-
-        Returns:
-            str
-        """
+        """Get the clODE OpenCL program string"""
         return self._integrator.get_program_string()
 
     def print_status(self) -> None:
-        """Print the simulator status info.
-
-        Returns:
-            None
-        """
+        """Print the simulator status info"""
+        # old_level = get_log_level()
+        # set_log_level(LogLevel.info)
         self._integrator.print_status()
+        # set_log_level(old_level)
 
     def print_devices(self) -> None:
-        """Print the available devices.
-
-        Returns:
-            None
-        """
+        """Print the available devices"""
+        # old_level = get_log_level()
+        # set_log_level(LogLevel.info)
         self._runtime.print_devices()
-
-    def get_max_memory_alloc_size(self) -> int:
-        """Get the maximum memory allocation size.
-
-        Returns:
-            int: The maximum memory allocation size.
-        """
-        return self._runtime.get_max_memory_alloc_size()
-
-    def get_device_cl_version(self) -> str:
-        """Get the device OpenCL version.
-
-        Returns:
-            str: The device OpenCL version.
-        """
-        return self._runtime.get_device_cl_version()
-
-    def get_double_support(self) -> bool:
-        """Get whether double precision is supported.
-
-        Returns:
-            bool: Whether double precision is supported.
-        """
-        return self._runtime.get_double_support()
+        # set_log_level(old_level)

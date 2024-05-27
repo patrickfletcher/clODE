@@ -20,10 +20,12 @@ nav:
     - Trajectory Simulation: 'trajectory_simulation.md'
     - Stochastic Simulations: 'Ornstein-Uhlenbeck_process.md'
     - Spike Counting: 'spike_counting.md'
+  - Observers:
+    - 'observers.md'
   - Configuration:
       - Specifying systems of ODEs: 'specifying_odes.md'
       - XPP files: 'xpp_files.md'
-      - Initialising the runtime: 'init_runtime.md'
+      - Initializing the runtime: 'init_runtime.md'
       - Selecting logging levels: 'logging_levels.md'
       - Querying OpenCL devices: 'querying_opencl.md'
       - Running in Matlab: 'matlab.md'

@@ -32,11 +32,11 @@ __kernel void trajectory(
     realtype p[N_PAR], xi[N_VAR], dxi[N_VAR];
     realtype auxi[N_AUX>0?N_AUX:1];
     realtype wi[N_WIENER>0?N_WIENER:1];
-    rngData rd;
+    struct rngData rd;
 
     //get private copy of ODE parameters, initial data, and compute slope at initial state
     ti = tspan[0];
-    dt = sp->dt;
+    dt = d_dt[i];
 
     for (int j = 0; j < N_PAR; ++j)
         p[j] = pars[j * nPts + i];
@@ -47,37 +47,34 @@ __kernel void trajectory(
     for (int j = 0; j < N_RNGSTATE; ++j)
         rd.state[j] = RNGstate[j * nPts + i];
 
+    // generate random numbers if needed
     rd.randnUselast = 0;
-
     for (int j = 0; j < N_WIENER; ++j)
 #ifdef STOCHASTIC_STEPPER
         wi[j] = randn(&rd) / sqrt(dt);
 #else
-        wi[j] = RCONST(0.0);
+        wi[j] = ZERO;
 #endif
-    getRHS(ti, xi, p, dxi, auxi, wi); //slope at initial point, needed for FSAL steppers (bs23, dorpri5) and for DX output
+
+    //get the slope and aux at initial point
+    getRHS(ti, xi, p, dxi, auxi, wi); 
 
     //store the initial point
-
     int storeix = 0;
     t[storeix * nPts + i] = ti;
     for (int j = 0; j < N_VAR; ++j)
         x[storeix * nPts * N_VAR + j * nPts + i] = xi[j];
-
     for (int j = 0; j < N_VAR; ++j)
         dx[storeix * nPts * N_VAR + j * nPts + i] = dxi[j];
-
     for (int j = 0; j < N_AUX; ++j)
         aux[storeix * nPts * N_AUX + j * nPts + i] = auxi[j];
-
-    ++storeix;
     
-    //time-stepping loop, main time interval
-    int step = 0;
+	//time-stepping loop
+    unsigned int step = 0;
     int stepflag = 0;
-    while (ti < tspan[1] && step < sp->max_steps && storeix < sp->max_store)
+    while (ti <= tspan[1] && step < sp->max_steps && storeix < sp->max_store)
     {
-        ++step;
+		++step;
         stepflag = stepper(&ti, xi, dxi, p, sp, &dt, tspan, auxi, wi, &rd);
         // if (stepflag!=0)
         //     break;
@@ -85,19 +82,14 @@ __kernel void trajectory(
         //store every sp.nout'th step after the initial point
         if (step % sp->nout == 0)
         {
-
-            t[storeix * nPts + i] = ti; //adaptive steppers give different timepoints for each trajectory
-
+            ++storeix;
+            t[storeix * nPts + i] = ti;
             for (int j = 0; j < N_VAR; ++j)
                 x[storeix * nPts * N_VAR + j * nPts + i] = xi[j];
-
             for (int j = 0; j < N_VAR; ++j)
                 dx[storeix * nPts * N_VAR + j * nPts + i] = dxi[j];
-
             for (int j = 0; j < N_AUX; ++j)
                 aux[storeix * nPts * N_AUX + j * nPts + i] = auxi[j];
-                
-            ++storeix;
         }
     }
 
@@ -112,5 +104,5 @@ __kernel void trajectory(
         RNGstate[j * nPts + i] = rd.state[j];
 
     // update dt to its final value (for adaptive stepper continue)
-    // d_dt[i] = dt;
+    d_dt[i] = dt;
 }

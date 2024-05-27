@@ -6,9 +6,9 @@
 #define EXPON RCONST(1.0)/(LOCAL_ERROR_ORDER+RCONST(1.0))  //controls error per unit step (err/dt~tol) -> global error proportional to tol (tolerance proportional) 
 
 //Wrapper to handle step-size adaptation.  note: wi should be zeros
-inline int stepper(realtype *ti, realtype xi[], realtype k1[], const realtype pars[], 
+static inline int stepper(realtype *ti, realtype xi[], realtype k1[], const realtype pars[], 
 __constant struct SolverParams *sp, realtype *dt, __constant realtype *tspan, 
-realtype aux[], realtype wi[], __private rngData *rd)
+realtype aux[], realtype wi[], __private struct rngData *rd)
 {
     realtype tNew, normErr, relErr, err[N_VAR], newxi[N_VAR], newk1[N_VAR];
 

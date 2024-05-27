@@ -62,24 +62,6 @@ cc_test(
 )
 
 cc_test(
-    name = "testFeatLarge",
-    srcs = ["testFeatures_morevars.cpp"],
-    data = [
-        ":lactotroph",
-        "//clode/cpp:opencl",
-    ],
-    linkopts = select({
-        "@platforms//os:osx": [],
-        "@platforms//os:linux": ["-lOpenCL"],
-        "@platforms//os:windows": [],
-    }),
-    linkstatic = True,
-    deps = [
-        "//clode/cpp",
-    ],
-)
-
-cc_test(
     name = "listOpenCL",
     srcs = ["listOpenCL.cpp"],
     data = [

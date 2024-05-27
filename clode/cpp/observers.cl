@@ -13,19 +13,22 @@
  * - finalizeFeatures: post-integration cleanup and write to global feature array
  */
 
-#include "realtype.cl"
-
 //TODO: expose different observerParams for each observer (provide relevant values only)
 //TODO: support using aux vars as event/feature var in observers.
+//TODO: concept of "solution buffer" or "solver state" data structure could simplify observer coding. Update it in the ode driver, pass to observer functions
+
+#include "realtype.cl"
+
 #ifdef __cplusplus
 template <typename realtype>
 #endif
 struct ObserverParams
 {
-    int eVarIx; //variable for event detection
-    int fVarIx; //variable for features
+    unsigned int eVarIx; //variable for event detection
+    unsigned int fVarIx; //variable for features
 
-    int maxEventCount; //time loop limiter
+    unsigned int maxEventCount; //time loop limiter
+    unsigned int maxEventTimestamps; //max number of event timestamps to store
     realtype minXamp;  //consider oscillations lower than this to be steady state (return mean X)
     realtype minIMI;
 
@@ -45,16 +48,33 @@ struct ObserverParams
 
 #ifdef __cplusplus
 //info about available observers for access in C++
-typedef struct ObserverInfo 
+struct ObserverInfo 
 {
 	std::string define;
 	size_t observerDataSizeFloat;
 	size_t observerDataSizeDouble;
 	std::vector<std::string> featureNames;
-} ObserverInfo;
+};
 
 #endif
 
+// Design criteria
+// - use online algorithms for features such as mean, median, etc.
+// - minimize storage of state
+// - 
+
+// TODO:
+// - return sequence data: list of features per event
+// - hashing for distinct value counting [binning?] - not same as above
+// - use minimal solution buffer size for task at hand. local extrema: t[3], x[3], dx[2]?
+// - separate diagnostic features [toggle on/off independent of observer?]
+// - time (e.g., durations) vs state-space features (e.g., amplitudes, means) 
+// -- supply list of vars to track for state-space features [similarly for trajectory storage]
+// - composable observers? toggle on only what you want 
+// - how to handle domain-specific use cases? eg. AHP
+
+// TODO: combine observers with same logic but different event functions into one
+// - threshold, nhood (1/2) --> toggle with a define?
 
 ////////////////////////////////////////////////
 // one-pass detectors
@@ -63,50 +83,63 @@ typedef struct ObserverInfo
 //basic detectors: no events. Measure extent of state space explored, max/min/mean x and aux, max/min dx
 #include "observers/observer_basic.clh" //one variable, specified by fVarIx
 #include "observers/observer_basic_allVar.clh"
+
+// convex hull of trajectory in state-space?
+
+// Local maximum detector
+// - could do local extremum, toggle whether event is on max vs min?
 #include "observers/observer_local_maximum.clh"
 
+// Threshold-based event detection with thresholds defined in state-space coordinates
 // #include "observers/observer_threshold_1.clh" //not implemented
 
-//Event is the return of trajectory to small neighborhood of Xstart (specified state, eg. x0)
-// to select Xstart: local min (e.g. of user-selected slow variable) 
+// Poincaré section, specified as a normal vector and offset in state-space coordinates
+// #include "observers/observer_poincare_1.clh"
+
+// Event trigger is the return of the trajectory to small neighborhood of a point Xstart in state-space coordinates
+// - define a sensible Xstart, found in one pass: e.g., local min of a slow variable 
 #include "observers/observer_neighborhood_1.clh"
 
 ////////////////////////////////////////////////
 // two-pass detectors
 ////////////////////////////////////////////////
+// Run a first pass to establish trajectory properties - e.g., extrema for computing normalized state-space coordinates
 
-//Threshold-based event detection with relative thresholds in a specified variable xi.
-// First pass to measure the extent of state-space trajectory visits, then compute thresholds as fractions of range
+// Threshold-based event detection with thresholds defined in normalized state-space coordinates
 #include "observers/observer_threshold_2.clh"
 
-// // First pass to measure the extent of state-space trajectory visits, decide x0 based on threshold. check each crossing, period when norm(x-x0)<tol
+// Poincaré section, specified as a normal vector and offset in normalized state-space coordinates
 // #include "observers/observer_poincare_2.clh"
 
-//Use a first pass to find a good Xstart (e.g. absolute drop below 0.5*range of slowest variable)
+// Event trigger is the return of the trajectory to small neighborhood of a point Xstart in normalized state-space coordinates
+// - Use a first pass to find a good Xstart (e.g. absolute drop below 0.5*range of slowest variable)
 #include "observers/observer_neighborhood_2.clh"
 
 
 
 // collect available methods into "name"-ObserverInfo map, for C++ side access. Must come after including all the getObserverInfo_functions.
 #ifdef __cplusplus
-static void getObserverDefineMap(const ProblemInfo pi, const int fVarIx, const int eVarIx, std::map<std::string, ObserverInfo> &observerDefineMap, std::vector<std::string> &availableObserverNames) 
-{
+static void getObserverDefineMap(const ProblemInfo pi,
+								 const unsigned int fVarIx,
+								 const unsigned int eVarIx,
+								 const unsigned int nStoredEvents,
+								 std::map<std::string, struct ObserverInfo> &observerDefineMap,
+								 std::vector<std::string> &availableObserverNames) {
+    std::map<std::string, struct ObserverInfo> newMap;
+    newMap["basic"]=getObserverInfo_basic(pi, fVarIx, eVarIx, nStoredEvents);
+    newMap["basicall"]=getObserverInfo_basicAll(pi, fVarIx, eVarIx, nStoredEvents);
+    newMap["localmax"]=getObserverInfo_localmax(pi, fVarIx, eVarIx, nStoredEvents);
+    newMap["nhood1"]=getObserverInfo_nhood1(pi, fVarIx, eVarIx, nStoredEvents);
+    newMap["nhood2"]=getObserverInfo_nhood2(pi, fVarIx, eVarIx, nStoredEvents);
+    newMap["thresh2"]=getObserverInfo_thresh2(pi, fVarIx, eVarIx, nStoredEvents);
 
-    std::map<std::string, ObserverInfo> newMap;
-    newMap["basic"]=getObserverInfo_basic(pi, fVarIx, eVarIx);
-    newMap["basicall"]=getObserverInfo_basicAll(pi, fVarIx, eVarIx);
-    newMap["localmax"]=getObserverInfo_localmax(pi, fVarIx, eVarIx);
-    newMap["nhood1"]=getObserverInfo_nhood1(pi, fVarIx, eVarIx);
-    newMap["nhood2"]=getObserverInfo_nhood2(pi, fVarIx, eVarIx);
-    newMap["thresh2"]=getObserverInfo_thresh2(pi, fVarIx, eVarIx);
+	//export vector of names for access in C++
+	std::vector<std::string> newNames;
+	for (auto const& element : newMap)
+		newNames.push_back(element.first);
 
-//export vector of names for access in C++
-std::vector<std::string> newNames;
-for (auto const& element : newMap)
-    newNames.push_back(element.first);
-
-observerDefineMap=newMap;
-availableObserverNames=newNames;
+	observerDefineMap=newMap;
+	availableObserverNames=newNames;
 }
 #endif
 

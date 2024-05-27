@@ -1,4 +1,4 @@
-// currently unused...
+// Unified features + trajectory kernel. currently unused...
 
 #include "clODE_random.cl"
 #include "clODE_struct_defs.cl"
@@ -14,27 +14,33 @@ __kernel void odedriver(
     __constant struct SolverParams *sp, //dtmin/max, tols, etc
     __global realtype *xf,              //final state 				[nPts*nVar]
     __global ulong *RNGstate,            //state for RNG					[nPts*nRNGstate]
-    __global ObserverData *OData,        //Observer data. Assume it is initialized externally by initialize observer kernel!
-    __constant struct ObserverParams *opars,
-    __global realtype *F,  //feature results
+    __global realtype *d_dt,            //array of dt values, one per solver
     __global realtype *t,  // trajectory storage: t, x, dx, aux
     __global realtype *x,
     __global realtype *dx,
     __global realtype *aux,
-    __global int *nStored)
+    __global int *nStored,
+    __global ObserverData *OData,        //Observer data 
+    __constant struct ObserverParams *opars,
+    __global realtype *t_event,  // trajectory storage: t, x, dx, aux
+    __global realtype *x_event,
+    __global realtype *dx_event,
+    __global realtype *aux_event,
+    __global realtype *F) 
 {
 
     int i = get_global_id(0);
     int nPts = get_global_size(0);
 
     realtype ti, dt;
-    realtype p[N_PAR], xi[N_VAR], dxi[N_VAR], auxi[N_AUX], wi[N_WIENER];
-    rngData rd;
-    __constant realtype * const tspanPtr = tspan;
+    realtype p[N_PAR], xi[N_VAR], dxi[N_VAR];
+    realtype auxi[N_AUX>0?N_AUX:1];
+    realtype wi[N_WIENER>0?N_WIENER:1];
+    struct rngData rd;
 
-    //get private copy of ODE parameters, initial data, and compute slope at initial state
+    //get private copy of ODE parameters, initial data, and random state
     ti = tspan[0];
-    dt = sp->dt;
+    dt = d_dt[i];
 
     for (int j = 0; j < N_PAR; ++j)
         p[j] = pars[j * nPts + i];
@@ -45,80 +51,99 @@ __kernel void odedriver(
     for (int j = 0; j < N_RNGSTATE; ++j)
         rd.state[j] = RNGstate[j * nPts + i];
 
-    rd.randnUselast = 0;
+    if (sp->useObserver){
+	    ObserverData odata = OData[i]; //private copy of observer data
+    }
 
+    // generate random numbers if needed
+    rd.randnUselast = 0;
     for (int j = 0; j < N_WIENER; ++j)
 #ifdef STOCHASTIC_STEPPER
         wi[j] = randn(&rd) / sqrt(dt);
 #else
-        wi[j] = RCONST(0.0);
+        wi[j] = ZERO;
 #endif
-	getRHS(ti, xi, p, dxi, auxi, wi); //slope at initial point, needed for FSAL steppers (bs23, dorpri5)
 
-    //store the initial point --> could be set elsewhere using an "init" kernel?
-    int storeix = 0;
-    t[storeix + i] = tspan[0];
-    for (int j = 0; j < N_VAR; ++j)
-        x[storeix * nPts * N_VAR + j * nPts + i] = xi[j];
+    //get the slope and aux at initial point
+    getRHS(ti, xi, p, dxi, auxi, wi); 
 
-    for (int j = 0; j < N_VAR; ++j)
-        dx[storeix * nPts * N_VAR + j * nPts + i] = dxi[j];
+    //store the initial point
+    unsigned int storeix = 0;
+    if (sp->storeTrajectory == 1)
+    {
+        int storeix = 0;
+        t[storeix * nPts + i] = ti;
+        for (int j = 0; j < N_VAR; ++j)
+            x[storeix * nPts * N_VAR + j * nPts + i] = xi[j];
+        for (int j = 0; j < N_VAR; ++j)
+            dx[storeix * nPts * N_VAR + j * nPts + i] = dxi[j];
+        for (int j = 0; j < N_AUX; ++j)
+            aux[storeix * nPts * N_AUX + j * nPts + i] = auxi[j];
+    }
 
-    for (int j = 0; j < N_AUX; ++j)
-        aux[storeix * nPts * N_AUX + j * nPts + i] = auxi[j];
-
-    ObserverData odata = OData[i]; //private copy of observer data. Assume it is initialized externally by initialize observer kernel
-
-    //time-stepping loop, main time interval
-    int step = 0;
+	//time-stepping loop
+    unsigned int step = 0;
+    unsigned int eventcount = 0;
+    unsigned int eventstoreix = 0;
     int stepflag = 0;
     bool eventOccurred;
     bool terminalEvent;
-    while (ti < tspan[1] && step < sp->max_steps && storeix < sp->max_store)
+    while (ti <= tspan[1] && step < sp->max_steps && storeix < sp->max_store)
     {
+		++step;
+        stepflag = stepper(&ti, xi, dxi, p, sp, &dt, tspan, auxi, wi, &rd);
+        // if (stepflag!=0) //handle numerical problems from time-stepper?
+            // break;
 
-        ++step;
-        //++odata.stepcount;
-        stepflag = stepper(&ti, xi, dxi, p, sp, &dt, tspanPtr, auxi, wi, step, &rd);
-        if (stepflag!=0)
-            break;
-
-        eventOccurred = eventFunction(&ti, xi, dxi, auxi, &odata, opars);
-        if (eventOccurred)
-        {
-            terminalEvent = computeEventFeatures(&ti, xi, dxi, auxi, &odata, opars);
-            if (terminalEvent)
+        if (sp->useObserver){
+            eventOccurred = eventFunction(&ti, xi, dxi, auxi, &odata, opars);
+            if (eventOccurred)
             {
-                break;
-            };
-        }
+                ++eventcount;
+                if (eventcount < op->maxEventTimestamps)
+                {
+                    t_event[eventcount * nPts + i] = ti;
+                    for (int j = 0; j < N_VAR; ++j)
+                        x_event[eventcount * nPts * N_VAR + j * nPts + i] = xi[j];
+                    for (int j = 0; j < N_VAR; ++j)
+                        dx_event[eventcount * nPts * N_VAR + j * nPts + i] = dxi[j];
+                    for (int j = 0; j < N_AUX; ++j)
+                        aux_event[eventcount * nPts * N_AUX + j * nPts + i] = auxi[j];
+                }
+                terminalEvent = computeEventFeatures(&ti, xi, dxi, auxi, &odata, opars);
+                if (terminalEvent | eventcount == op->maxEventCount)
+                    break;
+            }
 
-        updateObserverData(&ti, xi, dxi, auxi, &odata, opars); //TODO: if not FSAL, dxi buffer is delayed by one. (dxi is slope at LAST timestep)
+            updateObserverData(&ti, xi, dxi, auxi, &odata, opars); 
+        }
 
         //store every sp.nout'th step after the initial point
         if (step % sp->nout == 0)
         {
             ++storeix;
-
             t[storeix * nPts + i] = ti; //adaptive steppers give different timepoints for each trajectory
-
             for (int j = 0; j < N_VAR; ++j)
                 x[storeix * nPts * N_VAR + j * nPts + i] = xi[j];
-
             for (int j = 0; j < N_VAR; ++j)
                 dx[storeix * nPts * N_VAR + j * nPts + i] = dxi[j];
-
             for (int j = 0; j < N_AUX; ++j)
                 aux[storeix * nPts * N_AUX + j * nPts + i] = auxi[j];
         }
     }
 
-    //readout features of interest and write to global F:
-    finalizeFeatures(&ti, xi, dxi, auxi, &odata, opars, F, i, nPts);
+    if (sp->useObserver){
+        //readout features of interest and write to global F:
+        finalizeFeatures(&ti, xi, dxi, auxi, &odata, opars, F, i, nPts);
 
-    //finalize observerdata for possible continuation
-    finalizeObserverData(&ti, xi, dxi, auxi, &odata, opars, tspan);
+        //finalize observerdata for possible continuation
+        finalizeObserverData(&ti, xi, dxi, auxi, &odata, opars, tspan);
 
+        //store the observerData in global memory
+        OData[i] = odata;
+    }
+
+    nStored[i] = storeix; //storeix ranged from 0 to nStored-1
 
     //write the final solution values to global memory.
     for (int j = 0; j < N_VAR; ++j)
@@ -127,8 +152,7 @@ __kernel void odedriver(
     // To get same RNG on repeat (non-continued) run, need to set the seed to same value
     for (int j = 0; j < N_RNGSTATE; ++j)
         RNGstate[j * nPts + i] = rd.state[j];
-
-    OData[i] = odata;
     
-    nStored[i] = storeix; //storeix ranged from 0 to nStored-1
+    // update dt to its final value (for adaptive stepper continue)
+    d_dt[i] = dt;
 }

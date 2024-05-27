@@ -55,7 +55,7 @@
 #define E6 RCONST(22.0)/RCONST(525.0)
 #define E7 RCONST(-1.0)/RCONST(40.0)
 
-inline realtype do_step(realtype *ti, realtype xi[], realtype k1[], const realtype pars[], const realtype dt, realtype aux[], realtype err[], const realtype wi[])
+static inline realtype do_step(realtype *ti, realtype xi[], realtype k1[], const realtype pars[], const realtype dt, realtype aux[], realtype err[], const realtype wi[])
 {
     realtype tNew = *ti + dt;
     realtype newDt = tNew - *ti; //use the effective part of dt

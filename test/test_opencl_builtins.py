@@ -33,6 +33,7 @@ from clode import (
     floor,
     fmod,
     gamma,
+    heaviside,
     hypot,
     ilogb,
     ldexp,
@@ -106,7 +107,7 @@ def test_opencl_builtins() -> None:
         aux[26] = 0.0  # fma(x0, x1, x2)
         aux[27] = fmod(x0, x1 + 1)
         # aux[28] = fract(x0) # Compile error
-        aux[28] = t
+        aux[28] = heaviside(t - 0.5)
         aux[29] = gamma(x0 + 1)
         aux[30] = hypot(x0, x1)
         aux[31] = float(ilogb(x0 + 1))
@@ -118,7 +119,7 @@ def test_opencl_builtins() -> None:
         aux[37] = log10(x0 + 1)
         aux[38] = 0.0  # logb(x0 + 1)
         aux[39] = 0.0  # mad(x0, x1, x2)
-        # aux[40] = nan()
+        aux[40] = 0.0  # nan()
         aux[41] = nextafter(x0, x1)
         aux[42] = pow(x0, x1)
         aux[43] = pown(x0, p0)
@@ -156,8 +157,7 @@ def test_opencl_builtins() -> None:
         max_steps=3,
     )
 
-    sim.trajectory()
-    aux_values = sim.get_aux()[0]
+    trajectory = sim.trajectory()
 
     vars_arr = list(variables.values())
     params_arr = list(parameters.values())
@@ -166,7 +166,12 @@ def test_opencl_builtins() -> None:
         dx = [0.0] * len(vars_arr)
         w: List[float] = []
         rhs(t, vars_arr, params_arr, dx, aux_arr, w)
-        for i in range(len(aux)):
+        for i, auxi in enumerate(aux):
+            cl_aux_arr = trajectory.aux[auxi]
             assert np.isclose(
-                aux_values[t_index, i], aux_arr[i], atol=1e-7
-            ), f"Divergence at index {i} at time {t}, expected {aux_arr[i]}, got {aux_values[t_index, i]}"
+                cl_aux_arr[t_index], aux_arr[i], atol=1e-7
+            ), f"Assertion failed for {auxi} at time {t}, expected {aux_arr[i]}, got {cl_aux_arr[t_index]}"
+
+
+if __name__ == "__main__":
+    test_opencl_builtins()

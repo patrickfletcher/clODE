@@ -3,7 +3,7 @@ CLODE C++/Python interface
 """
 from __future__ import annotations
 import typing
-__all__ = ['CLDeviceType', 'CLVendor', 'DEVICE_TYPE_ACCELERATOR', 'DEVICE_TYPE_ALL', 'DEVICE_TYPE_CPU', 'DEVICE_TYPE_CUSTOM', 'DEVICE_TYPE_DEFAULT', 'DEVICE_TYPE_GPU', 'DeviceInfo', 'FeatureSimulatorBase', 'LogLevel', 'LoggerSingleton', 'ObserverParams', 'OpenCLResource', 'PlatformInfo', 'ProblemInfo', 'SimulatorBase', 'SolverParams', 'TrajectorySimulatorBase', 'VENDOR_AMD', 'VENDOR_ANY', 'VENDOR_INTEL', 'VENDOR_NVIDIA', 'critical', 'debug', 'err', 'get_logger', 'info', 'off', 'print_opencl', 'query_opencl', 'trace', 'warn']
+__all__ = ['CLDeviceType', 'CLVendor', 'DEVICE_TYPE_ACCELERATOR', 'DEVICE_TYPE_ALL', 'DEVICE_TYPE_CPU', 'DEVICE_TYPE_CUSTOM', 'DEVICE_TYPE_DEFAULT', 'DEVICE_TYPE_GPU', 'DeviceInfo', 'FeatureSimulatorBase', 'LogLevel', 'LoggerSingleton', 'ObserverParams', 'OpenCLResource', 'PlatformInfo', 'ProblemInfo', 'SimulatorBase', 'SolverParams', 'TrajectorySimulatorBase', 'VENDOR_AMD', 'VENDOR_ANY', 'VENDOR_INTEL', 'VENDOR_NVIDIA', 'critical', 'debug', 'err', 'get_logger', 'info', 'off', 'query_opencl', 'trace', 'warn']
 class CLDeviceType:
     """
     Members:
@@ -21,12 +21,12 @@ class CLDeviceType:
       DEVICE_TYPE_CUSTOM
     """
     DEVICE_TYPE_ACCELERATOR: typing.ClassVar[CLDeviceType]  # value = <CLDeviceType.DEVICE_TYPE_ACCELERATOR: 8>
-    DEVICE_TYPE_ALL: typing.ClassVar[CLDeviceType]  # value = <CLDeviceType.DEVICE_TYPE_ALL: 4294967295>
+    DEVICE_TYPE_ALL: typing.ClassVar[CLDeviceType]  # value = <CLDeviceType.DEVICE_TYPE_ALL: -1>
     DEVICE_TYPE_CPU: typing.ClassVar[CLDeviceType]  # value = <CLDeviceType.DEVICE_TYPE_CPU: 2>
     DEVICE_TYPE_CUSTOM: typing.ClassVar[CLDeviceType]  # value = <CLDeviceType.DEVICE_TYPE_CUSTOM: 16>
     DEVICE_TYPE_DEFAULT: typing.ClassVar[CLDeviceType]  # value = <CLDeviceType.DEVICE_TYPE_DEFAULT: 1>
     DEVICE_TYPE_GPU: typing.ClassVar[CLDeviceType]  # value = <CLDeviceType.DEVICE_TYPE_GPU: 4>
-    __members__: typing.ClassVar[dict[str, CLDeviceType]]  # value = {'DEVICE_TYPE_ALL': <CLDeviceType.DEVICE_TYPE_ALL: 4294967295>, 'DEVICE_TYPE_CPU': <CLDeviceType.DEVICE_TYPE_CPU: 2>, 'DEVICE_TYPE_GPU': <CLDeviceType.DEVICE_TYPE_GPU: 4>, 'DEVICE_TYPE_ACCELERATOR': <CLDeviceType.DEVICE_TYPE_ACCELERATOR: 8>, 'DEVICE_TYPE_DEFAULT': <CLDeviceType.DEVICE_TYPE_DEFAULT: 1>, 'DEVICE_TYPE_CUSTOM': <CLDeviceType.DEVICE_TYPE_CUSTOM: 16>}
+    __members__: typing.ClassVar[dict[str, CLDeviceType]]  # value = {'DEVICE_TYPE_ALL': <CLDeviceType.DEVICE_TYPE_ALL: -1>, 'DEVICE_TYPE_CPU': <CLDeviceType.DEVICE_TYPE_CPU: 2>, 'DEVICE_TYPE_GPU': <CLDeviceType.DEVICE_TYPE_GPU: 4>, 'DEVICE_TYPE_ACCELERATOR': <CLDeviceType.DEVICE_TYPE_ACCELERATOR: 8>, 'DEVICE_TYPE_DEFAULT': <CLDeviceType.DEVICE_TYPE_DEFAULT: 1>, 'DEVICE_TYPE_CUSTOM': <CLDeviceType.DEVICE_TYPE_CUSTOM: 16>}
     def __eq__(self, other: typing.Any) -> bool:
         ...
     def __getstate__(self) -> int:
@@ -115,7 +115,7 @@ class DeviceInfo:
         Device info string representation
         """
 class FeatureSimulatorBase(SimulatorBase):
-    def __init__(self, arg0: ProblemInfo, arg1: str, arg2: str, arg3: bool, arg4: OpenCLResource, arg5: str) -> None:
+    def __init__(self, arg0: ProblemInfo, arg1: str, arg2: str, arg3: ObserverParams, arg4: bool, arg5: OpenCLResource, arg6: str) -> None:
         ...
     def __repr__(self) -> str:
         """
@@ -139,16 +139,14 @@ class FeatureSimulatorBase(SimulatorBase):
         ...
     def get_observer_name(self) -> str:
         ...
-    @typing.overload
-    def initialize(self, arg0: list[float], arg1: list[float], arg2: list[float], arg3: SolverParams) -> None:
-        """
-        Initialize FeatureSimulatorBase
-        """
-    @typing.overload
-    def initialize(self, arg0: list[float], arg1: list[float], arg2: list[float], arg3: SolverParams, arg4: ObserverParams) -> None:
-        """
-        Initialize FeatureSimulatorBase
-        """
+    def get_observer_params(self) -> ObserverParams:
+        ...
+    def initialize_observer(self) -> None:
+        ...
+    def is_observer_initialized(self) -> bool:
+        ...
+    def set_observer(self, arg0: str) -> None:
+        ...
     def set_observer_params(self, arg0: ObserverParams) -> None:
         ...
 class LogLevel:
@@ -211,10 +209,19 @@ class LoggerSingleton:
     def set_log_pattern(self, arg0: str) -> None:
         ...
 class ObserverParams:
+    dx_down_threshold: float
+    dx_up_threshold: float
     e_var_ix: int
+    eps_dx: float
     f_var_ix: int
-    maxEventCount: int
-    def __init__(self, arg0: int, arg1: int, arg2: int, arg3: float, arg4: float, arg5: float, arg6: float, arg7: float, arg8: float, arg9: float, arg10: float) -> None:
+    max_event_count: int
+    max_event_timestamps: int
+    min_amp: float
+    min_imi: float
+    nhood_radius: float
+    x_down_threshold: float
+    x_up_threshold: float
+    def __init__(self, e_var_ix: int = 0, f_var_ix: int = 0, max_event_count: int = 100, max_event_timestamps: int = 0, min_amp: float = 0.0, min_imi: float = 0.0, nhood_radius: float = 0.05, x_up_threshold: float = 0.2, x_down_threshold: float = 0.2, dx_up_threshold: float = 0.0, dx_down_threshold: float = 0.0, eps_dx: float = 0.0) -> None:
         ...
     def __repr__(self) -> str:
         ...
@@ -268,7 +275,10 @@ class PlatformInfo:
         """
 class ProblemInfo:
     aux: list[str]
+    num_aux: int
     num_noise: int
+    num_par: int
+    num_var: int
     pars: list[str]
     src_file: str
     vars: list[str]
@@ -289,9 +299,13 @@ class SimulatorBase:
         ...
     def get_available_steppers(self) -> list[str]:
         ...
+    def get_pars(self) -> list[float]:
+        ...
     def get_problem_info(self) -> ProblemInfo:
         ...
     def get_program_string(self) -> str:
+        ...
+    def get_solver_params(self) -> SolverParams:
         ...
     def get_tspan(self) -> list[float]:
         ...
@@ -299,27 +313,35 @@ class SimulatorBase:
         ...
     def get_xf(self) -> list[float]:
         ...
-    def initialize(self, tspan: list[float], x0: list[float], pars: list[float], solver_params: SolverParams) -> None:
-        """
-        Initialize CLODE
-        """
     def print_status(self) -> None:
         ...
+    @typing.overload
+    def seed_rng(self) -> None:
+        """
+        Seed RNG
+        """
     @typing.overload
     def seed_rng(self, seed: int) -> None:
         """
         Seed RNG
         """
     @typing.overload
-    def seed_rng(self) -> None:
-        """
-        Seed RNG
-        """
+    def set_opencl(self, arg0: OpenCLResource) -> None:
+        ...
+    @typing.overload
+    def set_opencl(self, arg0: int, arg1: int) -> None:
+        ...
     def set_pars(self, arg0: list[float]) -> None:
+        ...
+    def set_precision(self, arg0: bool) -> None:
         ...
     def set_problem_data(self, arg0: list[float], arg1: list[float]) -> None:
         ...
+    def set_problem_info(self, arg0: ProblemInfo) -> None:
+        ...
     def set_solver_params(self, arg0: SolverParams) -> None:
+        ...
+    def set_stepper(self, arg0: str) -> None:
         ...
     def set_tspan(self, arg0: list[float]) -> None:
         ...
@@ -360,26 +382,22 @@ class TrajectorySimulatorBase(SimulatorBase):
         ...
     def get_x(self) -> list[float]:
         ...
-    def initialize(self, arg0: list[float], arg1: list[float], arg2: list[float], arg3: SolverParams) -> None:
-        """
-        Initialize TrajectorySimulatorBase
-        """
     def trajectory(self) -> None:
         ...
+def _print_opencl() -> None:
+    """
+    Print OpenCL devices
+    """
 def get_logger() -> LoggerSingleton:
     """
     Get logger singleton instance
-    """
-def print_opencl() -> None:
-    """
-    Print OpenCL devices
     """
 def query_opencl() -> list[PlatformInfo]:
     """
     Query OpenCL devices
     """
 DEVICE_TYPE_ACCELERATOR: CLDeviceType  # value = <CLDeviceType.DEVICE_TYPE_ACCELERATOR: 8>
-DEVICE_TYPE_ALL: CLDeviceType  # value = <CLDeviceType.DEVICE_TYPE_ALL: 4294967295>
+DEVICE_TYPE_ALL: CLDeviceType  # value = <CLDeviceType.DEVICE_TYPE_ALL: -1>
 DEVICE_TYPE_CPU: CLDeviceType  # value = <CLDeviceType.DEVICE_TYPE_CPU: 2>
 DEVICE_TYPE_CUSTOM: CLDeviceType  # value = <CLDeviceType.DEVICE_TYPE_CUSTOM: 16>
 DEVICE_TYPE_DEFAULT: CLDeviceType  # value = <CLDeviceType.DEVICE_TYPE_DEFAULT: 1>

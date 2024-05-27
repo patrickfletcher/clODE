@@ -37,8 +37,8 @@ integrator = clode.Simulator(
     dt=0.001,
 )
 
-# set up the ensemble of Wiener processes with identical parameters and initial conditions
-# Any parameters or initial conditions that are not specified will be set to the default values
+# set up the ensemble of Wiener processes with identical parameters and initial state
+# Any parameters or initial state that are not specified will be set to the default values
 nPts = 8192
 integrator.set_repeat_ensemble(nPts)
 

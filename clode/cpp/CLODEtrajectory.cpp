@@ -9,9 +9,6 @@
 CLODEtrajectory::CLODEtrajectory(ProblemInfo prob, std::string stepper, bool clSinglePrecision, OpenCLResource opencl, const std::string clodeRoot)
 	: CLODE(prob, stepper, clSinglePrecision, opencl, clodeRoot), nStoreMax(0)
 {
-
-	//printf("CLODE has been specialized: CLODEtrajectory");
-
 	clprogramstring += read_file(clodeRoot + "trajectory.cl");
 	spdlog::debug("constructor clODEtrajectory");
 }
@@ -19,22 +16,19 @@ CLODEtrajectory::CLODEtrajectory(ProblemInfo prob, std::string stepper, bool clS
 CLODEtrajectory::CLODEtrajectory(ProblemInfo prob, std::string stepper, bool clSinglePrecision, unsigned int platformID, unsigned int deviceID, const std::string clodeRoot)
 	: CLODE(prob, stepper, clSinglePrecision, platformID, deviceID, clodeRoot), nStoreMax(0)
 {
-
-	//printf("CLODE has been specialized: CLODEtrajectory");
-
 	clprogramstring += read_file(clodeRoot + "trajectory.cl");
 	spdlog::debug("constructor clODEtrajectory");
 }
 
 CLODEtrajectory::~CLODEtrajectory() {}
 
-
 // build program and create kernel objects. requires host variables to be set
 void CLODEtrajectory::buildCL()
 {
+	spdlog::info("Running CLODEtrajectory buildCL");
 	buildProgram();
 
-	//set up the kernels
+	// set up the kernels
 	try
 	{
 		cl_transient = cl::Kernel(opencl.getProgram(), "transient", &opencl.error);
@@ -42,62 +36,37 @@ void CLODEtrajectory::buildCL()
 	}
 	catch (cl::Error &er)
 	{
-		spdlog::error("CLODEtrajectory::initializeTrajectoryKernel():{}({})", er.what(), CLErrorString(er.err()).c_str());
+		spdlog::error("CLODEtrajectory::buildCL() create kernels:{}({})", er.what(), CLErrorString(er.err()).c_str());
 		throw er;
 	}
-	clInitialized = false;
-	spdlog::debug("initialize trajectory kernel");
-}
-
-//initialize everything
-void CLODEtrajectory::initialize(std::vector<cl_double> newTspan, std::vector<cl_double> newX0, std::vector<cl_double> newPars, SolverParams<cl_double> newSp)
-{
-
-	clInitialized = false;
-
-	setTspan(newTspan);
-	setProblemData(newX0, newPars); //will set nPts
-	setSolverParams(newSp);
-	//set up output variables, depends on sp.max_store, nPts, nVar, nAux
-	resizeTrajectoryVariables(); 
-
-	clInitialized = true;
-	spdlog::debug("initialize clODEtrajectory");
+	spdlog::debug("Created trajectory kernels");
 }
 
 void CLODEtrajectory::resizeTrajectoryVariables()
 {
+	int currentStoreAlloc = sp.max_store; // TODO: time chunking for long trajectories
 
-	int currentStoreAlloc = sp.max_store; //TODO: always alloc sp.max_store? or try to compute something?
-	//catch any changes to tspan, dt, or nout:
-	// int currentStoreAlloc=(tspan[1]-tspan[0])/(sp.dt*sp.nout)+1;
-	// currentStoreAlloc=std::min(currentStoreAlloc, sp.max_store);
-	//~ if (currentStoreAlloc > sp.max_store) {
-	//~ currentStoreAlloc=sp.max_store;
-	//~ printf("Warning: (tspan[1]-tspan[0])/(dt*nout)+1 > max_store. Reducing storage to max_store={} timepoints. ",sp.max_store);
-	//~ }
-
-	//check largest desired memory chunk against device's maximum allowable variable size
+	// check largest desired memory chunk against device's maximum allowable variable size
 	size_t largestAlloc = std::max(1 /*t*/, std::max(nVar /*x, dx*/, nAux /*aux*/)) * nPts * currentStoreAlloc * realSize;
 
 	if (largestAlloc > opencl.getMaxMemAllocSize())
 	{
 		int estimatedMaxStoreAlloc = std::floor(opencl.getMaxMemAllocSize() / (std::max(1, std::max(nVar, nAux)) * nPts * realSize));
-        spdlog::error("Storage requested exceeds device maximum variable size. Reason: {}. Try reducing storage to <{} time points, or reducing nPts. ", nAux > nVar ? "aux vars" : "state vars", estimatedMaxStoreAlloc);
+		spdlog::error("Storage requested exceeds device maximum variable size. Reason: {}. Try reducing storage to <{} time points, or reducing nPts. ", nAux > nVar ? "aux vars" : "state vars", estimatedMaxStoreAlloc);
 		throw std::invalid_argument("nPts*nStoreMax*nVar*realSize or nPts*nStoreMax*nAux*realSize is too big");
 	}
 
 	size_t currentTelements = currentStoreAlloc * nPts;
 
-	//only resize device variables if size changed, or if not yet initialized
-	if (!clInitialized || nStoreMax != currentStoreAlloc || telements != currentTelements)
+	// only resize device variables if size changed
+	if (nStoreMax != currentStoreAlloc || telements != currentTelements)
 	{
 
 		nStoreMax = currentStoreAlloc;
 		telements = currentTelements;
 		xelements = nVar * currentTelements;
 		// cl::Buffer doesn't like zero-sized arrays:
-		auxelements = nAux>0 ? nAux * currentTelements : 1;
+		auxelements = nAux > 0 ? nAux * currentTelements : 1;
 
 		t.resize(telements);
 		x.resize(xelements);
@@ -105,10 +74,10 @@ void CLODEtrajectory::resizeTrajectoryVariables()
 		aux.resize(auxelements);
 		nStored.resize(nPts);
 
-		//resize device variables
+		// resize device variables
 		try
 		{
-			//trajectory
+			// trajectory
 			d_t = cl::Buffer(opencl.getContext(), CL_MEM_WRITE_ONLY, realSize * telements, NULL, &opencl.error);
 			d_x = cl::Buffer(opencl.getContext(), CL_MEM_WRITE_ONLY, realSize * xelements, NULL, &opencl.error);
 			d_dx = cl::Buffer(opencl.getContext(), CL_MEM_WRITE_ONLY, realSize * xelements, NULL, &opencl.error);
@@ -124,53 +93,46 @@ void CLODEtrajectory::resizeTrajectoryVariables()
 	}
 }
 
-//Simulation routine
+// Simulation routine
 void CLODEtrajectory::trajectory()
 {
-	if (clInitialized)
-	{
-		//resize output variables - will only occur if nPts or nSteps has changed [~4ms overhead on Tornado]
-		resizeTrajectoryVariables();
+	// resize output variables - will only occur if nPts or nSteps has changed [~4ms overhead on Tornado]
+	resizeTrajectoryVariables();
 
-		try
-		{
-			//kernel arguments
-			int ix = 0;
-			cl_trajectory.setArg(ix++, d_tspan);
-			cl_trajectory.setArg(ix++, d_x0);
-			cl_trajectory.setArg(ix++, d_pars);
-			cl_trajectory.setArg(ix++, d_sp);
-			cl_trajectory.setArg(ix++, d_xf);
-			cl_trajectory.setArg(ix++, d_RNGstate);
-			cl_trajectory.setArg(ix++, d_dt);
-			cl_trajectory.setArg(ix++, d_t);
-			cl_trajectory.setArg(ix++, d_x);
-			cl_trajectory.setArg(ix++, d_dx);
-			cl_trajectory.setArg(ix++, d_aux);
-			cl_trajectory.setArg(ix++, d_nStored);
-
-			//execute the kernel
-			opencl.error = opencl.getQueue().enqueueNDRangeKernel(cl_trajectory, cl::NullRange, cl::NDRange(nPts));
-			opencl.getQueue().finish();
-		}
-		catch (cl::Error &er)
-		{
-			spdlog::error("CLODEtrajectory::trajectory():{}({})", er.what(), CLErrorString(er.err()).c_str());
-			throw er;
-		}
-		spdlog::debug("run trajectory");
-	}
-	else
+	try
 	{
-		printf("CLODE has not been initialized");
+		// kernel arguments
+		int ix = 0;
+		cl_trajectory.setArg(ix++, d_tspan);
+		cl_trajectory.setArg(ix++, d_x0);
+		cl_trajectory.setArg(ix++, d_pars);
+		cl_trajectory.setArg(ix++, d_sp);
+		cl_trajectory.setArg(ix++, d_xf);
+		cl_trajectory.setArg(ix++, d_RNGstate);
+		cl_trajectory.setArg(ix++, d_dt);
+		cl_trajectory.setArg(ix++, d_t);
+		cl_trajectory.setArg(ix++, d_x);
+		cl_trajectory.setArg(ix++, d_dx);
+		cl_trajectory.setArg(ix++, d_aux);
+		cl_trajectory.setArg(ix++, d_nStored);
+
+		// execute the kernel
+		opencl.error = opencl.getQueue().enqueueNDRangeKernel(cl_trajectory, cl::NullRange, cl::NDRange(nPts));
+		opencl.getQueue().finish();
 	}
+	catch (cl::Error &er)
+	{
+		spdlog::error("CLODEtrajectory::trajectory():{}({})", er.what(), CLErrorString(er.err()).c_str());
+		throw er;
+	}
+	spdlog::debug("run trajectory");
 }
 
 std::vector<cl_double> CLODEtrajectory::getT()
 {
 
 	if (clSinglePrecision)
-	{ //cast back to double
+	{ // cast back to double
 		std::vector<cl_float> tF(telements);
 		opencl.error = copy(opencl.getQueue(), d_t, tF.begin(), tF.end());
 		t.assign(tF.begin(), tF.end());
@@ -187,7 +149,7 @@ std::vector<cl_double> CLODEtrajectory::getX()
 {
 
 	if (clSinglePrecision)
-	{ //cast back to double
+	{ // cast back to double
 		std::vector<cl_float> xF(xelements);
 		opencl.error = copy(opencl.getQueue(), d_x, xF.begin(), xF.end());
 		x.assign(xF.begin(), xF.end());
@@ -204,7 +166,7 @@ std::vector<cl_double> CLODEtrajectory::getDx()
 {
 
 	if (clSinglePrecision)
-	{ //cast back to double
+	{ // cast back to double
 		std::vector<cl_float> dxF(xelements);
 		opencl.error = copy(opencl.getQueue(), d_dx, dxF.begin(), dxF.end());
 		dx.assign(dxF.begin(), dxF.end());
@@ -218,7 +180,7 @@ std::vector<cl_double> CLODEtrajectory::getDx()
 }
 
 std::vector<cl_double> CLODEtrajectory::getAux()
-{ //cast back to double
+{ // cast back to double
 
 	if (clSinglePrecision)
 	{

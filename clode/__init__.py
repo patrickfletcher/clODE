@@ -1,3 +1,7 @@
+# This is the package public interface (expose objects for "from clode import X")
+# - keep only main simulation items here?
+# - keep CL-related things in runtime?
+from clode.cpp.clode_cpp_wrapper import ObserverParams, ProblemInfo, SolverParams
 from clode.features import FeatureSimulator, Observer, ObserverOutput
 from clode.function_converter import (
     OpenCLConverter,
@@ -35,6 +39,7 @@ from clode.opencl_builtins import (
     floor,
     fmod,
     gamma,
+    heaviside,
     hypot,
     ilogb,
     ldexp,
@@ -63,9 +68,9 @@ from clode.opencl_builtins import (
 from clode.runtime import (
     CLDeviceType,
     CLVendor,
+    DeviceInfo,
     LogLevel,
-    ProblemInfo,
-    SolverParams,
+    PlatformInfo,
     get_log_level,
     initialize_runtime,
     print_opencl,
@@ -74,21 +79,39 @@ from clode.runtime import (
     set_log_pattern,
 )
 from clode.solver import Simulator, Stepper
-from clode.trajectory import TrajectorySimulator
+from clode.trajectory import TrajectoryOutput, TrajectorySimulator
 from clode.xpp_parser import convert_xpp_file, format_opencl_rhs, read_ode_parameters
 
-__version__ = "0.7.1"
+__version__ = "0.8.1"
 
 __all__ = [
-    "TrajectorySimulator",
-    "Simulator",
+    "CLDeviceType",
+    "CLVendor",
+    "DeviceInfo",
+    "PlatformInfo",
+    "initialize_runtime",
+    "print_opencl",
+    "query_opencl",
+    "LogLevel",
+    "get_log_level",
+    "set_log_level",
+    "set_log_pattern",
+    "ProblemInfo",
+    "SolverParams",
     "Stepper",
+    "Simulator",
     "FeatureSimulator",
     "Observer",
+    "ObserverParams",
     "ObserverOutput",
+    "TrajectorySimulator",
+    "TrajectoryOutput",
     "OpenCLConverter",
     "OpenCLRhsEquation",
     "convert_str_to_opencl",
+    "convert_xpp_file",
+    "format_opencl_rhs",
+    "read_ode_parameters",
     "acos",
     "acosh",
     "acospi",
@@ -118,6 +141,7 @@ __all__ = [
     "fmod",
     "gamma",
     "hypot",
+    "heaviside",
     "ilogb",
     "ldexp",
     "lgamma",
@@ -141,18 +165,4 @@ __all__ = [
     "tanh",
     "tanpi",
     "trunc",
-    "CLDeviceType",
-    "CLVendor",
-    "LogLevel",
-    "ProblemInfo",
-    "SolverParams",
-    "get_log_level",
-    "initialize_runtime",
-    "print_opencl",
-    "query_opencl",
-    "set_log_level",
-    "set_log_pattern",
-    "convert_xpp_file",
-    "format_opencl_rhs",
-    "read_ode_parameters",
 ]

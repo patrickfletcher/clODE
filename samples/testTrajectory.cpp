@@ -80,7 +80,9 @@ int main(int argc, char **argv)
 	CLODEtrajectory clo(prob, stepper, CLSinglePrecision, opencl, CLODE_ROOT);
 
     clo.buildCL();
-    clo.initialize(tspan, x0, pars, sp);
+	clo.setSolverParams(sp);
+	clo.setProblemData(x0, pars);
+	clo.setTspan(tspan);
 
     int mySeed = 1;
     clo.seedRNG(mySeed);

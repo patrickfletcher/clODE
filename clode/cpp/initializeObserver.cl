@@ -23,11 +23,11 @@ __kernel void initializeObserver(
     realtype p[N_PAR], xi[N_VAR], dxi[N_VAR];
     realtype auxi[N_AUX>0?N_AUX:1];
     realtype wi[N_WIENER>0?N_WIENER:1];
-	rngData rd;
+	struct rngData rd;
 
 	//get private copy of ODE parameters, initial data, and compute slope at initial state
 	ti = tspan[0];
-	dt = sp->dt;
+    dt = d_dt[i];
 
 	for (int j = 0; j < N_PAR; ++j)
 		p[j] = pars[j * nPts + i];
@@ -38,23 +38,26 @@ __kernel void initializeObserver(
 	for (int j = 0; j < N_RNGSTATE; ++j)
 		rd.state[j] = RNGstate[j * nPts + i];
 
-	rd.randnUselast = 0;
+	ObserverData odata = OData[i];
 
+    // generate random numbers if needed
+    rd.randnUselast = 0;
     for (int j = 0; j < N_WIENER; ++j)
 #ifdef STOCHASTIC_STEPPER
         wi[j] = randn(&rd) / sqrt(dt);
 #else
-        wi[j] = RCONST(0.0);
+        wi[j] = ZERO;
 #endif
-	getRHS(ti, xi, p, dxi, auxi, wi); //slope at initial point, needed for FSAL
 
-	ObserverData odata = OData[i]; //private copy of observer data
+    //get the slope and aux at initial point
+    getRHS(ti, xi, p, dxi, auxi, wi); 
 
 	initializeObserverData(&ti, xi, dxi, auxi, &odata, opars);
 
 #ifdef TWO_PASS_EVENT_DETECTOR
 
-    int step = 0;
+	//time-stepping loop
+    unsigned int step = 0;
     int stepflag = 0;
 	while (ti < tspan[1] && step < sp->max_steps)
 	{
@@ -65,6 +68,11 @@ __kernel void initializeObserver(
 
 		warmupObserverData(&ti, xi, dxi, auxi, &odata, opars);
 	}
+	//rewind the time and state so initializeEventDetector gets the right values
+	ti = tspan[0];
+	for (int j = 0; j < N_VAR; ++j)
+		xi[j] = x0[j * nPts + i];
+	getRHS(ti, xi, p, dxi, auxi, wi);
 
 #endif //TWO_PASS_EVENT_DETECTOR
 

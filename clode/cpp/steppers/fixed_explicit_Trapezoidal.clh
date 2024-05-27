@@ -2,7 +2,7 @@
 
 //Explicit trapezoidal (Heun's method, improved Euler) time step
 #define FIXED_STEPSIZE_EXPLICIT
-inline void do_step(realtype *ti, realtype xi[], realtype k1[], const realtype pars[], const realtype dt, realtype aux[], const realtype wi[])
+static inline void do_step(realtype *ti, realtype xi[], realtype k1[], const realtype pars[], const realtype dt, realtype aux[], const realtype wi[])
 {
     realtype th = *ti + dt;
     realtype tmp[N_VAR], k2[N_VAR];

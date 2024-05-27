@@ -4,25 +4,22 @@
 #define OBSERVER_BASIC_ALLVAR_H
 
 #ifdef __cplusplus
-//Collect all the info for this observer. Must be a static function when defining function in header, otherwise defined for each time included.
-static ObserverInfo getObserverInfo_basicAll(const ProblemInfo pi, const int fVarIx, const int eVarIx)
-{
-    ObserverInfo oi;
+//Collect all the info for this observer
+static struct ObserverInfo getObserverInfo_basicAll(const ProblemInfo pi, const unsigned int fVarIx, const unsigned int eVarIx, const unsigned int nStoredEvents) {
+    struct ObserverInfo oi;
     oi.define = "USE_OBSERVER_BASIC_ALLVAR";
-    size_t n_real = (5*pi.nVar + 3*pi.nAux); //hard coded, because C++ code can't see the N_VAR, N_AUX etc...
-    size_t n_int = 2;
+    size_t n_real = (5*pi.nVar + 3*pi.nAux + 2); //hard coded, because C++ code can't see the N_VAR, N_AUX etc...
+    size_t n_int = 1;
     oi.observerDataSizeFloat = n_real*sizeof(cl_float) + n_int*sizeof(cl_uint);
     oi.observerDataSizeDouble = n_real*sizeof(cl_double) + n_int*sizeof(cl_uint); 
-    for (int j = 0; j < pi.nVar; ++j)
-    {
+    for (int j = 0; j < pi.nVar; ++j) {
         oi.featureNames.push_back("max " + pi.varNames[j]);
         oi.featureNames.push_back("min " + pi.varNames[j]);
         oi.featureNames.push_back("mean " + pi.varNames[j]);
         oi.featureNames.push_back("max d" + pi.varNames[j] + "/dt");
         oi.featureNames.push_back("min d" + pi.varNames[j] + "/dt");
     }
-    for (int j = 0; j < pi.nAux; ++j)
-    {
+    for (int j = 0; j < pi.nAux; ++j) {
         oi.featureNames.push_back("max " + pi.auxNames[j]);
         oi.featureNames.push_back("min " + pi.auxNames[j]);
         oi.featureNames.push_back("mean " + pi.auxNames[j]);
@@ -35,7 +32,7 @@ static ObserverInfo getObserverInfo_basicAll(const ProblemInfo pi, const int fVa
 
 #ifdef USE_OBSERVER_BASIC_ALLVAR
 
-typedef struct ObserverData_basicAll
+struct ObserverData_basicAll
 {
     realtype xTrajectoryMax[N_VAR];
     realtype xTrajectoryMin[N_VAR];
@@ -45,86 +42,80 @@ typedef struct ObserverData_basicAll
     realtype auxTrajectoryMax[N_AUX];
     realtype auxTrajectoryMin[N_AUX];
     realtype auxTrajectoryMean[N_AUX];
-    unsigned int eventcount;
+    realtype t_last;
+    realtype t_start;
     unsigned int stepcount;
-} ObserverData;
+};
 
-inline void initializeObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
-{
-    for (int j = 0; j < N_VAR; ++j)
-    {
+typedef struct ObserverData_basicAll ObserverData;
+
+static inline void initializeObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op) {
+    for (int j = 0; j < N_VAR; ++j) {
         od->xTrajectoryMax[j] = -BIG_REAL;
         od->xTrajectoryMin[j] = BIG_REAL;
-        od->xTrajectoryMean[j] = RCONST(0.0);
+        od->xTrajectoryMean[j] = ZERO;
         od->dxTrajectoryMax[j] = -BIG_REAL;
         od->dxTrajectoryMin[j] = BIG_REAL;
     }
-    for (int j = 0; j < N_AUX; ++j)
-    {
+    for (int j = 0; j < N_AUX; ++j) {
         od->auxTrajectoryMax[j] = -BIG_REAL;
         od->auxTrajectoryMin[j] = BIG_REAL;
-        od->auxTrajectoryMean[j] = RCONST(0.0);
+        od->auxTrajectoryMean[j] = ZERO;
     }
-    od->eventcount = 0;
+    od->t_last = *ti;
+    od->t_start = *ti;
     od->stepcount = 0;
 }
 
 //nothing to do - One pass detector
-inline void warmupObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
-{
+static inline void warmupObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op) {
 }
 
 //no events
-inline void initializeEventDetector(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
-{
+static inline void initializeEventDetector(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op) {
 }
 
 //no events
-inline bool eventFunction(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
-{
+static inline bool eventFunction(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op) {
     return false;
 }
 
 //no events
-inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
-{
+static inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op) {
     return false;
 }
 
 //all features are per-timestep (eventOccurred unused)
-inline void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op)
-{
+static inline void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op) {
     ++od->stepcount;
-    for (int j = 0; j < N_VAR; ++j)
-    {
+    realtype dt = *ti - od->t_last;
+    od->t_last = *ti;
+    realtype elapsedTime = *ti - od->t_start;
+    for (int j = 0; j < N_VAR; ++j) {
         od->xTrajectoryMax[j] = fmax(xi[j], od->xTrajectoryMax[j]);
         od->xTrajectoryMin[j] = fmin(xi[j], od->xTrajectoryMin[j]);
-        runningMean(&od->xTrajectoryMean[j], xi[j], od->stepcount);
+        od->xTrajectoryMean[j] = runningMeanTime(od->xTrajectoryMean[j], xi[j], dt, elapsedTime);
         od->dxTrajectoryMax[j] = fmax(dxi[j], od->dxTrajectoryMax[j]);
         od->dxTrajectoryMin[j] = fmin(dxi[j], od->dxTrajectoryMin[j]);
     }
-    for (int j = 0; j < N_AUX; ++j)
-    {
+    for (int j = 0; j < N_AUX; ++j) {
         od->auxTrajectoryMax[j] = fmax(auxi[j], od->auxTrajectoryMax[j]);
         od->auxTrajectoryMin[j] = fmin(auxi[j], od->auxTrajectoryMin[j]);
-        runningMean(&od->auxTrajectoryMean[j], auxi[j], od->stepcount);
+        od->auxTrajectoryMean[j] = runningMeanTime(od->auxTrajectoryMean[j], auxi[j], dt, elapsedTime);
     }
 }
 
 
-inline void finalizeFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op, __global realtype *F, int i, int nPts)
-{
+static inline void finalizeFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op, __global realtype *F, int i, int nPts) {
     int ix = 0;
-    for (int j = 0; j < N_VAR; ++j)
-    {
+    for (int j = 0; j < N_VAR; ++j) {
         F[ix++ * nPts + i] = od->xTrajectoryMax[j];
         F[ix++ * nPts + i] = od->xTrajectoryMin[j];
         F[ix++ * nPts + i] = od->xTrajectoryMean[j];
         F[ix++ * nPts + i] = od->dxTrajectoryMax[j];
         F[ix++ * nPts + i] = od->dxTrajectoryMin[j];
     }
-    for (int j = 0; j < N_AUX; ++j)
-    {
+    for (int j = 0; j < N_AUX; ++j) {
         F[ix++ * nPts + i] = od->auxTrajectoryMax[j];
         F[ix++ * nPts + i] = od->auxTrajectoryMin[j];
         F[ix++ * nPts + i] = od->auxTrajectoryMean[j];
@@ -133,9 +124,9 @@ inline void finalizeFeatures(realtype *ti, realtype xi[], realtype dxi[], realty
 }
 
 //Perform and post-integration cleanup of observer data to ensure it is ready for continuation if needed
-inline void finalizeObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op, __constant realtype *tspan)
-{
-    //nothing to do
+static inline void finalizeObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op, __constant realtype *tspan) {
+    realtype T = *ti - tspan[0];
+    od->t_start -= T;
 }
 
 #endif // USE_OBSERVER_BASIC_ALLVAR
