@@ -10,12 +10,14 @@ authors:
   - name: Patrick Fletcher
     affiliation: 1
   - name: Wolf Byttner
-    affiliation: 2
+    affiliation: "2, 3"
 affiliations:
-  - name: National Institute of Health, USA
+  - name: National Institute of Health, United States of America
     index: 1
-  - name: University of Exeter, UK
+  - name: University of Exeter, United Kingdom
     index: 2
+  - name: Planar AI, United Kingdom
+    index: 3
 date: 2023-03-14
 bibliography: paper.bib
 ---
