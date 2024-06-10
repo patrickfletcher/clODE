@@ -433,10 +433,10 @@ class Simulator:
             )
 
         if initial_state_array.shape[0] == 1:
-            initial_state_array = np.tile(initial_state_array, new_shape)
+            initial_state_array = np.tile(initial_state_array,  (new_size, 1))
 
         if parameter_array.shape[0] == 1:
-            parameter_array = np.tile(parameter_array, new_shape)
+            parameter_array = np.tile(parameter_array,  (new_size, 1))
 
         # possibly overwrite some or all of the arrays
         if isinstance(variables, np.ndarray):
