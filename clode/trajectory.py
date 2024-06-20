@@ -149,9 +149,6 @@ class TrajectorySimulator(Simulator):
             device_ids=device_ids,
         )
 
-        self._max_store = self._sp.max_store
-        self._n_out = self._sp.nout
-
         self._device_t = None
         self._device_x = None
         self._device_dx = None
@@ -229,17 +226,17 @@ class TrajectorySimulator(Simulator):
             raise ValueError("Must run trajectory() before getting trajectory data")
 
         # time_steps has one column per simulation (to support adaptive steppers)
-        t_shape = (self._ensemble_size, self._max_store)
+        t_shape = (self._ensemble_size, self._sp.max_store)
         arr = np.array(self._device_t[: np.prod(t_shape)])
         self._device_t = arr.reshape(t_shape, order="F")
 
-        data_shape = (self._ensemble_size, self.num_variables, self._max_store)
+        data_shape = (self._ensemble_size, self.num_variables, self._sp.max_store)
         arr = np.array(self._device_x[: np.prod(data_shape)])
         self._device_x = arr.reshape(data_shape, order="F")
         arr = np.array(self._device_dx[: np.prod(data_shape)])
         self._device_dx = arr.reshape(data_shape, order="F")
 
-        aux_shape = (self._ensemble_size, len(self.aux_names), self._max_store)
+        aux_shape = (self._ensemble_size, len(self.aux_names), self._sp.max_store)
         arr = np.array(self._device_aux[: np.prod(aux_shape)])
         self._device_aux = arr.reshape(aux_shape, order="F")
 
