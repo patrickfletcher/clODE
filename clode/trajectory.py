@@ -243,7 +243,7 @@ class TrajectorySimulator(Simulator):
         # list of trajectories, each stored as dict:
         results = list()
         for i in range(self._ensemble_size):
-            ni = self._device_n_stored[i]
+            ni = self._device_n_stored[i]+1
             ti = self._device_t[i, :ni].transpose()
             xi = self._device_x[i, :, :ni].transpose()
             dxi = self._device_dx[i, :, :ni].transpose()
