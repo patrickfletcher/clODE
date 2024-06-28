@@ -189,11 +189,13 @@ class TrajectorySimulator(Simulator):
 
         self._integrator.trajectory()
         # invalidate _device_t, _device_x, _device_dx, _device_aux, _device_final_state
-        # self._device_t = self._device_x = self._device_dx = self._device_aux = self._device_final_state = None
+        self._device_t = self._device_x = self._device_dx = self._device_aux = None
+        self._device_final_state = self._device_dt = self._device_tf = None
 
         if update_x0:
             self._integrator.shift_x0()
             # invalidate _device_initial_state
+            self._device_initial_state = None
 
         if fetch_results:
             return self.get_trajectory()
@@ -225,25 +227,28 @@ class TrajectorySimulator(Simulator):
         elif self._device_aux is None:
             raise ValueError("Must run trajectory() before getting trajectory data")
 
-        # time_steps has one column per simulation (to support adaptive steppers)
         t_shape = (self._ensemble_size, self._sp.max_store)
-        arr = np.array(self._device_t[: np.prod(t_shape)])
-        self._device_t = arr.reshape(t_shape, order="F")
+        self._device_t = np.array(
+            self._device_t[: np.prod(t_shape)], dtype=np.float64
+        ).reshape(t_shape, order="F")
 
         data_shape = (self._ensemble_size, self.num_variables, self._sp.max_store)
-        arr = np.array(self._device_x[: np.prod(data_shape)])
-        self._device_x = arr.reshape(data_shape, order="F")
-        arr = np.array(self._device_dx[: np.prod(data_shape)])
-        self._device_dx = arr.reshape(data_shape, order="F")
+        self._device_x = np.array(
+            self._device_x[: np.prod(data_shape)], dtype=np.float64
+        ).reshape(data_shape, order="F")
+        self._device_dx = np.array(
+            self._device_dx[: np.prod(data_shape)], dtype=np.float64
+        ).reshape(data_shape, order="F")
 
         aux_shape = (self._ensemble_size, len(self.aux_names), self._sp.max_store)
-        arr = np.array(self._device_aux[: np.prod(aux_shape)])
-        self._device_aux = arr.reshape(aux_shape, order="F")
+        self._device_aux = np.array(
+            self._device_aux[: np.prod(aux_shape)], dtype=np.float64
+        ).reshape(aux_shape, order="F")
 
         # list of trajectories, each stored as dict:
         results = list()
         for i in range(self._ensemble_size):
-            ni = self._device_n_stored[i]+1
+            ni = self._device_n_stored[i] + 1
             ti = self._device_t[i, :ni].transpose()
             xi = self._device_x[i, :, :ni].transpose()
             dxi = self._device_dx[i, :, :ni].transpose()

@@ -201,6 +201,8 @@ void CLODE::setNpts(cl_int newNpts)
 		dt.resize(nPts);
 		std::fill(dt.begin(), dt.end(), sp.dt);
 
+		tf.resize(nPts);
+
 		xf.resize(x0elements);
 		// new device variables
 		try
@@ -213,12 +215,16 @@ void CLODE::setNpts(cl_int newNpts)
 
 			// resize and fill dt buffer
 			d_dt = cl::Buffer(opencl.getContext(), CL_MEM_READ_WRITE, realSize * nPts, NULL, &opencl.error);
-			if (clSinglePrecision) {
+			d_tf = cl::Buffer(opencl.getContext(), CL_MEM_WRITE_ONLY, realSize * nPts, NULL, &opencl.error);
+			if (clSinglePrecision)
+			{
 				std::vector<cl_float> dtF(dt.begin(), dt.end());
 				opencl.error = copy(opencl.getQueue(), dtF.begin(), dtF.end(), d_dt);
 			}
 			else
+			{
 				opencl.error = copy(opencl.getQueue(), dt.begin(), dt.end(), d_dt);
+			}
 
 			// output of simulation
 			d_xf = cl::Buffer(opencl.getContext(), CL_MEM_READ_WRITE, realSize * x0elements, NULL, &opencl.error);
@@ -373,23 +379,18 @@ void CLODE::setSolverParams(SolverParams<cl_double> newSp)
 	try
 	{
 		sp = newSp;
-		// std::fill(dt.begin(), dt.end(), sp.dt);
+		std::fill(dt.begin(), dt.end(), sp.dt);
 
 		if (clSinglePrecision)
 		{ // downcast to float if desired
 			SolverParams<cl_float> spF = solverParamsToFloat(sp);
 			d_sp = cl::Buffer(opencl.getContext(), CL_MEM_READ_ONLY, sizeof(SolverParams<cl_float>), NULL, &opencl.error);
 			opencl.error = opencl.getQueue().enqueueWriteBuffer(d_sp, CL_TRUE, 0, sizeof(spF), &spF);
-			// std::vector<cl_float> dtF(dt.begin(), dt.end());
-			// opencl.error = copy(opencl.getQueue(), dtF.begin(), dtF.end(), d_dt);
-			// opencl.error = opencl.getQueue().enqueueFillBuffer(d_dt, spF.dt, 0, sizeof(spF.dt));
 		}
 		else
 		{
 			d_sp = cl::Buffer(opencl.getContext(), CL_MEM_READ_ONLY, sizeof(SolverParams<cl_double>), NULL, &opencl.error);
 			opencl.error = opencl.getQueue().enqueueWriteBuffer(d_sp, CL_TRUE, 0, sizeof(sp), &sp);
-			// opencl.error = copy(opencl.getQueue(), dt.begin(), dt.end(), d_dt);
-			// opencl.error = opencl.getQueue().enqueueFillBuffer(d_dt, sp.dt, 0, sizeof(sp.dt));
 		}
 	}
 	catch (cl::Error &er)
@@ -477,6 +478,7 @@ void CLODE::transient()
 		cl_transient.setArg(ix++, d_xf);
 		cl_transient.setArg(ix++, d_RNGstate);
 		cl_transient.setArg(ix++, d_dt);
+		cl_transient.setArg(ix++, d_tf);
 
 		// execute the kernel
 		opencl.error = opencl.getQueue().enqueueNDRangeKernel(cl_transient, cl::NullRange, cl::NDRange(nPts));
@@ -514,7 +516,6 @@ void CLODE::shiftX0()
 
 const std::vector<cl_double> CLODE::getX0()
 {
-
 	if (clSinglePrecision)
 	{ // cast back to double
 		std::vector<cl_float> x0F(x0elements);
@@ -526,12 +527,12 @@ const std::vector<cl_double> CLODE::getX0()
 		opencl.error = copy(opencl.getQueue(), d_x0, x0.begin(), x0.end());
 	}
 
+	spdlog::debug("get X0");
 	return x0;
 }
 
 const std::vector<cl_double> CLODE::getXf()
 {
-
 	if (clSinglePrecision)
 	{ // cast back to double
 		std::vector<cl_float> xfF(x0elements);
@@ -543,7 +544,42 @@ const std::vector<cl_double> CLODE::getXf()
 		opencl.error = copy(opencl.getQueue(), d_xf, xf.begin(), xf.end());
 	}
 
+	spdlog::debug("get XF");
 	return xf;
+}
+
+const std::vector<cl_double> CLODE::getDt()
+{
+	if (clSinglePrecision)
+	{ // cast back to double
+		std::vector<cl_float> dtF(nPts);
+		opencl.error = copy(opencl.getQueue(), d_dt, dtF.begin(), dtF.end());
+		dt.assign(dtF.begin(), dtF.end());
+	}
+	else
+	{
+		opencl.error = copy(opencl.getQueue(), d_dt, dt.begin(), dt.end());
+	}
+
+	spdlog::debug("get dt");
+	return dt;
+}
+
+const std::vector<cl_double> CLODE::getTf()
+{
+	if (clSinglePrecision)
+	{ // cast back to double
+		std::vector<cl_float> tfF(nPts);
+		opencl.error = copy(opencl.getQueue(), d_tf, tfF.begin(), tfF.end());
+		tf.assign(tfF.begin(), tfF.end());
+	}
+	else
+	{
+		opencl.error = copy(opencl.getQueue(), d_tf, tf.begin(), tf.end());
+	}
+
+	spdlog::debug("get tf");
+	return tf;
 }
 
 void CLODE::printStatus()

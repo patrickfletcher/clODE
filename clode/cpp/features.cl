@@ -8,16 +8,17 @@
 #include "steppers.cl"
 
 __kernel void features(
-	__constant realtype *tspan,         //time vector [t0,tf] - adds (tf-t0) to these at the end
-	__global realtype *x0,              //initial state 				[nPts*nVar]
-	__constant realtype *pars,          //parameter values				[nPts*nPar]
-	__constant struct SolverParams *sp, //dtmin/max, tols, etc
-	__global realtype *xf,              //final state 				[nPts*nVar]
-	__global ulong *RNGstate,           //state for RNG					[nPts*nRNGstate]
-    __global realtype *d_dt,            //array of dt values, one per solver
+    __constant realtype *tspan,         //time interval
+    __global realtype *x0,              //initial state 	   [nPts*nVar]
+    __constant realtype *pars,          //parameter values	   [nPts*nPar]
+    __constant struct SolverParams *sp, //dtmin/max, tols
+    __global realtype *xf,              //final state 		   [nPts*nVar]
+    __global ulong *RNGstate,           //final RNG	state	   [nPts*nRNGstate]
+    __global realtype *d_dt,            //final dt values      [nPts]
+    __global realtype *tf,              //final time values    [nPts]
 	__global ObserverData *OData,		//Observer data
-	__constant struct ObserverParams *opars,
-	__global realtype *F)
+	__constant struct ObserverParams *opars, //observer parameters
+	__global realtype *F)               //features             [nPts*nFeat]
 {
 	int i = get_global_id(0);
 	int nPts = get_global_size(0);
@@ -99,4 +100,7 @@ __kernel void features(
 
     // update dt to its final value (for adaptive stepper continue)
     d_dt[i] = dt;
+
+    // store the actual final time value
+    tf[i] = ti;
 }

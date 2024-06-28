@@ -7,14 +7,14 @@
 #include "steppers.cl"
 
 __kernel void initializeObserver(
-	__constant realtype *tspan,			//time vector [t0,tf] - adds (tf-t0) to these at the end
-	__global realtype *x0,				//initial state 				[nPts*nVar]
-	__constant realtype *pars,			//parameter values				[nPts*nPar]
-	__constant struct SolverParams *sp, //dtmin/max, tols, etc
-	__global ulong *RNGstate,			//enables host seeding/continued streams	    [nPts*nRNGstate]
-    __global realtype *d_dt,            //array of dt values, one per solver
-	__global ObserverData *OData,		//for continue
-	__constant struct ObserverParams *opars)
+    __constant realtype *tspan,         //time interval
+    __global realtype *x0,              //initial state 	   [nPts*nVar]
+    __constant realtype *pars,          //parameter values	   [nPts*nPar]
+    __constant struct SolverParams *sp, //dtmin/max, tols
+    __global ulong *RNGstate,           //final RNG	state	   [nPts*nRNGstate]
+    __global realtype *d_dt,            //final dt values      [nPts]
+	__global ObserverData *OData,		//Observer data
+	__constant struct ObserverParams *opars) //observer parameters
 {
 	int i = get_global_id(0);
 	int nPts = get_global_size(0);
@@ -81,5 +81,4 @@ __kernel void initializeObserver(
 	//update the global ObserverData array
 	OData[i] = odata;
 
-	//dt only evolves for TWO_PASS_EVENT_DETECTOR, in which case we want to restart. Don't save dt.
 }

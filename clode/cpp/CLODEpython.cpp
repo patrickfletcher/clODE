@@ -275,6 +275,8 @@ PYBIND11_MODULE(clode_cpp_wrapper, m)
         .def("get_pars", &CLODE::getPars)
         .def("get_x0", &CLODE::getX0)
         .def("get_xf", &CLODE::getXf)
+        .def("get_dt", &CLODE::getDt)
+        .def("get_tf", &CLODE::getTf)
         .def("get_available_steppers", &CLODE::getAvailableSteppers)
         .def("get_program_string", &CLODE::getProgramString)
         .def("print_status", &CLODE::printStatus);

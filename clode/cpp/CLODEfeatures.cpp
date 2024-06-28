@@ -239,6 +239,7 @@ void CLODEfeatures::features()
 		cl_features.setArg(ix++, d_xf);
 		cl_features.setArg(ix++, d_RNGstate);
 		cl_features.setArg(ix++, d_dt);
+		cl_features.setArg(ix++, d_tf);
 		cl_features.setArg(ix++, d_odata);
 		cl_features.setArg(ix++, d_op);
 		cl_features.setArg(ix++, d_F);

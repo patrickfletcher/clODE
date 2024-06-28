@@ -8,25 +8,26 @@
 #include "steppers.cl"
 
 __kernel void odedriver(
-    __constant realtype *tspan,         //time vector [t0,tf] - adds (tf-t0) to these at the end
-    __global realtype *x0,              //initial state 				[nPts*nVar]
-    __constant realtype *pars,          //parameter values				[nPts*nPar]
-    __constant struct SolverParams *sp, //dtmin/max, tols, etc
-    __global realtype *xf,              //final state 				[nPts*nVar]
-    __global ulong *RNGstate,            //state for RNG					[nPts*nRNGstate]
-    __global realtype *d_dt,            //array of dt values, one per solver
-    __global realtype *t,  // trajectory storage: t, x, dx, aux
-    __global realtype *x,
-    __global realtype *dx,
-    __global realtype *aux,
-    __global int *nStored,
-    __global ObserverData *OData,        //Observer data 
-    __constant struct ObserverParams *opars,
-    __global realtype *t_event,  // trajectory storage: t, x, dx, aux
+    __constant realtype *tspan,         //time interval
+    __global realtype *x0,              //initial state 	   [nPts*nVar]
+    __constant realtype *pars,          //parameter values	   [nPts*nPar]
+    __constant struct SolverParams *sp, //dtmin/max, tols
+    __global realtype *xf,              //final state 		   [nPts*nVar]
+    __global ulong *RNGstate,           //final RNG	state	   [nPts*nRNGstate]
+    __global realtype *d_dt,            //final dt values      [nPts]
+    __global realtype *tf,              //final time values    [nPts]
+    __global realtype *t,               //stored time points
+    __global realtype *x,               //stored state
+    __global realtype *dx,              //stored derivatives
+    __global realtype *aux,             //stored aux variables
+    __global int *nStored,              //actual number of stored timepoints
+	__global ObserverData *OData,		//Observer data
+	__constant struct ObserverParams *opars, //observer parameters
+	__global realtype *F                //features             [nPts*nFeat]
+    __global realtype *t_event,  // TODO: treat events like trajectories...
     __global realtype *x_event,
     __global realtype *dx_event,
-    __global realtype *aux_event,
-    __global realtype *F) 
+    __global realtype *aux_event)
 {
 
     int i = get_global_id(0);
@@ -155,4 +156,7 @@ __kernel void odedriver(
     
     // update dt to its final value (for adaptive stepper continue)
     d_dt[i] = dt;
+    
+    // store the actual final time value
+    tf[i] = ti;
 }
