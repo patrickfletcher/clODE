@@ -4,6 +4,8 @@ PYTESTFILES=$(shell find test -name "*.py")
 
 PYTHON ?= python
 
+.PHONY: venv install install_clode format test test_mac_python_310 test_mac_python_38 test_short run lint generate_stubs_macos_python_310 wheel sdist upload upload_prod paper
+
 venv:
 	$(PYTHON) -m venv venv
 
@@ -66,3 +68,10 @@ upload:
 
 upload_prod:
 	$(PYTHON) -m twine upload dist/* --skip-existing
+
+paper:
+	docker run --rm \
+    --volume ./paper:/data \
+    --user $(id -u):$(id -g) \
+    --env JOURNAL=joss \
+    openjournals/inara
