@@ -79,6 +79,8 @@ class Simulator:
     # 2D array shape (ensemble_size, num_variables)
     _device_initial_state: Optional[np.ndarray] = None
     _device_final_state: Optional[np.ndarray] = None
+    _device_dt: Optional[np.ndarray] = None
+    _device_tf: Optional[np.ndarray] = None
 
     # TODO[mkdocs] - put these below init?
     @property
@@ -433,10 +435,10 @@ class Simulator:
             )
 
         if initial_state_array.shape[0] == 1:
-            initial_state_array = np.tile(initial_state_array, new_shape)
+            initial_state_array = np.tile(initial_state_array, (new_size, 1))
 
         if parameter_array.shape[0] == 1:
-            parameter_array = np.tile(parameter_array, new_shape)
+            parameter_array = np.tile(parameter_array, (new_size, 1))
 
         # possibly overwrite some or all of the arrays
         if isinstance(variables, np.ndarray):
@@ -615,12 +617,12 @@ class Simulator:
             self.set_tspan(t_span=t_span)
 
         self._integrator.transient()
-        # invalidates _device_final_state
-        self._device_final_state = None
+        # invalidates _device_final_state and _device_dt
+        self._device_final_state = self._device_dt = self._device_tf = None
 
         if update_x0:
             self._integrator.shift_x0()
-            # invalidates _device_initial_state (?)
+            # invalidates _device_initial_state
             self._device_initial_state = None
 
         if fetch_results:
@@ -636,10 +638,9 @@ class Simulator:
             np.array: The initial state of the simulation.
         """
         if self._device_initial_state is None:
-            initial_state = np.array(self._integrator.get_x0(), dtype=np.float64)
-            self._device_initial_state = initial_state.reshape(
-                (self._ensemble_size, self.num_variables), order="F"
-            )
+            self._device_initial_state = np.array(
+                self._integrator.get_x0(), dtype=np.float64
+            ).reshape((self._ensemble_size, self.num_variables), order="F")
         return self._device_initial_state
 
     def get_final_state(self) -> np.ndarray:
@@ -651,11 +652,45 @@ class Simulator:
             np.array: The final state of the simulation.
         """
         if self._device_final_state is None:
-            final_state = np.array(self._integrator.get_xf(), dtype=np.float64)
-            self._device_final_state = final_state.reshape(
-                (self._ensemble_size, self.num_variables), order="F"
-            )
+            final_state = self._integrator.get_xf()
+
+        if final_state is None:
+            raise ValueError("Must run a simulation before getting final state")
+
+        self._device_final_state = np.array(final_state, dtype=np.float64).reshape(
+            (self._ensemble_size, self.num_variables), order="F"
+        )
         return self._device_final_state
+
+    def get_dt(self) -> np.ndarray:
+        """Get the array of timestep sizes (dt) from the device.
+
+        There is one value per simulation.
+        Note that this triggers a device-to-host transfer.
+
+        Returns:
+            np.array: The timestep sizes.
+        """
+        if self._device_dt is None:
+            self._device_dt = np.array(
+                self._integrator.get_dt(), dtype=np.float64
+            ).reshape(self._ensemble_shape, order="F")
+        return self._device_dt
+    
+    def get_final_time(self) -> np.ndarray:
+        """Get the array of timestep sizes (dt) from the device.
+
+        There is one value per simulation.
+        Note that this triggers a device-to-host transfer.
+
+        Returns:
+            np.array: The timestep sizes.
+        """
+        if self._device_tf is None:
+            self._device_tf = np.array(
+                self._integrator.get_tf(), dtype=np.float64
+            ).reshape(self._ensemble_shape, order="F")
+        return self._device_tf
 
     def get_max_memory_alloc_size(self, deviceID: int = 0) -> int:
         """Get the device maximum memory allocation size

@@ -456,6 +456,14 @@ class FeatureSimulator(Simulator):
         """Get the list of feature names for the current observer"""
         return self._integrator.get_feature_names()
 
+    def is_observer_initialized(self):
+        """Get whether the current observer is initialized"""
+        return self._integrator.is_observer_initialized()
+
+    def initialize_observer(self):
+        """run the observer's initialization warmup pass, if it has one"""
+        self._integrator.initialize_observer()
+
     def features(
         self,
         t_span: Optional[Tuple[float, float]] = None,
@@ -486,12 +494,14 @@ class FeatureSimulator(Simulator):
             self._integrator.features(initialize_observer)
         else:
             self._integrator.features()
-        # invalidate _device_features
-        # invalidate _device_final_state
+            # invalidates _device_features, _device_final_state, _device_dt
+            self._device_features = None
+            self._device_final_state = self._device_dt = self._device_tf = None
 
         if update_x0:
             self._integrator.shift_x0()
             # invalidate _device_initial_state
+            self._device_initial_state = None
 
         if fetch_results:
             return self.get_observer_results()
@@ -502,18 +512,16 @@ class FeatureSimulator(Simulator):
         Returns:
             ObserverOutput: object containing features that summarize trajectories
         """
-        self._device_features = self._integrator.get_f()
-        self._num_features = self._integrator.get_n_features()
+        if self._device_features is None:
+            self._device_features = self._integrator.get_f()
+            self._num_features = self._integrator.get_n_features()
 
-        if self._num_features is None:
-            raise ValueError("Must run trajectory() before getting trajectory data")
-        elif self._device_features is None:
-            raise ValueError("Must run trajectory() before getting trajectory data")
+        if self._device_features is None or self._num_features is None:
+            raise ValueError("Must run trajectory() before getting observer results")
 
-        shape = (self._ensemble_size, self._num_features)
         self._device_features = np.array(
-            self._device_features[: np.prod(shape)]
-        ).reshape(shape, order="F")
+            self._device_features, dtype=np.float64
+        ).reshape((self._ensemble_size, self._num_features), order="F")
 
         return ObserverOutput(
             self._op,

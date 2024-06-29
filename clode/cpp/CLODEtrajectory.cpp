@@ -110,6 +110,7 @@ void CLODEtrajectory::trajectory()
 		cl_trajectory.setArg(ix++, d_xf);
 		cl_trajectory.setArg(ix++, d_RNGstate);
 		cl_trajectory.setArg(ix++, d_dt);
+		cl_trajectory.setArg(ix++, d_tf);
 		cl_trajectory.setArg(ix++, d_t);
 		cl_trajectory.setArg(ix++, d_x);
 		cl_trajectory.setArg(ix++, d_dx);

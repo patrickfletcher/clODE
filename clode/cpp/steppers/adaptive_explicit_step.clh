@@ -65,7 +65,7 @@ realtype aux[], realtype wi[], __private struct rngData *rd)
     if (noFailedSteps)
         newDt *= fmin(ADAPTIVE_STEP_MAX_GROW,  SAFETY_FACTOR*pow(sp->reltol / normErr, EXPON)); //matches matlab (double precision)
 
-    newDt = fmin(newDt, tspan[1] - *ti); //hit the final time exactly
+    newDt = fmin(newDt, tspan[1] - tNew); //hit the final time exactly
     newDt = clamp(newDt, hmin, sp->dtmax); //limiters
 
     //update the solution and dt
