@@ -107,7 +107,7 @@ class BuildPyCommand(setuptools.command.build_py.build_py):
 
 
 def _configure_macos_deployment_target():
-    min_macos_target = '10.9'
+    min_macos_target = '12.0'
     key = 'MACOSX_DEPLOYMENT_TARGET'
     python_macos_target = str(sysconfig.get_config_var(key))
     macos_target = python_macos_target
