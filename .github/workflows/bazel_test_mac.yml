@@ -10,7 +10,7 @@ on:
 
 jobs:
   test_macos_bazel:
-    runs-on: macos-12
+    runs-on: macos-13
 
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, which is the CWD for
@@ -29,12 +29,12 @@ jobs:
     needs: test_macos_bazel
 
     # virtual environments: https://github.com/actions/virtual-environments
-    runs-on: macos-12
+    runs-on: macos-13
 
     strategy:
       fail-fast: true
       matrix:
-        python-version: [ "3.8", "3.9", "3.10", "3.11", "3.12" ]
+        python-version: [ "3.9", "3.10", "3.11", "3.12", ]
 
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, which is the CWD for

@@ -240,7 +240,7 @@ static inline void updateObserverData(realtype *ti, realtype xi[], realtype dxi[
     for (int j = 0; j < N_AUX; ++j) {
         od->auxTrajectoryMax[j] = fmax(auxi[j], od->auxTrajectoryMax[j]);
         od->auxTrajectoryMin[j] = fmin(auxi[j], od->auxTrajectoryMin[j]);
-        od->auxTrajectoryMean[j] = runningMeanTime(od->auxTrajectoryMean[j], xi[j], dt, elapsedTime);
+        od->auxTrajectoryMean[j] = runningMeanTime(od->auxTrajectoryMean[j], auxi[j], dt, elapsedTime);
     }
 
     // if (od->stepcount < 2)
