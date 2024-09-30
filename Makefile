@@ -25,7 +25,8 @@ test: install install_clode
 
 test_mac_python_310:
 	# Copy bazel out file clode_cpp_wrapper.so to clode/clode_cpp_wrapper.so
-	cp -f bazel-out/darwin_arm64-opt/bin/clode/cpp/libclode_cpp_wrapper.dylib clode/cpp/clode_cpp_wrapper.cpython-310-darwin.so
+	#cp -f bazel-out/darwin_arm64-opt/bin/clode/cpp/libclode_cpp_wrapper.dylib clode/cpp/clode_cpp_wrapper.cpython-310-darwin.so
+#	cp -rf bazel-out/darwin_arm64-opt/bin/_solib_darwin_arm64 ./
 	$(PYTHON) -m pytest $(PYTESTFILES)
 
 test_mac_python_38:

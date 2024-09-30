@@ -82,7 +82,7 @@ from clode.solver import Simulator, Stepper
 from clode.trajectory import TrajectoryOutput, TrajectorySimulator
 from clode.xpp_parser import convert_xpp_file, format_opencl_rhs, read_ode_parameters
 
-__version__ = "0.8.3"
+__version__ = "0.9.0"
 
 __all__ = [
     "CLDeviceType",
