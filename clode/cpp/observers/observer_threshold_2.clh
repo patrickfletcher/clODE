@@ -90,7 +90,7 @@ struct ObserverData_thresh2 {
     realtype duty[3];  //max/min/mean
     realtype activeDip[3];  //max/min/mean
     realtype stepDt[3]; //max/min/mean
-    realtype xActiveThreshold[3]; //max/min/mean
+    realtype activeThreshold[3]; //max/min/mean
 
     realtype fVarUpstateMean;
     realtype fVarDownstateMean;
@@ -174,9 +174,9 @@ static inline void initializeObserverData(realtype *ti, realtype xi[], realtype 
     od->stepDt[1] = BIG_REAL;
     od->stepDt[2] = ZERO;
 
-    of->xActiveThreshold[0] = -BIG_REAL;
-    of->xActiveThreshold[1] = BIG_REAL;
-    of->xActiveThreshold[2] = ZERO;
+    od->activeThreshold[0] = -BIG_REAL;
+    od->activeThreshold[1] = BIG_REAL;
+    od->activeThreshold[2] = ZERO;
 
     od->fVarDownstateMean = ZERO;
     od->fVarLastUp = -BIG_REAL;

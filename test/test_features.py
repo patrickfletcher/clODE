@@ -1,4 +1,4 @@
-from math import cos, exp, pi, sqrt
+from math import cos, pi, exp, sqrt, sin
 from typing import List
 
 import numpy as np
@@ -20,7 +20,7 @@ def sine_curve(
     dx_[0] = dx
 
 
-def test_sine_curve_timestamps():
+def test_sine_curve_timestamps() -> None:
     "Test that the active timestamps of a sine curve are correct"
 
     # Define the parameters
@@ -73,6 +73,11 @@ def test_sine_curve_timestamps():
 
     assert np.isclose(down_times[0], 3 / 2 * pi, atol=0.01)
     assert np.isclose(down_times[1], 7 / 2 * pi, atol=0.01)
+
+    # Since we are activating at pi/4, activeDip is close to
+    # sin(pi/4) - (-1)
+    active_dip = output.get_var_mean("activeDip")
+    assert np.isclose(active_dip, sin(pi/4) + 1, atol=0.01)
 
     up_times_timestamps = output.get_timestamps("up")
     down_times_timestamps = output.get_timestamps("down")
