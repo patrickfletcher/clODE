@@ -33,7 +33,7 @@ import shutil
 import sysconfig
 import tempfile
 
-import pkg_resources
+from packaging.version import parse
 import setuptools.command.build_ext
 import setuptools.command.build_py
 import setuptools.command.install
@@ -111,14 +111,14 @@ def _configure_macos_deployment_target():
     key = 'MACOSX_DEPLOYMENT_TARGET'
     python_macos_target = str(sysconfig.get_config_var(key))
     macos_target = python_macos_target
-    if (macos_target and (pkg_resources.parse_version(macos_target) <
-                          pkg_resources.parse_version(min_macos_target))):
+    if (macos_target and (parse(macos_target) <
+                          parse(min_macos_target))):
         macos_target = min_macos_target
 
     macos_target_override = os.getenv(key)
     if macos_target_override:
-        if (pkg_resources.parse_version(macos_target_override) <
-                pkg_resources.parse_version(macos_target)):
+        if (parse(macos_target_override) <
+                parse(macos_target)):
             print('%s=%s is set in environment but >= %s is required by this package '
                   'and >= %s is required by the current Python build' %
                   (key, macos_target_override, min_macos_target, python_macos_target))
