@@ -24,7 +24,7 @@ def wiener_process(
 variables = {"x": 0.0}
 parameters = {"mu": 1.0, "sigma": 0.5}
 
-t_span = (0.0, 1000.0)
+t_span = (0.0, 20.0)
 
 integrator = clode.Simulator(
     rhs_equation=wiener_process,
@@ -34,7 +34,7 @@ integrator = clode.Simulator(
     stepper=clode.Stepper.stochastic_euler,
     single_precision=True,
     t_span=t_span,
-    dt=0.001,
+    dt=0.01,
 )
 
 # set up the ensemble of Wiener processes with identical parameters and initial state
@@ -46,10 +46,9 @@ integrator.transient()
 
 XF = integrator.get_final_state()
 
+print(f"expected mean: {parameters['mu'] :0.5}, simulation mean: {np.mean(XF) :0.5}")
+print(f"expected variance: {parameters['sigma'] ** 2 / 2 :0.5}, simulation variance: {np.var(XF) :0.5}")
+
 plt.hist(XF, 30)
 plt.xlabel("x")
 plt.show()
-
-print(f"mean xf: {np.mean(XF) :0.5}")
-print(f"simulation variance: {np.var(XF) :0.5}")
-print(f"expected variance: {parameters['sigma'] ** 2 / 2 :0.5}")

@@ -31,7 +31,9 @@ realtype aux[], realtype wi[], __private struct rngData *rd)
     for (int j = 0; j < N_WIENER; ++j)
         wi[j] = randn(rd) / sqrt(*dt);
 #endif
-    getRHS(*ti, xi, pars, k1, aux, wi); //compute k1 at new (purified) time. only really matters for non-autonomous case
+
+    //compute k1 at new (purified) time. only really matters for non-autonomous case
+    getRHS(*ti, xi, pars, k1, aux, wi); 
 
     return 0;
 }

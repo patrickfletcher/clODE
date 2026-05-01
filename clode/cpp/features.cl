@@ -45,6 +45,7 @@ __kernel void features(
 	ObserverData odata = OData[i]; 
 
     // generate random numbers if needed
+	// TODO: I think this breaks true reproducibility for continued runs??
     rd.randnUselast = 0;
     for (int j = 0; j < N_WIENER; ++j)
 #ifdef STOCHASTIC_STEPPER
@@ -61,7 +62,7 @@ __kernel void features(
     int stepflag = 0;
 	bool eventOccurred;
 	bool terminalEvent;
-	while (ti <= tspan[1] && step < sp->max_steps)
+	while (ti < tspan[1] && step < sp->max_steps)
 	{
 		++step;
         stepflag = stepper(&ti, xi, dxi, p, sp, &dt, tspan, auxi, wi, &rd);
@@ -85,6 +86,7 @@ __kernel void features(
 	finalizeFeatures(&ti, xi, dxi, auxi, &odata, opars, F, i, nPts);
 
 	//finalize observerdata for possible continuation
+	// TODO: this should advance the time vectors using the final ti, not the tspan[1]
 	finalizeObserverData(&ti, xi, dxi, auxi, &odata, opars, tspan);
 
 	//store the observerData in global memory
