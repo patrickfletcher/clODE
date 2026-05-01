@@ -7,6 +7,9 @@ authors = [
 ]
 requires-python = ">=3.8"
 readme = "docs/README.md"
+dependencies = [
+    "numpy>=2.0.2",
+]
 
 maintainers = [
     {name="Patrick Fletcher", email="patrick.allen.fletcher@gmail.com"},
@@ -41,7 +44,7 @@ version = {attr = "clode.__version__"}
 
 [build-system]
 requires = [
-    "setuptools>=65.5.1",
+    "setuptools>=75.0.0,<81",
     "wheel",
     "setuptools_scm"
 ]
