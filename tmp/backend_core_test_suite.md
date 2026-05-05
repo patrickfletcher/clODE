@@ -28,8 +28,10 @@ Everything else under `test/` is reference material, historical coverage, or out
 - `test/test_pyopencl_source_builder.py`
 - `test/test_pyopencl_runtime.py`
 - `test/test_pyopencl_buffers.py`
+- `test/test_pyopencl_structs.py`
+- `test/test_pyopencl_transient_backend.py`
 
-Today this combined gate is 39 tests and is the suite that should stay green through the subsequent backend-migration phases.
+Today this combined gate is 47 tests and is the suite that should stay green through the subsequent backend-migration phases.
 
 Current implementation state:
 
@@ -40,6 +42,8 @@ Current implementation state:
 - the internal `clode/_pyopencl/` package now also contains a static kernel registry and deterministic phase-one source builder
 - the internal `clode/_pyopencl/` package now also contains a real PyOpenCL runtime selector and runtime-scoped program cache
 - the internal `clode/_pyopencl/` package now also contains a common-state buffer manager that centralizes the current flatten and reshape rules
+- the internal `clode/_pyopencl/` package now also contains device-matched host struct helpers for `SolverParams` and `ObserverParams`
+- the internal `clode/_pyopencl/` package now also contains a transient executor that can be selected internally through `_CLODE_BACKEND=pyopencl`
 
 ## Canonical Models
 
@@ -142,6 +146,19 @@ The stochastic gate does not currently include a continuation test. That was int
 - upload and download helpers round-trip problem data, `dt`, and RNG state through PyOpenCL buffers
 - solver-parameter packing matches the current C-style struct layout used by the kernels
 
+`test/test_pyopencl_structs.py` protects the struct-handling rules established after the PyOpenCL audit:
+
+- `SolverParams` and `ObserverParams` use device-matched PyOpenCL dtypes rather than relying on handwritten host assumptions
+- packing helpers preserve field values across single and double precision paths
+- the simplest double-precision observer-state layout demonstrates why raw byte-count formulas are unsafe for later feature-backend work
+
+`test/test_pyopencl_transient_backend.py` protects the PR 9 transient execution path:
+
+- deterministic transient parity is checked against the current C++ backend
+- continuation of `x0`, `dt`, and final time matches the current backend contract
+- seeded stochastic ensembles are reproducible on the PyOpenCL backend and remain numerically aligned with the C++ path
+- updating solver parameters still rewrites the live `dt` buffer on the PyOpenCL path
+
 This file is intentionally small. Its job is to lock down the current backend contract, not to become a second broad API suite.
 
 ## Runtime Guidance
@@ -154,7 +171,7 @@ This file is intentionally small. Its job is to lock down the current backend co
 On this Linux workspace, the stable local command is:
 
 ```bash
-CLODE_TEST_PLATFORM_ID=1 CLODE_TEST_DEVICE_ID=0 /home/fletcherpa/envs/clode/bin/python -m pytest test/core_numerics test/test_backend_contracts.py test/test_backend_rhs_source.py test/test_pyopencl_models.py test/test_pyopencl_source_builder.py test/test_pyopencl_runtime.py test/test_pyopencl_buffers.py -q
+CLODE_TEST_PLATFORM_ID=1 CLODE_TEST_DEVICE_ID=0 /home/fletcherpa/envs/clode/bin/python -m pytest test/core_numerics/test_transient.py test/core_numerics/test_trajectory.py test/core_numerics/test_features_basicall.py test/core_numerics/test_stochastic.py test/test_backend_contracts.py test/test_backend_rhs_source.py test/test_pyopencl_models.py test/test_pyopencl_source_builder.py test/test_pyopencl_runtime.py test/test_pyopencl_buffers.py test/test_pyopencl_structs.py test/test_pyopencl_transient_backend.py -q
 ```
 
 The environment-variable override lives in `test/core_numerics/helpers.py` so the tests do not hardcode local device IDs.

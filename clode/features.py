@@ -381,6 +381,7 @@ class FeatureSimulator(Simulator):
             self._single_precision,
             self._runtime,
             _clode_root_dir,
+            runtime_selection=self._runtime_selection,
         )
         # self.set_observer_parameters()
 

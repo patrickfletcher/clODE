@@ -13,7 +13,7 @@ import numpy.typing as npt
 
 from clode.cpp.clode_cpp_wrapper import ProblemInfo, SolverParams
 
-from ._backends.factory import create_simulator_backend
+from ._backends.factory import RuntimeSelection, create_simulator_backend
 from ._backends.protocol import SimulatorBackend
 from ._backends.rhs import RhsSource, create_rhs_source, load_rhs_source
 from .function_converter import OpenCLConverter, OpenCLRhsEquation
@@ -59,6 +59,7 @@ class Simulator:
 
     _integrator: SimulatorBackend
     _runtime: OpenCLResource
+    _runtime_selection: RuntimeSelection
     _single_precision: bool
     _stepper: Stepper
     _pi: ProblemInfo
@@ -165,6 +166,13 @@ class Simulator:
         )
         self._stepper = stepper
         self._single_precision = single_precision
+        self._runtime_selection = RuntimeSelection(
+            device_type=device_type,
+            vendor=vendor,
+            platform_id=platform_id,
+            device_id=device_id,
+            device_ids=None if device_ids is None else tuple(device_ids),
+        )
 
         # _runtime as an instance variable
         self._runtime = initialize_runtime(
@@ -216,6 +224,7 @@ class Simulator:
             self._single_precision,
             self._runtime,
             _clode_root_dir,
+            runtime_selection=self._runtime_selection,
         )
 
     def _build_cl_program(self):

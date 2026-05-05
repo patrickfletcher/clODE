@@ -54,11 +54,13 @@ class OpenCLRuntime:
     platform_id: int
     device_id: int
     program_cache: object = field(init=False, repr=False)
+    struct_cache: dict[str, tuple[object, str]] = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
         from .program_cache import ProgramCache
 
         self.program_cache = ProgramCache()
+        self.struct_cache = {}
 
     @classmethod
     def create(

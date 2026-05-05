@@ -17,8 +17,10 @@ It is intentionally more granular than the phase plan in `tmp/pyopencl_backend_d
 - Completed: PR 6 PyOpenCL registry and source builder
 - Completed: PR 7 PyOpenCL runtime and program cache
 - Completed: PR 8 Buffer manager for common state
-- Next: PR 9 PyOpenCL transient backend
-- Current milestone audit: `test/core_numerics`, `test/test_backend_contracts.py`, `test/test_backend_rhs_source.py`, `test/test_pyopencl_models.py`, `test/test_pyopencl_source_builder.py`, `test/test_pyopencl_runtime.py`, `test/test_pyopencl_buffers.py`, `test/test_features.py`, `test/test_function_converter.py`, and `test/test_xpp_parser.py` passed together
+- Completed: PR 9 PyOpenCL transient backend
+- Next: PR 10 trajectory backend
+- Current milestone audit: the authoritative 47-test gate in `tmp/backend_core_test_suite.md` passed together on the stable local device
+- Struct-handling audit result: host-populated OpenCL structs now use device-matched PyOpenCL dtypes for `SolverParams` and `ObserverParams`; `ObserverData` remains a deferred feature-backend concern and must not reuse the legacy byte-count formulas
 - Deferred follow-up: a zero-parameter Python-callable RHS can still trip a current C++ backend construction-time edge case on this Linux workspace; keep it documented but out of scope for the current PR sequence
 
 ## Planning Rules
@@ -34,8 +36,8 @@ It is intentionally more granular than the phase plan in `tmp/pyopencl_backend_d
 | --- | --- | --- |
 | M0 | Lock scope and tests | Complete |
 | M1 | Land backend seam | Complete |
-| M2 | Land PyOpenCL build primitives | In progress |
-| M3 | Land transient parity | Not started |
+| M2 | Land PyOpenCL build primitives | Complete |
+| M3 | Land transient parity | Complete |
 | M4 | Land trajectory parity | Not started |
 | M5 | Land feature parity | Not started |
 | M6 | Switch defaults and simplify later | Not started |
@@ -302,6 +304,10 @@ Audit result:
 
 Priority: P0
 
+Status:
+
+- Complete
+
 Goal:
 
 - land the first working PyOpenCL execution path
@@ -310,6 +316,8 @@ Deliverables:
 
 - `PyOpenCLTransientBackend` in `clode/_pyopencl/executors.py`
 - factory support for selecting the PyOpenCL backend internally
+- `clode/_pyopencl/structs.py` for device-matched host struct packing used by the transient path
+- `tmp/pyopencl_struct_audit.md` recording the `ObserverData` sizing risk that must not be copied into later PRs
 
 Checkpoint:
 
@@ -320,6 +328,10 @@ Acceptance criteria:
 - transient parity tests compare C++ backend to PyOpenCL backend
 - seeded stochastic repeatability behavior is pinned
 - continuation of `x0`, `dt`, and final time matches current behavior
+
+Audit result:
+
+- Passed
 
 ## PR 10: Trajectory Buffers And Trajectory Backend
 

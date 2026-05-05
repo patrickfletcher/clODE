@@ -7,45 +7,10 @@ import numpy as np
 
 from .models import Precision, ProblemShape
 from .runtime import OpenCLRuntime, _require_pyopencl
+from .structs import get_solver_params_struct, pack_solver_params
 
 
 N_RNGSTATE = 2
-
-
-def _solver_params_dtype(precision: Precision) -> np.dtype:
-    real_dtype = ArrayLayout.real_dtype(precision)
-    return np.dtype(
-        [
-            ("dt", real_dtype),
-            ("dtmax", real_dtype),
-            ("abstol", real_dtype),
-            ("reltol", real_dtype),
-            ("max_steps", np.uint32),
-            ("max_store", np.uint32),
-            ("nout", np.uint32),
-        ],
-        align=True,
-    )
-
-
-def solver_params_to_array(
-    solver_params: SolverParams, precision: Precision
-) -> np.ndarray:
-    dtype = _solver_params_dtype(precision)
-    return np.array(
-        (
-            solver_params.dt,
-            solver_params.dtmax,
-            solver_params.abstol,
-            solver_params.reltol,
-            solver_params.max_steps,
-            solver_params.max_store,
-            solver_params.nout,
-        ),
-        dtype=dtype,
-    )
-
-
 @dataclass(slots=True)
 class CommonBuffers:
     ensemble_size: int
@@ -126,7 +91,7 @@ class BufferManager:
             solver_params=self._pyopencl.Buffer(
                 self._runtime.context,
                 flags.READ_ONLY,
-                size=_solver_params_dtype(self._precision).itemsize,
+                size=get_solver_params_struct(self._runtime, self._precision).dtype.itemsize,
             ),
             x0=self._pyopencl.Buffer(
                 self._runtime.context, flags.READ_WRITE, size=x0_elements * real_bytes
@@ -160,7 +125,7 @@ class BufferManager:
     def upload_solver_params(
         self, buffers: CommonBuffers, solver_params: SolverParams
     ) -> np.ndarray:
-        host = solver_params_to_array(solver_params, self._precision)
+        host = pack_solver_params(self._runtime, solver_params, self._precision)
         self._enqueue_copy(buffers.solver_params, host)
         return host
 
@@ -170,16 +135,20 @@ class BufferManager:
         initial_state: np.ndarray,
         parameters: np.ndarray,
     ) -> tuple[np.ndarray, np.ndarray]:
-        initial_state_host = ArrayLayout.flatten_problem_matrix(
-            initial_state, precision=self._precision
-        )
-        parameters_host = ArrayLayout.flatten_problem_matrix(
-            parameters, precision=self._precision
-        )
-        self._enqueue_copy(buffers.x0, initial_state_host)
-        if parameters_host.size > 0:
-            self._enqueue_copy(buffers.pars, parameters_host)
+        initial_state_host = self.upload_x0(buffers, initial_state)
+        parameters_host = self.upload_pars(buffers, parameters)
         return initial_state_host, parameters_host
+
+    def upload_x0(self, buffers: CommonBuffers, initial_state: np.ndarray) -> np.ndarray:
+        host = ArrayLayout.flatten_problem_matrix(initial_state, precision=self._precision)
+        self._enqueue_copy(buffers.x0, host)
+        return host
+
+    def upload_pars(self, buffers: CommonBuffers, parameters: np.ndarray) -> np.ndarray:
+        host = ArrayLayout.flatten_problem_matrix(parameters, precision=self._precision)
+        if host.size > 0:
+            self._enqueue_copy(buffers.pars, host)
+        return host
 
     def upload_dt(self, buffers: CommonBuffers, dt_values: np.ndarray) -> np.ndarray:
         host = np.asarray(dt_values, dtype=self._real_dtype)
@@ -199,8 +168,14 @@ class BufferManager:
     def download_pars(self, buffers: CommonBuffers) -> np.ndarray:
         return self._download_state_buffer(buffers.pars, buffers.ensemble_size, buffers.problem_shape.n_par)
 
+    def download_xf(self, buffers: CommonBuffers) -> np.ndarray:
+        return self._download_state_buffer(buffers.xf, buffers.ensemble_size, buffers.problem_shape.n_var)
+
     def download_dt(self, buffers: CommonBuffers) -> np.ndarray:
         return self._download_vector_buffer(buffers.dt, (buffers.ensemble_size,))
+
+    def download_tf(self, buffers: CommonBuffers) -> np.ndarray:
+        return self._download_vector_buffer(buffers.tf, (buffers.ensemble_size,))
 
     def download_rng_state(self, buffers: CommonBuffers) -> np.ndarray:
         host = np.empty(buffers.ensemble_size * N_RNGSTATE, dtype=np.uint64)

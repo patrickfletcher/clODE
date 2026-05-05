@@ -118,6 +118,8 @@ These folders are not in scope for the first phases of the backend overhaul.
 | `clode/_pyopencl/runtime.py` | Explicit PyOpenCL context and queue selection | Phase-one runtime foundation for backend execution |
 | `clode/_pyopencl/program_cache.py` | Runtime-scoped compiled program cache | Phase-one compile and cache authority |
 | `clode/_pyopencl/buffers.py` | Common-state buffer allocation and layout helpers | Phase-one buffer foundation for transient execution |
+| `clode/_pyopencl/structs.py` | Device-matched host struct packing helpers | Current authority for `SolverParams` and `ObserverParams` host layout |
+| `clode/_pyopencl/executors.py` | PyOpenCL execution backends | Current authority for transient execution parity |
 
 ### Current C++ backend reference
 
@@ -202,6 +204,8 @@ These files are the current authoritative source pool for backend-phase gating.
 - `test/test_pyopencl_source_builder.py`
 - `test/test_pyopencl_runtime.py`
 - `test/test_pyopencl_buffers.py`
+- `test/test_pyopencl_structs.py`
+- `test/test_pyopencl_transient_backend.py`
 
 The exact suite definition is pinned in `tmp/backend_core_test_suite.md`.
 
@@ -218,6 +222,8 @@ Use this section to answer common implementation questions with minimum token co
 | Where are the PyOpenCL registry and source builder | `clode/_pyopencl/registry.py`, `clode/_pyopencl/source_builder.py` |
 | Where are the PyOpenCL runtime and compile cache | `clode/_pyopencl/runtime.py`, `clode/_pyopencl/program_cache.py` |
 | Where are the PyOpenCL buffer layout and allocation rules | `clode/_pyopencl/buffers.py` |
+| Where are the PyOpenCL host struct layout rules | `clode/_pyopencl/structs.py`, `tmp/pyopencl_struct_audit.md` |
+| Where is the PyOpenCL transient executor | `clode/_pyopencl/executors.py` |
 | What is the current build key | `tmp/cpp_opencl_layer_audit.md`, `clode/cpp/CLODE.cpp` |
 | How is the current program assembled | `tmp/cpp_opencl_layer_audit.md`, `clode/cpp/CLODE.cpp`, `clode/cpp/transient.cl`, `clode/cpp/features.cl` |
 | Which public APIs must remain stable | `clode/solver.py`, `clode/trajectory.py`, `clode/features.py`, `tmp/pyopencl_backend_design.md` |

@@ -5,7 +5,7 @@
 - Status: In progress
 - Audience: maintainers and contributors implementing the PyOpenCL migration
 - Related document: `tmp/cpp_opencl_layer_audit.md`
-- Completed groundwork: scope lock, authoritative migration test gate, internal backend seam, C++ backend adapter, RHS source object integration, PyOpenCL core models and errors, the phase-one Python registry plus source builder, the first runtime-scoped PyOpenCL compile path, and the common-state buffer manager
+- Completed groundwork: scope lock, authoritative migration test gate, internal backend seam, C++ backend adapter, RHS source object integration, PyOpenCL core models and errors, the phase-one Python registry plus source builder, the first runtime-scoped PyOpenCL compile path, the common-state buffer manager, device-matched host struct helpers, and the first transient PyOpenCL executor
 
 ## Decision Summary
 
@@ -133,11 +133,14 @@ Current state:
 - `clode/_pyopencl/registry.py` and `clode/_pyopencl/source_builder.py` now reproduce the current static define map, entrypoint layout, and phase-one build option assembly in Python
 - `clode/_pyopencl/runtime.py` and `clode/_pyopencl/program_cache.py` now select one OpenCL device explicitly and compile/cache transient programs through PyOpenCL
 - `clode/_pyopencl/buffers.py` now centralizes the current common transient buffer allocation and Fortran-order layout rules
-- the next backend milestone is PR 9: PyOpenCL transient backend
+- `clode/_pyopencl/structs.py` now uses `pyopencl.tools.match_dtype_to_c_struct(...)` for host-populated OpenCL structs used by the backend
+- `clode/_pyopencl/executors.py` now contains a transient PyOpenCL backend reachable through the internal `_CLODE_BACKEND=pyopencl` selector
+- the next backend milestone is PR 10: trajectory backend
 
 Deferred note:
 
 - a zero-parameter Python-callable RHS can still hit a current C++ backend construction-time edge case on this Linux workspace; it is documented and intentionally deferred while the backend migration sequence proceeds
+- the feature-backend work must not copy the legacy `ObserverData` byte-count formulas; `tmp/pyopencl_struct_audit.md` records why device-aligned padding makes that unsafe in double precision
 
 ### Recommended module layout
 
@@ -166,6 +169,7 @@ clode/
     source_builder.py
     program_cache.py
     buffers.py
+    structs.py
     executors.py
     errors.py
 ```

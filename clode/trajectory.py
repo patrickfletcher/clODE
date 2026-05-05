@@ -164,6 +164,7 @@ class TrajectorySimulator(Simulator):
             self._single_precision,
             self._runtime,
             _clode_root_dir,
+            runtime_selection=self._runtime_selection,
         )
 
     # TODO[feature]: chunk time - keep max_store to a reasonable level (device-dependent), loop solve/get until t_span is covered.
