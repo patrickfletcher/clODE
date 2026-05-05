@@ -1,3 +1,4 @@
+from .buffers import ArrayLayout, BufferManager, CommonBuffers, FeatureBuffers, TrajectoryBuffers
 from .errors import (
     BuildError,
     DoublePrecisionNotSupportedError,
@@ -25,9 +26,13 @@ from .source_builder import SourceBuilder
 from .program_cache import ProgramCache
 
 __all__ = [
+    "ArrayLayout",
     "BuildError",
     "BuildKey",
+    "BufferManager",
+    "CommonBuffers",
     "DoublePrecisionNotSupportedError",
+    "FeatureBuffers",
     "KernelKind",
     "KernelRegistry",
     "OpenCLRuntime",
@@ -44,6 +49,7 @@ __all__ = [
     "RhsValidationError",
     "SourceBuilder",
     "SourceBundle",
+    "TrajectoryBuffers",
     "UnsupportedObserverError",
     "UnsupportedStepperError",
 ]

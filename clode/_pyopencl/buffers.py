@@ -1,0 +1,237 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
+
+from clode.cpp.clode_cpp_wrapper import SolverParams
+import numpy as np
+
+from .models import Precision, ProblemShape
+from .runtime import OpenCLRuntime, _require_pyopencl
+
+
+N_RNGSTATE = 2
+
+
+def _solver_params_dtype(precision: Precision) -> np.dtype:
+    real_dtype = ArrayLayout.real_dtype(precision)
+    return np.dtype(
+        [
+            ("dt", real_dtype),
+            ("dtmax", real_dtype),
+            ("abstol", real_dtype),
+            ("reltol", real_dtype),
+            ("max_steps", np.uint32),
+            ("max_store", np.uint32),
+            ("nout", np.uint32),
+        ],
+        align=True,
+    )
+
+
+def solver_params_to_array(
+    solver_params: SolverParams, precision: Precision
+) -> np.ndarray:
+    dtype = _solver_params_dtype(precision)
+    return np.array(
+        (
+            solver_params.dt,
+            solver_params.dtmax,
+            solver_params.abstol,
+            solver_params.reltol,
+            solver_params.max_steps,
+            solver_params.max_store,
+            solver_params.nout,
+        ),
+        dtype=dtype,
+    )
+
+
+@dataclass(slots=True)
+class CommonBuffers:
+    ensemble_size: int
+    problem_shape: ProblemShape
+    tspan: object
+    solver_params: object
+    x0: object
+    pars: object
+    xf: object
+    rng_state: object
+    dt: object
+    tf: object
+
+
+@dataclass(slots=True)
+class TrajectoryBuffers:
+    t: object
+    x: object
+    dx: object
+    aux: object
+    n_stored: object
+
+
+@dataclass(slots=True)
+class FeatureBuffers:
+    observer_data: object
+    observer_params: object
+    features: object
+
+
+class ArrayLayout:
+    @staticmethod
+    def real_dtype(precision: Precision) -> np.dtype:
+        return np.dtype(np.float32 if precision is Precision.SINGLE else np.float64)
+
+    @staticmethod
+    def flatten_problem_matrix(
+        array: np.ndarray, precision: Precision | None = None
+    ) -> np.ndarray:
+        dtype = np.float64 if precision is None else ArrayLayout.real_dtype(precision)
+        return np.asarray(array, dtype=dtype).flatten(order="F")
+
+    @staticmethod
+    def reshape_state(array: np.ndarray | list[float], ensemble_size: int, width: int) -> np.ndarray:
+        return np.asarray(array, dtype=np.float64).reshape(
+            (ensemble_size, width), order="F"
+        )
+
+    @staticmethod
+    def reshape_vector(array: np.ndarray | list[float], shape: tuple[int, ...]) -> np.ndarray:
+        return np.asarray(array, dtype=np.float64).reshape(shape, order="F")
+
+
+class BufferManager:
+    def __init__(self, runtime: OpenCLRuntime, precision: Precision):
+        self._runtime = runtime
+        self._precision = precision
+        self._real_dtype = ArrayLayout.real_dtype(precision)
+        self._pyopencl = _require_pyopencl()
+
+    @property
+    def real_dtype(self) -> np.dtype:
+        return self._real_dtype
+
+    def allocate_common(self, ensemble_size: int, shape: ProblemShape) -> CommonBuffers:
+        flags = self._pyopencl.mem_flags
+        real_bytes = self._real_dtype.itemsize
+        x0_elements = max(1, ensemble_size * shape.n_var)
+        pars_elements = max(1, ensemble_size * shape.n_par)
+        rng_elements = max(1, ensemble_size * N_RNGSTATE)
+
+        return CommonBuffers(
+            ensemble_size=ensemble_size,
+            problem_shape=shape,
+            tspan=self._pyopencl.Buffer(
+                self._runtime.context, flags.READ_ONLY, size=2 * real_bytes
+            ),
+            solver_params=self._pyopencl.Buffer(
+                self._runtime.context,
+                flags.READ_ONLY,
+                size=_solver_params_dtype(self._precision).itemsize,
+            ),
+            x0=self._pyopencl.Buffer(
+                self._runtime.context, flags.READ_WRITE, size=x0_elements * real_bytes
+            ),
+            pars=self._pyopencl.Buffer(
+                self._runtime.context, flags.READ_ONLY, size=pars_elements * real_bytes
+            ),
+            xf=self._pyopencl.Buffer(
+                self._runtime.context, flags.READ_WRITE, size=x0_elements * real_bytes
+            ),
+            rng_state=self._pyopencl.Buffer(
+                self._runtime.context,
+                flags.READ_WRITE,
+                size=rng_elements * np.dtype(np.uint64).itemsize,
+            ),
+            dt=self._pyopencl.Buffer(
+                self._runtime.context, flags.READ_WRITE, size=ensemble_size * real_bytes
+            ),
+            tf=self._pyopencl.Buffer(
+                self._runtime.context, flags.WRITE_ONLY, size=ensemble_size * real_bytes
+            ),
+        )
+
+    def upload_tspan(
+        self, buffers: CommonBuffers, tspan: tuple[float, float]
+    ) -> np.ndarray:
+        host = np.asarray(tspan, dtype=self._real_dtype)
+        self._enqueue_copy(buffers.tspan, host)
+        return host
+
+    def upload_solver_params(
+        self, buffers: CommonBuffers, solver_params: SolverParams
+    ) -> np.ndarray:
+        host = solver_params_to_array(solver_params, self._precision)
+        self._enqueue_copy(buffers.solver_params, host)
+        return host
+
+    def upload_problem_data(
+        self,
+        buffers: CommonBuffers,
+        initial_state: np.ndarray,
+        parameters: np.ndarray,
+    ) -> tuple[np.ndarray, np.ndarray]:
+        initial_state_host = ArrayLayout.flatten_problem_matrix(
+            initial_state, precision=self._precision
+        )
+        parameters_host = ArrayLayout.flatten_problem_matrix(
+            parameters, precision=self._precision
+        )
+        self._enqueue_copy(buffers.x0, initial_state_host)
+        if parameters_host.size > 0:
+            self._enqueue_copy(buffers.pars, parameters_host)
+        return initial_state_host, parameters_host
+
+    def upload_dt(self, buffers: CommonBuffers, dt_values: np.ndarray) -> np.ndarray:
+        host = np.asarray(dt_values, dtype=self._real_dtype)
+        self._enqueue_copy(buffers.dt, host)
+        return host
+
+    def upload_rng_state(
+        self, buffers: CommonBuffers, rng_state: np.ndarray
+    ) -> np.ndarray:
+        host = np.asarray(rng_state, dtype=np.uint64).flatten(order="F")
+        self._enqueue_copy(buffers.rng_state, host)
+        return host
+
+    def download_x0(self, buffers: CommonBuffers) -> np.ndarray:
+        return self._download_state_buffer(buffers.x0, buffers.ensemble_size, buffers.problem_shape.n_var)
+
+    def download_pars(self, buffers: CommonBuffers) -> np.ndarray:
+        return self._download_state_buffer(buffers.pars, buffers.ensemble_size, buffers.problem_shape.n_par)
+
+    def download_dt(self, buffers: CommonBuffers) -> np.ndarray:
+        return self._download_vector_buffer(buffers.dt, (buffers.ensemble_size,))
+
+    def download_rng_state(self, buffers: CommonBuffers) -> np.ndarray:
+        host = np.empty(buffers.ensemble_size * N_RNGSTATE, dtype=np.uint64)
+        self._pyopencl.enqueue_copy(
+            self._runtime.queue, host, buffers.rng_state, is_blocking=True
+        )
+        return host.reshape((buffers.ensemble_size, N_RNGSTATE), order="F")
+
+    def _download_state_buffer(
+        self, buffer: object, ensemble_size: int, width: int
+    ) -> np.ndarray:
+        if width == 0:
+            return np.empty((ensemble_size, 0), dtype=np.float64)
+        host = np.empty(ensemble_size * width, dtype=self._real_dtype)
+        self._pyopencl.enqueue_copy(
+            self._runtime.queue, host, buffer, is_blocking=True
+        )
+        return ArrayLayout.reshape_state(host, ensemble_size, width)
+
+    def _download_vector_buffer(
+        self, buffer: object, shape: tuple[int, ...]
+    ) -> np.ndarray:
+        host = np.empty(int(np.prod(shape)), dtype=self._real_dtype)
+        self._pyopencl.enqueue_copy(
+            self._runtime.queue, host, buffer, is_blocking=True
+        )
+        return ArrayLayout.reshape_vector(host, shape)
+
+    def _enqueue_copy(self, buffer: object, host: np.ndarray) -> None:
+        if host.size == 0:
+            return
+        self._pyopencl.enqueue_copy(
+            self._runtime.queue, buffer, host, is_blocking=True
+        )

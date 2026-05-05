@@ -16,8 +16,9 @@ It is intentionally more granular than the phase plan in `tmp/pyopencl_backend_d
 - Completed: PR 5 PyOpenCL core models and errors
 - Completed: PR 6 PyOpenCL registry and source builder
 - Completed: PR 7 PyOpenCL runtime and program cache
-- Next: PR 8 Buffer manager for common state
-- Current milestone audit: `test/core_numerics`, `test/test_backend_contracts.py`, `test/test_backend_rhs_source.py`, `test/test_pyopencl_models.py`, `test/test_pyopencl_source_builder.py`, `test/test_pyopencl_runtime.py`, `test/test_features.py`, `test/test_function_converter.py`, and `test/test_xpp_parser.py` passed together
+- Completed: PR 8 Buffer manager for common state
+- Next: PR 9 PyOpenCL transient backend
+- Current milestone audit: `test/core_numerics`, `test/test_backend_contracts.py`, `test/test_backend_rhs_source.py`, `test/test_pyopencl_models.py`, `test/test_pyopencl_source_builder.py`, `test/test_pyopencl_runtime.py`, `test/test_pyopencl_buffers.py`, `test/test_features.py`, `test/test_function_converter.py`, and `test/test_xpp_parser.py` passed together
 - Deferred follow-up: a zero-parameter Python-callable RHS can still trip a current C++ backend construction-time edge case on this Linux workspace; keep it documented but out of scope for the current PR sequence
 
 ## Planning Rules
@@ -271,6 +272,10 @@ Audit result:
 
 Priority: P0
 
+Status:
+
+- Complete
+
 Goal:
 
 - centralize common buffer allocation and current flatten and reshape rules
@@ -288,6 +293,10 @@ Acceptance criteria:
 - current Fortran-order flattening is centralized
 - common buffer allocation supports transient execution requirements
 - no public API changes
+
+Audit result:
+
+- Passed
 
 ## PR 9: PyOpenCL Transient Backend
 
