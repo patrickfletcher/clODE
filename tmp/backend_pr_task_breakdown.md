@@ -22,8 +22,8 @@ It is intentionally more granular than the phase plan in `tmp/pyopencl_backend_d
 - Completed: PR 11 feature backend
 - Completed: PR 12 extended reference suite and rollout guardrails
 - Completed: PR 13 dependency surfacing and runtime diagnostics
-- In progress: PR 14 Python-owned public types and runtime facade
-- Current milestone audit: the authoritative 54-test gate in `tmp/backend_core_test_suite.md`, the broader 63-test PR 11 acceptance bundle, and the 74-test PR 12 extended reference bundle all passed on the stable NVIDIA runtime on this workspace after the PR 13 dependency and runtime-diagnostics updates; packaging audit results are recorded in `tmp/pyopencl_packaging_release_audit.md`
+- Completed: PR 14 Python-owned public types and runtime facade
+- Current milestone audit: the authoritative 54-test gate remains green, the extended PyOpenCL reference bundle now covers 76 tests including the public logger surface, the default-backend `test/test_vdp.py` smoke still passes, and the transition example at `examples/pyopencl_ornstein_uhlenbeck.py` still runs correctly on the stable NVIDIA runtime on this workspace; packaging audit results are recorded in `tmp/pyopencl_packaging_release_audit.md`
 - Struct-handling audit result: host-populated OpenCL structs now use device-matched PyOpenCL dtypes for `SolverParams` and `ObserverParams`; `ObserverData` remains a deferred feature-backend concern and must not reuse the legacy byte-count formulas
 - Trajectory note: the current kernel contract counts `max_store` as total storage slots including the initial sample at slot 0; this existing behavior was respected in the new regression coverage and was not changed here
 - Deferred follow-up: a zero-parameter Python-callable RHS can still trip a current C++ backend construction-time edge case on this Linux workspace; keep it documented but out of scope for the current PR sequence
@@ -481,7 +481,7 @@ Priority: P1
 
 Status:
 
-- In progress
+- Complete
 
 Goal:
 
@@ -509,13 +509,15 @@ Current slice landed:
 - `ProblemInfo`, `SolverParams`, and `ObserverParams` now have Python-owned implementations in `clode/types.py`
 - public simulators and `_pyopencl` modules now consume those Python-owned model types
 - the C++ backend now converts those models explicitly at the adapter boundary
+- `clode/runtime.py` now owns the public runtime enums, info models, lazy logger state, and a Python `OpenCLResource` compatibility facade
+- `clode/_backends/factory.py` now lazy-loads the C++ adapter so `import clode` and the PyOpenCL path no longer touch the wrapper at module import time
+- `test/test_pyopencl_runtime.py` now contains a subprocess regression that blocks `clode.cpp` imports and verifies the PyOpenCL public path still imports, queries OpenCL, and builds a simulator
 - `examples/pyopencl_ornstein_uhlenbeck.py` now demonstrates the current transition-phase PyOpenCL backend selector and explicit runtime pinning on a real simulation
-- focused model tests plus broader C++ and PyOpenCL simulator slices passed locally on this workspace
+- focused runtime tests, the default-backend runtime/logger smoke, and the broader 76-test PyOpenCL acceptance bundle all passed locally on this workspace
 
-Remaining work in this PR:
+Audit result:
 
-- remove the public runtime module's import-time dependency on wrapper-owned runtime types
-- decide whether the runtime facade should be Python-native immediately or loaded through a compatibility shim during transition
+- Passed on the stable NVIDIA runtime; `import clode` no longer requires the C++ extension when the PyOpenCL path is selected, and the C++ backend still works through the explicit adapter boundary
 
 Guardrails:
 

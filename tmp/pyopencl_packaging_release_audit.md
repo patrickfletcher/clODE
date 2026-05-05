@@ -202,6 +202,10 @@ Success criterion:
 
 - `import clode` works without the C++ extension being importable, provided the PyOpenCL dependency path is installed and the C++ backend is not selected
 
+Status update:
+
+- Landed on this workspace: public model types and runtime compatibility objects are now Python-owned, `clode/_backends/factory.py` no longer imports the C++ adapter eagerly, and a subprocess regression test now blocks `clode.cpp` imports while verifying the PyOpenCL public path still imports and constructs a simulator
+
 #### PR 15: Bazel-Free Packaging And Release Transition
 
 Goal:

@@ -142,7 +142,7 @@ class CppSimulatorBackend(_CppBackendBase[SimulatorBase]):
                 materialized_problem_info,
                 stepper,
                 single_precision,
-                runtime,
+                runtime.as_cpp(),
                 clode_root,
             )
         )
@@ -166,7 +166,7 @@ class CppTrajectoryBackend(_CppBackendBase[TrajectorySimulatorBase]):
                 materialized_problem_info,
                 stepper,
                 single_precision,
-                runtime,
+                runtime.as_cpp(),
                 clode_root,
             )
         )
@@ -212,7 +212,7 @@ class CppFeatureBackend(_CppBackendBase[FeatureSimulatorBase]):
                 observer,
                 observer_params_to_cpp(observer_params),
                 single_precision,
-                runtime,
+                runtime.as_cpp(),
                 clode_root,
             )
         )

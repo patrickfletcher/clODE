@@ -13,7 +13,6 @@ from .._pyopencl.runtime import OpenCLRuntime
 from ..runtime import CLDeviceType, CLVendor
 from ..runtime import OpenCLResource
 from ..types import ObserverParams, ProblemInfo
-from .cpp import CppFeatureBackend, CppSimulatorBackend, CppTrajectoryBackend
 from .protocol import FeatureBackend, SimulatorBackend, TrajectoryBackend
 from .rhs import RhsSource
 
@@ -71,6 +70,8 @@ def create_simulator_backend(
 ) -> SimulatorBackend:
     resolved = _resolve_backend_name(backend_name)
     if resolved == "cpp":
+        from .cpp import CppSimulatorBackend
+
         return CppSimulatorBackend(
             problem_info, rhs_source, stepper, single_precision, runtime, clode_root
         )
@@ -104,6 +105,8 @@ def create_trajectory_backend(
             _create_pyopencl_runtime(runtime_selection),
             clode_root,
         )
+    from .cpp import CppTrajectoryBackend
+
     return CppTrajectoryBackend(
         problem_info, rhs_source, stepper, single_precision, runtime, clode_root
     )
@@ -133,6 +136,8 @@ def create_feature_backend(
             _create_pyopencl_runtime(runtime_selection),
             clode_root,
         )
+    from .cpp import CppFeatureBackend
+
     return CppFeatureBackend(
         problem_info,
         rhs_source,

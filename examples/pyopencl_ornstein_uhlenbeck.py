@@ -9,7 +9,6 @@ os.environ["_CLODE_BACKEND"] = "pyopencl"
 import clode
 import numpy as np
 
-
 def ornstein_uhlenbeck(
     t: float,
     variables: List[float],
@@ -69,6 +68,7 @@ def main() -> None:
         platform_id=args.platform_id,
         device_id=args.device_id,
     )
+
 
     integrator.set_repeat_ensemble(args.ensemble_size)
     integrator.seed_rng(args.seed)

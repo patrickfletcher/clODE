@@ -136,7 +136,7 @@ Current state:
 - `clode/_pyopencl/structs.py` now uses `pyopencl.tools.match_dtype_to_c_struct(...)` for host-populated OpenCL structs used by the backend
 - `clode/_pyopencl/executors.py` now contains transient, trajectory, and feature PyOpenCL backends reachable through the internal `_CLODE_BACKEND=pyopencl` selector
 - `clode/_pyopencl/observer_metadata.py` now models feature names and observer-specific `ObserverData` layouts for PyOpenCL allocation without reusing the legacy host byte-count formulas
-- the next backend milestone is PR 14: Python-owned public types and runtime facade
+- the next backend milestone is PR 15: Bazel-free packaging and release transition; PR 14 runtime-facade decoupling is now landed
 
 Deferred note:
 
@@ -148,7 +148,7 @@ Deferred note:
 - `tmp/pyopencl_rollout_guardrails.md` now records the rollout policy, the 74-test extended reference bundle, and the prerequisites for the eventual default switch
 - the default switch should follow a dedicated transition step that makes the PyOpenCL dependency and runtime-selection story explicit first
 - that transition step is now landed: package metadata exposes an optional `clode[pyopencl]` dependency, install docs describe runtime verification, and PyOpenCL runtime errors now point at the optional dependency path
-- packaging audit result: the current wheel still ships the C++ extension and much of the `clode/cpp` source tree, and public Python imports still depend on wrapper-owned types; a Bazel-free PyOpenCL release therefore requires public-model decoupling and packaging cleanup before the default switch
+- packaging audit result: the public Python import path no longer requires wrapper-owned runtime or model types at module import time, but the current wheel still ships the C++ extension and much of the `clode/cpp` source tree; a Bazel-free PyOpenCL release therefore still requires packaging cleanup before the default switch
 - packaging scope note: stale trees such as `matlab/` and `samples/` should be removed from Python package artifacts during the packaging-transition phase rather than carried into the PyOpenCL-only endpoint
 
 ### Recommended module layout
@@ -199,8 +199,8 @@ Responsibility:
 
 Phase behavior:
 
-- during transition, it may still expose the current C++ `OpenCLResource`
-- once the PyOpenCL runtime is ready, it should expose a Python `OpenCLResource` compatibility class with the same public behavior
+- during transition, it now exposes Python-owned runtime enums, info models, and a Python `OpenCLResource` compatibility class that loads the C++ resource only when the C++ backend path is actually used
+- it should continue to preserve the public runtime surface while the package build and release path are moved off the legacy extension
 
 #### `clode/solver.py`, `clode/trajectory.py`, `clode/features.py`
 

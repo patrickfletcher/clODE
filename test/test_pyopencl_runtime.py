@@ -1,5 +1,10 @@
 from dataclasses import replace
+import json
+import os
 from pathlib import Path
+import subprocess
+import sys
+import textwrap
 
 import pytest
 
@@ -72,3 +77,66 @@ def test_program_cache_surfaces_build_failures_with_source_and_options() -> None
     assert error.source_text == invalid_bundle.source_text
     assert error.build_options == invalid_bundle.build_options
     assert error.build_log.strip() != ""
+
+
+def test_public_pyopencl_path_does_not_import_cpp_wrapper() -> None:
+    repo_root = Path(__file__).resolve().parents[1]
+    script = textwrap.dedent(
+        f"""
+        import builtins
+        import json
+        import os
+        import sys
+
+        attempts = []
+        real_import = builtins.__import__
+
+        def guarded_import(name, globals=None, locals=None, fromlist=(), level=0):
+            if name == \"clode.cpp\" or name.startswith(\"clode.cpp.\"):
+                attempts.append({{\"name\": name, \"fromlist\": list(fromlist or ())}})
+                raise ModuleNotFoundError(name)
+            return real_import(name, globals, locals, fromlist, level)
+
+        builtins.__import__ = guarded_import
+
+        import clode
+
+        os.environ[\"_CLODE_BACKEND\"] = \"pyopencl\"
+
+        platforms = clode.query_opencl()
+        simulator = clode.Simulator(
+            src_file=\"test/van_der_pol_oscillator.cl\",
+            variables={{\"x\": 0.0, \"y\": 1.0}},
+            parameters={{\"mu\": 1.0}},
+            num_noise=0,
+            stepper=clode.Stepper.rk4,
+            platform_id={_explicit_runtime_kwargs()["platform_id"]},
+            device_id={_explicit_runtime_kwargs()["device_id"]},
+        )
+
+        print(
+            json.dumps(
+                {{
+                    \"attempts\": attempts,
+                    \"platform_count\": len(platforms),
+                    \"program_string_len\": len(simulator.get_program_string()),
+                    \"wrapper_loaded\": \"clode.cpp.clode_cpp_wrapper\" in sys.modules,
+                }}
+            )
+        )
+        """
+    )
+    completed = subprocess.run(
+        [sys.executable, "-c", script],
+        check=True,
+        capture_output=True,
+        cwd=repo_root,
+        env=os.environ.copy(),
+        text=True,
+    )
+    payload = json.loads(completed.stdout.strip().splitlines()[-1])
+
+    assert payload["platform_count"] > 0
+    assert payload["program_string_len"] > 0
+    assert payload["wrapper_loaded"] is False
+    assert payload["attempts"] == []

@@ -23,6 +23,7 @@ It exists to answer three questions quickly:
 - the currently stable validation target is the NVIDIA runtime selected by `CLODE_TEST_PLATFORM_ID=0` and `CLODE_TEST_DEVICE_ID=0`
 - the Intel CPU runtime remains unstable for the `localmax` feature rebuild path on this machine
 - do not infer the stable runtime only from `clinfo -l`; on this workspace the CLI ordering does not match the stable backend-validation mapping that was verified in practice
+- `clode.print_opencl()` now follows the active backend path: with `_CLODE_BACKEND=pyopencl` it reports the PyOpenCL-visible platform ordering rather than the legacy wrapper ordering
 
 Recommended verification commands:
 
@@ -54,14 +55,14 @@ CLODE_TEST_PLATFORM_ID=0 CLODE_TEST_DEVICE_ID=0 /home/fletcherpa/envs/clode/bin/
 ### Extended reference bundle
 
 - scope: authoritative gate plus higher-value reference coverage that is now worth carrying through rollout work
-- current size: 74 tests
+- current size: 76 tests
 - current command:
 
 ```bash
-CLODE_TEST_PLATFORM_ID=0 CLODE_TEST_DEVICE_ID=0 _CLODE_BACKEND=pyopencl /home/fletcherpa/envs/clode/bin/python -m pytest test/core_numerics/test_transient.py test/core_numerics/test_trajectory.py test/core_numerics/test_features_basicall.py test/core_numerics/test_stochastic.py test/test_backend_contracts.py test/test_backend_rhs_source.py test/test_pyopencl_models.py test/test_pyopencl_source_builder.py test/test_pyopencl_runtime.py test/test_pyopencl_buffers.py test/test_pyopencl_structs.py test/test_pyopencl_transient_backend.py test/test_pyopencl_trajectory_backend.py test/test_pyopencl_feature_backend.py test/test_vdp.py test/test_features.py test/test_aux_values.py test/test_ornl_thompson_a1.py test/test_opencl_builtins.py test/test_runtime.py -q
+CLODE_TEST_PLATFORM_ID=0 CLODE_TEST_DEVICE_ID=0 _CLODE_BACKEND=pyopencl /home/fletcherpa/envs/clode/bin/python -m pytest test/core_numerics/test_transient.py test/core_numerics/test_trajectory.py test/core_numerics/test_features_basicall.py test/core_numerics/test_stochastic.py test/test_backend_contracts.py test/test_backend_rhs_source.py test/test_pyopencl_models.py test/test_pyopencl_source_builder.py test/test_pyopencl_runtime.py test/test_pyopencl_buffers.py test/test_pyopencl_structs.py test/test_pyopencl_transient_backend.py test/test_pyopencl_trajectory_backend.py test/test_pyopencl_feature_backend.py test/test_vdp.py test/test_features.py test/test_aux_values.py test/test_ornl_thompson_a1.py test/test_opencl_builtins.py test/test_runtime.py test/test_logger.py -q
 ```
 
-This bundle passed on the stable NVIDIA runtime on this workspace, including after the PR 13 transition updates.
+This bundle passed on the stable NVIDIA runtime on this workspace after the PR 14 runtime-facade updates.
 
 ## Tests Still Excluded From PR12
 
@@ -82,10 +83,10 @@ Do not switch the default backend until all of the following are true:
 5. the backend selector and diagnostics make it obvious which runtime was actually chosen
 6. the default package build no longer requires the C++ extension at import time
 
-Status on this workspace after the transition PR:
+Status on this workspace after PR 14:
 
-- satisfied: 1, 2, 3, 4, and 5 for the current stable NVIDIA runtime
-- not yet satisfied: 6; the public package and the `_pyopencl` implementation still import C++ wrapper-owned types
+- satisfied: 1, 2, 3, 4, 5, and 6 for the current stable NVIDIA runtime
+- remaining packaging blocker before any default switch: the default build and release path is still Bazel-backed and not yet a pure-Python endpoint
 - still unresolved for broader support: the Intel CPU runtime remains unstable for the `localmax` rebuild path
 
 ## Post-Switch Follow-Up Worth Keeping In Scope
