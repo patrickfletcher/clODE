@@ -1,273 +1,106 @@
 # Feature extraction
 
-...Under Construction...
+`FeatureSimulator` computes trajectory statistics on the device while integrating, which keeps memory use low even for large ensembles. This is the right tool when you want summary quantities such as periods, extrema, event counts, or event timestamps instead of full trajectories.
 
-CLODE can simulate a large number of ODEs simultaneously using OpenCL.
-To keep memory usage low, CLODE extracts features on-the-fly
-using configurable observers. These observers are written in OpenCL
-and can capture properties like the minimum, maximum, or average
-of a variable.
+## Built-in observers
 
-Advanced observers can also capture local maxima, neighbourhoods,
-and thresholds.
+clODE currently ships the following observer modes through the public `Observer` enum:
 
-## Observers
+- `Observer.basic`: basic summary statistics for one variable
+- `Observer.basic_all_variables`: basic summary statistics for all state variables
+- `Observer.local_max`: local-maximum event tracking
+- `Observer.neighbourhood_1`
+- `Observer.neighbourhood_2`
+- `Observer.threshold_2`: threshold-based event tracking and period-style measurements
 
-CLODE's observers are highly configurable. You can choose the following:
-
-* basic - Captures one variable
-* basic_all_variables - Captures all variables
-* local_max - Captures local maxima
-* neighbourhood_2
-* threshold_2 - Captures all values above a threshold
+The exact feature names depend on the observer. Use `get_feature_names()` on a configured simulator or `get_feature_names()` on the resulting `ObserverOutput` to inspect what is available.
 
 ## Example
 
-The following example extracts features from the Van der Pol oscillator
-using the dormand_prince45 integrator.
+The example below measures the period of the Van der Pol oscillator across an ensemble of `mu` values.
 
 ```python
-import numpy as np
-import matplotlib.pyplot as plt
+from typing import List
+
 import clode
+import matplotlib.pyplot as plt
+import numpy as np
 
 
-# Van der Pol Dormand Prince oscillator
-def getRHS(
-        t: float,
-        var: list[float],
-        par: list[float],
-        derivatives: list[float],
-        aux: list[float],
-        wiener: list[float],
+def van_der_pol(
+    t: float,
+    variables: List[float],
+    parameters: List[float],
+    derivatives: List[float],
+    aux: List[float],
+    wiener: List[float],
 ) -> None:
-    mu: float = par[0]
-    x: float = var[0]
-    y: float = var[1]
+    x: float = variables[0]
+    y: float = variables[1]
+    mu: float = parameters[0]
 
-    dx: float = y
-    dy: float = mu * (1 - x ** 2) * y - x
-
-    derivatives[0] = dx
-    derivatives[1] = dy
+    derivatives[0] = y
+    derivatives[1] = mu * (1.0 - x * x) * y - x
 
 
-def scipy_solve_ivp_wrapper(func, aux=None, wiener=None):
-    if aux is None:
-        aux = []
-    if wiener is None:
-        wiener = []
-
-    def wrapper(t, y, *args):
-        dydt = np.zeros_like(y)
-        func(t, y, args, dydt, aux, wiener)
-        return dydt
-
-    return wrapper
-
-
-wrap = scipy_solve_ivp_wrapper(getRHS)
-xx = solve_ivp(
-    wrap,
-    [0, 1000],
-    [1, 1],
-    args=(-1, 0, 1),
-    atol=1e-10,
-    rtol=1e-10,
-    mxstep=1000000,
-)
-
-# Invoke the wrapper with scipy's odeint
-
-getRHS = scipy_odeint_wrapper(getRHS)
-
-from scipy.integrate import odeint
-
-res = odeint(
-    getRHS,
-    [1, 1],
-    [0, 1000],
-    args=([-1], [], []),
-    atol=1e-10,
-    rtol=1e-10,
-    mxstep=1000000,
-)
+mu_values = np.array([0.01, 0.5, 2.0, 4.0])
 
 integrator = clode.FeatureSimulator(
-    rhs_equation=getRHS,
-    variable_names=["x", "y"],
-    parameter_names=["mu"],
+    rhs_equation=van_der_pol,
+    variables={"x": 1.0, "y": 1.0},
+    parameters={"mu": 0.1},
     observer=clode.Observer.threshold_2,
     stepper=clode.Stepper.dormand_prince,
-    tspan=(0.0, 1000.0),
+    t_span=(0.0, 1000.0),
 )
 
-parameters = [-1, 0, 0.01, 0.1, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0]
-
-x0 = np.tile([1, 1], (len(parameters), 1))
-
-pars_v = np.array([[par] for par in parameters])
-integrator.set_ensemble(x0, pars_v)
-
+integrator.set_ensemble(parameters={"mu": mu_values})
 integrator.transient()
-integrator.features()
-observer_output = integrator.get_observer_results()
+observer_output = integrator.features()
 
-periods = observer_output.get_var_max("period")
-plt.plot(parameters, periods[:, 0])
-plt.title("Van der Pol oscillator")
+period = observer_output.get_var_mean("period")
+
+plt.plot(mu_values, period)
 plt.xlabel("mu")
 plt.ylabel("period")
-
+plt.title("Van der Pol oscillator")
 plt.show()
 ```
 
-## New definition
+## Configuring an observer
+
+Observer configuration lives in `ObserverParams` and can be updated through `set_observer_parameters(...)`.
+
+Common options include:
+
+- `event_var`: which variable is used for event detection
+- `feature_var`: which variable is used for feature readout
+- `max_event_count`: how many events to accumulate
+- `max_event_timestamps`: how many event timestamps to retain
+- `min_amp`, `min_imi`, `nhood_radius`, `x_up_threshold`, `x_down_threshold`, `dx_up_threshold`, `dx_down_threshold`, `eps_dx`
+
+Example:
 
 ```python
-import numpy as np
-import matplotlib.pyplot as plt
-import clode
-
-
-# Van der Pol Dormand Prince oscillator
-def get_rhs(
-        t: float,
-        var: list[float],
-        mu: float,
-        kl: float,
-        weiner1: float,
-) -> list[float]:
-    x: float = var[0]
-    y: float = var[1]
-
-    kk: float = weiner1 * kl
-
-    dx: float = y
-    dy: float = mu * (1 - x ** 2) * y - x
-
-    aux: float = x + kk
-
-    return [dx, dy]
-
-
-ivp = clode.IVP(
-    rhs=get_rhs,
-    variables: dict[str, float] = {"x": 1.0, "y": 1.0},
-parameters: dict[str, float] = {"mu": 0.1},
-aux: list["str"] = ["aux"],
-noise: list["str"] = ["weiner1"]
+integrator.set_observer_parameters(
+    event_var="x",
+    feature_var="x",
+    max_event_timestamps=16,
+    min_amp=0.1,
 )
-
-
-integrator = clode.FeatureSimulator(
-    ivp=ivp,
-    solver=clode.Solver.dormand_prince,
-)
-
-integrator.set_ensemble(
-    parameters={"mu": [-1, 0, 0.01, 0.1, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0]},
-    variables={"x": [1.0, 2.0], },
-)
-
-integrator.transient()
-integrator.features()
-observer_output = integrator.get_observer_results()
-
-periods = observer_output.get_var_max("period")
-
-plt.plot(parameters, periods[:, 0])
-plt.title("Van der Pol oscillator")
-plt.xlabel("mu")
-plt.ylabel("period")
-
-plt.show()
 ```
 
-## XPP
+## Reading results
 
-```xpp
-init x = 0.1 y = 0.1
+`features()` returns an `ObserverOutput` object. Common accessors are:
 
-par mu = 0.1
-y' = mu * (1 - x*x) * y - x
-x' = y
+- `get_feature_names()`
+- `get_var_mean(name)`
+- `get_var_min(name)`
+- `get_var_max(name)`
+- `get_var_count(name)`
+- `get_event_data(name, type="time")`
 
-@ dt=0.05, total=5000, maxstor=20000000
-@ bounds=10000000, xp=t, yp=v
-@ xlo=0, xhi=5000, ylo=-75, yhi=0
-@ method=Euler
+## Current customization status
 
-```
-
-### Python
-
-```python
-import numpy as np
-
-import clode
-
-
-def cuberoot(x):
-    return x ** (1 / 3.)
-
-
-def vdp_dormand_prince(end: int, input_file: str):
-    tspan = (0.0, 1000.0)
-
-    integrator = clode.CLODEFeatures(
-        src_file=input_file,
-        variable_names=["x", "y"],
-        parameter_names=["mu"],
-        num_noise=0,
-        observer=clode.Observer.threshold_2,
-        stepper=clode.Stepper.dormand_prince,
-        tspan=tspan,
-    )
-
-    parameters = [-1, 0, 0.01, 0.1, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0] +
-    list(range(5, end))
-
-
-x0 = np.tile([1, 1], (len(parameters), 1))
-
-pars_v = np.array([[par] for par in parameters])
-integrator.set_ensemble(x0, pars_v)
-
-integrator.transient()
-integrator.features()
-observer_output = integrator.get_observer_results()
-
-return observer_output
-
-vdp_dormand_prince(100, "vdp_oscillator.xpp")
-```
-
-```python
-def scipy_solve_ivp_wrapper(func, aux=None, wiener=None):
-    if aux is None:
-        aux = []
-    if wiener is None:
-        wiener = []
-    def wrapper(t, y, *args):
-        dydt = np.zeros_like(y)
-        func(t, y, args, dydt, aux, wiener)
-        return dydt
-
-    return wrapper
-
-wrap = scipy_solve_ivp_wrapper(getRHS)
-xx = solve_ivp(
-    wrap,
-    [0, 1000],
-    [1, 1],
-    args=(-1, 0, 1),
-    atol=1e-10,
-    rtol=1e-10,
-    mxstep=1000000,
-)
-
-# Invoke the wrapper with scipy's odeint
-
-getRHS = scipy_odeint_wrapper(getRHS)
-```
+The built-in observers are stable and supported. Authoring completely custom observers is still an internal workflow tied to the OpenCL observer kernels and Python-side observer metadata. That is an active design area for the post-migration cleanup, but it is not yet a polished public extension API.

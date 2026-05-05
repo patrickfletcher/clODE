@@ -1,132 +1,108 @@
-# (Advanced) Initialize runtimes
+# (Advanced) Runtime selection
 
-Each CLODEFeature and CLODETrajectory object
-maintains its own OpenCL runtime. This is so
-that users can initialize multiple runtimes
-across different devices.
+Each simulator instance owns its own OpenCL runtime selection. That means you can construct different simulators for different devices in the same Python process.
 
-## Automatic initialization
+Most users do not need to call `initialize_runtime(...)` directly. The common pattern is to pass runtime-selection arguments to `Simulator`, `FeatureSimulator`, or `TrajectorySimulator`.
 
-The simplest way to initialize the clODE runtime is to call
-CLODEFeatures and CLODETrajectory without any runtime-specific
-arguments. The runtime device and vendor will be selected
-automatically.
+## Automatic selection
 
-The default runtime device is cl_device_type.DEVICE_TYPE_DEFAULT.
-The default runtime vendor is cl_vendor.ANY.
-
-## Select device and vendor by name
-
-The second way to initialize the clODE runtime is to specify
-the device and platform by name. This is done by passing
-the `device_type` and `vendor` arguments to CLODEFeatures or CLODETrajectory.
-
-You can select from the following devices:
-
-* cl_device_type.DEVICE_TYPE_DEFAULT
-* cl_device_type.DEVICE_TYPE_CPU
-* cl_device_type.DEVICE_TYPE_GPU
-* cl_device_type.DEVICE_TYPE_ACCELERATOR
-* cl_device_type.DEVICE_TYPE_CUSTOM
-* cl_device_type.DEVICE_TYPE_ALL
-
-You can select from the following vendors:
-
-* cl_vendor.AMD
-* cl_vendor.NVIDIA
-* cl_vendor.INTEL
-* cl_vendor.ANY
+If you do not pass any runtime-selection arguments, clODE chooses a default device automatically.
 
 ```python
 import clode
 
-device_type = cl_device_type,DEVICE_TYPE_GPU
-vendor = cl_vendor.AMD
 
-input_file: str = "test/van_der_pol_oscillator.cl"
-tspan = (0.0, 1000.0)
-
-trajectory = clode.CLODETrajectory(
-    src_file=input_file,
-    variable_names=["x", "y"],
-    parameter_names=["mu"],
-    num_noise=0,
+simulator = clode.TrajectorySimulator(
+    src_file="test/van_der_pol_oscillator.cl",
+    variables={"x": 0.0, "y": 1.0},
+    parameters={"mu": 1.0},
     stepper=clode.Stepper.dormand_prince,
-    tspan=tspan,
-    device_type=device_type,
-    vendor=vendor,
+    t_span=(0.0, 1000.0),
 )
 ```
 
-## Select platform and device by index
+## Select by device type and vendor
 
-The third way to initialize the clODE runtime is to specify
-the platform and device by index. This is done by passing
-the `platformID` and `deviceID` arguments
-to CLODEFeatures or CLODETrajectory.
+Use `CLDeviceType` and `CLVendor` when you want a class of device rather than a specific `(platform_id, device_id)` pair.
 
 ```python
 import clode
 
-platform_id = 0
-device_id = 0
 
-input_file: str = "test/van_der_pol_oscillator.cl"
-tspan = (0.0, 1000.0)
-
-trajectory = clode.CLODETrajectory(
-    src_file=input_file,
-    variable_names=["x", "y"],
-    parameter_names=["mu"],
-    num_noise=0,
+simulator = clode.TrajectorySimulator(
+    src_file="test/van_der_pol_oscillator.cl",
+    variables={"x": 0.0, "y": 1.0},
+    parameters={"mu": 1.0},
     stepper=clode.Stepper.dormand_prince,
-    tspan=tspan,
-    platform_id=platform_id,
-    device_id=device_id,
+    t_span=(0.0, 1000.0),
+    device_type=clode.CLDeviceType.DEVICE_TYPE_GPU,
+    vendor=clode.CLVendor.VENDOR_NVIDIA,
 )
 ```
 
-## Selecting platform and multiple devices
+Available device types:
 
-You can also select multiple devices on a single platform.
-This is done by passing the `deviceIDs` argument
-to CLODEFeatures or CLODETrajectory.
+- `CLDeviceType.DEVICE_TYPE_DEFAULT`
+- `CLDeviceType.DEVICE_TYPE_CPU`
+- `CLDeviceType.DEVICE_TYPE_GPU`
+- `CLDeviceType.DEVICE_TYPE_ACCELERATOR`
+- `CLDeviceType.DEVICE_TYPE_CUSTOM`
+- `CLDeviceType.DEVICE_TYPE_ALL`
+
+Available vendors:
+
+- `CLVendor.VENDOR_ANY`
+- `CLVendor.VENDOR_NVIDIA`
+- `CLVendor.VENDOR_AMD`
+- `CLVendor.VENDOR_INTEL`
+
+## Select by platform and device index
+
+Use `platform_id` and `device_id` when you want a specific runtime reported by `clode.query_opencl()` or `clode.print_opencl()`.
 
 ```python
-
 import clode
 
-platformID = 0
-deviceIDs = [0, 1, 2]
 
-input_file: str = "test/van_der_pol_oscillator.cl"
-tspan = (0.0, 1000.0)
-
-trajectory = clode.CLODETrajectory(
-    src_file=input_file,
-    variable_names=["x", "y"],
-    parameter_names=["mu"],
-    num_noise=0,
+simulator = clode.FeatureSimulator(
+    src_file="test/van_der_pol_oscillator.cl",
+    variables={"x": 0.0, "y": 1.0},
+    parameters={"mu": 1.0},
+    observer=clode.Observer.threshold_2,
     stepper=clode.Stepper.dormand_prince,
-    tspan=tspan,
-    platform_id=platform_id,
-    device_ids=device_ids,
+    t_span=(0.0, 1000.0),
+    platform_id=0,
+    device_id=0,
 )
 ```
 
-## Printing the devices
+## Notes on `device_ids`
 
-You can print the devices that are used
-by calling the print_devices method of
-CLODEFeature or CLODETrajectory objects.
+The public constructors still accept `device_ids`, but the high-level simulator API does not implement real multi-device work partitioning. During the PyOpenCL transition, the supported path is explicit single-device selection.
+
+For new work, prefer one of:
+
+- automatic selection
+- `device_type` plus `vendor`
+- explicit `platform_id` plus `device_id`
+
+## Inspecting the selected runtime
+
+Use the public query helpers when choosing a device tuple:
 
 ```python
 import clode
 
-features = CLODEFeatures(...)
-trajectory = CLODETrajectory(...)
 
-trajectory.print_devices()
-
-features.print_devices()
+platforms = clode.query_opencl()
+print(platforms)
+clode.print_opencl()
 ```
+
+You can also print the devices visible to a specific simulator instance:
+
+```python
+simulator.print_devices()
+```
+
+When validating the internal PyOpenCL backend during the current transition period, remember that platform ordering can differ from `clinfo -l`. Treat the backend-reported ordering as authoritative for the backend you are actually using.

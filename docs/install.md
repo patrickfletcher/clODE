@@ -127,4 +127,4 @@ from clode import query_opencl
 print(query_opencl())
 ```
 
-If you are validating the PyOpenCL backend, also verify that `clinfo -l` and `clode.print_opencl()` agree on the runtimes you intend to use before pinning platform and device IDs.
+If you are validating the PyOpenCL backend, compare `clinfo -l` with `clode.print_opencl()` carefully before pinning platform and device IDs. The visible ordering can differ between `clinfo`, the legacy runtime path, and PyOpenCL.

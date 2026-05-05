@@ -1,25 +1,32 @@
 # Logging levels
 
-clODE has several internal logging levels. These are set by the
-`clode.set_log_level` function, which takes an enum argument. The
-levels are:
+clODE exposes logging levels through the `LogLevel` enum and the `set_log_level(...)` helper.
 
-* `clode.log_level.off`: No logging
-* `clode.log_level.critical`: Only log critical errors
-* `clode.log_level.error`: Only log errors
-* `clode.log_level.warning`: Log errors and warnings
-* `clode.log_level.info`: Log errors, warnings, and info
-* `clode.log_level.debug`: Log errors, warnings, info, and debug
-* `clode.log_level.trace`: Log everything, including trace messages
+Available levels:
 
-To set the logging level, use the `clode.set_log_level` function:
+- `clode.LogLevel.off`: no logging
+- `clode.LogLevel.critical`: only critical failures
+- `clode.LogLevel.err`: errors and above
+- `clode.LogLevel.warn`: warnings and above
+- `clode.LogLevel.info`: informational messages and above
+- `clode.LogLevel.debug`: debug output and above
+- `clode.LogLevel.trace`: the most verbose logging
+
+To change the active level:
 
 ```python
 import clode
 
-clode.set_log_level(clode.log_level.debug) # Set the logging level to debug
+clode.set_log_level(clode.LogLevel.debug)
 
 # Do some stuff
 
-clode.set_log_level(clode.log_level.off) # Turn off logging
+clode.set_log_level(clode.LogLevel.off)
+```
+
+You can inspect the current level with:
+
+```python
+current_level = clode.get_log_level()
+print(current_level)
 ```

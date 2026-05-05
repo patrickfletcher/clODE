@@ -5,6 +5,7 @@
 - Status: In progress
 - Audience: maintainers and contributors implementing the PyOpenCL migration
 - Related document: `tmp/cpp_opencl_layer_audit.md`
+- Forward-looking follow-up: `tmp/pyopencl_post_migration_plan.md`
 - Completed groundwork: scope lock, authoritative migration test gate, internal backend seam, C++ backend adapter, RHS source object integration, PyOpenCL core models and errors, the phase-one Python registry plus source builder, the first runtime-scoped PyOpenCL compile path, the common-state buffer manager, device-matched host struct helpers, and the first transient, trajectory, and feature PyOpenCL executors
 
 ## Decision Summary

@@ -11,31 +11,26 @@
 ------------------- |
 [![Documentation](https://img.shields.io/badge/api-reference-blue.svg)](https://patrickfletcher.github.io/clODE/) |
 
+clODE is an efficient computational tool designed for parallel solving of ordinary differential equation (ODE) ensembles using OpenCL. It lets users define their ODE system and the ensemble of parameter sets and initial conditions in Python. By leveraging OpenCL, significant speedups can be obtained for this inherently parallel problem on CPUs, GPUs, and other OpenCL-capable devices.
 
-clODE is an efficient computational tool designed for parallel solving
-of ordinary differential equation (ODE) ensembles using OpenCL.
-It lets users define their ODE system and the ensemble of parameter sets and initial conditions in Python.  By leveraging OpenCL, significant speedups can be obtained for this inherently parallel problem on any CPU, GPU, or other device with OpenCL support. Two primary modes of simulation are supported:
+The public Python API is built around three simulator classes:
 
-- FeatureSimulator computes features of ODE trajectories, such as oscillation period, on-the-fly, without storing the trajectory data, facilitating extensive parameter analyses with considerable computational speed improvements.
-- TrajectorySimulator stores the full trajectory data.
+- `Simulator` advances an ensemble and keeps only the final state.
+- `FeatureSimulator` computes trajectory features on the fly through a stateful observer, without storing the full trajectory.
+- `TrajectorySimulator` stores full trajectory samples.
 
-clODE offers flexibility in simulator deployment across different hardware,
-allowing, for example, the FeatureSimulator to operate on a GPU while the
-TrajectorySimulator runs on a CPU.
+clODE offers flexibility in simulator deployment across different hardware, allowing, for example, the `FeatureSimulator` to operate on a GPU while the `TrajectorySimulator` runs on a CPU.
 
-Developed in C++ and OpenCL, clODE is accessible for direct use in C++
-applications or through a Python interface. The library compiles with bazel
-and bazelisk, and works on Linux, Windows, and MacOS platforms.
+The repository is currently transitioning from a legacy C++/Bazel host runtime to a Python-owned PyOpenCL backend. The public API remains stable during that migration. Today, the default backend is still the legacy path, while the optional `clode[pyopencl]` dependency enables the transition backend for contributor workflows and validation.
 
 ## Installation
 
-See [installation](https://patrickfletcher.github.io/clODE/install/) for instructions on how to install CLODE.
+See [installation](https://patrickfletcher.github.io/clODE/install/) for current installation instructions.
 
 ## Getting Started
 
-See [Getting Started](https://patrickfletcher.github.io/clODE/getting_started/) for an example of clODE usage.
+See [Getting Started](https://patrickfletcher.github.io/clODE/getting_started/) for current Python examples.
 
 ## Source
 
 The source code is available on [GitHub](https://github.com/patrickfletcher/clODE).
-

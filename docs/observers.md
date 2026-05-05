@@ -1,99 +1,63 @@
+# Observers
 
+Observers are the mechanism behind `FeatureSimulator`. They maintain per-ensemble state on the device and reduce trajectory information as integration proceeds, which lets clODE compute summary quantities without storing the full trajectory.
+
+## Built-in observer modes
+
+The current public observer modes are:
+
+- `clode.Observer.basic`
+- `clode.Observer.basic_all_variables`
+- `clode.Observer.local_max`
+- `clode.Observer.neighbourhood_1`
+- `clode.Observer.neighbourhood_2`
+- `clode.Observer.threshold_2`
+
+Choose an observer when constructing a `FeatureSimulator`:
 
 ```python
-import numpy as np
-import matplotlib.pyplot as plt
 import clode
 
 
-def x_inf(v: float, vx: float, sx: float) -> float:
-    return 1.0 / (1.0 + exp((vx - v) / sx))
-
-
-def s_inf(c: float, k_s: float) -> float:
-    c2: float = c * c
-    return c2 / (c2 + k_s * k_s)
-
-
-def lactotroph(
-    t: float,
-    x_: List[float],
-    p_: List[float],
-    dx_: List[float],
-    aux_: List[float],
-    w_: List[float],
-) -> None:
-    v: float = x_[0]
-    n: float = x_[1]
-    c: float = x_[2]
-
-    gca: float = p_[0]
-    gk: float = p_[1]
-    gsk: float = p_[2]
-    gleak: float = p_[3]
-    cm: float = p_[4]
-    e_leak: float = p_[5]
-    tau_n: float = p_[6]
-    k_c: float = p_[7]
-
-    e_ca: float = 60
-    e_k: float = -75
-
-    vm: float = -20
-    vn: float = -5
-    sm: float = 12
-    sn: float = 10
-
-    f_c: float = 0.01
-    alpha: float = 0.0015
-    k_s: float = 0.4
-
-    ica: float = gca * x_inf(v, vm, sm) * (v - e_ca)
-    ik: float = gk * n * (v - e_k)
-    isk: float = gsk * s_inf(c, k_s) * (v - e_k)
-    ileak: float = gleak * (v - e_leak)
-    current: float = ica + ik + isk + ileak
-
-    dv: float = -current / cm
-
-    dn: float = (x_inf(v, vn, sn) - n) / tau_n
-
-    dc: float = -f_c * (alpha * ica + k_c * c)
-
-    dx_[0] = dv
-    dx_[1] = dn
-    dx_[2] = dc
-
-
 integrator = clode.FeatureSimulator(
-    rhs_equation=lactotroph,
-    supplementary_equations=[x_inf, s_inf],
-    variables={
-        "v": -60,
-        "n": 0.1,
-        "c": 0.1,
-    },
-    parameters={
-        "gca": 1.5,
-        "gk": 2.0,
-        "gsk": 0.5,
-        "gleak": 0.1,
-        "cm": 10.0,
-        "e_leak": -60,
-        "tau_n": 15,
-        "k_c": 0.1,
-    },
-    observer=clode.Observer.neighbourhood_2,
+    src_file="test/van_der_pol_oscillator.cl",
+    variables={"x": 0.0, "y": 1.0},
+    parameters={"mu": 1.0},
+    observer=clode.Observer.threshold_2,
     stepper=clode.Stepper.dormand_prince,
     t_span=(0.0, 1000.0),
 )
-
-# TODO magic that creates grid
-
-parameters = []
-
-integrator.set_ensemble(parameters=parameters)
-
-
-
 ```
+
+## Observer parameters
+
+Tune observer behavior with `set_observer_parameters(...)`.
+
+```python
+integrator.set_observer_parameters(
+    event_var="x",
+    feature_var="x",
+    max_event_count=128,
+    max_event_timestamps=16,
+    min_amp=0.1,
+    x_up_threshold=0.3,
+    x_down_threshold=0.2,
+)
+```
+
+Changing `max_event_timestamps` changes observer storage requirements and may trigger a rebuild of the OpenCL program.
+
+## Reading observer output
+
+```python
+observer_output = integrator.features()
+print(observer_output.get_feature_names())
+print(observer_output.get_var_mean("period"))
+print(observer_output.get_event_data("up", type="time"))
+```
+
+The available names depend on the selected observer.
+
+## Current extension status
+
+Built-in observers are supported and tested. User-authored custom observers are not yet a polished public API; today they still depend on internal OpenCL observer kernels and Python-side metadata definitions.
