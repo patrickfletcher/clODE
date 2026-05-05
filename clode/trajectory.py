@@ -180,9 +180,7 @@ class TrajectorySimulator(Simulator):
         Returns:
             List[TrajectoryOutput]
         """
-        # if not self._cl_program_is_valid:
-        #     self._integrator.build_cl()
-        #     self._cl_program_is_valid = True
+        self._ensure_cl_program()
 
         if t_span is not None:
             self.set_tspan(t_span=t_span)
@@ -190,7 +188,7 @@ class TrajectorySimulator(Simulator):
         self._integrator.trajectory()
         # invalidate _device_t, _device_x, _device_dx, _device_aux, _device_final_state
         self._device_t = self._device_x = self._device_dx = self._device_aux = None
-        self._device_final_state = self._device_dt = self._device_tf = None
+        self._invalidate_solution_cache()
 
         if update_x0:
             self._integrator.shift_x0()

@@ -67,6 +67,7 @@ void CLODEfeatures::setObserver(std::string newObserver)
 	{
 		observer = newObserver;
 		updateObserverDefineMap();
+		observerInitialized = false;
 	}
 	else
 	{
@@ -95,6 +96,7 @@ void CLODEfeatures::setObserverParams(ObserverParams<cl_double> newOp)
 
 		// if op.fVarIx or op.eVarIx change, observer's fNames may change (doesn't need rebuild though)
 		updateObserverDefineMap();
+		observerInitialized = false;
 	}
 	catch (cl::Error &er)
 	{
@@ -110,6 +112,7 @@ void CLODEfeatures::updateObserverDefineMap()
 	getObserverDefineMap(prob, op.fVarIx, op.eVarIx, op.maxEventTimestamps, observerDefineMap, availableObserverNames);
 	observerBuildOpts = " -D" + observerDefineMap.at(observer).define;
 	observerBuildOpts += " -DN_STORE_EVENTS=" + std::to_string((long long)op.maxEventTimestamps);
+	observerName = observer;
 	if (clSinglePrecision)
 		observerDataSize = observerDefineMap.at(observer).observerDataSizeFloat;
 	else
@@ -129,7 +132,9 @@ ObserverParams<cl_float> CLODEfeatures::observerParamsToFloat(ObserverParams<cl_
 	opF.eVarIx = op.eVarIx;
 	opF.fVarIx = op.fVarIx;
 	opF.maxEventCount = op.maxEventCount;
+	opF.maxEventTimestamps = op.maxEventTimestamps;
 	opF.minXamp = op.minXamp;
+	opF.minIMI = op.minIMI;
 	opF.nHoodRadius = op.nHoodRadius;
 	opF.xUpThresh = op.xUpThresh;
 	opF.xDownThresh = op.xDownThresh;
@@ -143,6 +148,7 @@ ObserverParams<cl_float> CLODEfeatures::observerParamsToFloat(ObserverParams<cl_
 void CLODEfeatures::resizeFeaturesVariables()
 {
 	size_t currentFelements = nFeatures * nPts;
+	size_t currentObserverDataAllocBytes = observerDataSize * nPts;
 	size_t largestAlloc = std::max(nFeatures * realSize, observerDataSize) * nPts;
 
 	if (largestAlloc > opencl.getMaxMemAllocSize())
@@ -153,16 +159,17 @@ void CLODEfeatures::resizeFeaturesVariables()
 	}
 
 	// resize device variables if nPts changed
-	if (Felements != currentFelements)
+	if (Felements != currentFelements || observerDataAllocBytes != currentObserverDataAllocBytes)
 	{
 
 		Felements = currentFelements;
+		observerDataAllocBytes = currentObserverDataAllocBytes;
 		F.resize(currentFelements);
 
 		// resize device variables
 		try
 		{
-			d_odata = cl::Buffer(opencl.getContext(), CL_MEM_READ_WRITE, observerDataSize * nPts, NULL, &opencl.error);
+			d_odata = cl::Buffer(opencl.getContext(), CL_MEM_READ_WRITE, observerDataAllocBytes, NULL, &opencl.error);
 			d_F = cl::Buffer(opencl.getContext(), CL_MEM_WRITE_ONLY, realSize * currentFelements, NULL, &opencl.error);
 		}
 		catch (cl::Error &er)

@@ -31,11 +31,12 @@ protected:
     std::vector<std::string> featureNames;
     std::vector<std::string> availableObserverNames;
 
-    int nFeatures;
-    size_t observerDataSize;
+    int nFeatures = 0;
+    size_t observerDataSize = 0;
     std::vector<cl_double> F;
     ObserverParams<cl_double> op;
-    size_t Felements;
+    size_t Felements = 0;
+    size_t observerDataAllocBytes = 0;
     bool observerInitialized = false;
 
     cl::Buffer d_odata, d_op, d_F;

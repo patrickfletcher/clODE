@@ -217,6 +217,13 @@ class Simulator:
         self._integrator.build_cl()
         self._cl_program_is_valid = True
 
+    def _ensure_cl_program(self) -> None:
+        if not self._cl_program_is_valid:
+            self._build_cl_program()
+
+    def _invalidate_solution_cache(self) -> None:
+        self._device_final_state = self._device_dt = self._device_tf = None
+
     def _handle_clode_rhs_cl_file(
         self,
         src_file: str | None = None,
@@ -517,7 +524,8 @@ class Simulator:
         Returns:
             tuple[float, float]: The time span
         """
-        self._t_span = self._integrator.get_tspan()
+        self._t_span = tuple(self._integrator.get_tspan())
+        return self._t_span
 
     def shift_tspan(self) -> None:
         """Shift the time span to the current time plus the time period."""
@@ -567,6 +575,7 @@ class Simulator:
             if nout is not None:
                 self._sp.nout = nout
         self._integrator.set_solver_params(self._sp)
+        self._device_dt = None
 
     def get_solver_parameters(self):
         """Get the current ensemble parameters from the OpenCL device
@@ -608,17 +617,13 @@ class Simulator:
             None
         """
 
-        # Lazy rebuild - would also need to verify device data is set
-        # if not self._cl_program_is_valid:
-        #     self._integrator.build_cl()
-        #     self._cl_program_is_valid = True
+        self._ensure_cl_program()
 
         if t_span is not None:
             self.set_tspan(t_span=t_span)
 
         self._integrator.transient()
-        # invalidates _device_final_state and _device_dt
-        self._device_final_state = self._device_dt = self._device_tf = None
+        self._invalidate_solution_cache()
 
         if update_x0:
             self._integrator.shift_x0()
@@ -654,12 +659,12 @@ class Simulator:
         if self._device_final_state is None:
             final_state = self._integrator.get_xf()
 
-        if final_state is None:
-            raise ValueError("Must run a simulation before getting final state")
+            if final_state is None:
+                raise ValueError("Must run a simulation before getting final state")
 
-        self._device_final_state = np.array(final_state, dtype=np.float64).reshape(
-            (self._ensemble_size, self.num_variables), order="F"
-        )
+            self._device_final_state = np.array(final_state, dtype=np.float64).reshape(
+                (self._ensemble_size, self.num_variables), order="F"
+            )
         return self._device_final_state
 
     def get_dt(self) -> np.ndarray:

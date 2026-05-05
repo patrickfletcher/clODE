@@ -392,6 +392,19 @@ void CLODE::setSolverParams(SolverParams<cl_double> newSp)
 			d_sp = cl::Buffer(opencl.getContext(), CL_MEM_READ_ONLY, sizeof(SolverParams<cl_double>), NULL, &opencl.error);
 			opencl.error = opencl.getQueue().enqueueWriteBuffer(d_sp, CL_TRUE, 0, sizeof(sp), &sp);
 		}
+
+		if (nPts > 0)
+		{
+			if (clSinglePrecision)
+			{
+				std::vector<cl_float> dtF(dt.begin(), dt.end());
+				opencl.error = copy(opencl.getQueue(), dtF.begin(), dtF.end(), d_dt);
+			}
+			else
+			{
+				opencl.error = copy(opencl.getQueue(), dt.begin(), dt.end(), d_dt);
+			}
+		}
 	}
 	catch (cl::Error &er)
 	{

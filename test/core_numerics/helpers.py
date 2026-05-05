@@ -43,6 +43,10 @@ def _with_test_device(kwargs: dict[str, Any]) -> dict[str, Any]:
     return options
 
 
+def device_kwargs_for_tests(**kwargs: Any) -> dict[str, Any]:
+    return _with_test_device(kwargs)
+
+
 def _problem(name: str) -> dict[str, Any]:
     if name == "stable_linear":
         return {

@@ -273,7 +273,8 @@ class FeatureSimulator(Simulator):
     >>> model.plot()
     >>> plt.show()"""
 
-    _device_features: np.ndarray[Any, np.dtype[np.float64]] | None
+    _device_features: np.ndarray[Any, np.dtype[np.float64]] | None = None
+    _num_features: int | None = None
     _integrator: FeatureSimulatorBase
 
     def __init__(
@@ -384,11 +385,18 @@ class FeatureSimulator(Simulator):
         )
         # self.set_observer_parameters()
 
+    def _invalidate_feature_cache(self) -> None:
+        self._device_features = None
+        self._num_features = None
+        self._invalidate_solution_cache()
+
     def set_observer(self, observer_type: Observer):
         """Change the observer"""
         if observer_type != self._observer_type:
-            self._integrator.set_observer(observer_type)
+            self._integrator.set_observer(observer_type.value)
+            self._observer_type = observer_type
             self._cl_program_is_valid = False
+            self._invalidate_feature_cache()
 
     # Changing solver parameters does not require re-building CL program
     def set_observer_parameters(
@@ -417,6 +425,8 @@ class FeatureSimulator(Simulator):
         Returns:
             None
         """
+        current_max_event_timestamps = self._op.max_event_timestamps
+
         if op is not None:
             self._op = op
         else:
@@ -427,8 +437,6 @@ class FeatureSimulator(Simulator):
             if max_event_count is not None:
                 self._op.max_event_count = max_event_count
             if max_event_timestamps is not None:
-                if self._op.max_event_timestamps != max_event_timestamps:
-                    self._cl_program_is_valid = False  # NOTE! Changing max_event_timestamps invalidates the CL program!!
                 self._op.max_event_timestamps = max_event_timestamps
             if min_amp is not None:
                 self._op.min_amp = min_amp
@@ -446,7 +454,12 @@ class FeatureSimulator(Simulator):
                 self._op.dx_down_threshold = dx_down_threshold
             if eps_dx is not None:
                 self._op.eps_dx = eps_dx
+
+        if self._op.max_event_timestamps != current_max_event_timestamps:
+            self._cl_program_is_valid = False
+
         self._integrator.set_observer_params(self._op)
+        self._invalidate_feature_cache()
 
     def get_observer_parameters(self):
         """Get the current observer parameter struct"""
@@ -462,6 +475,7 @@ class FeatureSimulator(Simulator):
 
     def initialize_observer(self):
         """run the observer's initialization warmup pass, if it has one"""
+        self._ensure_cl_program()
         self._integrator.initialize_observer()
 
     def features(
@@ -482,21 +496,17 @@ class FeatureSimulator(Simulator):
         Returns:
             ObserverOutput | None
         """
-        # if not self._cl_program_is_valid:
-        #     self._integrator.build_cl()
-        #     self._cl_program_is_valid = True
+        self._ensure_cl_program()
 
         if t_span is not None:
             self.set_tspan(t_span=t_span)
 
         if initialize_observer is not None:
-            print(f"Setting {initialize_observer=}")
             self._integrator.features(initialize_observer)
         else:
             self._integrator.features()
-            # invalidates _device_features, _device_final_state, _device_dt
-            self._device_features = None
-            self._device_final_state = self._device_dt = self._device_tf = None
+
+        self._invalidate_feature_cache()
 
         if update_x0:
             self._integrator.shift_x0()
@@ -517,7 +527,7 @@ class FeatureSimulator(Simulator):
             self._num_features = self._integrator.get_n_features()
 
         if self._device_features is None or self._num_features is None:
-            raise ValueError("Must run trajectory() before getting observer results")
+            raise ValueError("Must run features() before getting observer results")
 
         self._device_features = np.array(
             self._device_features, dtype=np.float64
