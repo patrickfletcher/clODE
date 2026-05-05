@@ -5,6 +5,10 @@ class PyOpenCLBackendError(RuntimeError):
     pass
 
 
+class PyOpenCLDependencyError(PyOpenCLBackendError):
+    pass
+
+
 class PyOpenCLValidationError(PyOpenCLBackendError, ValueError):
     pass
 

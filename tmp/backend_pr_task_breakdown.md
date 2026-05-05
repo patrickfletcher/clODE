@@ -15,8 +15,9 @@ It is intentionally more granular than the phase plan in `tmp/pyopencl_backend_d
 - Completed: PR 4 RHS source object integration
 - Completed: PR 5 PyOpenCL core models and errors
 - Completed: PR 6 PyOpenCL registry and source builder
-- Next: PR 7 PyOpenCL runtime and program cache
-- Current milestone audit: `test/core_numerics`, `test/test_backend_contracts.py`, `test/test_backend_rhs_source.py`, `test/test_pyopencl_models.py`, `test/test_pyopencl_source_builder.py`, `test/test_features.py`, `test/test_function_converter.py`, and `test/test_xpp_parser.py` passed together
+- Completed: PR 7 PyOpenCL runtime and program cache
+- Next: PR 8 Buffer manager for common state
+- Current milestone audit: `test/core_numerics`, `test/test_backend_contracts.py`, `test/test_backend_rhs_source.py`, `test/test_pyopencl_models.py`, `test/test_pyopencl_source_builder.py`, `test/test_pyopencl_runtime.py`, `test/test_features.py`, `test/test_function_converter.py`, and `test/test_xpp_parser.py` passed together
 - Deferred follow-up: a zero-parameter Python-callable RHS can still trip a current C++ backend construction-time edge case on this Linux workspace; keep it documented but out of scope for the current PR sequence
 
 ## Planning Rules
@@ -239,6 +240,10 @@ Audit result:
 
 Priority: P0
 
+Status:
+
+- Complete
+
 Goal:
 
 - compile programs and cache them correctly in Python without executing solver kernels yet
@@ -257,6 +262,10 @@ Acceptance criteria:
 - runtime selects one device explicitly
 - cache is runtime-scoped and keyed by `BuildKey`
 - build failures surface source text, options, and build log
+
+Audit result:
+
+- Passed
 
 ## PR 8: Buffer Manager For Common State
 

@@ -2,6 +2,7 @@ from .errors import (
     BuildError,
     DoublePrecisionNotSupportedError,
     PyOpenCLBackendError,
+    PyOpenCLDependencyError,
     PyOpenCLValidationError,
     RegistryValidationError,
     RhsValidationError,
@@ -19,7 +20,9 @@ from .models import (
     SourceBundle,
 )
 from .registry import KernelRegistry
+from .runtime import OpenCLRuntime
 from .source_builder import SourceBuilder
+from .program_cache import ProgramCache
 
 __all__ = [
     "BuildError",
@@ -27,11 +30,14 @@ __all__ = [
     "DoublePrecisionNotSupportedError",
     "KernelKind",
     "KernelRegistry",
+    "OpenCLRuntime",
     "PYOPENCL_BACKEND_VERSION",
     "Precision",
+    "ProgramCache",
     "ProblemShape",
     "ProgramBundle",
     "PyOpenCLBackendError",
+    "PyOpenCLDependencyError",
     "PyOpenCLValidationError",
     "RegistryValidationError",
     "RhsSource",

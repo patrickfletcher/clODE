@@ -5,7 +5,7 @@
 - Status: In progress
 - Audience: maintainers and contributors implementing the PyOpenCL migration
 - Related document: `tmp/cpp_opencl_layer_audit.md`
-- Completed groundwork: scope lock, authoritative migration test gate, internal backend seam, C++ backend adapter, RHS source object integration, PyOpenCL core models and errors, and the phase-one Python registry plus source builder
+- Completed groundwork: scope lock, authoritative migration test gate, internal backend seam, C++ backend adapter, RHS source object integration, PyOpenCL core models and errors, the phase-one Python registry plus source builder, and the first runtime-scoped PyOpenCL compile path
 
 ## Decision Summary
 
@@ -131,7 +131,8 @@ Current state:
 - public simulators now prepare an internal `RhsSource` object before backend construction
 - `clode/_pyopencl/` now exists with the initial model and error layer for upcoming source-builder and runtime work
 - `clode/_pyopencl/registry.py` and `clode/_pyopencl/source_builder.py` now reproduce the current static define map, entrypoint layout, and phase-one build option assembly in Python
-- the next backend milestone is PR 7: PyOpenCL runtime and program cache
+- `clode/_pyopencl/runtime.py` and `clode/_pyopencl/program_cache.py` now select one OpenCL device explicitly and compile/cache transient programs through PyOpenCL
+- the next backend milestone is PR 8: buffer manager for common state
 
 Deferred note:
 

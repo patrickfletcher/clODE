@@ -26,8 +26,9 @@ Everything else under `test/` is reference material, historical coverage, or out
 - `test/test_backend_rhs_source.py`
 - `test/test_pyopencl_models.py`
 - `test/test_pyopencl_source_builder.py`
+- `test/test_pyopencl_runtime.py`
 
-Today this combined gate is 32 tests and is the suite that should stay green through the subsequent backend-migration phases.
+Today this combined gate is 35 tests and is the suite that should stay green through the subsequent backend-migration phases.
 
 Current implementation state:
 
@@ -36,6 +37,7 @@ Current implementation state:
 - public simulators now prepare an internal `RhsSource` object with source text and digest before backend construction
 - the internal `clode/_pyopencl/` package now contains the immutable build, source, and program models plus backend-specific error types
 - the internal `clode/_pyopencl/` package now also contains a static kernel registry and deterministic phase-one source builder
+- the internal `clode/_pyopencl/` package now also contains a real PyOpenCL runtime selector and runtime-scoped program cache
 
 ## Canonical Models
 
@@ -124,6 +126,13 @@ The stochastic gate does not currently include a continuation test. That was int
 - the build key changes when RHS source changes while kernel-tree digest stays stable
 - conservative RHS validation rejects source that does not define `getRHS(...)`
 
+`test/test_pyopencl_runtime.py` protects the PR 7 runtime and compile layer:
+
+- explicit runtime selection chooses one requested OpenCL device
+- transient source bundles compile successfully through PyOpenCL on the configured test device
+- the program cache is runtime-scoped and reuses cache hits by `BuildKey`
+- build failures preserve source text, build options, and build log details
+
 This file is intentionally small. Its job is to lock down the current backend contract, not to become a second broad API suite.
 
 ## Runtime Guidance
@@ -136,7 +145,7 @@ This file is intentionally small. Its job is to lock down the current backend co
 On this Linux workspace, the stable local command is:
 
 ```bash
-CLODE_TEST_PLATFORM_ID=1 CLODE_TEST_DEVICE_ID=0 /home/fletcherpa/envs/clode/bin/python -m pytest test/core_numerics test/test_backend_contracts.py test/test_backend_rhs_source.py test/test_pyopencl_models.py test/test_pyopencl_source_builder.py -q
+CLODE_TEST_PLATFORM_ID=1 CLODE_TEST_DEVICE_ID=0 /home/fletcherpa/envs/clode/bin/python -m pytest test/core_numerics test/test_backend_contracts.py test/test_backend_rhs_source.py test/test_pyopencl_models.py test/test_pyopencl_source_builder.py test/test_pyopencl_runtime.py -q
 ```
 
 The environment-variable override lives in `test/core_numerics/helpers.py` so the tests do not hardcode local device IDs.
