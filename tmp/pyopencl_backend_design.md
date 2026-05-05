@@ -5,7 +5,7 @@
 - Status: In progress
 - Audience: maintainers and contributors implementing the PyOpenCL migration
 - Related document: `tmp/cpp_opencl_layer_audit.md`
-- Completed groundwork: scope lock, authoritative migration test gate, internal backend seam, C++ backend adapter, RHS source object integration, PyOpenCL core models and errors, the phase-one Python registry plus source builder, the first runtime-scoped PyOpenCL compile path, the common-state buffer manager, device-matched host struct helpers, and the first transient and trajectory PyOpenCL executors
+- Completed groundwork: scope lock, authoritative migration test gate, internal backend seam, C++ backend adapter, RHS source object integration, PyOpenCL core models and errors, the phase-one Python registry plus source builder, the first runtime-scoped PyOpenCL compile path, the common-state buffer manager, device-matched host struct helpers, and the first transient, trajectory, and feature PyOpenCL executors
 
 ## Decision Summary
 
@@ -134,14 +134,17 @@ Current state:
 - `clode/_pyopencl/runtime.py` and `clode/_pyopencl/program_cache.py` now select one OpenCL device explicitly and compile/cache transient programs through PyOpenCL
 - `clode/_pyopencl/buffers.py` now centralizes the current common transient buffer allocation and Fortran-order layout rules
 - `clode/_pyopencl/structs.py` now uses `pyopencl.tools.match_dtype_to_c_struct(...)` for host-populated OpenCL structs used by the backend
-- `clode/_pyopencl/executors.py` now contains transient and trajectory PyOpenCL backends reachable through the internal `_CLODE_BACKEND=pyopencl` selector
-- the next backend milestone is PR 11: feature backend
+- `clode/_pyopencl/executors.py` now contains transient, trajectory, and feature PyOpenCL backends reachable through the internal `_CLODE_BACKEND=pyopencl` selector
+- `clode/_pyopencl/observer_metadata.py` now models feature names and observer-specific `ObserverData` layouts for PyOpenCL allocation without reusing the legacy host byte-count formulas
+- the next backend milestone is PR 12: extended reference suite and rollout guardrails
 
 Deferred note:
 
 - a zero-parameter Python-callable RHS can still hit a current C++ backend construction-time edge case on this Linux workspace; it is documented and intentionally deferred while the backend migration sequence proceeds
 - the feature-backend work must not copy the legacy `ObserverData` byte-count formulas; `tmp/pyopencl_struct_audit.md` records why device-aligned padding makes that unsafe in double precision
 - the current trajectory kernel contract treats `max_store` as total storage slots including the initial sample at slot 0; this migration phase preserved that behavior rather than changing kernel numerics
+- the feature path has a real two-stage lifecycle: `initializeObserver` prepares observer state and the `features` kernel consumes and updates it; continuation semantics depend on preserving that opaque observer buffer between calls
+- on this workspace, the stable PyOpenCL milestone-validation command currently uses the NVIDIA runtime with `CLODE_TEST_PLATFORM_ID=0` and `CLODE_TEST_DEVICE_ID=0`; `clinfo -l` reports a different platform order, so runtime selection should be verified empirically rather than inferred from the CLI alone
 
 ### Recommended module layout
 

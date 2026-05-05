@@ -19,11 +19,14 @@ It is intentionally more granular than the phase plan in `tmp/pyopencl_backend_d
 - Completed: PR 8 Buffer manager for common state
 - Completed: PR 9 PyOpenCL transient backend
 - Completed: PR 10 trajectory backend
-- Next: PR 11 feature backend
-- Current milestone audit: the authoritative 51-test gate in `tmp/backend_core_test_suite.md` passed together on the stable local device
+- Completed: PR 11 feature backend
+- Next: PR 12 extended reference suite and rollout guardrails
+- Current milestone audit: the authoritative 54-test gate in `tmp/backend_core_test_suite.md` plus the broader 63-test PR 11 acceptance bundle passed on the stable NVIDIA runtime on this workspace
 - Struct-handling audit result: host-populated OpenCL structs now use device-matched PyOpenCL dtypes for `SolverParams` and `ObserverParams`; `ObserverData` remains a deferred feature-backend concern and must not reuse the legacy byte-count formulas
 - Trajectory note: the current kernel contract counts `max_store` as total storage slots including the initial sample at slot 0; this existing behavior was respected in the new regression coverage and was not changed here
 - Deferred follow-up: a zero-parameter Python-callable RHS can still trip a current C++ backend construction-time edge case on this Linux workspace; keep it documented but out of scope for the current PR sequence
+- Feature note for PR 11: feature execution is a two-kernel lifecycle (`initializeObserver` plus `features`) and observer continuation depends on preserving the opaque per-ensemble `ObserverData` buffer across calls
+- Runtime note: `clinfo -l` reports Intel as platform `0` and NVIDIA as platform `1` on this workspace, but the current stable backend-validation command uses `CLODE_TEST_PLATFORM_ID=0` and `CLODE_TEST_DEVICE_ID=0` to target the NVIDIA runtime; the Intel CPU runtime remains unstable for the `localmax` rebuild path
 
 ## Planning Rules
 
@@ -41,7 +44,7 @@ It is intentionally more granular than the phase plan in `tmp/pyopencl_backend_d
 | M2 | Land PyOpenCL build primitives | Complete |
 | M3 | Land transient parity | Complete |
 | M4 | Land trajectory parity | Complete |
-| M5 | Land feature parity | Not started |
+| M5 | Land feature parity | Complete |
 | M6 | Switch defaults and simplify later | Not started |
 
 ## PR 0: Scope And Test Lock
@@ -371,6 +374,10 @@ Audit result:
 
 Priority: P1
 
+Status:
+
+- Complete
+
 Goal:
 
 - add the current observer and feature pipeline to the PyOpenCL backend
@@ -378,7 +385,9 @@ Goal:
 Deliverables:
 
 - feature buffer support in `clode/_pyopencl/buffers.py`
+- observer metadata and layout sizing in `clode/_pyopencl/observer_metadata.py`
 - `PyOpenCLFeatureBackend` in `clode/_pyopencl/executors.py`
+- `test/test_pyopencl_feature_backend.py`
 
 Checkpoint:
 
@@ -389,6 +398,16 @@ Acceptance criteria:
 - feature contract tests pass against both backends
 - `test/test_vdp.py`, `test/test_features.py`, and `test/test_aux_values.py` pass on the PyOpenCL path
 - observer initialization and continuation behavior match current behavior
+
+Guardrails:
+
+- do not reuse the legacy C++ `observerDataSize` byte-count formulas for PyOpenCL allocation
+- treat `ObserverData` as observer-specific opaque device state whose exact size comes from an explicit layout model
+- preserve the current `initializeObserver` plus `features` lifecycle, including the two-pass warmup path used by `nhood2` and `thresh2`
+
+Audit result:
+
+- Passed on the stable NVIDIA runtime; the Intel CPU runtime remains unstable for the `localmax` rebuild path on this workspace
 
 ## PR 12: Extended Reference Suite And Rollout Guardrails
 

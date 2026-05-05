@@ -31,8 +31,9 @@ Everything else under `test/` is reference material, historical coverage, or out
 - `test/test_pyopencl_structs.py`
 - `test/test_pyopencl_transient_backend.py`
 - `test/test_pyopencl_trajectory_backend.py`
+- `test/test_pyopencl_feature_backend.py`
 
-Today this combined gate is 51 tests and is the suite that should stay green through the subsequent backend-migration phases.
+Today this combined gate is 54 tests and is the suite that should stay green through the subsequent backend-migration phases.
 
 Current implementation state:
 
@@ -46,6 +47,7 @@ Current implementation state:
 - the internal `clode/_pyopencl/` package now also contains device-matched host struct helpers for `SolverParams` and `ObserverParams`
 - the internal `clode/_pyopencl/` package now also contains a transient executor that can be selected internally through `_CLODE_BACKEND=pyopencl`
 - the internal `clode/_pyopencl/` package now also contains trajectory buffer support and a trajectory executor behind the same internal backend selector
+- the internal `clode/_pyopencl/` package now also contains observer metadata and layout sizing, feature buffers, and a feature executor behind the same internal backend selector
 
 ## Canonical Models
 
@@ -168,6 +170,20 @@ The stochastic gate does not currently include a continuation test. That was int
 - `nout`, `max_store`, and `n_stored` semantics are pinned on the PyOpenCL path
 - trajectory storage reallocates correctly when `max_store` changes without changing the public `TrajectoryOutput` behavior
 
+`test/test_pyopencl_feature_backend.py` protects the PR 11 feature execution path:
+
+- `basicall` feature statistics remain numerically aligned with the current C++ backend
+- the `localmax` rebuild contract updates `N_STORE_EVENTS` and feature-name exposure correctly on the PyOpenCL path
+- a two-pass observer path (`thresh2`) remains aligned with the current C++ backend
+
+Feature backend edge cases that remain active after PR 11:
+
+- `ObserverData` is observer-specific opaque state and must be sized from an explicit layout model rather than copied from the current C++ host byte-count formulas
+- feature execution uses a distinct `initializeObserver` kernel before the `features` kernel when observer state needs to be initialized or reinitialized
+- two-pass observers such as `nhood2` and `thresh2` rely on that initialize pass to compute detector thresholds before feature collection begins
+- the zero-parameter Python-callable RHS constructor edge case is still a current C++-path limitation and stays out of scope for the PyOpenCL parity work
+- the Intel CPU OpenCL runtime on this workspace remains unstable for the `localmax` feature rebuild path, so milestone validation currently prefers the NVIDIA runtime
+
 This file is intentionally small. Its job is to lock down the current backend contract, not to become a second broad API suite.
 
 ## Runtime Guidance
@@ -180,10 +196,18 @@ This file is intentionally small. Its job is to lock down the current backend co
 On this Linux workspace, the stable local command is:
 
 ```bash
-CLODE_TEST_PLATFORM_ID=1 CLODE_TEST_DEVICE_ID=0 /home/fletcherpa/envs/clode/bin/python -m pytest test/core_numerics/test_transient.py test/core_numerics/test_trajectory.py test/core_numerics/test_features_basicall.py test/core_numerics/test_stochastic.py test/test_backend_contracts.py test/test_backend_rhs_source.py test/test_pyopencl_models.py test/test_pyopencl_source_builder.py test/test_pyopencl_runtime.py test/test_pyopencl_buffers.py test/test_pyopencl_structs.py test/test_pyopencl_transient_backend.py test/test_pyopencl_trajectory_backend.py -q
+CLODE_TEST_PLATFORM_ID=0 CLODE_TEST_DEVICE_ID=0 /home/fletcherpa/envs/clode/bin/python -m pytest test/core_numerics/test_transient.py test/core_numerics/test_trajectory.py test/core_numerics/test_features_basicall.py test/core_numerics/test_stochastic.py test/test_backend_contracts.py test/test_backend_rhs_source.py test/test_pyopencl_models.py test/test_pyopencl_source_builder.py test/test_pyopencl_runtime.py test/test_pyopencl_buffers.py test/test_pyopencl_structs.py test/test_pyopencl_transient_backend.py test/test_pyopencl_trajectory_backend.py test/test_pyopencl_feature_backend.py -q
 ```
 
+For the broader PR 11 acceptance bundle on this workspace, add `test/test_vdp.py`, `test/test_features.py`, `test/test_aux_values.py`, and `test/test_ornl_thompson_a1.py` to the same command. That expanded bundle is currently 63 tests and passed on the stable NVIDIA runtime.
+
 The environment-variable override lives in `test/core_numerics/helpers.py` so the tests do not hardcode local device IDs.
+
+Important runtime-selection note:
+
+- `clinfo -l` reports Intel as platform `0` and NVIDIA as platform `1` on this machine
+- the stable backend-validation command above currently targets the NVIDIA runtime with `CLODE_TEST_PLATFORM_ID=0` and `CLODE_TEST_DEVICE_ID=0`
+- do not assume that `clinfo -l` platform ordering matches the runtime-selection order seen by the current backend validation path on this workspace
 
 ## Out Of Scope For This Gate
 

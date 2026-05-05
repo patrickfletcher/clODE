@@ -6,7 +6,11 @@ from typing import Final
 
 from clode.cpp.clode_cpp_wrapper import ObserverParams, ProblemInfo
 
-from .._pyopencl.executors import PyOpenCLTrajectoryBackend, PyOpenCLTransientBackend
+from .._pyopencl.executors import (
+    PyOpenCLFeatureBackend,
+    PyOpenCLTrajectoryBackend,
+    PyOpenCLTransientBackend,
+)
 from .._pyopencl.runtime import OpenCLRuntime
 from ..runtime import CLDeviceType, CLVendor
 from ..runtime import OpenCLResource
@@ -120,7 +124,16 @@ def create_feature_backend(
 ) -> FeatureBackend:
     resolved = _resolve_backend_name(backend_name)
     if resolved == "pyopencl":
-        raise NotImplementedError("PyOpenCL feature backend is not implemented yet")
+        return PyOpenCLFeatureBackend(
+            problem_info,
+            rhs_source,
+            stepper,
+            observer,
+            observer_params,
+            single_precision,
+            _create_pyopencl_runtime(runtime_selection),
+            clode_root,
+        )
     return CppFeatureBackend(
         problem_info,
         rhs_source,

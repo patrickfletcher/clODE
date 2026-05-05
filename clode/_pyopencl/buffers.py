@@ -2,12 +2,17 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from clode.cpp.clode_cpp_wrapper import SolverParams
+from clode.cpp.clode_cpp_wrapper import ObserverParams, SolverParams
 import numpy as np
 
 from .models import Precision, ProblemShape
 from .runtime import OpenCLRuntime, _require_pyopencl
-from .structs import get_solver_params_struct, pack_solver_params
+from .structs import (
+    get_observer_params_struct,
+    get_solver_params_struct,
+    pack_observer_params,
+    pack_solver_params,
+)
 
 
 N_RNGSTATE = 2
@@ -37,6 +42,8 @@ class TrajectoryBuffers:
 
 @dataclass(slots=True)
 class FeatureBuffers:
+    n_features: int
+    observer_data_nbytes: int
     observer_data: object
     observer_params: object
     features: object
@@ -146,6 +153,38 @@ class BufferManager:
             ),
         )
 
+    def allocate_feature(
+        self,
+        ensemble_size: int,
+        n_features: int,
+        observer_data_nbytes: int,
+    ) -> FeatureBuffers:
+        flags = self._pyopencl.mem_flags
+        real_bytes = self._real_dtype.itemsize
+        feature_elements = max(1, ensemble_size * n_features)
+        observer_bytes = max(1, ensemble_size * observer_data_nbytes)
+        return FeatureBuffers(
+            n_features=n_features,
+            observer_data_nbytes=observer_data_nbytes,
+            observer_data=self._pyopencl.Buffer(
+                self._runtime.context,
+                flags.READ_WRITE,
+                size=observer_bytes,
+            ),
+            observer_params=self._pyopencl.Buffer(
+                self._runtime.context,
+                flags.READ_ONLY,
+                size=get_observer_params_struct(
+                    self._runtime, self._precision
+                ).dtype.itemsize,
+            ),
+            features=self._pyopencl.Buffer(
+                self._runtime.context,
+                flags.WRITE_ONLY,
+                size=feature_elements * real_bytes,
+            ),
+        )
+
     def upload_tspan(
         self, buffers: CommonBuffers, tspan: tuple[float, float]
     ) -> np.ndarray:
@@ -159,6 +198,20 @@ class BufferManager:
         host = pack_solver_params(self._runtime, solver_params, self._precision)
         self._enqueue_copy(buffers.solver_params, host)
         return host
+
+    def upload_observer_params(
+        self, buffers: FeatureBuffers, observer_params: ObserverParams
+    ) -> np.ndarray:
+        host = pack_observer_params(self._runtime, observer_params, self._precision)
+        self._enqueue_copy(buffers.observer_params, host)
+        return host
+
+    def clear_observer_data(self, buffers: FeatureBuffers, ensemble_size: int) -> None:
+        host = np.zeros(
+            max(1, ensemble_size * buffers.observer_data_nbytes),
+            dtype=np.uint8,
+        )
+        self._enqueue_copy(buffers.observer_data, host)
 
     def upload_problem_data(
         self,
@@ -262,6 +315,14 @@ class BufferManager:
             self._runtime.queue, host, trajectory_buffers.n_stored, is_blocking=True
         )
         return host
+
+    def download_features(
+        self, buffers: CommonBuffers, feature_buffers: FeatureBuffers
+    ) -> np.ndarray:
+        return self._download_vector_buffer(
+            feature_buffers.features,
+            (buffers.ensemble_size * feature_buffers.n_features,),
+        )
 
     def download_rng_state(self, buffers: CommonBuffers) -> np.ndarray:
         host = np.empty(buffers.ensemble_size * N_RNGSTATE, dtype=np.uint64)

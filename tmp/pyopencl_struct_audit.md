@@ -124,3 +124,7 @@ It does materially affect the future feature backend work.
 Guardrail for later PRs:
 
 - PR 11 should build an explicit observer-struct layout model rather than inheriting `observerDataSize` formulas from the old C++ host layer.
+
+Additional feature-path constraint:
+
+- PR 11 also needs to preserve the existing `initializeObserver` plus `features` lifecycle. For one-pass observers this mostly establishes clean observer state, but for `nhood2` and `thresh2` it is the warmup pass that computes the detector thresholds used by the later feature kernel.

@@ -10,7 +10,11 @@ from .errors import (
     UnsupportedObserverError,
     UnsupportedStepperError,
 )
-from .executors import PyOpenCLTrajectoryBackend, PyOpenCLTransientBackend
+from .executors import (
+    PyOpenCLFeatureBackend,
+    PyOpenCLTrajectoryBackend,
+    PyOpenCLTransientBackend,
+)
 from .models import (
     PYOPENCL_BACKEND_VERSION,
     BuildKey,
@@ -24,10 +28,12 @@ from .models import (
 from .registry import KernelRegistry
 from .runtime import OpenCLRuntime
 from .source_builder import SourceBuilder
+from .observer_metadata import ObserverMetadata, get_observer_metadata, is_two_pass_observer
 from .structs import (
     MatchedStruct,
     get_observer_params_struct,
     get_solver_params_struct,
+    match_struct_dtype,
     pack_observer_params,
     pack_solver_params,
 )
@@ -42,14 +48,17 @@ __all__ = [
     "DoublePrecisionNotSupportedError",
     "FeatureBuffers",
     "MatchedStruct",
+    "match_struct_dtype",
     "KernelKind",
     "KernelRegistry",
     "OpenCLRuntime",
+    "ObserverMetadata",
     "PYOPENCL_BACKEND_VERSION",
     "Precision",
     "ProgramCache",
     "ProblemShape",
     "ProgramBundle",
+    "PyOpenCLFeatureBackend",
     "PyOpenCLTrajectoryBackend",
     "PyOpenCLTransientBackend",
     "PyOpenCLBackendError",
@@ -61,8 +70,10 @@ __all__ = [
     "SourceBuilder",
     "SourceBundle",
     "TrajectoryBuffers",
+    "get_observer_metadata",
     "get_observer_params_struct",
     "get_solver_params_struct",
+    "is_two_pass_observer",
     "pack_observer_params",
     "pack_solver_params",
     "UnsupportedObserverError",

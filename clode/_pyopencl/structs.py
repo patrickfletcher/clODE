@@ -71,6 +71,12 @@ def _match_struct(
     return MatchedStruct(name, matched_dtype, c_declaration)
 
 
+def match_struct_dtype(
+    runtime: OpenCLRuntime, name: str, base_dtype: np.dtype
+) -> MatchedStruct:
+    return _match_struct(runtime, name, base_dtype)
+
+
 def get_solver_params_struct(
     runtime: OpenCLRuntime, precision: Precision
 ) -> MatchedStruct:
