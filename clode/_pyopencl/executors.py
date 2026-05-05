@@ -8,7 +8,13 @@ import numpy as np
 
 from .._backends.protocol import SimulatorBackend
 from .._backends.rhs import RhsSource
-from .buffers import ArrayLayout, BufferManager, CommonBuffers, N_RNGSTATE
+from .buffers import (
+    ArrayLayout,
+    BufferManager,
+    CommonBuffers,
+    N_RNGSTATE,
+    TrajectoryBuffers,
+)
 from .models import KernelKind, Precision, ProblemShape, ProgramBundle
 from .registry import KernelRegistry
 from .runtime import OpenCLRuntime, _require_pyopencl
@@ -41,6 +47,7 @@ class PyOpenCLTransientBackend(SimulatorBackend):
         self._tspan: tuple[float, float] = (0.0, 0.0)
         self._buffers: CommonBuffers | None = None
         self._program_bundle: ProgramBundle | None = None
+        self._retired_common_buffers: list[CommonBuffers] = []
 
         self._x0_host: np.ndarray | None = None
         self._pars_host: np.ndarray | None = None
@@ -51,6 +58,18 @@ class PyOpenCLTransientBackend(SimulatorBackend):
 
         self._has_transient_result = False
         self._pending_seed: int | None = None
+
+    @staticmethod
+    def _copy_solver_params(solver_params: SolverParams) -> SolverParams:
+        return SolverParams(
+            solver_params.dt,
+            solver_params.dtmax,
+            solver_params.abstol,
+            solver_params.reltol,
+            solver_params.max_steps,
+            solver_params.max_store,
+            solver_params.nout,
+        )
 
     def build_cl(self) -> None:
         if self._precision is Precision.DOUBLE:
@@ -83,7 +102,7 @@ class PyOpenCLTransientBackend(SimulatorBackend):
         return self._program_bundle.source_bundle.source_text
 
     def get_solver_params(self) -> SolverParams:
-        return self._solver_params
+        return self._copy_solver_params(self._solver_params)
 
     def get_tf(self) -> list[float]:
         if self._buffers is None or not self._has_transient_result:
@@ -158,6 +177,8 @@ class PyOpenCLTransientBackend(SimulatorBackend):
             self._buffers is None or self._buffers.ensemble_size != ensemble_size
         )
         if buffers_reallocated:
+            if self._buffers is not None:
+                self._retired_common_buffers.append(self._buffers)
             self._buffers = self._buffer_manager.allocate_common(
                 ensemble_size=ensemble_size,
                 shape=self._problem_shape,
@@ -190,13 +211,13 @@ class PyOpenCLTransientBackend(SimulatorBackend):
             self.seed_rng(pending_seed)
 
     def set_solver_params(self, solver_params: SolverParams) -> None:
-        self._solver_params = solver_params
+        self._solver_params = self._copy_solver_params(solver_params)
         if self._buffers is None:
             return
 
-        self._buffer_manager.upload_solver_params(self._buffers, solver_params)
+        self._buffer_manager.upload_solver_params(self._buffers, self._solver_params)
         self._dt_host = np.full(
-            self._buffers.ensemble_size, solver_params.dt, dtype=np.float64
+            self._buffers.ensemble_size, self._solver_params.dt, dtype=np.float64
         )
         self._buffer_manager.upload_dt(self._buffers, self._dt_host)
         self._tf_host = None
@@ -321,3 +342,165 @@ class PyOpenCLTransientBackend(SimulatorBackend):
         if self._buffers is None:
             raise RuntimeError("Problem data has not been initialized")
         return self._buffers
+
+
+class PyOpenCLTrajectoryBackend(PyOpenCLTransientBackend):
+    def __init__(
+        self,
+        problem_info: ProblemInfo,
+        rhs_source: RhsSource,
+        stepper: str,
+        single_precision: bool,
+        runtime: OpenCLRuntime,
+        clode_root: str,
+    ) -> None:
+        super().__init__(
+            problem_info,
+            rhs_source,
+            stepper,
+            single_precision,
+            runtime,
+            clode_root,
+        )
+        self._trajectory_buffers: TrajectoryBuffers | None = None
+        self._retired_trajectory_buffers: list[TrajectoryBuffers] = []
+        self._t_host: np.ndarray | None = None
+        self._x_host: np.ndarray | None = None
+        self._dx_host: np.ndarray | None = None
+        self._aux_host: np.ndarray | None = None
+        self._n_stored_host: np.ndarray | None = None
+
+    def build_cl(self) -> None:
+        if self._precision is Precision.DOUBLE:
+            self._runtime.require_double_precision()
+
+        source_bundle = self._source_builder.build(
+            kernel_kind=KernelKind.TRAJECTORY,
+            precision=self._precision,
+            stepper_name=self._stepper,
+            problem_shape=self._problem_shape,
+            rhs=self._rhs_source,
+        )
+        self._program_bundle = self._runtime.program_cache.get_or_build(
+            self._runtime, source_bundle
+        )
+
+    def set_problem_data(
+        self, initial_state: Sequence[float], parameters: Sequence[float]
+    ) -> None:
+        previous_ensemble_size = None if self._buffers is None else self._buffers.ensemble_size
+        super().set_problem_data(initial_state, parameters)
+        current_ensemble_size = self._require_buffers().ensemble_size
+        if previous_ensemble_size != current_ensemble_size and self._trajectory_buffers is not None:
+            self._retired_trajectory_buffers.append(self._trajectory_buffers)
+            self._trajectory_buffers = None
+
+    def set_solver_params(self, solver_params: SolverParams) -> None:
+        previous_max_store = self._solver_params.max_store
+        super().set_solver_params(solver_params)
+        if previous_max_store != self._solver_params.max_store and self._trajectory_buffers is not None:
+            self._retired_trajectory_buffers.append(self._trajectory_buffers)
+            self._trajectory_buffers = None
+        self._invalidate_trajectory_cache()
+
+    def get_aux(self) -> list[float]:
+        if self._buffers is None:
+            return []
+        if self._aux_host is None:
+            self._aux_host = self._buffer_manager.download_aux(
+                self._buffers, self._require_trajectory_buffers()
+            )
+        return self._aux_host.astype(np.float64, copy=False).tolist()
+
+    def get_dx(self) -> list[float]:
+        if self._buffers is None:
+            return []
+        if self._dx_host is None:
+            self._dx_host = self._buffer_manager.download_dx(
+                self._buffers, self._require_trajectory_buffers()
+            )
+        return self._dx_host.astype(np.float64, copy=False).tolist()
+
+    def get_n_stored(self) -> list[int]:
+        if self._buffers is None:
+            return []
+        if self._n_stored_host is None:
+            self._n_stored_host = self._buffer_manager.download_n_stored(
+                self._buffers, self._require_trajectory_buffers()
+            )
+        return self._n_stored_host.astype(np.int32, copy=False).tolist()
+
+    def get_t(self) -> list[float]:
+        if self._buffers is None:
+            return []
+        if self._t_host is None:
+            self._t_host = self._buffer_manager.download_t(
+                self._buffers, self._require_trajectory_buffers()
+            )
+        return self._t_host.astype(np.float64, copy=False).tolist()
+
+    def get_x(self) -> list[float]:
+        if self._buffers is None:
+            return []
+        if self._x_host is None:
+            self._x_host = self._buffer_manager.download_x(
+                self._buffers, self._require_trajectory_buffers()
+            )
+        return self._x_host.astype(np.float64, copy=False).tolist()
+
+    def trajectory(self) -> None:
+        if self._program_bundle is None:
+            raise RuntimeError("OpenCL program has not been built")
+        buffers = self._require_buffers()
+        trajectory_buffers = self._ensure_trajectory_buffers()
+        kernel = self._program_bundle.kernels["trajectory"]
+        kernel.set_args(
+            buffers.tspan,
+            buffers.x0,
+            buffers.pars,
+            buffers.solver_params,
+            buffers.xf,
+            buffers.rng_state,
+            buffers.dt,
+            buffers.tf,
+            trajectory_buffers.t,
+            trajectory_buffers.x,
+            trajectory_buffers.dx,
+            trajectory_buffers.aux,
+            trajectory_buffers.n_stored,
+        )
+        self._pyopencl.enqueue_nd_range_kernel(
+            self._runtime.queue,
+            kernel,
+            (buffers.ensemble_size,),
+            None,
+        ).wait()
+        self._runtime.queue.finish()
+        self._xf_host = None
+        self._dt_host = None
+        self._tf_host = None
+        self._rng_state_host = None
+        self._has_transient_result = True
+        self._invalidate_trajectory_cache()
+
+    def _ensure_trajectory_buffers(self) -> TrajectoryBuffers:
+        buffers = self._require_buffers()
+        if self._trajectory_buffers is None:
+            self._trajectory_buffers = self._buffer_manager.allocate_trajectory(
+                buffers.ensemble_size,
+                buffers.problem_shape,
+                self._solver_params.max_store,
+            )
+        return self._trajectory_buffers
+
+    def _invalidate_trajectory_cache(self) -> None:
+        self._t_host = None
+        self._x_host = None
+        self._dx_host = None
+        self._aux_host = None
+        self._n_stored_host = None
+
+    def _require_trajectory_buffers(self) -> TrajectoryBuffers:
+        if self._trajectory_buffers is None:
+            raise RuntimeError("Trajectory buffers have not been initialized")
+        return self._trajectory_buffers

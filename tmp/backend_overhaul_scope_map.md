@@ -206,6 +206,7 @@ These files are the current authoritative source pool for backend-phase gating.
 - `test/test_pyopencl_buffers.py`
 - `test/test_pyopencl_structs.py`
 - `test/test_pyopencl_transient_backend.py`
+- `test/test_pyopencl_trajectory_backend.py`
 
 The exact suite definition is pinned in `tmp/backend_core_test_suite.md`.
 

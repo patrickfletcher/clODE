@@ -10,7 +10,7 @@ from .errors import (
     UnsupportedObserverError,
     UnsupportedStepperError,
 )
-from .executors import PyOpenCLTransientBackend
+from .executors import PyOpenCLTrajectoryBackend, PyOpenCLTransientBackend
 from .models import (
     PYOPENCL_BACKEND_VERSION,
     BuildKey,
@@ -50,6 +50,7 @@ __all__ = [
     "ProgramCache",
     "ProblemShape",
     "ProgramBundle",
+    "PyOpenCLTrajectoryBackend",
     "PyOpenCLTransientBackend",
     "PyOpenCLBackendError",
     "PyOpenCLDependencyError",

@@ -27,6 +27,7 @@ class CommonBuffers:
 
 @dataclass(slots=True)
 class TrajectoryBuffers:
+    max_store: int
     t: object
     x: object
     dx: object
@@ -115,6 +116,36 @@ class BufferManager:
             ),
         )
 
+    def allocate_trajectory(
+        self, ensemble_size: int, shape: ProblemShape, max_store: int
+    ) -> TrajectoryBuffers:
+        flags = self._pyopencl.mem_flags
+        real_bytes = self._real_dtype.itemsize
+        t_elements = max(1, ensemble_size * max_store)
+        state_elements = max(1, ensemble_size * shape.n_var * max_store)
+        aux_elements = max(1, ensemble_size * shape.n_aux * max_store)
+
+        return TrajectoryBuffers(
+            max_store=max_store,
+            t=self._pyopencl.Buffer(
+                self._runtime.context, flags.WRITE_ONLY, size=t_elements * real_bytes
+            ),
+            x=self._pyopencl.Buffer(
+                self._runtime.context, flags.WRITE_ONLY, size=state_elements * real_bytes
+            ),
+            dx=self._pyopencl.Buffer(
+                self._runtime.context, flags.WRITE_ONLY, size=state_elements * real_bytes
+            ),
+            aux=self._pyopencl.Buffer(
+                self._runtime.context, flags.WRITE_ONLY, size=aux_elements * real_bytes
+            ),
+            n_stored=self._pyopencl.Buffer(
+                self._runtime.context,
+                flags.WRITE_ONLY,
+                size=ensemble_size * np.dtype(np.int32).itemsize,
+            ),
+        )
+
     def upload_tspan(
         self, buffers: CommonBuffers, tspan: tuple[float, float]
     ) -> np.ndarray:
@@ -176,6 +207,61 @@ class BufferManager:
 
     def download_tf(self, buffers: CommonBuffers) -> np.ndarray:
         return self._download_vector_buffer(buffers.tf, (buffers.ensemble_size,))
+
+    def download_t(
+        self, buffers: CommonBuffers, trajectory_buffers: TrajectoryBuffers
+    ) -> np.ndarray:
+        return self._download_vector_buffer(
+            trajectory_buffers.t,
+            (buffers.ensemble_size * trajectory_buffers.max_store,),
+        )
+
+    def download_x(
+        self, buffers: CommonBuffers, trajectory_buffers: TrajectoryBuffers
+    ) -> np.ndarray:
+        return self._download_vector_buffer(
+            trajectory_buffers.x,
+            (
+                buffers.ensemble_size
+                * buffers.problem_shape.n_var
+                * trajectory_buffers.max_store,
+            ),
+        )
+
+    def download_dx(
+        self, buffers: CommonBuffers, trajectory_buffers: TrajectoryBuffers
+    ) -> np.ndarray:
+        return self._download_vector_buffer(
+            trajectory_buffers.dx,
+            (
+                buffers.ensemble_size
+                * buffers.problem_shape.n_var
+                * trajectory_buffers.max_store,
+            ),
+        )
+
+    def download_aux(
+        self, buffers: CommonBuffers, trajectory_buffers: TrajectoryBuffers
+    ) -> np.ndarray:
+        if buffers.problem_shape.n_aux == 0:
+            return self._download_vector_buffer(trajectory_buffers.aux, (1,))
+        return self._download_vector_buffer(
+            trajectory_buffers.aux,
+            (
+                buffers.ensemble_size
+                * buffers.problem_shape.n_aux
+                * trajectory_buffers.max_store,
+            ),
+        )
+
+    def download_n_stored(
+        self, buffers: CommonBuffers, trajectory_buffers: TrajectoryBuffers
+    ) -> np.ndarray:
+        host = np.empty(buffers.ensemble_size, dtype=np.int32)
+        self._pyopencl.enqueue_copy(
+            self._runtime.queue, host, trajectory_buffers.n_stored, is_blocking=True
+        )
+        return host
 
     def download_rng_state(self, buffers: CommonBuffers) -> np.ndarray:
         host = np.empty(buffers.ensemble_size * N_RNGSTATE, dtype=np.uint64)

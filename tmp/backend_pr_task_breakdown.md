@@ -18,9 +18,11 @@ It is intentionally more granular than the phase plan in `tmp/pyopencl_backend_d
 - Completed: PR 7 PyOpenCL runtime and program cache
 - Completed: PR 8 Buffer manager for common state
 - Completed: PR 9 PyOpenCL transient backend
-- Next: PR 10 trajectory backend
-- Current milestone audit: the authoritative 47-test gate in `tmp/backend_core_test_suite.md` passed together on the stable local device
+- Completed: PR 10 trajectory backend
+- Next: PR 11 feature backend
+- Current milestone audit: the authoritative 51-test gate in `tmp/backend_core_test_suite.md` passed together on the stable local device
 - Struct-handling audit result: host-populated OpenCL structs now use device-matched PyOpenCL dtypes for `SolverParams` and `ObserverParams`; `ObserverData` remains a deferred feature-backend concern and must not reuse the legacy byte-count formulas
+- Trajectory note: the current kernel contract counts `max_store` as total storage slots including the initial sample at slot 0; this existing behavior was respected in the new regression coverage and was not changed here
 - Deferred follow-up: a zero-parameter Python-callable RHS can still trip a current C++ backend construction-time edge case on this Linux workspace; keep it documented but out of scope for the current PR sequence
 
 ## Planning Rules
@@ -38,7 +40,7 @@ It is intentionally more granular than the phase plan in `tmp/pyopencl_backend_d
 | M1 | Land backend seam | Complete |
 | M2 | Land PyOpenCL build primitives | Complete |
 | M3 | Land transient parity | Complete |
-| M4 | Land trajectory parity | Not started |
+| M4 | Land trajectory parity | Complete |
 | M5 | Land feature parity | Not started |
 | M6 | Switch defaults and simplify later | Not started |
 
@@ -337,6 +339,10 @@ Audit result:
 
 Priority: P1
 
+Status:
+
+- Complete
+
 Goal:
 
 - add trajectory execution without introducing the future monitor abstraction
@@ -345,6 +351,7 @@ Deliverables:
 
 - trajectory buffer support in `clode/_pyopencl/buffers.py`
 - `PyOpenCLTrajectoryBackend` in `clode/_pyopencl/executors.py`
+- `test/test_pyopencl_trajectory_backend.py`
 
 Checkpoint:
 
@@ -355,6 +362,10 @@ Acceptance criteria:
 - trajectory contract tests pass against both backends
 - `test/test_ornl_thompson_a1.py` passes on the PyOpenCL path
 - `nout`, `max_store`, and `n_stored` semantics match the current backend
+
+Audit result:
+
+- Passed
 
 ## PR 11: Feature Buffers And Feature Backend
 

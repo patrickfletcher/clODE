@@ -30,8 +30,9 @@ Everything else under `test/` is reference material, historical coverage, or out
 - `test/test_pyopencl_buffers.py`
 - `test/test_pyopencl_structs.py`
 - `test/test_pyopencl_transient_backend.py`
+- `test/test_pyopencl_trajectory_backend.py`
 
-Today this combined gate is 47 tests and is the suite that should stay green through the subsequent backend-migration phases.
+Today this combined gate is 51 tests and is the suite that should stay green through the subsequent backend-migration phases.
 
 Current implementation state:
 
@@ -44,6 +45,7 @@ Current implementation state:
 - the internal `clode/_pyopencl/` package now also contains a common-state buffer manager that centralizes the current flatten and reshape rules
 - the internal `clode/_pyopencl/` package now also contains device-matched host struct helpers for `SolverParams` and `ObserverParams`
 - the internal `clode/_pyopencl/` package now also contains a transient executor that can be selected internally through `_CLODE_BACKEND=pyopencl`
+- the internal `clode/_pyopencl/` package now also contains trajectory buffer support and a trajectory executor behind the same internal backend selector
 
 ## Canonical Models
 
@@ -159,6 +161,13 @@ The stochastic gate does not currently include a continuation test. That was int
 - seeded stochastic ensembles are reproducible on the PyOpenCL backend and remain numerically aligned with the C++ path
 - updating solver parameters still rewrites the live `dt` buffer on the PyOpenCL path
 
+`test/test_pyopencl_trajectory_backend.py` protects the PR 10 trajectory execution path:
+
+- deterministic trajectory samples match the current C++ backend for `t`, `x`, and `dx`
+- auxiliary trajectory samples remain aligned with the current C++ backend
+- `nout`, `max_store`, and `n_stored` semantics are pinned on the PyOpenCL path
+- trajectory storage reallocates correctly when `max_store` changes without changing the public `TrajectoryOutput` behavior
+
 This file is intentionally small. Its job is to lock down the current backend contract, not to become a second broad API suite.
 
 ## Runtime Guidance
@@ -171,7 +180,7 @@ This file is intentionally small. Its job is to lock down the current backend co
 On this Linux workspace, the stable local command is:
 
 ```bash
-CLODE_TEST_PLATFORM_ID=1 CLODE_TEST_DEVICE_ID=0 /home/fletcherpa/envs/clode/bin/python -m pytest test/core_numerics/test_transient.py test/core_numerics/test_trajectory.py test/core_numerics/test_features_basicall.py test/core_numerics/test_stochastic.py test/test_backend_contracts.py test/test_backend_rhs_source.py test/test_pyopencl_models.py test/test_pyopencl_source_builder.py test/test_pyopencl_runtime.py test/test_pyopencl_buffers.py test/test_pyopencl_structs.py test/test_pyopencl_transient_backend.py -q
+CLODE_TEST_PLATFORM_ID=1 CLODE_TEST_DEVICE_ID=0 /home/fletcherpa/envs/clode/bin/python -m pytest test/core_numerics/test_transient.py test/core_numerics/test_trajectory.py test/core_numerics/test_features_basicall.py test/core_numerics/test_stochastic.py test/test_backend_contracts.py test/test_backend_rhs_source.py test/test_pyopencl_models.py test/test_pyopencl_source_builder.py test/test_pyopencl_runtime.py test/test_pyopencl_buffers.py test/test_pyopencl_structs.py test/test_pyopencl_transient_backend.py test/test_pyopencl_trajectory_backend.py -q
 ```
 
 The environment-variable override lives in `test/core_numerics/helpers.py` so the tests do not hardcode local device IDs.

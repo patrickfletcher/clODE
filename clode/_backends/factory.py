@@ -6,7 +6,7 @@ from typing import Final
 
 from clode.cpp.clode_cpp_wrapper import ObserverParams, ProblemInfo
 
-from .._pyopencl.executors import PyOpenCLTransientBackend
+from .._pyopencl.executors import PyOpenCLTrajectoryBackend, PyOpenCLTransientBackend
 from .._pyopencl.runtime import OpenCLRuntime
 from ..runtime import CLDeviceType, CLVendor
 from ..runtime import OpenCLResource
@@ -93,7 +93,14 @@ def create_trajectory_backend(
 ) -> TrajectoryBackend:
     resolved = _resolve_backend_name(backend_name)
     if resolved == "pyopencl":
-        raise NotImplementedError("PyOpenCL trajectory backend is not implemented yet")
+        return PyOpenCLTrajectoryBackend(
+            problem_info,
+            rhs_source,
+            stepper,
+            single_precision,
+            _create_pyopencl_runtime(runtime_selection),
+            clode_root,
+        )
     return CppTrajectoryBackend(
         problem_info, rhs_source, stepper, single_precision, runtime, clode_root
     )
