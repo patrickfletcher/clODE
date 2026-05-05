@@ -66,6 +66,7 @@ The following folders are in scope for the backend overhaul.
 | --- | --- | --- | --- |
 | `clode/` | Public Python API and future backend seam integration | Yes | First Python integration target |
 | `clode/_backends/` | Internal backend seam, factory, and current C++ adapter | Yes | Current transition boundary for backend work |
+| `clode/_pyopencl/` | New Python-owned runtime and build implementation | Yes | PR 5 starts the package with model and error foundations |
 | `clode/cpp/` | Current backend reference implementation and OpenCL kernel source tree | Yes | Behavioral reference, not long-term runtime target |
 | `test/` | Source of the pinned migration suite and excluded-placeholder list | Mixed | Only selected tests are authoritative |
 | `tmp/` | Active migration docs, scope docs, test-suite docs, task planning | Yes | Current durable planning memory during the backend prep phase |
@@ -105,6 +106,15 @@ These folders are not in scope for the first phases of the backend overhaul.
 | `clode/_backends/factory.py` | Backend selection and construction | Current transition point for swapping backend implementations |
 | `clode/_backends/cpp.py` | C++ adapter behind the backend contract | Current reference implementation path during migration |
 | `clode/_backends/rhs.py` | Internal RHS source model and digest helpers | Transition input model for future PyOpenCL source assembly |
+
+### PyOpenCL implementation foundation
+
+| File | Responsibility | Why in scope |
+| --- | --- | --- |
+| `clode/_pyopencl/models.py` | Immutable build, source, and program models | Foundation for deterministic source builder and runtime cache keys |
+| `clode/_pyopencl/errors.py` | Backend-specific validation and build errors | Foundation for parity-grade diagnostics in later PRs |
+| `clode/_pyopencl/registry.py` | Static stepper and observer registry plus entrypoint mapping | Phase-one source assembly authority |
+| `clode/_pyopencl/source_builder.py` | Deterministic program text and build-option assembly | Phase-one replacement for the current C++ build-input path |
 
 ### Current C++ backend reference
 
@@ -185,6 +195,8 @@ These files are the current authoritative source pool for backend-phase gating.
 
 - `test/test_backend_contracts.py`
 - `test/test_backend_rhs_source.py`
+- `test/test_pyopencl_models.py`
+- `test/test_pyopencl_source_builder.py`
 
 The exact suite definition is pinned in `tmp/backend_core_test_suite.md`.
 
@@ -197,6 +209,8 @@ Use this section to answer common implementation questions with minimum token co
 | Where does backend selection happen | `clode/_backends/factory.py` |
 | Where is the current backend adapter | `clode/_backends/cpp.py` |
 | Where is RHS source preparation modeled | `clode/_backends/rhs.py`, `clode/solver.py` |
+| Where are the PyOpenCL build and program models | `clode/_pyopencl/models.py`, `clode/_pyopencl/errors.py` |
+| Where are the PyOpenCL registry and source builder | `clode/_pyopencl/registry.py`, `clode/_pyopencl/source_builder.py` |
 | What is the current build key | `tmp/cpp_opencl_layer_audit.md`, `clode/cpp/CLODE.cpp` |
 | How is the current program assembled | `tmp/cpp_opencl_layer_audit.md`, `clode/cpp/CLODE.cpp`, `clode/cpp/transient.cl`, `clode/cpp/features.cl` |
 | Which public APIs must remain stable | `clode/solver.py`, `clode/trajectory.py`, `clode/features.py`, `tmp/pyopencl_backend_design.md` |

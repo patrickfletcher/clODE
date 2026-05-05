@@ -13,8 +13,11 @@ It is intentionally more granular than the phase plan in `tmp/pyopencl_backend_d
 - Completed: PR 2 backend protocol and factory
 - Completed: PR 3 C++ backend adapter and public-wrapper rewiring
 - Completed: PR 4 RHS source object integration
-- Next: PR 5 PyOpenCL core models and errors
-- Current milestone audit: `test/core_numerics`, `test/test_backend_contracts.py`, `test/test_backend_rhs_source.py`, `test/test_features.py`, `test/test_function_converter.py`, and `test/test_xpp_parser.py` passed together
+- Completed: PR 5 PyOpenCL core models and errors
+- Completed: PR 6 PyOpenCL registry and source builder
+- Next: PR 7 PyOpenCL runtime and program cache
+- Current milestone audit: `test/core_numerics`, `test/test_backend_contracts.py`, `test/test_backend_rhs_source.py`, `test/test_pyopencl_models.py`, `test/test_pyopencl_source_builder.py`, `test/test_features.py`, `test/test_function_converter.py`, and `test/test_xpp_parser.py` passed together
+- Deferred follow-up: a zero-parameter Python-callable RHS can still trip a current C++ backend construction-time edge case on this Linux workspace; keep it documented but out of scope for the current PR sequence
 
 ## Planning Rules
 
@@ -172,6 +175,10 @@ Audit result:
 
 Priority: P0
 
+Status:
+
+- Complete
+
 Goal:
 
 - land the core PyOpenCL data models and error types without execution logic
@@ -192,9 +199,17 @@ Acceptance criteria:
 - no execution yet
 - no public API changes
 
+Audit result:
+
+- Passed
+
 ## PR 6: PyOpenCL Registry And Source Builder
 
 Priority: P0
+
+Status:
+
+- Complete
 
 Goal:
 
@@ -215,6 +230,10 @@ Acceptance criteria:
 - build options include current compile-time specialization knobs
 - RHS validation exists at least at a conservative phase-one level
 - tests cover build-key changes and source assembly behavior
+
+Audit result:
+
+- Passed
 
 ## PR 7: PyOpenCL Runtime And Program Cache
 
