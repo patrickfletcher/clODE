@@ -240,6 +240,6 @@ dmypy.json
 cython_debug/
 
 # Other
-tmp/
+# tmp/
 clode_rhs.cl
 docs-gen/
