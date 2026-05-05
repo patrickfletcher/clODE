@@ -509,6 +509,7 @@ Current slice landed:
 - `ProblemInfo`, `SolverParams`, and `ObserverParams` now have Python-owned implementations in `clode/types.py`
 - public simulators and `_pyopencl` modules now consume those Python-owned model types
 - the C++ backend now converts those models explicitly at the adapter boundary
+- `examples/pyopencl_ornstein_uhlenbeck.py` now demonstrates the current transition-phase PyOpenCL backend selector and explicit runtime pinning on a real simulation
 - focused model tests plus broader C++ and PyOpenCL simulator slices passed locally on this workspace
 
 Remaining work in this PR:

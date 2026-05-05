@@ -4,7 +4,7 @@
 
 Pre-build binaries are provided via PyPI for Python 3.8-3.12 on MacOS and Windows, which can be installed simply using pip:
 
-```
+```bash
     pip install clode
 ```
 
@@ -13,11 +13,13 @@ GPU driver (AMD APP SDK, Intel OpenCL SDK, NVIDIA CUDA, etc.)
 
 If you are validating or experimenting with the PyOpenCL backend during the current transition period, install the optional dependency as well:
 
-```
+```bash
     pip install clode[pyopencl]
 ```
 
 The public default backend still remains the current C++ path at the moment. The optional PyOpenCL dependency is for contributor workflows, milestone validation, and the upcoming default-switch work.
+
+For a concrete transition-phase example of selecting the PyOpenCL backend and running a simulation, see `examples/pyopencl_ornstein_uhlenbeck.py`.
 
 ### Google Colab
 
@@ -64,7 +66,7 @@ To install the Python library from source, you will need the following dependenc
 
 You can then install the Python library using pip:
 
-```
+```bash
     pip install clode
 ```
 
@@ -73,7 +75,7 @@ and build the C++ libraries. It will then install the Python library.
 
 If you also want the PyOpenCL backend dependencies in that environment, install:
 
-```
+```bash
     pip install -e .[pyopencl]
 ```
 
@@ -102,7 +104,7 @@ To install the C++ library, you will need the following dependencies:
 
 You can build the C++ libraries using Bazel:
 
-```
+```bash
 bazel build //clode/cpp:cpp
 ```
 
