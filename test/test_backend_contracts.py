@@ -144,3 +144,4 @@ def test_feature_max_event_timestamps_rebuild_updates_event_storage() -> None:
     feature_names = result.get_feature_names()
     assert len([name for name in feature_names if name.startswith("localmax event time")]) == 3
     assert "-DN_STORE_EVENTS=3" in simulator._integrator.get_program_string()
+

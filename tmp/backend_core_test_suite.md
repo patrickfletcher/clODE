@@ -24,7 +24,12 @@ Everything else under `test/` is reference material, historical coverage, or out
 
 - `test/test_backend_contracts.py`
 
-Today this combined gate is 20 tests and is the suite that should stay green while the backend seam lands.
+Today this combined gate is 20 tests and is the suite that should stay green through the subsequent backend-migration phases.
+
+Current implementation state:
+
+- the public simulators now construct their execution backend through `clode/_backends/factory.py`
+- the active reference path is `clode/_backends/cpp.py`, which wraps the current pybind C++ runtime
 
 ## Canonical Models
 

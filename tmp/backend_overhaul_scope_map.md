@@ -65,6 +65,7 @@ The following folders are in scope for the backend overhaul.
 | Folder | Role in overhaul | Authoritative now | Notes |
 | --- | --- | --- | --- |
 | `clode/` | Public Python API and future backend seam integration | Yes | First Python integration target |
+| `clode/_backends/` | Internal backend seam, factory, and current C++ adapter | Yes | Current transition boundary for backend work |
 | `clode/cpp/` | Current backend reference implementation and OpenCL kernel source tree | Yes | Behavioral reference, not long-term runtime target |
 | `test/` | Source of the pinned migration suite and excluded-placeholder list | Mixed | Only selected tests are authoritative |
 | `tmp/` | Active migration docs, scope docs, test-suite docs, task planning | Yes | Current durable planning memory during the backend prep phase |
@@ -89,12 +90,20 @@ These folders are not in scope for the first phases of the backend overhaul.
 | --- | --- | --- |
 | `clode/__init__.py` | Public exports | Must remain stable through migration |
 | `clode/runtime.py` | Public runtime surface | Will become a compatibility layer over the new runtime |
-| `clode/solver.py` | Public simulator orchestration | Must stop instantiating pybind classes directly |
-| `clode/trajectory.py` | Public trajectory orchestration and output reshaping | Must preserve existing output semantics |
-| `clode/features.py` | Public feature orchestration and observer-facing API | Must preserve existing observer-facing API |
+| `clode/solver.py` | Public simulator orchestration | Now delegates backend construction through the internal factory |
+| `clode/trajectory.py` | Public trajectory orchestration and output reshaping | Must preserve existing output semantics through the backend seam |
+| `clode/features.py` | Public feature orchestration and observer-facing API | Must preserve existing observer-facing API through the backend seam |
 | `clode/function_converter.py` | Python to OpenCL RHS conversion | Must continue to feed the backend source builder |
 | `clode/xpp_parser.py` | XPP to OpenCL conversion | Must continue to feed the backend source builder |
 | `clode/opencl_builtins.py` | Supported OpenCL builtin wrappers | Important source-generation compatibility surface |
+
+### Internal backend seam
+
+| File | Responsibility | Why in scope |
+| --- | --- | --- |
+| `clode/_backends/protocol.py` | Internal simulator backend contract | Defines the public-wrapper to backend boundary |
+| `clode/_backends/factory.py` | Backend selection and construction | Current transition point for swapping backend implementations |
+| `clode/_backends/cpp.py` | C++ adapter behind the backend contract | Current reference implementation path during migration |
 
 ### Current C++ backend reference
 
@@ -183,6 +192,8 @@ Use this section to answer common implementation questions with minimum token co
 
 | Question | Read first |
 | --- | --- |
+| Where does backend selection happen | `clode/_backends/factory.py` |
+| Where is the current backend adapter | `clode/_backends/cpp.py` |
 | What is the current build key | `tmp/cpp_opencl_layer_audit.md`, `clode/cpp/CLODE.cpp` |
 | How is the current program assembled | `tmp/cpp_opencl_layer_audit.md`, `clode/cpp/CLODE.cpp`, `clode/cpp/transient.cl`, `clode/cpp/features.cl` |
 | Which public APIs must remain stable | `clode/solver.py`, `clode/trajectory.py`, `clode/features.py`, `tmp/pyopencl_backend_design.md` |
@@ -200,7 +211,7 @@ When context is short, consult files in this order.
 2. `tmp/backend_core_test_suite.md`
 3. This document
 4. `tmp/cpp_opencl_layer_audit.md`
-5. The current public Python files under `clode/`
+5. The current backend seam under `clode/_backends/`
 6. The current reference C++ and OpenCL implementation under `clode/cpp/`
 
 ## Maintenance Rule

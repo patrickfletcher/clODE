@@ -11,8 +11,10 @@ import numpy as np
 # https://numpy.org/neps/nep-0029-deprecation_policy.html
 import numpy.typing as npt
 
-from clode.cpp.clode_cpp_wrapper import ProblemInfo, SimulatorBase, SolverParams
+from clode.cpp.clode_cpp_wrapper import ProblemInfo, SolverParams
 
+from ._backends.factory import create_simulator_backend
+from ._backends.protocol import SimulatorBackend
 from .function_converter import OpenCLConverter, OpenCLRhsEquation
 from .runtime import (
     CLDeviceType,
@@ -54,7 +56,7 @@ class Simulator:
     of interest, or as a base class for other simulators.
     """
 
-    _integrator: SimulatorBase
+    _integrator: SimulatorBackend
     _runtime: OpenCLResource
     _single_precision: bool
     _stepper: Stepper
@@ -171,7 +173,7 @@ class Simulator:
             device_ids,
         )
 
-        # derived classes override this to call appropriate pybind constructors.
+        # derived classes override this to call appropriate backend constructors.
         self._create_integrator()
         self._build_cl_program()
 
@@ -205,7 +207,7 @@ class Simulator:
         # ---> now the simulator is ready to go
 
     def _create_integrator(self) -> None:
-        self._integrator = SimulatorBase(
+        self._integrator = create_simulator_backend(
             self._pi,
             self._stepper.value,
             self._single_precision,

@@ -6,12 +6,10 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 import numpy as np
 from numpy.lib import recfunctions as rfn
 
-from clode.cpp.clode_cpp_wrapper import (
-    FeatureSimulatorBase,
-    ObserverParams,
-    SolverParams,
-)
+from clode.cpp.clode_cpp_wrapper import ObserverParams, SolverParams
 
+from ._backends.factory import create_feature_backend
+from ._backends.protocol import FeatureBackend
 from .function_converter import OpenCLRhsEquation
 from .runtime import CLDeviceType, CLVendor, _clode_root_dir
 from .solver import Simulator, Stepper
@@ -275,7 +273,7 @@ class FeatureSimulator(Simulator):
 
     _device_features: np.ndarray[Any, np.dtype[np.float64]] | None = None
     _num_features: int | None = None
-    _integrator: FeatureSimulatorBase
+    _integrator: FeatureBackend
 
     def __init__(
         self,
@@ -374,11 +372,11 @@ class FeatureSimulator(Simulator):
         # op could come after super_init if max_event_timestamps treated like trajectory max_store
 
     def _create_integrator(self) -> None:
-        self._integrator = FeatureSimulatorBase(
+        self._integrator = create_feature_backend(
             self._pi,
             self._stepper.value,
             self._observer_type.value,
-            self._op,  # remove from constructor & add set_observer_pars below.
+            self._op,
             self._single_precision,
             self._runtime,
             _clode_root_dir,

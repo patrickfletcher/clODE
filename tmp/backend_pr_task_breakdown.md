@@ -6,6 +6,14 @@ This document turns the migration design into PR-sized work items with checkpoin
 
 It is intentionally more granular than the phase plan in `tmp/pyopencl_backend_design.md`. The design phases are the roadmap. This document is the execution plan.
 
+## Current Progress
+
+- Completed: PR 0 scope and test lock
+- Completed: PR 1 numerical-core and backend-contract test lock
+- Completed: PR 2 backend protocol and factory
+- Completed: PR 3 C++ backend adapter and public-wrapper rewiring
+- Next: PR 4 RHS source object integration
+
 ## Planning Rules
 
 - Each PR should have one primary deliverable.
@@ -15,15 +23,15 @@ It is intentionally more granular than the phase plan in `tmp/pyopencl_backend_d
 
 ## Milestone Overview
 
-| Milestone | Intent |
-| --- | --- |
-| M0 | Lock scope and tests |
-| M1 | Land backend seam |
-| M2 | Land PyOpenCL build primitives |
-| M3 | Land transient parity |
-| M4 | Land trajectory parity |
-| M5 | Land feature parity |
-| M6 | Switch defaults and simplify later |
+| Milestone | Intent | Status |
+| --- | --- | --- |
+| M0 | Lock scope and tests | Complete |
+| M1 | Land backend seam | Complete |
+| M2 | Land PyOpenCL build primitives | Not started |
+| M3 | Land transient parity | Not started |
+| M4 | Land trajectory parity | Not started |
+| M5 | Land feature parity | Not started |
+| M6 | Switch defaults and simplify later | Not started |
 
 ## PR 0: Scope And Test Lock
 
@@ -76,6 +84,10 @@ Acceptance criteria:
 
 Priority: P0
 
+Status:
+
+- Complete
+
 Goal:
 
 - introduce the internal backend boundary without changing behavior
@@ -100,6 +112,10 @@ Acceptance criteria:
 
 Priority: P0
 
+Status:
+
+- Complete
+
 Goal:
 
 - hide the current pybind implementation behind the backend protocol
@@ -122,6 +138,10 @@ Acceptance criteria:
 ## PR 4: RHS Source Object Integration
 
 Priority: P0
+
+Status:
+
+- Next
 
 Goal:
 

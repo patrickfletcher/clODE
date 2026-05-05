@@ -7,8 +7,10 @@ import numpy as np
 # from numpy.typing import NDArray
 from numpy.lib import recfunctions as rfn
 
-from clode.cpp.clode_cpp_wrapper import SolverParams, TrajectorySimulatorBase
+from clode.cpp.clode_cpp_wrapper import SolverParams
 
+from ._backends.factory import create_trajectory_backend
+from ._backends.protocol import TrajectoryBackend
 from .function_converter import OpenCLRhsEquation
 from .runtime import CLDeviceType, CLVendor, _clode_root_dir
 from .solver import Simulator, Stepper
@@ -65,7 +67,7 @@ class TrajectorySimulator(Simulator):
     _device_x: np.ndarray[Any, np.dtype[np.float64]] | None
     _device_dx: np.ndarray[Any, np.dtype[np.float64]] | None
     _device_aux: np.ndarray[Any, np.dtype[np.float64]] | None
-    _integrator: TrajectorySimulatorBase
+    _integrator: TrajectoryBackend
 
     def __init__(
         self,
@@ -155,7 +157,7 @@ class TrajectorySimulator(Simulator):
         self._device_aux = None
 
     def _create_integrator(self) -> None:
-        self._integrator = TrajectorySimulatorBase(
+        self._integrator = create_trajectory_backend(
             self._pi,
             self._stepper.value,
             self._single_precision,
