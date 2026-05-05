@@ -7,13 +7,12 @@ import numpy as np
 # from numpy.typing import NDArray
 from numpy.lib import recfunctions as rfn
 
-from clode.cpp.clode_cpp_wrapper import SolverParams
-
 from ._backends.factory import create_trajectory_backend
 from ._backends.protocol import TrajectoryBackend
 from .function_converter import OpenCLRhsEquation
 from .runtime import CLDeviceType, CLVendor, _clode_root_dir
 from .solver import Simulator, Stepper
+from .types import SolverParams
 
 
 # TODO: better even - use getitem?  trajectory["t"], trajectory["varname"], trajectory["dvar/dt"], ...

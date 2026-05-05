@@ -3,6 +3,7 @@ from dataclasses import replace
 import pytest
 
 from clode._backends.rhs import create_rhs_source
+from clode.types import ProblemInfo
 from clode._pyopencl import (
     BuildError,
     BuildKey,
@@ -16,7 +17,6 @@ from clode._pyopencl import (
     SourceBundle,
     UnsupportedStepperError,
 )
-from clode.cpp.clode_cpp_wrapper import ProblemInfo
 
 
 def _make_build_key(**overrides: object) -> BuildKey:

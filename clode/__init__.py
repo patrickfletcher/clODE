@@ -1,7 +1,3 @@
-# This is the package public interface (expose objects for "from clode import X")
-# - keep only main simulation items here?
-# - keep CL-related things in runtime?
-from clode.cpp.clode_cpp_wrapper import ObserverParams, ProblemInfo, SolverParams
 from clode.features import FeatureSimulator, Observer, ObserverOutput
 from clode.function_converter import (
     OpenCLConverter,
@@ -80,6 +76,7 @@ from clode.runtime import (
 )
 from clode.solver import Simulator, Stepper
 from clode.trajectory import TrajectoryOutput, TrajectorySimulator
+from clode.types import ObserverParams, ProblemInfo, SolverParams
 from clode.xpp_parser import convert_xpp_file, format_opencl_rhs, read_ode_parameters
 
 __version__ = "0.9.0"

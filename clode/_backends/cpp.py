@@ -7,14 +7,24 @@ from typing import Generic, Sequence, TypeVar
 
 from clode.cpp.clode_cpp_wrapper import (
     FeatureSimulatorBase,
-    ObserverParams,
-    ProblemInfo,
+    ObserverParams as CppObserverParams,
+    ProblemInfo as CppProblemInfo,
     SimulatorBase,
-    SolverParams,
+    SolverParams as CppSolverParams,
     TrajectorySimulatorBase,
 )
 
 from ..runtime import OpenCLResource
+from ..types import (
+    ObserverParams,
+    ProblemInfo,
+    SolverParams,
+    observer_params_from_cpp,
+    observer_params_to_cpp,
+    problem_info_to_cpp,
+    solver_params_from_cpp,
+    solver_params_to_cpp,
+)
 from .rhs import RhsSource
 
 PybindBackend = TypeVar(
@@ -24,12 +34,12 @@ PybindBackend = TypeVar(
 
 def _materialize_rhs_source(
     problem_info: ProblemInfo, rhs_source: RhsSource
-) -> tuple[ProblemInfo, tempfile.TemporaryDirectory[str] | None]:
+) -> tuple[CppProblemInfo, tempfile.TemporaryDirectory[str] | None]:
     candidate_path = rhs_source.origin_label
     if os.path.isfile(candidate_path):
         candidate_text = Path(candidate_path).read_text(encoding="utf-8")
         if candidate_text == rhs_source.text:
-            return problem_info, None
+            return problem_info_to_cpp(problem_info), None
 
     tempdir = tempfile.TemporaryDirectory(prefix="clode_rhs_")
     filename = Path(rhs_source.origin_label).name or "rhs.cl"
@@ -44,7 +54,7 @@ def _materialize_rhs_source(
         problem_info.aux,
         problem_info.num_noise,
     )
-    return materialized_problem_info, tempdir
+    return problem_info_to_cpp(materialized_problem_info), tempdir
 
 
 class _CppBackendBase(Generic[PybindBackend]):
@@ -64,7 +74,7 @@ class _CppBackendBase(Generic[PybindBackend]):
         return self._integrator.get_program_string()
 
     def get_solver_params(self) -> SolverParams:
-        return self._integrator.get_solver_params()
+        return solver_params_from_cpp(self._integrator.get_solver_params())
 
     def get_tf(self) -> list[float]:
         return self._integrator.get_tf()
@@ -96,7 +106,7 @@ class _CppBackendBase(Generic[PybindBackend]):
         self._integrator.set_problem_data(list(initial_state), list(parameters))
 
     def set_solver_params(self, solver_params: SolverParams) -> None:
-        self._integrator.set_solver_params(solver_params)
+        self._integrator.set_solver_params(solver_params_to_cpp(solver_params))
 
     def set_tspan(self, tspan: Sequence[float]) -> None:
         self._integrator.set_tspan(list(tspan))
@@ -200,7 +210,7 @@ class CppFeatureBackend(_CppBackendBase[FeatureSimulatorBase]):
                 materialized_problem_info,
                 stepper,
                 observer,
-                observer_params,
+                observer_params_to_cpp(observer_params),
                 single_precision,
                 runtime,
                 clode_root,
@@ -223,7 +233,7 @@ class CppFeatureBackend(_CppBackendBase[FeatureSimulatorBase]):
         return self._integrator.get_n_features()
 
     def get_observer_params(self) -> ObserverParams:
-        return self._integrator.get_observer_params()
+        return observer_params_from_cpp(self._integrator.get_observer_params())
 
     def initialize_observer(self) -> None:
         self._integrator.initialize_observer()
@@ -235,4 +245,4 @@ class CppFeatureBackend(_CppBackendBase[FeatureSimulatorBase]):
         self._integrator.set_observer(observer)
 
     def set_observer_params(self, observer_params: ObserverParams) -> None:
-        self._integrator.set_observer_params(observer_params)
+        self._integrator.set_observer_params(observer_params_to_cpp(observer_params))

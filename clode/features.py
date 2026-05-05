@@ -6,13 +6,12 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 import numpy as np
 from numpy.lib import recfunctions as rfn
 
-from clode.cpp.clode_cpp_wrapper import ObserverParams, SolverParams
-
 from ._backends.factory import create_feature_backend
 from ._backends.protocol import FeatureBackend
 from .function_converter import OpenCLRhsEquation
 from .runtime import CLDeviceType, CLVendor, _clode_root_dir
 from .solver import Simulator, Stepper
+from .types import ObserverParams, SolverParams
 
 # TODO[API]: defaults for ObserverParams are here and in wrapper. Should be only ONE place globally.
 # - Prefer the struct defaults? Create a default config?

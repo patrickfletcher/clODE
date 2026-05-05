@@ -22,7 +22,7 @@ It is intentionally more granular than the phase plan in `tmp/pyopencl_backend_d
 - Completed: PR 11 feature backend
 - Completed: PR 12 extended reference suite and rollout guardrails
 - Completed: PR 13 dependency surfacing and runtime diagnostics
-- Next: PR 14 Python-owned public types and runtime facade
+- In progress: PR 14 Python-owned public types and runtime facade
 - Current milestone audit: the authoritative 54-test gate in `tmp/backend_core_test_suite.md`, the broader 63-test PR 11 acceptance bundle, and the 74-test PR 12 extended reference bundle all passed on the stable NVIDIA runtime on this workspace after the PR 13 dependency and runtime-diagnostics updates; packaging audit results are recorded in `tmp/pyopencl_packaging_release_audit.md`
 - Struct-handling audit result: host-populated OpenCL structs now use device-matched PyOpenCL dtypes for `SolverParams` and `ObserverParams`; `ObserverData` remains a deferred feature-backend concern and must not reuse the legacy byte-count formulas
 - Trajectory note: the current kernel contract counts `max_store` as total storage slots including the initial sample at slot 0; this existing behavior was respected in the new regression coverage and was not changed here
@@ -479,6 +479,10 @@ Audit result:
 
 Priority: P1
 
+Status:
+
+- In progress
+
 Goal:
 
 - remove the C++ wrapper from the public Python import path so the package can become PyOpenCL-owned rather than only PyOpenCL-capable
@@ -500,6 +504,18 @@ Acceptance criteria:
 - `_pyopencl` backends no longer depend on C++-owned public structs
 - C++ backend still works through explicit adapter conversions
 
+Current slice landed:
+
+- `ProblemInfo`, `SolverParams`, and `ObserverParams` now have Python-owned implementations in `clode/types.py`
+- public simulators and `_pyopencl` modules now consume those Python-owned model types
+- the C++ backend now converts those models explicitly at the adapter boundary
+- focused model tests plus broader C++ and PyOpenCL simulator slices passed locally on this workspace
+
+Remaining work in this PR:
+
+- remove the public runtime module's import-time dependency on wrapper-owned runtime types
+- decide whether the runtime facade should be Python-native immediately or loaded through a compatibility shim during transition
+
 Guardrails:
 
 - do not change kernel numerics or constructor semantics in this PR
@@ -517,6 +533,7 @@ Deliverables:
 
 - default `python -m build` path no longer compiles the C++ extension
 - wheel carries Python code plus required OpenCL assets, not the legacy C++ source tree
+- stale trees such as `matlab/` and `samples/` are no longer part of package artifacts
 - release/version source is unified
 - release publishing moves to a tag-driven workflow rather than general push jobs
 
@@ -534,6 +551,7 @@ Guardrails:
 
 - do not switch the default backend in the same PR
 - keep the release workflow understandable enough that published artifacts map cleanly to one semver tag
+- use standard `pyproject.toml`-first packaging conventions for the PyOpenCL-only endpoint rather than carrying forward Bazel-era release assumptions
 
 ## PR 16: Default Backend Switch
 

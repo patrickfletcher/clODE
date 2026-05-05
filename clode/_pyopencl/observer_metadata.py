@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from clode.cpp.clode_cpp_wrapper import ObserverParams, ProblemInfo
 import numpy as np
 
+from ..types import ObserverParams, ProblemInfo
 from .models import Precision, ProblemShape
 from .runtime import OpenCLRuntime
 from .structs import MatchedStruct, match_struct_dtype

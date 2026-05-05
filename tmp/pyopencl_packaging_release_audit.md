@@ -17,6 +17,7 @@ It also records the packaging state verified on this workspace on 2026-05-05.
 - installing the built wheel into an isolated target directory works, and `import clode` plus `clode.query_opencl()` both succeed there
 - the built wheel metadata reports version `0.9.0`
 - the repository tag state does not match that release identity: `git describe --tags --always --dirty` currently reports `v0.8.1-32-ged3de84-dirty`, and the newest tag is still `v0.8.1`
+- `matlab/` and `samples/` are now pruned from the source distribution via `MANIFEST.in`
 
 ## Findings
 
@@ -94,6 +95,14 @@ The sdist is broader still and currently carries most of the repository, includi
 - `test/`
 - `tmp/`
 
+Immediate packaging policy update:
+
+- `matlab/` and `samples/` should no longer be included in source distributions because they are stale and unmaintained
+
+Current status:
+
+- implemented for sdists on this branch
+
 The `python -m build` output also emits setuptools warnings about importable-but-undiscovered packages under:
 
 - `clode.cpp.OpenCL`
@@ -112,6 +121,22 @@ The current build path still emits avoidable warnings:
 - deprecated license-classifier warnings from setuptools
 
 These do not currently stop the build, but they are part of the packaging debt that should be removed before a migration-finish release.
+
+### 8. The modern PyOpenCL-only endpoint is now clear enough to target directly
+
+For the desired end state, the package should converge on standard modern Python packaging practices rather than a customized binary-extension build path.
+
+That target should look like this:
+
+- `pyproject.toml` is the authoritative packaging configuration
+- the default wheel is pure Python and built with `python -m build`
+- package data is declared explicitly for runtime `.cl` assets
+- build-time behavior does not depend on `setup.py` side effects
+- release publishing is tag-driven and uses one dedicated workflow
+- CI separates validation from publishing
+- package version comes from one authoritative semver-compatible source
+
+That means the migration finish line is not just "PyOpenCL works". It is also "the package looks like a normal modern Python package".
 
 ## Recommendation
 
@@ -132,6 +157,32 @@ Recommended release semantics:
 - reserve `1.0.0` for the first release whose default install path is Bazel-free, whose runtime-support policy is explicit, and whose public API/install story you are willing to call stable
 
 ### Recommended work plan
+
+### Modern packaging target for the PyOpenCL-only endpoint
+
+Packaging:
+
+1. move package configuration ownership fully into `pyproject.toml`
+2. remove the default compiled extension from `ext_modules`
+3. package only Python modules plus the OpenCL source assets needed at runtime
+4. stop shipping stale or non-runtime trees in sdists and wheels, including `matlab/` and `samples/`
+5. remove `pkg_resources` and stale `setup.py` compatibility logic from the default build path
+6. unify version sourcing, ideally via a dedicated version module populated from release tags
+
+CI and release workflows:
+
+1. split validation workflows from publishing workflows
+2. stop publishing from general `push` jobs on Linux, macOS, and Windows
+3. run the normal test matrix on push and pull request events
+4. run build-artifact verification in one packaging workflow using `python -m build`
+5. publish only from tagged releases or a dedicated release dispatch workflow
+6. use trusted publishing or a single explicit PyPI publish job instead of repeating upload logic across OS jobs
+
+Repository scope:
+
+1. keep stale maintenance surfaces out of the release path
+2. treat `matlab/` and `samples/` as out of scope for Python package artifacts
+3. revisit whether they should remain in the repository at all after the backend migration settles
 
 #### PR 14: Python-Owned Public Model And Runtime Facade
 
@@ -162,6 +213,7 @@ Deliverables:
 - package only the Python code and required `.cl` assets
 - move kernel assets to an explicitly packaged data location rather than relying on the legacy `clode/cpp` layout
 - stop shipping the compiled extension and C++ source tree in the default wheel
+- stop shipping stale repository trees in package artifacts, including `matlab/` and `samples/`
 - quarantine the legacy C++ backend behind an explicit compatibility extra, separate package, or clearly isolated maintenance path
 - replace the current push-publish workflows with a tag-driven release workflow that builds artifacts once and publishes once
 - clean up the version source, `pkg_resources`, and stale `setuptools_scm` configuration debt

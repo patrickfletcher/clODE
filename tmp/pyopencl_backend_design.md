@@ -149,6 +149,7 @@ Deferred note:
 - the default switch should follow a dedicated transition step that makes the PyOpenCL dependency and runtime-selection story explicit first
 - that transition step is now landed: package metadata exposes an optional `clode[pyopencl]` dependency, install docs describe runtime verification, and PyOpenCL runtime errors now point at the optional dependency path
 - packaging audit result: the current wheel still ships the C++ extension and much of the `clode/cpp` source tree, and public Python imports still depend on wrapper-owned types; a Bazel-free PyOpenCL release therefore requires public-model decoupling and packaging cleanup before the default switch
+- packaging scope note: stale trees such as `matlab/` and `samples/` should be removed from Python package artifacts during the packaging-transition phase rather than carried into the PyOpenCL-only endpoint
 
 ### Recommended module layout
 

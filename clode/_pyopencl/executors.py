@@ -3,11 +3,11 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Sequence
 
-from clode.cpp.clode_cpp_wrapper import ObserverParams, ProblemInfo, SolverParams
 import numpy as np
 
 from .._backends.protocol import FeatureBackend, SimulatorBackend
 from .._backends.rhs import RhsSource
+from ..types import ObserverParams, ProblemInfo, SolverParams
 from .buffers import (
     ArrayLayout,
     BufferManager,

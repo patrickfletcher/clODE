@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 from .._backends.rhs import RhsSource
 
 if TYPE_CHECKING:
-    from clode.cpp.clode_cpp_wrapper import ProblemInfo
+    from ..types import ProblemInfo
 
 
 PYOPENCL_BACKEND_VERSION = "1"

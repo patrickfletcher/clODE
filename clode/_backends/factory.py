@@ -4,8 +4,6 @@ from dataclasses import dataclass
 import os
 from typing import Final
 
-from clode.cpp.clode_cpp_wrapper import ObserverParams, ProblemInfo
-
 from .._pyopencl.executors import (
     PyOpenCLFeatureBackend,
     PyOpenCLTrajectoryBackend,
@@ -14,6 +12,7 @@ from .._pyopencl.executors import (
 from .._pyopencl.runtime import OpenCLRuntime
 from ..runtime import CLDeviceType, CLVendor
 from ..runtime import OpenCLResource
+from ..types import ObserverParams, ProblemInfo
 from .cpp import CppFeatureBackend, CppSimulatorBackend, CppTrajectoryBackend
 from .protocol import FeatureBackend, SimulatorBackend, TrajectoryBackend
 from .rhs import RhsSource

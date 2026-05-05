@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Protocol, Sequence
 
-from clode.cpp.clode_cpp_wrapper import ObserverParams, SolverParams
+from ..types import ObserverParams, SolverParams
 
 
 class SimulatorBackend(Protocol):

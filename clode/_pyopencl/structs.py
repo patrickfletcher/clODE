@@ -3,9 +3,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 import warnings
 
-from clode.cpp.clode_cpp_wrapper import ObserverParams, SolverParams
 import numpy as np
 
+from ..types import ObserverParams, SolverParams
 from .models import Precision
 from .runtime import OpenCLRuntime, _require_pyopencl
 

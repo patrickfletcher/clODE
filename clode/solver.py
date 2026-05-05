@@ -11,8 +11,6 @@ import numpy as np
 # https://numpy.org/neps/nep-0029-deprecation_policy.html
 import numpy.typing as npt
 
-from clode.cpp.clode_cpp_wrapper import ProblemInfo, SolverParams
-
 from ._backends.factory import RuntimeSelection, create_simulator_backend
 from ._backends.protocol import SimulatorBackend
 from ._backends.rhs import RhsSource, create_rhs_source, load_rhs_source
@@ -27,6 +25,7 @@ from .runtime import (
     initialize_runtime,
     set_log_level,
 )
+from .types import ProblemInfo, SolverParams
 from .xpp_parser import convert_xpp_file
 
 
