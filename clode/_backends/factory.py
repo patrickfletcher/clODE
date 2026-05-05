@@ -8,6 +8,7 @@ from clode.cpp.clode_cpp_wrapper import ObserverParams, ProblemInfo
 from ..runtime import OpenCLResource
 from .cpp import CppFeatureBackend, CppSimulatorBackend, CppTrajectoryBackend
 from .protocol import FeatureBackend, SimulatorBackend, TrajectoryBackend
+from .rhs import RhsSource
 
 _DEFAULT_BACKEND: Final[str] = "cpp"
 _BACKEND_ENVVAR: Final[str] = "_CLODE_BACKEND"
@@ -24,6 +25,7 @@ def _resolve_backend_name(backend_name: str | None = None) -> str:
 
 def create_simulator_backend(
     problem_info: ProblemInfo,
+    rhs_source: RhsSource,
     stepper: str,
     single_precision: bool,
     runtime: OpenCLResource,
@@ -32,12 +34,13 @@ def create_simulator_backend(
 ) -> SimulatorBackend:
     _resolve_backend_name(backend_name)
     return CppSimulatorBackend(
-        problem_info, stepper, single_precision, runtime, clode_root
+        problem_info, rhs_source, stepper, single_precision, runtime, clode_root
     )
 
 
 def create_trajectory_backend(
     problem_info: ProblemInfo,
+    rhs_source: RhsSource,
     stepper: str,
     single_precision: bool,
     runtime: OpenCLResource,
@@ -46,12 +49,13 @@ def create_trajectory_backend(
 ) -> TrajectoryBackend:
     _resolve_backend_name(backend_name)
     return CppTrajectoryBackend(
-        problem_info, stepper, single_precision, runtime, clode_root
+        problem_info, rhs_source, stepper, single_precision, runtime, clode_root
     )
 
 
 def create_feature_backend(
     problem_info: ProblemInfo,
+    rhs_source: RhsSource,
     stepper: str,
     observer: str,
     observer_params: ObserverParams,
@@ -63,6 +67,7 @@ def create_feature_backend(
     _resolve_backend_name(backend_name)
     return CppFeatureBackend(
         problem_info,
+        rhs_source,
         stepper,
         observer,
         observer_params,

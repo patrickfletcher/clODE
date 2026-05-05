@@ -159,6 +159,7 @@ class TrajectorySimulator(Simulator):
     def _create_integrator(self) -> None:
         self._integrator = create_trajectory_backend(
             self._pi,
+            self._rhs_source,
             self._stepper.value,
             self._single_precision,
             self._runtime,

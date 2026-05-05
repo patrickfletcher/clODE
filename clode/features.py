@@ -374,6 +374,7 @@ class FeatureSimulator(Simulator):
     def _create_integrator(self) -> None:
         self._integrator = create_feature_backend(
             self._pi,
+            self._rhs_source,
             self._stepper.value,
             self._observer_type.value,
             self._op,

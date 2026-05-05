@@ -12,7 +12,9 @@ It is intentionally more granular than the phase plan in `tmp/pyopencl_backend_d
 - Completed: PR 1 numerical-core and backend-contract test lock
 - Completed: PR 2 backend protocol and factory
 - Completed: PR 3 C++ backend adapter and public-wrapper rewiring
-- Next: PR 4 RHS source object integration
+- Completed: PR 4 RHS source object integration
+- Next: PR 5 PyOpenCL core models and errors
+- Current milestone audit: `test/core_numerics`, `test/test_backend_contracts.py`, `test/test_backend_rhs_source.py`, `test/test_features.py`, `test/test_function_converter.py`, and `test/test_xpp_parser.py` passed together
 
 ## Planning Rules
 
@@ -27,7 +29,7 @@ It is intentionally more granular than the phase plan in `tmp/pyopencl_backend_d
 | --- | --- | --- |
 | M0 | Lock scope and tests | Complete |
 | M1 | Land backend seam | Complete |
-| M2 | Land PyOpenCL build primitives | Not started |
+| M2 | Land PyOpenCL build primitives | In progress |
 | M3 | Land transient parity | Not started |
 | M4 | Land trajectory parity | Not started |
 | M5 | Land feature parity | Not started |
@@ -141,7 +143,7 @@ Priority: P0
 
 Status:
 
-- Next
+- Complete
 
 Goal:
 
@@ -161,6 +163,10 @@ Acceptance criteria:
 - current C++ backend still works through the adapter
 - `get_program_string()` behavior is unchanged on the C++ backend
 - converter and XPP tests still pass
+
+Audit result:
+
+- Passed
 
 ## PR 5: PyOpenCL Core Models And Errors
 

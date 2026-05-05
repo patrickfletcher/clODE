@@ -23,13 +23,15 @@ Everything else under `test/` is reference material, historical coverage, or out
 ### Backend contract authority
 
 - `test/test_backend_contracts.py`
+- `test/test_backend_rhs_source.py`
 
-Today this combined gate is 20 tests and is the suite that should stay green through the subsequent backend-migration phases.
+Today this combined gate is 23 tests and is the suite that should stay green through the subsequent backend-migration phases.
 
 Current implementation state:
 
 - the public simulators now construct their execution backend through `clode/_backends/factory.py`
 - the active reference path is `clode/_backends/cpp.py`, which wraps the current pybind C++ runtime
+- public simulators now prepare an internal `RhsSource` object with source text and digest before backend construction
 
 ## Canonical Models
 
@@ -97,6 +99,12 @@ The stochastic gate does not currently include a continuation test. That was int
 - `features(initialize_observer=...)` refreshes cached feature results instead of returning stale data
 - `max_event_timestamps` changes rebuild the compiled feature program with the expected `N_STORE_EVENTS` value
 
+`test/test_backend_rhs_source.py` protects the PR 4 source-preparation path:
+
+- file-backed RHS inputs are prepared as source text plus digest
+- Python-callable RHS inputs are prepared as source text plus digest
+- source digest changes when source text changes
+
 This file is intentionally small. Its job is to lock down the current backend contract, not to become a second broad API suite.
 
 ## Runtime Guidance
@@ -109,7 +117,7 @@ This file is intentionally small. Its job is to lock down the current backend co
 On this Linux workspace, the stable local command is:
 
 ```bash
-CLODE_TEST_PLATFORM_ID=1 CLODE_TEST_DEVICE_ID=0 /home/fletcherpa/envs/clode/bin/python -m pytest test/core_numerics test/test_backend_contracts.py -q
+CLODE_TEST_PLATFORM_ID=1 CLODE_TEST_DEVICE_ID=0 /home/fletcherpa/envs/clode/bin/python -m pytest test/core_numerics test/test_backend_contracts.py test/test_backend_rhs_source.py -q
 ```
 
 The environment-variable override lives in `test/core_numerics/helpers.py` so the tests do not hardcode local device IDs.

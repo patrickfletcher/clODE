@@ -5,7 +5,7 @@
 - Status: In progress
 - Audience: maintainers and contributors implementing the PyOpenCL migration
 - Related document: `tmp/cpp_opencl_layer_audit.md`
-- Completed groundwork: scope lock, authoritative migration test gate, internal backend seam, and C++ backend adapter
+- Completed groundwork: scope lock, authoritative migration test gate, internal backend seam, C++ backend adapter, and RHS source object integration
 
 ## Decision Summary
 
@@ -128,7 +128,8 @@ Current state:
 
 - the public simulators now delegate backend construction through `clode/_backends/factory.py`
 - the active implementation path is the C++ adapter in `clode/_backends/cpp.py`
-- the next backend milestone is PR 4: RHS source object integration
+- public simulators now prepare an internal `RhsSource` object before backend construction
+- the next backend milestone is PR 5: PyOpenCL core models and errors
 
 ### Recommended module layout
 

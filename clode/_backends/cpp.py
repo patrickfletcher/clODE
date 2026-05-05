@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import os
+from pathlib import Path
+import tempfile
 from typing import Generic, Sequence, TypeVar
 
 from clode.cpp.clode_cpp_wrapper import (
@@ -12,10 +15,36 @@ from clode.cpp.clode_cpp_wrapper import (
 )
 
 from ..runtime import OpenCLResource
+from .rhs import RhsSource
 
 PybindBackend = TypeVar(
     "PybindBackend", SimulatorBase, TrajectorySimulatorBase, FeatureSimulatorBase
 )
+
+
+def _materialize_rhs_source(
+    problem_info: ProblemInfo, rhs_source: RhsSource
+) -> tuple[ProblemInfo, tempfile.TemporaryDirectory[str] | None]:
+    candidate_path = rhs_source.origin_label
+    if os.path.isfile(candidate_path):
+        candidate_text = Path(candidate_path).read_text(encoding="utf-8")
+        if candidate_text == rhs_source.text:
+            return problem_info, None
+
+    tempdir = tempfile.TemporaryDirectory(prefix="clode_rhs_")
+    filename = Path(rhs_source.origin_label).name or "rhs.cl"
+    if Path(filename).suffix == "":
+        filename = f"{filename}.cl"
+    rhs_path = Path(tempdir.name) / filename
+    rhs_path.write_text(rhs_source.text, encoding="utf-8")
+    materialized_problem_info = ProblemInfo(
+        str(rhs_path),
+        problem_info.vars,
+        problem_info.pars,
+        problem_info.aux,
+        problem_info.num_noise,
+    )
+    return materialized_problem_info, tempdir
 
 
 class _CppBackendBase(Generic[PybindBackend]):
@@ -89,13 +118,23 @@ class CppSimulatorBackend(_CppBackendBase[SimulatorBase]):
     def __init__(
         self,
         problem_info: ProblemInfo,
+        rhs_source: RhsSource,
         stepper: str,
         single_precision: bool,
         runtime: OpenCLResource,
         clode_root: str,
     ) -> None:
+        materialized_problem_info, self._rhs_tempdir = _materialize_rhs_source(
+            problem_info, rhs_source
+        )
         super().__init__(
-            SimulatorBase(problem_info, stepper, single_precision, runtime, clode_root)
+            SimulatorBase(
+                materialized_problem_info,
+                stepper,
+                single_precision,
+                runtime,
+                clode_root,
+            )
         )
 
 
@@ -103,14 +142,22 @@ class CppTrajectoryBackend(_CppBackendBase[TrajectorySimulatorBase]):
     def __init__(
         self,
         problem_info: ProblemInfo,
+        rhs_source: RhsSource,
         stepper: str,
         single_precision: bool,
         runtime: OpenCLResource,
         clode_root: str,
     ) -> None:
+        materialized_problem_info, self._rhs_tempdir = _materialize_rhs_source(
+            problem_info, rhs_source
+        )
         super().__init__(
             TrajectorySimulatorBase(
-                problem_info, stepper, single_precision, runtime, clode_root
+                materialized_problem_info,
+                stepper,
+                single_precision,
+                runtime,
+                clode_root,
             )
         )
 
@@ -137,6 +184,7 @@ class CppFeatureBackend(_CppBackendBase[FeatureSimulatorBase]):
     def __init__(
         self,
         problem_info: ProblemInfo,
+        rhs_source: RhsSource,
         stepper: str,
         observer: str,
         observer_params: ObserverParams,
@@ -144,9 +192,12 @@ class CppFeatureBackend(_CppBackendBase[FeatureSimulatorBase]):
         runtime: OpenCLResource,
         clode_root: str,
     ) -> None:
+        materialized_problem_info, self._rhs_tempdir = _materialize_rhs_source(
+            problem_info, rhs_source
+        )
         super().__init__(
             FeatureSimulatorBase(
-                problem_info,
+                materialized_problem_info,
                 stepper,
                 observer,
                 observer_params,

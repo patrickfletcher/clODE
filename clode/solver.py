@@ -15,6 +15,7 @@ from clode.cpp.clode_cpp_wrapper import ProblemInfo, SolverParams
 
 from ._backends.factory import create_simulator_backend
 from ._backends.protocol import SimulatorBackend
+from ._backends.rhs import RhsSource, create_rhs_source, load_rhs_source
 from .function_converter import OpenCLConverter, OpenCLRhsEquation
 from .runtime import (
     CLDeviceType,
@@ -61,6 +62,7 @@ class Simulator:
     _single_precision: bool
     _stepper: Stepper
     _pi: ProblemInfo
+    _rhs_source: RhsSource
 
     # changes to the above items require rebuilding the CL program.
     # Flag them and rebuild if necessary on simulation function call
@@ -147,7 +149,7 @@ class Simulator:
         device_ids: Optional[List[int]] = None,
     ) -> None:
 
-        input_file = self._handle_clode_rhs_cl_file(
+        self._rhs_source = self._prepare_rhs_source(
             src_file, rhs_equation, supplementary_equations
         )
 
@@ -155,7 +157,7 @@ class Simulator:
             aux = []
 
         self._pi = ProblemInfo(
-            input_file,
+            self._rhs_source.origin_label,
             list(variables.keys()),
             list(parameters.keys()),
             aux,
@@ -209,6 +211,7 @@ class Simulator:
     def _create_integrator(self) -> None:
         self._integrator = create_simulator_backend(
             self._pi,
+            self._rhs_source,
             self._stepper.value,
             self._single_precision,
             self._runtime,
@@ -226,13 +229,12 @@ class Simulator:
     def _invalidate_solution_cache(self) -> None:
         self._device_final_state = self._device_dt = self._device_tf = None
 
-    def _handle_clode_rhs_cl_file(
+    def _prepare_rhs_source(
         self,
         src_file: str | None = None,
         rhs_equation: OpenCLRhsEquation | None = None,
         supplementary_equations: List[Callable[[Any], Any]] | None = None,
-    ) -> str:
-        input_file: str
+    ) -> RhsSource:
 
         if src_file is not None and rhs_equation is not None:
             raise ValueError("Cannot specify both src_file and rhs_equation")
@@ -241,6 +243,7 @@ class Simulator:
                 input_file = convert_xpp_file(src_file)
             else:
                 input_file = src_file
+            return load_rhs_source(input_file)
         elif rhs_equation is not None:
             # Convert the rhs_equation to a string
             # and write it to a file
@@ -252,13 +255,9 @@ class Simulator:
             eqn = converter.convert_to_opencl(
                 rhs_equation, mutable_args=[3, 4], function_name="getRHS"
             )
-            input_file = "clode_rhs.cl"
-            with open(input_file, "w") as ff:
-                ff.write(eqn)
+            return create_rhs_source("clode_rhs.cl", eqn)
         else:
             raise ValueError("Must specify either src_file or rhs_equation")
-
-        return input_file
 
     def set_repeat_ensemble(self, num_repeats: int) -> None:
         """Create an ensemble with identical parameters and initial states.

@@ -104,6 +104,7 @@ These folders are not in scope for the first phases of the backend overhaul.
 | `clode/_backends/protocol.py` | Internal simulator backend contract | Defines the public-wrapper to backend boundary |
 | `clode/_backends/factory.py` | Backend selection and construction | Current transition point for swapping backend implementations |
 | `clode/_backends/cpp.py` | C++ adapter behind the backend contract | Current reference implementation path during migration |
+| `clode/_backends/rhs.py` | Internal RHS source model and digest helpers | Transition input model for future PyOpenCL source assembly |
 
 ### Current C++ backend reference
 
@@ -183,6 +184,7 @@ These files are the current authoritative source pool for backend-phase gating.
 ### Backend contract gate
 
 - `test/test_backend_contracts.py`
+- `test/test_backend_rhs_source.py`
 
 The exact suite definition is pinned in `tmp/backend_core_test_suite.md`.
 
@@ -194,6 +196,7 @@ Use this section to answer common implementation questions with minimum token co
 | --- | --- |
 | Where does backend selection happen | `clode/_backends/factory.py` |
 | Where is the current backend adapter | `clode/_backends/cpp.py` |
+| Where is RHS source preparation modeled | `clode/_backends/rhs.py`, `clode/solver.py` |
 | What is the current build key | `tmp/cpp_opencl_layer_audit.md`, `clode/cpp/CLODE.cpp` |
 | How is the current program assembled | `tmp/cpp_opencl_layer_audit.md`, `clode/cpp/CLODE.cpp`, `clode/cpp/transient.cl`, `clode/cpp/features.cl` |
 | Which public APIs must remain stable | `clode/solver.py`, `clode/trajectory.py`, `clode/features.py`, `tmp/pyopencl_backend_design.md` |
