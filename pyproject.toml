@@ -37,6 +37,15 @@ classifiers = [
     "Topic :: Software Development :: Libraries",
 ]
 
+[project.urls]
+Documentation = "https://patrickfletcher.github.io/clODE/"
+Repository = "https://github.com/patrickfletcher/clODE"
+
+[project.optional-dependencies]
+pyopencl = [
+    "pyopencl>=2025.2",
+]
+
 
 [tool.setuptools.dynamic]
 version = {attr = "clode.__version__"}
@@ -48,7 +57,3 @@ requires = [
     "wheel",
     "setuptools_scm"
 ]
-
-[project.urls]
-Documentation = "https://patrickfletcher.github.io/clODE/"
-Repository = "https://github.com/patrickfletcher/clODE"

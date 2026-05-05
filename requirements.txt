@@ -14,3 +14,4 @@ mkdocstrings-python
 scipy>=1.13.0
 pymdown-extensions>=10.0.0
 matplotlib>=3.8.0
+pyopencl>=2025.2

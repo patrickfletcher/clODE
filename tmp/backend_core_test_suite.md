@@ -201,6 +201,8 @@ CLODE_TEST_PLATFORM_ID=0 CLODE_TEST_DEVICE_ID=0 /home/fletcherpa/envs/clode/bin/
 
 For the broader PR 11 acceptance bundle on this workspace, add `test/test_vdp.py`, `test/test_features.py`, `test/test_aux_values.py`, and `test/test_ornl_thompson_a1.py` to the same command. That expanded bundle is currently 63 tests and passed on the stable NVIDIA runtime.
 
+For PR 12 rollout work, the current extended reference bundle adds `test/test_opencl_builtins.py` and `test/test_runtime.py` on top of that PR 11 acceptance command. That expanded bundle is currently 74 tests and passed on the stable NVIDIA runtime.
+
 The environment-variable override lives in `test/core_numerics/helpers.py` so the tests do not hardcode local device IDs.
 
 Important runtime-selection note:
@@ -208,6 +210,7 @@ Important runtime-selection note:
 - `clinfo -l` reports Intel as platform `0` and NVIDIA as platform `1` on this machine
 - the stable backend-validation command above currently targets the NVIDIA runtime with `CLODE_TEST_PLATFORM_ID=0` and `CLODE_TEST_DEVICE_ID=0`
 - do not assume that `clinfo -l` platform ordering matches the runtime-selection order seen by the current backend validation path on this workspace
+- `tmp/pyopencl_rollout_guardrails.md` is the authoritative rollout-policy note for PR 12 and later
 
 ## Out Of Scope For This Gate
 

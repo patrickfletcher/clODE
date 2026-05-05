@@ -16,7 +16,7 @@ except ModuleNotFoundError:
 def _require_pyopencl() -> Any:
     if cl is None:
         raise PyOpenCLDependencyError(
-            "pyopencl is required for the internal PyOpenCL backend"
+            "pyopencl is required for the PyOpenCL backend. Install pyopencl directly or use the optional 'clode[pyopencl]' dependency."
         )
     return cl
 
@@ -128,6 +128,14 @@ class OpenCLRuntime:
             "cl_khr_fp64" in extensions
             or "cl_amd_fp64" in extensions
             or int(getattr(self.device, "double_fp_config", 0)) != 0
+        )
+
+    def describe(self) -> str:
+        platform_name = str(getattr(self.platform, "name", "unknown platform"))
+        device_name = str(getattr(self.device, "name", "unknown device"))
+        return (
+            f"platform_id={self.platform_id} ({platform_name}), "
+            f"device_id={self.device_id} ({device_name})"
         )
 
     def get_max_memory_alloc_size(self) -> int:

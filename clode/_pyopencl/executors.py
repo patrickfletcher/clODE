@@ -147,6 +147,7 @@ class PyOpenCLTransientBackend(SimulatorBackend):
             f"Using {'single' if self._precision is Precision.SINGLE else 'double'} precision."
         )
         print(f"Using stepper: {self._stepper}")
+        print(f"Using OpenCL runtime: {self._runtime.describe()}")
 
     def seed_rng(self, seed: int | None = None) -> None:
         if self._buffers is None:

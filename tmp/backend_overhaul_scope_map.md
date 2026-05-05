@@ -226,6 +226,7 @@ Use this section to answer common implementation questions with minimum token co
 | Where are the PyOpenCL buffer layout and allocation rules | `clode/_pyopencl/buffers.py` |
 | Where are the PyOpenCL host struct layout rules | `clode/_pyopencl/structs.py`, `tmp/pyopencl_struct_audit.md` |
 | Where is the PyOpenCL transient executor | `clode/_pyopencl/executors.py` |
+| What is the current rollout policy and stable runtime | `tmp/pyopencl_rollout_guardrails.md`, `docs/install.md` |
 | What is the current build key | `tmp/cpp_opencl_layer_audit.md`, `clode/cpp/CLODE.cpp` |
 | How is the current program assembled | `tmp/cpp_opencl_layer_audit.md`, `clode/cpp/CLODE.cpp`, `clode/cpp/transient.cl`, `clode/cpp/features.cl` |
 | Which public APIs must remain stable | `clode/solver.py`, `clode/trajectory.py`, `clode/features.py`, `tmp/pyopencl_backend_design.md` |

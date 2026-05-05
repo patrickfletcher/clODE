@@ -136,7 +136,7 @@ Current state:
 - `clode/_pyopencl/structs.py` now uses `pyopencl.tools.match_dtype_to_c_struct(...)` for host-populated OpenCL structs used by the backend
 - `clode/_pyopencl/executors.py` now contains transient, trajectory, and feature PyOpenCL backends reachable through the internal `_CLODE_BACKEND=pyopencl` selector
 - `clode/_pyopencl/observer_metadata.py` now models feature names and observer-specific `ObserverData` layouts for PyOpenCL allocation without reusing the legacy host byte-count formulas
-- the next backend milestone is PR 12: extended reference suite and rollout guardrails
+- the next backend milestone is PR 14: Python-owned public types and runtime facade
 
 Deferred note:
 
@@ -145,6 +145,10 @@ Deferred note:
 - the current trajectory kernel contract treats `max_store` as total storage slots including the initial sample at slot 0; this migration phase preserved that behavior rather than changing kernel numerics
 - the feature path has a real two-stage lifecycle: `initializeObserver` prepares observer state and the `features` kernel consumes and updates it; continuation semantics depend on preserving that opaque observer buffer between calls
 - on this workspace, the stable PyOpenCL milestone-validation command currently uses the NVIDIA runtime with `CLODE_TEST_PLATFORM_ID=0` and `CLODE_TEST_DEVICE_ID=0`; `clinfo -l` reports a different platform order, so runtime selection should be verified empirically rather than inferred from the CLI alone
+- `tmp/pyopencl_rollout_guardrails.md` now records the rollout policy, the 74-test extended reference bundle, and the prerequisites for the eventual default switch
+- the default switch should follow a dedicated transition step that makes the PyOpenCL dependency and runtime-selection story explicit first
+- that transition step is now landed: package metadata exposes an optional `clode[pyopencl]` dependency, install docs describe runtime verification, and PyOpenCL runtime errors now point at the optional dependency path
+- packaging audit result: the current wheel still ships the C++ extension and much of the `clode/cpp` source tree, and public Python imports still depend on wrapper-owned types; a Bazel-free PyOpenCL release therefore requires public-model decoupling and packaging cleanup before the default switch
 
 ### Recommended module layout
 
