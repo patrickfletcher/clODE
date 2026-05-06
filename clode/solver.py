@@ -586,7 +586,7 @@ class Simulator:
         self._integrator.set_solver_params(self._sp)
         self._device_dt = None
 
-    def get_solver_parameters(self):
+    def get_solver_parameters(self) -> SolverParams:
         """Get the current ensemble parameters from the OpenCL device
 
         Returns:

@@ -18,7 +18,7 @@ except ModuleNotFoundError:
 def _require_pyopencl() -> Any:
     if cl is None:
         raise PyOpenCLDependencyError(
-            "pyopencl is required for the PyOpenCL backend. Install pyopencl directly or use the optional 'clode[pyopencl]' dependency."
+            "pyopencl is required for the PyOpenCL backend. Install pyopencl into the active environment or reinstall clode with its default dependencies."
         )
     return cl
 

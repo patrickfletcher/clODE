@@ -1,6 +1,17 @@
-name: JOSS Paper
+name: Paper
 
-on: [push]
+on:
+  pull_request:
+    paths:
+      - "paper/**"
+      - ".github/workflows/draft_pdf.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "paper/**"
+      - ".github/workflows/draft_pdf.yml"
+  workflow_dispatch:
 
 jobs:
   paper:

@@ -37,6 +37,30 @@ classifiers = [
     "Topic :: Software Development :: Libraries",
 ]
 
+[project.optional-dependencies]
+test = [
+    "pytest>=8.0.0",
+]
+docs = [
+    "matplotlib>=3.8.0",
+    "mkdocs>=1.6.0",
+    "mkdocs-autorefs>=1.0.0",
+    "mkdocstrings>=0.30.0",
+    "mkdocstrings-python>=1.10.0",
+    "pymdown-extensions>=10.0.0",
+]
+dev = [
+    "build>=1.2.0",
+    "matplotlib>=3.8.0",
+    "mkdocs>=1.6.0",
+    "mkdocs-autorefs>=1.0.0",
+    "mkdocstrings>=0.30.0",
+    "mkdocstrings-python>=1.10.0",
+    "pymdown-extensions>=10.0.0",
+    "pytest>=8.0.0",
+    "twine>=5.0.0",
+]
+
 [project.urls]
 Documentation = "https://patrickfletcher.github.io/clODE/"
 Repository = "https://github.com/patrickfletcher/clODE"

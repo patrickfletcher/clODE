@@ -99,9 +99,6 @@ def test_vdp_dormand_prince_python_rhs():
     vdp_dormand_prince(end=7, input_eq=getRHS)
 
 
-# if using 'bazel test ...'
 if __name__ == "__main__":
-    # print(clode)
-    # sys.exit(pytest.main(sys.argv[1:]))
-    # clode.set_log_level(clode.LogLevel.debug)
+    # Allow direct invocation for ad hoc local runs.
     vdp_dormand_prince(end=100)

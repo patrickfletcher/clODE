@@ -1,74 +1,41 @@
-
-PYFILES=$(shell find clode -name "*.py")
-PYTESTFILES=$(shell find test -name "*.py")
-
 PYTHON ?= python
+DIST_DIR ?= dist
 
-.PHONY: venv install install_clode format test test_mac_python_310 test_mac_python_38 test_short run lint generate_stubs_macos_python_310 wheel sdist upload upload_prod paper
+.PHONY: install-test install-docs install-dev test-smoke test-opencl test-extended test-long build-docs build-dist legacy-cpp-wrapper paper
 
-venv:
-	$(PYTHON) -m venv venv
+install-test:
+	$(PYTHON) -m pip install --upgrade pip
+	$(PYTHON) -m pip install -e ".[test]"
 
-install:
-	$(PYTHON) -m pip install --upgrade pip && \
-		$(PYTHON) -m pip install -r requirements.txt
+install-docs:
+	$(PYTHON) -m pip install --upgrade pip
+	$(PYTHON) -m pip install -e ".[docs]"
 
-install_clode:
-	$(PYTHON) -m pip install . --verbose
+install-dev:
+	$(PYTHON) -m pip install --upgrade pip
+	$(PYTHON) -m pip install -e ".[dev]"
 
-format:
-	isort $(PYFILES) $(PYTESTFILES) && \
-			black $(PYFILES) $(PYTESTFILES)
+test-smoke:
+	$(PYTHON) tools/run_test_bundle.py smoke
 
-test: install install_clode
-	$(PYTHON) -m pytest $(PYTESTFILES)
+test-opencl:
+	$(PYTHON) tools/run_test_bundle.py opencl
 
-test_mac_python_310:
-	# Copy bazel out file clode_cpp_wrapper.so to clode/clode_cpp_wrapper.so
-	#cp -f bazel-out/darwin_arm64-opt/bin/clode/cpp/libclode_cpp_wrapper.dylib clode/cpp/clode_cpp_wrapper.cpython-310-darwin.so
-#	cp -rf bazel-out/darwin_arm64-opt/bin/_solib_darwin_arm64 ./
-	$(PYTHON) -m pytest $(PYTESTFILES)
+test-extended:
+	$(PYTHON) tools/run_test_bundle.py extended
 
-test_mac_python_38:
-	# Copy bazel out file clode_cpp_wrapper.so to clode/clode_cpp_wrapper.so
-	cp -f bazel-out/darwin_arm64-opt/bin/clode/cpp/libclode_cpp_wrapper.dylib clode/cpp/clode_cpp_wrapper.cpython-38-darwin.so
-	$(PYTHON) -m pytest $(PYTESTFILES)
+test-long:
+	$(PYTHON) tools/run_test_bundle.py long
 
-test_short:
-	# Make tmp dir, run tests in there (make sure to activate venv)
-	source venv/bin/activate && \
-	mkdir -p tmp && \
-		cd tmp && \
-		cp -R ../test  . && \
-		$(PYTHON) -m pytest test -m "not long"
-	#$(PYTHON) -m pytest $(PYTESTFILES) -m "not long"
-	rm -rf tmp
+build-docs:
+	$(PYTHON) -m mkdocs build --strict
 
-run: install
-	. venv/bin/activate && PYTHONPATH=$(PYTHONPATH) $(PYTHON) main.py
+build-dist:
+	$(PYTHON) -m build --outdir $(DIST_DIR)
+	$(PYTHON) -m twine check $(DIST_DIR)/*
 
-lint: install
-	vulture $(PYFILES) $(PYTESTFILES) && \
-		$(PYTHON) -m pylint $(PYFILES) $(PYTESTFILES) && \
-		mypy $(PYFILES) $(PYTESTFILES)
-
-generate_stubs_macos_python_310:
-	cp -f bazel-out/darwin_arm64-opt/bin/clode/cpp/libclode_cpp_wrapper.dylib clode/cpp/clode_cpp_wrapper.cpython-310-darwin.so
-	. venv/bin/activate  && \
-		cd clode/cpp && \
-		PYTHONPATH=. pybind11-stubgen -o . clode_cpp_wrapper
-
-wheel:
-	$(PYTHON) -m build -xn .
-
-sdist:
-	$(PYTHON) -m build . --sdist
-
-upload:
-	$(PYTHON) -m twine upload --repository testpypi dist/* --skip-existing
-
-upload_prod:
-	$(PYTHON) -m twine upload dist/* --skip-existing
+legacy-cpp-wrapper:
+	$(MAKE) -C clode/cpp install-wrapper PYTHON=$(PYTHON)
 
 paper:
 	docker run --rm \

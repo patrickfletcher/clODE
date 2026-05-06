@@ -2,10 +2,10 @@
 
 [![Python](https://img.shields.io/pypi/pyversions/clode.svg)](https://badge.fury.io/py/clode)
 [![PyPI version](https://badge.fury.io/py/clode.svg)](https://badge.fury.io/py/clode)
+[![CI](https://github.com/patrickfletcher/clODE/actions/workflows/ci.yml/badge.svg)](https://github.com/patrickfletcher/clODE/actions/workflows/ci.yml)
+[![Docs](https://github.com/patrickfletcher/clODE/actions/workflows/deploy_mkdocs_pages.yml/badge.svg)](https://github.com/patrickfletcher/clODE/actions/workflows/deploy_mkdocs_pages.yml)
+[![Release](https://github.com/patrickfletcher/clODE/actions/workflows/python_package_release.yml/badge.svg)](https://github.com/patrickfletcher/clODE/actions/workflows/python_package_release.yml)
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/patrickfletcher/clODE/badge)](https://securityscorecards.dev/viewer/?uri=github.com/patrickfletcher/clODE)
-![Windows](https://github.com/patrickfletcher/clODE/actions/workflows/bazel_build_windows.yml/badge.svg)
-![Mac](https://github.com/patrickfletcher/clODE/actions/workflows/bazel_test_mac.yml/badge.svg)
-![Linux](https://github.com/patrickfletcher/clODE/actions/workflows/bazel_build_linux.yml/badge.svg)
 
 **`Documentation`** |
 ------------------- |
@@ -22,6 +22,8 @@ The public Python API is built around three simulator classes:
 clODE offers flexibility in simulator deployment across different hardware, allowing, for example, the `FeatureSimulator` to operate on a GPU while the `TrajectorySimulator` runs on a CPU.
 
 The current release line uses the Python-owned PyOpenCL backend by default. The public API remains stable while the remaining migration cleanup work continues. The legacy C++/Bazel host runtime is now an explicit source-checkout comparison path rather than part of the default package build.
+
+The default CI now builds and smoke-tests the pure-Python package on Linux, macOS, and Windows, builds the docs, and runs the authoritative OpenCL runtime bundle on Linux.
 
 ## Installation
 

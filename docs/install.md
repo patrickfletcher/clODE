@@ -75,46 +75,17 @@ The legacy C++ backend is no longer part of the published wheel or the default P
 pip install -e .
 ```
 
-1. Build the legacy wrapper with Bazel:
+1. Build and install the legacy wrapper into the checkout:
+
+```bash
+make -C clode/cpp install-wrapper
+```
+
+This convenience target still uses Bazel under the hood. On Windows, or anywhere `make` is not convenient, run the two underlying steps directly:
 
 ```bash
 bazel build //clode/cpp:clode_cpp_wrapper
-```
-
-1. Copy the built shared library into `clode/cpp/` using a Python-recognized extension-module suffix for your interpreter:
-
-```bash
-python - <<'PY'
-from importlib.machinery import EXTENSION_SUFFIXES
-from pathlib import Path
-import shutil
-
-candidates = []
-for root in (Path("bazel-bin"), Path("bazel-out")):
-    if root.exists():
-        candidates.extend(
-            path
-            for path in root.rglob("*")
-            if path.is_file()
-            and path.name
-            in {
-                "clode_cpp_wrapper",
-                "clode_cpp_wrapper.so",
-                "libclode_cpp_wrapper.so",
-                "libclode_cpp_wrapper.dylib",
-                "clode_cpp_wrapper.dll",
-                "clode_cpp_wrapper.pyd",
-            }
-        )
-
-if not candidates:
-    raise SystemExit("No Bazel-built clode_cpp_wrapper shared library was found.")
-
-suffix = next(suffix for suffix in EXTENSION_SUFFIXES if suffix.endswith((".so", ".pyd")))
-destination = Path("clode/cpp") / f"clode_cpp_wrapper{suffix}"
-shutil.copy2(candidates[0], destination)
-print(destination)
-PY
+python tools/install_cpp_wrapper.py
 ```
 
 1. Select the legacy backend explicitly when running a comparison script or test:

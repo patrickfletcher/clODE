@@ -20,6 +20,5 @@ def test_vdp_converter_converts_vdp():
     vdp_dormand_prince(end=5, input_file=input_file)
 
 
-# if using 'bazel test ...'
 if __name__ == "__main__":
     sys.exit(pytest.main(sys.argv[1:]))

@@ -46,6 +46,5 @@ def test_ornl_thompson_a1():
         np.testing.assert_approx_equal(y2, expected_y2, significant=5)
 
 
-# if using 'bazel test ...'
 if __name__ == "__main__":
     test_ornl_thompson_a1()

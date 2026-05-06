@@ -170,7 +170,7 @@ def _require_cpp_wrapper() -> Any:
 def _load_pyopencl() -> Any | None:
     try:
         import pyopencl as cl
-    except ModuleNotFoundError:
+    except (ImportError, OSError):
         return None
     return cl
 

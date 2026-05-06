@@ -416,14 +416,7 @@ class FeatureSimulator(Simulator):
         dx_down_threshold: Optional[float] = None,
         eps_dx: Optional[float] = None,
     ) -> None:
-        """Update any of the solver parameters and push to device
-
-        Args:
-            parameters (np.array): The parameters.
-
-        Returns:
-            None
-        """
+        """Update observer parameters and push them to the device."""
         current_max_event_timestamps = self._op.max_event_timestamps
 
         if op is not None:

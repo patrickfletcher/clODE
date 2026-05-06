@@ -98,8 +98,8 @@ class TrajectorySimulator(Simulator):
 
         Args:
             src_file (str): The path to the source file to be simulated.  If the file ends with ".xpp", it will be converted to a CLODE source file.
-            variable_names (List[str]): The names of the variables to be simulated.
-            parameter_names (List[str]): The names of the parameters to be simulated.
+            variables (Dict[str, float]): Mapping of variable names to initial values.
+            parameters (Dict[str, float]): Mapping of parameter names to values.
             aux (Optional[List[str]], optional): The names of the auxiliary variables to be simulated. Defaults to None.
             num_noise (int, optional): The number of noise variables to be simulated. Defaults to 0.
             t_span (Tuple[float, float], optional): The time span to simulate over. Defaults to (0.0, 1000.0).

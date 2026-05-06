@@ -80,7 +80,6 @@ def test_lorenz_rk4(platform_id, device_id, num_pts, reps):
     return t_average
 
 
-# if using 'bazel test ...'
 if __name__ == "__main__":
 
     ocl_info = clode.runtime.query_opencl()

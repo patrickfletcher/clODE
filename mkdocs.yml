@@ -12,10 +12,12 @@ docs_dir: docs
 
 nav:
   - Home: 'README.md'
+  - License: 'LICENSE.md'
   - Getting Started:
     - 'install.md'
     - 'getting_started.md'
   - Functionality:
+    - Fast and Slow Variables: 'fast_and_slow_variables.md'
     - Feature Extraction: 'feature_extraction.md'
     - Trajectory Simulation: 'trajectory_simulation.md'
     - Stochastic Simulations: 'Ornstein-Uhlenbeck_process.md'
@@ -53,7 +55,7 @@ plugins:
   - mkdocstrings:
       handlers:
         python:
-          rendering:
+          options:
             show_source: true
             show_signature_annotations: true
 
