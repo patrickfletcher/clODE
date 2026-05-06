@@ -6,6 +6,7 @@ on:
   push:
     branches:
       - main
+      - pyopencl-backend
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
