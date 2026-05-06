@@ -228,7 +228,6 @@ The following remain outside the authoritative backend-phase gate:
 - `test/test_vdp.py`
 - `test/test_ornl_thompson_a1.py`
 - `test/test_solver.py`
-- `test/test_trajectory.py`
 - `test/test_observers.py`
 
-Those files may still be useful as reference or later expansion points, but they are not the pinned authority for the migration work.
+Those files may still be useful as reference or later expansion points, but they are not the pinned authority for the migration work. The old empty `test/test_trajectory.py` file has since been removed.

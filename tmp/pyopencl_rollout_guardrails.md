@@ -67,7 +67,7 @@ This bundle passed on the stable NVIDIA runtime on this workspace after the PR 1
 ## Tests Still Excluded From PR12
 
 - `test/test_solver.py` is not an active rollout target because its contents are mostly skipped placeholders
-- `test/test_trajectory.py` is empty
+- the old empty `test/test_trajectory.py` file has been removed
 - `test/test_observers.py` is manual/debug-oriented and currently skipped
 - `test/test_clODE_utilities.py` is a placeholder note file, not an executable suite
 - parser and converter tests remain useful, but they are not OpenCL-backend rollout blockers

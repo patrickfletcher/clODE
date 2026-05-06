@@ -7,6 +7,7 @@ import numpy as np
 import pytest
 
 import clode
+from test.core_numerics.helpers import device_kwargs_for_tests
 
 
 def cuberoot(x):
@@ -66,6 +67,7 @@ def vdp_dormand_prince(
         t_span=t_span,
         max_store=20000,
         max_steps=20000,
+        **device_kwargs_for_tests(),
     )
 
     parameters = {

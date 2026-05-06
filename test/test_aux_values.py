@@ -50,7 +50,7 @@ def test_sine_curve_timestamps(observer: clode.Observer):
         variables=variables,
         parameters=parameters,
         aux=["xp1", "pos", "neg"],
-        observer=clode.Observer.threshold_2,
+        observer=observer,
         stepper=clode.Stepper.rk4,
         dtmax=0.1,
         dt=0.1,

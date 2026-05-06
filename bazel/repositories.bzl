@@ -14,7 +14,6 @@ def external_http_archive(name, **kwargs):
 def clode_dependencies(skip_targets = []):
     _com_github_fmtlib_fmt()
     _com_github_gabime_spdlog()
-    _org_python_ftp()
     _com_github_pybind11_pybind()
     _com_github_khronosgroup_opencl_windows()
 
@@ -36,16 +35,6 @@ def _com_github_gabime_spdlog():
     native.bind(
         name = "spdlog",
         actual = "@com_github_gabime_spdlog//:spdlog",
-    )
-
-def _org_python_ftp():
-    external_http_archive(
-        name = "org_python_ftp",
-        build_file = "//bazel/external:python.BUILD",
-    )
-    native.bind(
-        name = "spdlog",
-        actual = "@org_python_ftp//:python",
     )
 
 def _com_github_pybind11_pybind():

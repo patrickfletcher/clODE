@@ -1,52 +1,101 @@
-# CI And Legacy Cleanup Plan
+# CI, Testing, And Packaging Status
 
-## Scope for the current cleanup PR
+## Implemented in the current cleanup pass
 
-- replace the Bazel-era Linux, macOS, and Windows workflows with one clear CI workflow
-- make the default CI responsibilities explicit: cross-platform smoke checks, Linux OpenCL runtime checks, docs build, and release artifact validation
-- move test and docs dependencies into `pyproject.toml` extras instead of a separate `requirements.txt`
-- delete non-executable placeholder tests so the remaining suite reflects real regression coverage
-- keep the legacy C++ backend comparison-only and give it a smaller helper surface for local use
+- Bazel is no longer part of the default Python package path or CI path.
+- The remaining Bazel support is trimmed to the legacy wrapper build only.
+- The old Bazel Python packaging layer is removed.
+- `pyproject.toml` is now the single source of truth for package, docs, and test dependencies.
+- The supported Python floor is aligned with the actual `pyopencl` dependency requirement: Python 3.10+.
+- The current tests are grouped by domain through named bundles and pytest markers, without forcing a premature final directory reorganization.
 
-## Recommended CI shape
+## Minimal Bazel surface that remains justified
 
-1. Cross-platform smoke jobs on Linux, macOS, and Windows should build the pure-Python package, install the built wheel, and run only driver-independent smoke tests.
-2. The authoritative runtime gate should stay Linux-only and run against an explicit OpenCL ICD.
-3. Docs should build in a dedicated job with `mkdocs build --strict`.
-4. Release publishing should remain tag-driven and build artifacts once before publishing them.
+The retained Bazel pieces are only those needed to build `//clode/cpp:clode_cpp_wrapper` and the optional standalone C++ library targets under `clode/cpp/`.
 
-## Optional C++ backend build options
+### Retained
 
-### Option 1: Keep Bazel, add a thin helper layer
+- `WORKSPACE`
+- `bazel/clode_http_archive.bzl`
+- `bazel/repositories.bzl`
+- `bazel/external_deps.bzl`
+- `bazel/repository_locations.bzl`
+- `bazel/repository_locations_utils.bzl`
+- `bazel/python/**`
+- `bazel/remote_config/**`
+- `bazel/external/fmtlib.BUILD`
+- `bazel/external/spdlog.BUILD`
+- `bazel/external/pybind11.BUILD`
+- `bazel/external/opencl_windows.BUILD`
+- `clode/cpp/**/BUILD`
 
-- Pros: lowest risk, no disruption to the default package, works with the current source tree.
-- Cons: Bazel remains in the repository until the comparison backend is retired or rebuilt.
+### Removed as dead packaging support
 
-### Option 2: Replace Bazel with a local Makefile only
+- top-level `BUILD`
+- `clode/BUILD`
+- `bazel/get_python_libs.py`
+- `bazel/external/python.BUILD`
+- unused `rules_python` and `rules_apple` setup from `WORKSPACE`
+- unused external Python tarball metadata in the Bazel repository definitions
 
-- Pros: smaller developer surface on Linux and macOS.
-- Cons: poor Windows story, duplicated dependency discovery, and likely more maintenance than it saves.
+## Testing recommendation for the current transition phase
 
-### Option 3: Replace Bazel with CMake plus `scikit-build-core`
+Do not do a large physical test-tree migration yet.
 
-- Pros: standard cross-platform native build story, clearer Python packaging integration.
-- Cons: meaningful migration work for a backend that is already comparison-only.
+The better near-term move is:
 
-## Recommended path
+1. keep the authoritative kernel-level numerical tests in `test/core_numerics/`
+2. keep higher-level exact-solution and observer-output regressions in place
+3. expose a clearer domain taxonomy through bundle names and pytest markers
+4. reserve a future directory rewrite for after the final package structure settles
 
-- Do Option 1 now: keep Bazel off the default package and default CI, but hide the legacy copy/install mechanics behind a helper script and a local `clode/cpp/Makefile`.
-- Only consider Option 3 if the legacy comparison backend is expected to remain supported beyond the next cleanup milestone.
-- Do not spend time on Option 2 unless the comparison path becomes Linux/macOS-only by policy.
+That is now the implemented approach.
 
-## Legacy items that can be removed now
+## Current test taxonomy
 
-- Bazel-specific CI workflow files
-- `requirements.txt` as a duplicate dependency source
-- placeholder test modules that do not execute assertions
+- `smoke`: driver-independent packaging and frontend smoke checks
+- `frontend`: function conversion, OpenCL builtins, and XPP conversion checks
+- `runtime_api`: public runtime, backend-selection, and simulator contract checks
+- `numerics`: exact-solution, observer-output, and `core_numerics` regressions
+- `pyopencl_internal`: focused tests for the internal PyOpenCL support layers
+- `legacy_cpp_comparison`: tests that still compare against the optional C++ wrapper backend
+- `release`: the current OpenCL-backed release gate, combining `frontend`, `runtime_api`, and `numerics`
 
-## Legacy items that should wait until the C++ backend is retired or rebuilt
+## CI audit against PyOpenCL upstream
 
-- top-level `BUILD`, `WORKSPACE`, and the `bazel/` tree
-- `clode/cpp/BUILD`
-- Bazel-based instructions for the standalone C++ library
-- any deeper folder-structure cleanup that would break the current comparison path
+Upstream `inducer/pyopencl` CI focuses on runtime diversity more than Python-version fan-out. In particular, it uses:
+
+- Linux POCL as a predictable default runtime gate
+- separate Intel OpenCL jobs where they still want vendor-specific coverage
+- cross-platform wheel builds as a separate concern from runtime CI
+
+That points to the following conclusions for clODE:
+
+1. using `pocl-opencl-icd` for the default GitHub-hosted Linux runtime gate is the right choice
+2. Intel OpenCL is not a good default PR gate on GitHub runners because setup is more brittle and the signal is less predictable
+3. several Python versions do make sense for clODE, but mostly for packaging and import smoke, not for the expensive runtime job
+
+## Recommended CI shape going forward
+
+- Cross-platform smoke: Linux, macOS, and Windows on a small Python matrix that includes the supported minimum and a current upper version.
+- Default runtime gate: Linux plus POCL on one current Python version.
+- Docs: strict MkDocs build on pull requests.
+- Release: tag-driven artifact build and publish, with build happening once.
+
+## Packaging audit
+
+For the current pure-Python package, `setuptools` remains a reasonable backend.
+
+The current best-practice adjustments are:
+
+- use `pyproject.toml` as the primary configuration file
+- avoid a `setup.py` shim when it is no longer needed
+- avoid duplicate dependency declarations in a separate `requirements.txt`
+- align `requires-python` with the real dependency floor
+- avoid unexplained upper bounds on the build backend unless there is a known breakage to pin around
+
+Those adjustments are now reflected in the repository.
+
+## Recommended next step after this pass
+
+Once the final package layout is settled and the legacy C++ wrapper is either removed or formally frozen, do a second-stage test-tree rewrite that moves files physically into domain-oriented directories. Until then, the current bundle-plus-marker taxonomy is the lower-risk path.

@@ -1,0 +1,46 @@
+from __future__ import annotations
+
+from collections.abc import Iterable
+
+import pytest
+
+
+MARKERS_BY_PREFIX: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ("test/core_numerics/", ("core_numerics", "numerics", "release_gate", "requires_opencl")),
+)
+
+MARKERS_BY_FILE: dict[str, tuple[str, ...]] = {
+    "test/test_function_converter.py": ("frontend", "smoke"),
+    "test/test_opencl_builtins.py": ("frontend", "release_gate", "requires_opencl"),
+    "test/test_xpp_parser.py": ("frontend", "release_gate", "requires_opencl"),
+    "test/test_backend_contracts.py": ("runtime_api", "release_gate", "requires_opencl"),
+    "test/test_backend_rhs_source.py": ("runtime_api", "release_gate", "requires_opencl"),
+    "test/test_pyopencl_runtime.py": ("runtime_api", "release_gate", "requires_opencl"),
+    "test/test_runtime.py": ("runtime_api", "release_gate", "requires_opencl"),
+    "test/test_logger.py": ("runtime_api", "release_gate", "requires_opencl"),
+    "test/test_ornl_thompson_a1.py": ("numerics", "release_gate", "requires_opencl"),
+    "test/test_vdp.py": ("numerics", "release_gate", "requires_opencl"),
+    "test/test_aux_values.py": ("numerics", "release_gate", "requires_opencl"),
+    "test/test_features.py": ("numerics", "release_gate", "requires_opencl"),
+    "test/test_pyopencl_models.py": ("pyopencl_internal", "smoke"),
+    "test/test_pyopencl_source_builder.py": ("pyopencl_internal", "smoke"),
+    "test/test_pyopencl_buffers.py": ("pyopencl_internal", "requires_opencl"),
+    "test/test_pyopencl_structs.py": ("pyopencl_internal", "requires_opencl"),
+    "test/test_pyopencl_transient_backend.py": ("legacy_cpp_comparison", "requires_opencl"),
+    "test/test_pyopencl_trajectory_backend.py": ("legacy_cpp_comparison", "requires_opencl"),
+    "test/test_pyopencl_feature_backend.py": ("legacy_cpp_comparison", "requires_opencl"),
+}
+
+
+def _markers_for_path(path: str) -> Iterable[str]:
+    for prefix, markers in MARKERS_BY_PREFIX:
+        if path.startswith(prefix):
+            yield from markers
+    yield from MARKERS_BY_FILE.get(path, ())
+
+
+def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
+    for item in items:
+        path = item.path.as_posix()
+        for marker_name in _markers_for_path(path):
+            item.add_marker(getattr(pytest.mark, marker_name))

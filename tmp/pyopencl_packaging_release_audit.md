@@ -24,7 +24,7 @@ It also records the packaging and release state verified on this workspace throu
 
 ### 1. PR 15 converted the default package to a pure-Python endpoint
 
-The default build path now runs entirely through `pyproject.toml` and a stub `setup.py`.
+The default build path now runs entirely through `pyproject.toml`; the old `setup.py` shim is no longer part of the build path.
 
 Consequences:
 
@@ -74,7 +74,7 @@ That target should look like this:
 - `pyproject.toml` is the authoritative packaging configuration
 - the default wheel is pure Python and built with `python -m build`
 - package data is declared explicitly for runtime `.cl` assets
-- build-time behavior does not depend on `setup.py` side effects
+- build-time behavior does not depend on legacy setup-script side effects
 - release publishing is tag-driven and uses one dedicated workflow
 - CI separates validation from publishing
 - package version comes from one authoritative semver-compatible source
@@ -109,7 +109,7 @@ Packaging:
 2. remove the default compiled extension from `ext_modules`
 3. package only Python modules plus the OpenCL source assets needed at runtime
 4. stop shipping stale or non-runtime trees in sdists and wheels, including `matlab/` and `samples/`
-5. remove `pkg_resources` and stale `setup.py` compatibility logic from the default build path
+5. keep `pkg_resources` and legacy setup-script compatibility logic out of the default build path
 6. unify version sourcing, ideally via a dedicated version module populated from release tags
 
 CI and release workflows:

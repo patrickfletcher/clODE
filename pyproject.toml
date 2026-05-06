@@ -5,9 +5,10 @@ dynamic = ["version"]
 authors = [
     {name="Patrick Fletcher", email="patrick.allen.fletcher@gmail.com"},
 ]
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 readme = "docs/README.md"
 license = "MIT"
+license-files = ["docs/LICENSE.md"]
 dependencies = [
     "numpy>=2.0.2",
     "pyopencl>=2025.2",
@@ -26,8 +27,6 @@ classifiers = [
     "Operating System :: POSIX",
     "Environment :: GPU",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -85,7 +84,24 @@ clode = [
 
 [build-system]
 requires = [
-    "setuptools>=75.0.0,<81",
+    "setuptools>=75.0.0",
     "wheel",
 ]
 build-backend = "setuptools.build_meta"
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["test"]
+addopts = "-ra"
+markers = [
+    "smoke: driver-independent packaging and frontend smoke checks",
+    "frontend: frontend-facing conversion or API-surface tests",
+    "runtime_api: public runtime and backend contract tests",
+    "numerics: numerical regression tests against exact solutions or fixed expectations",
+    "core_numerics: authoritative kernel-level numerical regression tests",
+    "pyopencl_internal: focused tests for internal PyOpenCL support layers",
+    "legacy_cpp_comparison: comparison tests that still rely on the legacy C++ wrapper backend",
+    "release_gate: tests that should pass before publishing a release",
+    "requires_opencl: tests that require an OpenCL runtime on the host",
+    "slow: reserved marker for slower tests",
+]

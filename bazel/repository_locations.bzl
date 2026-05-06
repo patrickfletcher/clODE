@@ -23,18 +23,6 @@ REPOSITORY_LOCATIONS_SPEC = dict(
         release_date = "2021-08-12",
         cpe = "N/A",
     ),
-    org_python_ftp = dict(
-        project_name = "python",
-        project_desc = "Python programming language runtime",
-        project_url = "https://python.org/",
-        version = "3.10.7",
-        sha256 = "1b2e4e2df697c52d36731666979e648beeda5941d0f95740aafbf4163e5cc126",
-        strip_prefix = "Python-{version}",
-        urls = ["https://www.python.org/ftp/python/3.10.7/Python-{version}.tgz"],
-        use_category = ["dataplane_core", "controlplane"],
-        release_date = "2022-09-06",
-        cpe = "N/A",
-    ),
     com_github_pybind_pybind11 = dict(
         project_name = "pybind11",
         project_desc = "A lightweight header-only library that exposes C++ types in Python",

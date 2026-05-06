@@ -1,4 +1,5 @@
 import clode
+from test.core_numerics.helpers import device_kwargs_for_tests
 
 
 def test_print_open_cl(capfd):
@@ -10,8 +11,7 @@ def test_print_open_cl(capfd):
         parameters={"mu": 1.0},
         num_noise=0,
         stepper=clode.Stepper.dormand_prince,
-        device_id=0,
-        platform_id=0,
+        **device_kwargs_for_tests(platform_id=0, device_id=0),
     )
 
     clode.set_log_level(clode.LogLevel.trace)

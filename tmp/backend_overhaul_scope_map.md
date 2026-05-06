@@ -159,9 +159,8 @@ These folders are not in scope for the first phases of the backend overhaul.
 
 | File | Responsibility | Why in scope |
 | --- | --- | --- |
-| `pyproject.toml` | Python package metadata | Relevant for dependency and editable-install docs |
-| `setup.py` | Source build path for current C++ backend | Relevant because editable source installs still use it |
-| `pytest.ini` | Test marker definitions | Needed for pinned suite docs |
+| `pyproject.toml` | Python package metadata plus current pytest configuration | Relevant for dependency, editable-install, and pinned-suite docs |
+| `clode/cpp/Makefile` | Thin helper around the legacy wrapper build | Relevant because the comparison backend still uses it locally |
 | `clode/cpp/BUILD` | Current C++ and kernel file grouping | Useful reference, not first-phase implementation target |
 
 ## Non-Authoritative Or Excluded Files
@@ -179,10 +178,10 @@ These files exist in the repo but must not be treated as authoritative for the b
 
 | File | Status | Why excluded from the pinned migration suite |
 | --- | --- | --- |
-| `test/test_trajectory.py` | Empty file | No authoritative behavior |
+| `test/test_trajectory.py` | Removed empty file | No authoritative behavior |
 | `test/test_solver.py` | Placeholder with skipped tests | Explicitly marked not ready |
 | `test/test_observers.py` | Debug-only skipped tests | Explicitly marked debug validation only |
-| `test/test_vdp_long.py` | Long-running stress test | Useful later, not part of the core gating suite |
+| `test/test_vdp_long.py` | Removed long-running stress test | Not part of the useful current gating suite |
 | `test/test_clODE_utilities.py` | Notes only, not executable tests | Planning file, not authoritative suite input |
 | `test/tests.md` | Test planning notes | Helpful context, not the pinned suite itself |
 | `test/test_logger.py` | Logging behavior test | Useful reference, not core backend-overhaul gating |

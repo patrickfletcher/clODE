@@ -59,6 +59,7 @@ from clode import (
     tanpi,
     trunc,
 )
+from test.core_numerics.helpers import device_kwargs_for_tests
 
 
 def test_opencl_builtins() -> None:
@@ -155,6 +156,7 @@ def test_opencl_builtins() -> None:
         stepper=clode.Stepper.euler,
         max_store=3,
         max_steps=3,
+        **device_kwargs_for_tests(),
     )
 
     trajectory = sim.trajectory()

@@ -4,6 +4,7 @@ from typing import List
 import numpy as np
 
 import clode
+from test.core_numerics.helpers import device_kwargs_for_tests
 
 
 def sine_curve(
@@ -53,6 +54,7 @@ def test_sine_curve_timestamps():
         observer_dx_up_thresh=0.001,
         observer_max_event_count=100,
         observer_max_event_timestamps=3,
+        **device_kwargs_for_tests(),
     )
 
     # Run the simulation

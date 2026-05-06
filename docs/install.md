@@ -2,7 +2,7 @@
 
 ## Python
 
-The default package is a pure-Python distribution for Python 3.8-3.12. Install it with:
+The default package is a pure-Python distribution for Python 3.10 and newer. Install it with:
 
 ```bash
     pip install clode
@@ -53,7 +53,7 @@ clode.print_opencl()
 
 To install the Python library from source, you will need the following dependencies:
 
-* Python 3.8 or later
+* Python 3.10 or later
 * An OpenCL runtime (AMD APP SDK, Intel OpenCL SDK, NVIDIA CUDA, etc.)
 * OpenCL development headers on Linux if `pyopencl` needs to build from source in your environment
 

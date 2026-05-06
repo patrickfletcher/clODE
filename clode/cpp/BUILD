@@ -165,15 +165,3 @@ cc_binary(
         "@local_config_python//:python_headers",
     ],
 )
-
-# This wrapper exists to expose the clode.so binary to python
-py_library(
-    name = "py_clode",
-    data = [
-        ":clode_cpp_wrapper",
-        ":opencl",
-        "//samples:lactotroph",
-    ],
-    imports = ["."],
-    visibility = ["//visibility:public"],
-)

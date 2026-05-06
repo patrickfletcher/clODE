@@ -3,6 +3,7 @@ from math import exp
 import numpy as np
 
 import clode
+from test.core_numerics.helpers import device_kwargs_for_tests
 
 # test type: numerical accuracy (compare simulation to exact solution)
 
@@ -36,6 +37,7 @@ def test_ornl_thompson_a1():
         t_span=t_span,
         max_store=20000,
         max_steps=20000,
+        **device_kwargs_for_tests(),
     )
 
     trajectory = integrator.trajectory()
