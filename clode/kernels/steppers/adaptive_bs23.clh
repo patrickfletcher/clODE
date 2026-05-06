@@ -1,0 +1,63 @@
+#include "realtype.cl"
+
+#define ADAPTIVE_STEPSIZE_EXPLICIT
+#define FSAL_STEP_PROPERTY
+#define LOCAL_ERROR_ORDER RCONST(2.0)
+#define ADAPTIVE_STEP_MAX_SHRINK RCONST(0.5)
+#define ADAPTIVE_STEP_MAX_GROW RCONST(5.0)
+
+#define B1 RCONST(2.0)/RCONST(9.0)
+#define B2 RCONST(1.0)/RCONST(3.0)
+#define B3 RCONST(4.0)/RCONST(9.0)
+
+/*
+#define _C1 RCONST(7.0)/RCONST(24.0)
+#define _B2 RCONST(1.0)/RCONST(4.0)
+#define _C3 RCONST(1.0)/RCONST(3.0)
+#define _C4 RCONST(1.0)/RCONST(8.0)
+*/
+
+// E1=B1-_C1 directly in error estimate dt*(E dot k) = xnew_B - xnewB
+#define E1 RCONST(-5.0)/RCONST(72.0)
+#define E2 RCONST(1.0)/RCONST(12.0)
+#define E3 RCONST(1.0)/RCONST(9.0)
+#define E4 RCONST(-1.0)/RCONST(8.0)
+
+//this is ode23 in matlab
+static inline realtype do_step(realtype *ti, realtype xi[], realtype k1[], const realtype pars[], const realtype dt, realtype aux[], realtype err[], const realtype wi[])
+{
+    realtype tNew = *ti + dt;
+    realtype newDt = tNew - *ti; //use the effective part of dt
+    realtype xtmp[N_VAR], k2[N_VAR], k3[N_VAR], k4[N_VAR];
+
+    //expects k1 to be precomputed (FSAL)
+
+    //compute k2: xtmp[k]=xi[k]+h2*k1[k]; xtmp[k] = fma(h2, k1[k], xi[k]);
+    for (int k = 0; k < N_VAR; k++)
+        xtmp[k]=xi[k] + newDt * RCONST(0.5) * k1[k];
+    getRHS(*ti + newDt * RCONST(0.5), xtmp, pars, k2, aux, wi);
+
+    //compute k3: xtmp[k]=xi[k]+h3*k2[k]; xtmp[k] = fma(h3, k2[k], xi[k]);
+    for (int k = 0; k < N_VAR; k++)
+        xtmp[k]=xi[k] + newDt * RCONST(0.75) * k2[k]; 
+    getRHS(*ti + newDt * RCONST(0.75), xtmp, pars, k3, aux, wi);
+
+    //update xi
+    for (int k = 0; k < N_VAR; k++)
+        xi[k] = xi[k] + newDt * (B1 * k1[k] + B2 * k2[k] + B3 * k3[k]); //third order
+
+    //compute k4
+    getRHS(tNew, xi, pars, k4, aux, wi);
+
+    //update error estimate
+    for (int k = 0; k < N_VAR; k++)
+    {
+        //~ xtmp[k] = xi[k] + newDt*(_C1*k1[k] +_B2*k2[k] +_C3*k3[k] +_C4*k4[k]); //second order
+        //~ err[k]=xi[k]-xtmp[k] =  newDt*( (B1-_C1)*k1[k] + (B2-_B2)*k2[k] + (B3-_C3)*k3[k] + (B4-_C4)*k4[k]);
+        err[k] = newDt * (E1 * k1[k] + E2 * k2[k] + E3 * k3[k] + E4 * k4[k]);
+        k1[k] = k4[k]; //first same as last (FSAL) property
+    }
+
+    *ti = tNew;
+    return newDt;
+}

@@ -26,9 +26,9 @@ print(platforms[0].device_info)
 
 ## Backend-specific ordering note
 
-During the current backend transition, the platform ordering reported by `clode.print_opencl()` and `clode.query_opencl()` follows the active backend implementation.
+The platform ordering reported by `clode.print_opencl()` and `clode.query_opencl()` follows the active backend implementation.
 
-- on the legacy default backend, the ordering comes from the legacy wrapper runtime
-- with `_CLODE_BACKEND=pyopencl`, the ordering comes from PyOpenCL
+- by default, the ordering comes from PyOpenCL
+- with `_CLODE_BACKEND=cpp`, the ordering comes from the legacy wrapper runtime
 
 That ordering may differ from `clinfo -l`, so choose platform and device IDs from the same toolchain you will actually use for the simulation.

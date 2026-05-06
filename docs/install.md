@@ -2,7 +2,7 @@
 
 ## Python
 
-Pre-build binaries are provided via PyPI for Python 3.8-3.12 on MacOS and Windows, which can be installed simply using pip:
+The default package is a pure-Python distribution for Python 3.8-3.12. Install it with:
 
 ```bash
     pip install clode
@@ -11,15 +11,9 @@ Pre-build binaries are provided via PyPI for Python 3.8-3.12 on MacOS and Window
 An OpenCL runtime for your device is required. This is often included as part of your
 GPU driver (AMD APP SDK, Intel OpenCL SDK, NVIDIA CUDA, etc.)
 
-If you are validating or experimenting with the PyOpenCL backend during the current transition period, install the optional dependency as well:
+Tagged releases now ship the packaged OpenCL kernel assets needed by the Python-owned runtime path, and PyOpenCL is the default backend. In a source checkout, the legacy C++ backend remains available only as an explicit comparison path after its wrapper extension has been built into `clode/cpp/`.
 
-```bash
-    pip install clode[pyopencl]
-```
-
-The public default backend still remains the current C++ path at the moment. The optional PyOpenCL dependency is for contributor workflows, milestone validation, and the upcoming default-switch work.
-
-For a concrete transition-phase example of selecting the PyOpenCL backend and running a simulation, see `examples/pyopencl_ornstein_uhlenbeck.py`.
+For a concrete backend-selection example, see `examples/pyopencl_ornstein_uhlenbeck.py`.
 
 ### Google Colab
 
@@ -59,29 +53,83 @@ clode.print_opencl()
 
 To install the Python library from source, you will need the following dependencies:
 
-* A C++ compiler (GCC, Clang, MSVC, etc.)
 * Python 3.8 or later
 * An OpenCL runtime (AMD APP SDK, Intel OpenCL SDK, NVIDIA CUDA, etc.)
-* OpenCL development headers on Linux
+* OpenCL development headers on Linux if `pyopencl` needs to build from source in your environment
 
 You can then install the Python library using pip:
 
 ```bash
-    pip install clode
+    pip install .
 ```
 
-This will download Bazel to your machine (using Bazelisk)
-and build the C++ libraries. It will then install the Python library.
+This uses the same pure-Python packaging path as the published wheel.
 
-If you also want the PyOpenCL backend dependencies in that environment, install:
+### Legacy C++ compatibility backend
+
+The legacy C++ backend is no longer part of the published wheel or the default Python build path. If you want to compare the legacy runtime against the default PyOpenCL path, use a source checkout.
+
+1. Install the checkout into the active environment:
 
 ```bash
-    pip install -e .[pyopencl]
+pip install -e .
 ```
+
+1. Build the legacy wrapper with Bazel:
+
+```bash
+bazel build //clode/cpp:clode_cpp_wrapper
+```
+
+1. Copy the built shared library into `clode/cpp/` using a Python-recognized extension-module suffix for your interpreter:
+
+```bash
+python - <<'PY'
+from importlib.machinery import EXTENSION_SUFFIXES
+from pathlib import Path
+import shutil
+
+candidates = []
+for root in (Path("bazel-bin"), Path("bazel-out")):
+    if root.exists():
+        candidates.extend(
+            path
+            for path in root.rglob("*")
+            if path.is_file()
+            and path.name
+            in {
+                "clode_cpp_wrapper",
+                "clode_cpp_wrapper.so",
+                "libclode_cpp_wrapper.so",
+                "libclode_cpp_wrapper.dylib",
+                "clode_cpp_wrapper.dll",
+                "clode_cpp_wrapper.pyd",
+            }
+        )
+
+if not candidates:
+    raise SystemExit("No Bazel-built clode_cpp_wrapper shared library was found.")
+
+suffix = next(suffix for suffix in EXTENSION_SUFFIXES if suffix.endswith((".so", ".pyd")))
+destination = Path("clode/cpp") / f"clode_cpp_wrapper{suffix}"
+shutil.copy2(candidates[0], destination)
+print(destination)
+PY
+```
+
+1. Select the legacy backend explicitly when running a comparison script or test:
+
+```bash
+_CLODE_BACKEND=cpp python -m pytest test/test_vdp.py -q
+```
+
+You can compare the two backends by running the same command twice: once with the default PyOpenCL path or `_CLODE_BACKEND=pyopencl`, and once with `_CLODE_BACKEND=cpp`.
+
+When doing that, choose `platform_id` and `device_id` from the backend you are actually running. PyOpenCL and the legacy wrapper do not necessarily report platforms in the same order.
 
 ### Windows
 
-On Windows, prior to installing via pip you will need the following dependencies in addition to those listed above:
+On Windows, prior to building the legacy C++ path from source you will need the following dependencies in addition to those listed above:
 
 * The MSVC C++ compiler (e.g., Visual Studio Community installed to default path)
 * MSYS2 (add msys64/usr/bin to path)
@@ -127,4 +175,4 @@ from clode import query_opencl
 print(query_opencl())
 ```
 
-If you are validating the PyOpenCL backend, compare `clinfo -l` with `clode.print_opencl()` carefully before pinning platform and device IDs. The visible ordering can differ between `clinfo`, the legacy runtime path, and PyOpenCL.
+Compare `clinfo -l` with `clode.print_opencl()` carefully before pinning platform and device IDs. The visible ordering can differ between `clinfo`, the legacy runtime path, and PyOpenCL.

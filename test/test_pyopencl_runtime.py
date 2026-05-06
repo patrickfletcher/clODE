@@ -10,11 +10,13 @@ import pytest
 
 pyopencl = pytest.importorskip("pyopencl")
 
+import clode.runtime as runtime_module
 from clode._pyopencl import BuildError, KernelKind, OpenCLRuntime, Precision, ProblemShape, SourceBuilder
+from clode.runtime import _clode_root_dir
 from test.core_numerics.helpers import TEST_DEVICE_ID, TEST_PLATFORM_ID, model_path
 
 
-KERNEL_ROOT = Path(__file__).resolve().parents[1] / "clode" / "cpp"
+KERNEL_ROOT = Path(_clode_root_dir)
 
 
 def _explicit_runtime_kwargs() -> dict[str, int]:
@@ -79,7 +81,13 @@ def test_program_cache_surfaces_build_failures_with_source_and_options() -> None
     assert error.build_log.strip() != ""
 
 
-def test_public_pyopencl_path_does_not_import_cpp_wrapper() -> None:
+def test_explicit_cpp_backend_requires_wrapper(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(runtime_module, "_cpp_wrapper_available", lambda: False)
+    with pytest.raises(ModuleNotFoundError, match=r"legacy clODE C\+\+ backend is not available"):
+        runtime_module.resolve_backend_name("cpp")
+
+
+def test_default_public_path_does_not_import_cpp_wrapper() -> None:
     repo_root = Path(__file__).resolve().parents[1]
     script = textwrap.dedent(
         f"""
@@ -99,9 +107,9 @@ def test_public_pyopencl_path_does_not_import_cpp_wrapper() -> None:
 
         builtins.__import__ = guarded_import
 
-        import clode
+        os.environ.pop("_CLODE_BACKEND", None)
 
-        os.environ[\"_CLODE_BACKEND\"] = \"pyopencl\"
+        import clode
 
         platforms = clode.query_opencl()
         simulator = clode.Simulator(
@@ -126,12 +134,14 @@ def test_public_pyopencl_path_does_not_import_cpp_wrapper() -> None:
         )
         """
     )
+    env = os.environ.copy()
+    env.pop("_CLODE_BACKEND", None)
     completed = subprocess.run(
         [sys.executable, "-c", script],
         check=True,
         capture_output=True,
         cwd=repo_root,
-        env=os.environ.copy(),
+        env=env,
         text=True,
     )
     payload = json.loads(completed.stdout.strip().splitlines()[-1])

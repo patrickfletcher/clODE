@@ -1,6 +1,6 @@
 name: CI Linux
 
-on: ['push']
+on: [push, pull_request]
 
 jobs:
   test_linux:
@@ -48,17 +48,5 @@ jobs:
       - name: make sdist
         run: make sdist
 
-      - name: Publish to PyPI test
-        env:
-          TWINE_USERNAME: __token__
-          TWINE_PASSWORD: ${{ secrets.PYPI_TEST_TOKEN }}
-        run: |
-          make upload
-
-      - name: Publish to PyPI
-        if: github.ref == 'refs/heads/main'
-        env:
-          TWINE_USERNAME: __token__
-          TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
-        run: |
-          make upload_prod
+      - name: Verify build metadata
+        run: python3 -m twine check dist/*

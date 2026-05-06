@@ -55,17 +55,5 @@ jobs:
       - name: Build wheel
         run: make wheel
 
-      - name: Publish to PyPI test
-        env:
-          TWINE_USERNAME: __token__
-          TWINE_PASSWORD: ${{ secrets.PYPI_TEST_TOKEN }}
-        run: |
-          make upload
-
-      - name: Publish to PyPI
-        if: github.ref == 'refs/heads/main'
-        env:
-          TWINE_USERNAME: __token__
-          TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
-        run: |
-          make upload_prod
+      - name: Verify build metadata
+        run: python -m twine check dist/*

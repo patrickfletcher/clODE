@@ -2,15 +2,16 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import IntEnum
+from importlib.machinery import EXTENSION_SUFFIXES
 import os
 import sys
 from typing import Any, Sequence
 
 from ._pyopencl.errors import PyOpenCLDependencyError
 
-_clode_root_dir: str = os.path.join(os.path.dirname(__file__), "cpp", "")
+_clode_root_dir: str = os.path.join(os.path.dirname(__file__), "kernels", "")
 _BACKEND_ENVVAR = "_CLODE_BACKEND"
-_DEFAULT_BACKEND = "cpp"
+_DEFAULT_BACKEND = "pyopencl"
 
 
 class CLDeviceType(IntEnum):
@@ -100,17 +101,37 @@ _DEVICE_TYPE_VALUES = {member.value for member in CLDeviceType}
 _VENDOR_VALUES = {member.value for member in CLVendor}
 
 
-def _selected_backend_name() -> str:
-    backend_name = os.getenv(_BACKEND_ENVVAR, _DEFAULT_BACKEND)
+def _cpp_wrapper_available() -> bool:
+    cpp_dir = os.path.join(os.path.dirname(__file__), "cpp")
+    if not os.path.isdir(cpp_dir):
+        return False
+
+    return any(
+        entry.startswith("clode_cpp_wrapper")
+        and any(entry.endswith(suffix) for suffix in EXTENSION_SUFFIXES)
+        for entry in os.listdir(cpp_dir)
+    )
+
+
+def resolve_backend_name(requested_backend: str | None = None) -> str:
+    backend_name = (
+        requested_backend
+        if requested_backend is not None
+        else os.getenv(_BACKEND_ENVVAR, _DEFAULT_BACKEND)
+    )
     if backend_name not in {"cpp", "pyopencl"}:
         raise ValueError(
             f"Unsupported clODE backend '{backend_name}'. Supported backends: ['cpp', 'pyopencl']"
+        )
+    if backend_name == "cpp" and not _cpp_wrapper_available():
+        raise ModuleNotFoundError(
+            "The legacy clODE C++ backend is not available in this installation. Build the wrapper in a source checkout and select it explicitly with _CLODE_BACKEND=cpp, or use the default PyOpenCL backend."
         )
     return backend_name
 
 
 def _prefer_pyopencl_runtime() -> bool:
-    return _selected_backend_name() == "pyopencl"
+    return resolve_backend_name() == "pyopencl"
 
 
 def _loaded_cpp_wrapper() -> Any | None:
@@ -141,7 +162,7 @@ def _require_cpp_wrapper() -> Any:
     cpp = _load_cpp_wrapper()
     if cpp is None:
         raise ModuleNotFoundError(
-            "The clODE C++ extension is not available. Build/install the extension for the C++ backend or select the PyOpenCL backend with _CLODE_BACKEND=pyopencl."
+            "The legacy clODE C++ backend is not available in this installation. Build the wrapper in a source checkout and select it explicitly with _CLODE_BACKEND=cpp, or use the default PyOpenCL backend."
         )
     return cpp
 
@@ -158,7 +179,7 @@ def _require_pyopencl() -> Any:
     pyopencl = _load_pyopencl()
     if pyopencl is None:
         raise PyOpenCLDependencyError(
-            "pyopencl is required for the PyOpenCL backend. Install pyopencl directly or use the optional 'clode[pyopencl]' dependency."
+            "pyopencl is required for this clODE installation. Install pyopencl into the active environment or reinstall the package with its default dependencies."
         )
     return pyopencl
 
@@ -422,7 +443,7 @@ class OpenCLResource:
             device_id,
             device_ids,
         )
-        self._backend_name = _selected_backend_name()
+        self._backend_name = resolve_backend_name()
         self._cpp_resource: Any | None = None
         self._pyopencl_runtime: Any | None = None
 

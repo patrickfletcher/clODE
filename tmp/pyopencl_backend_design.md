@@ -137,7 +137,8 @@ Current state:
 - `clode/_pyopencl/structs.py` now uses `pyopencl.tools.match_dtype_to_c_struct(...)` for host-populated OpenCL structs used by the backend
 - `clode/_pyopencl/executors.py` now contains transient, trajectory, and feature PyOpenCL backends reachable through the internal `_CLODE_BACKEND=pyopencl` selector
 - `clode/_pyopencl/observer_metadata.py` now models feature names and observer-specific `ObserverData` layouts for PyOpenCL allocation without reusing the legacy host byte-count formulas
-- the next backend milestone is PR 15: Bazel-free packaging and release transition; PR 14 runtime-facade decoupling is now landed
+- PR 15 packaging transition is now landed: the default package build is pure Python, runtime kernel assets are packaged under `clode/kernels/`, and release publishing now lives in a dedicated tag workflow
+- PR 16 default-switch work is now landed: PyOpenCL is the explicit default even in source checkouts that still contain a locally built wrapper, and the legacy backend remains comparison-only through explicit `_CLODE_BACKEND=cpp` selection
 
 Deferred note:
 
@@ -146,10 +147,10 @@ Deferred note:
 - the current trajectory kernel contract treats `max_store` as total storage slots including the initial sample at slot 0; this migration phase preserved that behavior rather than changing kernel numerics
 - the feature path has a real two-stage lifecycle: `initializeObserver` prepares observer state and the `features` kernel consumes and updates it; continuation semantics depend on preserving that opaque observer buffer between calls
 - on this workspace, the stable PyOpenCL milestone-validation command currently uses the NVIDIA runtime with `CLODE_TEST_PLATFORM_ID=0` and `CLODE_TEST_DEVICE_ID=0`; `clinfo -l` reports a different platform order, so runtime selection should be verified empirically rather than inferred from the CLI alone
-- `tmp/pyopencl_rollout_guardrails.md` now records the rollout policy, the 74-test extended reference bundle, and the prerequisites for the eventual default switch
-- the default switch should follow a dedicated transition step that makes the PyOpenCL dependency and runtime-selection story explicit first
-- that transition step is now landed: package metadata exposes an optional `clode[pyopencl]` dependency, install docs describe runtime verification, and PyOpenCL runtime errors now point at the optional dependency path
-- packaging audit result: the public Python import path no longer requires wrapper-owned runtime or model types at module import time, but the current wheel still ships the C++ extension and much of the `clode/cpp` source tree; a Bazel-free PyOpenCL release therefore still requires packaging cleanup before the default switch
+- `tmp/pyopencl_rollout_guardrails.md` now records the rollout policy, the extended reference bundle, and the prerequisites for the eventual default switch
+- that packaging step is now landed: package metadata now requires `pyopencl` on the default install path, install docs describe runtime verification for the packaged Python runtime, and PyOpenCL runtime errors now point at the default dependency path
+- packaging audit result: the public Python import path no longer requires wrapper-owned runtime or model types at module import time, the default wheel is now `py3-none-any`, and the legacy wrapper is retained only as an explicit compatibility path when it is already present in a source checkout
+- the default-switch step is now landed as well: the selector no longer prefers the legacy backend merely because a local wrapper binary exists in the checkout
 - packaging scope note: stale trees such as `matlab/` and `samples/` should be removed from Python package artifacts during the packaging-transition phase rather than carried into the PyOpenCL-only endpoint
 
 ### Recommended module layout

@@ -23,7 +23,9 @@ It is intentionally more granular than the phase plan in `tmp/pyopencl_backend_d
 - Completed: PR 12 extended reference suite and rollout guardrails
 - Completed: PR 13 dependency surfacing and runtime diagnostics
 - Completed: PR 14 Python-owned public types and runtime facade
-- Current milestone audit: the authoritative 54-test gate remains green, the extended PyOpenCL reference bundle now covers 76 tests including the public logger surface, the default-backend `test/test_vdp.py` smoke still passes, and the transition example at `examples/pyopencl_ornstein_uhlenbeck.py` still runs correctly on the stable NVIDIA runtime on this workspace; packaging audit results are recorded in `tmp/pyopencl_packaging_release_audit.md`
+- Completed: PR 15 Bazel-free packaging and release transition
+- Completed: PR 16 default backend switch
+- Current milestone audit: the authoritative backend gate, the extended PyOpenCL reference bundle, the default-backend `test/test_vdp.py` smoke, and the transition example at `examples/pyopencl_ornstein_uhlenbeck.py` are the current validation targets on the stable NVIDIA runtime on this workspace; packaging and release-state notes are recorded in `tmp/pyopencl_packaging_release_audit.md`
 - Struct-handling audit result: host-populated OpenCL structs now use device-matched PyOpenCL dtypes for `SolverParams` and `ObserverParams`; `ObserverData` remains a deferred feature-backend concern and must not reuse the legacy byte-count formulas
 - Trajectory note: the current kernel contract counts `max_store` as total storage slots including the initial sample at slot 0; this existing behavior was respected in the new regression coverage and was not changed here
 - Deferred follow-up: a zero-parameter Python-callable RHS can still trip a current C++ backend construction-time edge case on this Linux workspace; keep it documented but out of scope for the current PR sequence
@@ -528,6 +530,10 @@ Guardrails:
 
 Priority: P1
 
+Status:
+
+- completed on this workspace on 2026-05-05
+
 Goal:
 
 - make the default package build and release path pure Python before changing the public backend default
@@ -550,6 +556,14 @@ Acceptance criteria:
 - the default wheel is pure Python
 - legacy C++ support is retained only through an explicit compatibility path
 
+Validated result:
+
+- `python -m build` now emits `clode-0.9.0-py3-none-any.whl`
+- runtime kernel assets are packaged under `clode/kernels/` instead of the legacy `clode/cpp` tree
+- the default wheel no longer ships the wrapper extension or the `clode/cpp` source tree
+- an isolated wheel install resolves to the PyOpenCL runtime path when the wrapper is absent
+- release publishing now lives in one dedicated tag-driven workflow rather than the push CI jobs
+
 Guardrails:
 
 - do not switch the default backend in the same PR
@@ -560,6 +574,10 @@ Guardrails:
 
 Priority: P1
 
+Status:
+
+- completed on this workspace on 2026-05-06
+
 Goal:
 
 - switch the default backend to PyOpenCL only after the public package and release path are already PyOpenCL-owned
@@ -569,6 +587,7 @@ Deliverables:
 - backend factory defaults to PyOpenCL
 - explicit legacy fallback retained during transition where still supported
 - docs updated for runtime and dependency behavior
+- source checkouts stop preferring the legacy backend merely because a local wrapper binary is present
 
 Checkpoint:
 
@@ -576,9 +595,17 @@ Checkpoint:
 
 Acceptance criteria:
 
-- the 74-test extended reference bundle passes with PyOpenCL as default on supported environments
+- the extended reference bundle passes with PyOpenCL as default on supported environments
 - default install path no longer depends on the C++ extension build
 - no public API changes are introduced in the switch PR
+
+Validated result:
+
+- the backend selector now resolves to PyOpenCL by default even in a source checkout that already contains a locally built wrapper binary
+- the legacy C++ backend remains available only through explicit `_CLODE_BACKEND=cpp` selection
+- the package version is now `0.10.0`, matching the intended first pure-Python default-backend release line
+- public docs now describe the legacy wrapper as a comparison workflow rather than as the default runtime path
+- migration-state notes and post-migration cleanup notes remain separated between this file family and `tmp/pyopencl_post_migration_plan.md`
 
 Guardrails:
 
@@ -612,6 +639,28 @@ Acceptance criteria:
 
 - parity suite remains green
 - public contract remains stable unless an explicit follow-on design change is approved
+
+## tmp Doc Status After PR16
+
+Keep active during the remaining migration cleanup:
+
+- `tmp/backend_pr_task_breakdown.md`
+- `tmp/pyopencl_rollout_guardrails.md`
+- `tmp/pyopencl_packaging_release_audit.md`
+- `tmp/pyopencl_backend_design.md`
+
+Keep as technical references while the legacy comparison path still exists:
+
+- `tmp/cpp_opencl_layer_audit.md`
+- `tmp/pyopencl_struct_audit.md`
+- `tmp/python_simulation_flow_reference.md`
+
+Candidate archive targets once PR 17 cleanup starts or once one post-switch release has shipped:
+
+- `tmp/backend_overhaul_scope_map.md`
+- `tmp/backend_core_test_suite.md`
+
+Forward-looking notes should continue to live separately in `tmp/pyopencl_post_migration_plan.md` rather than being mixed back into the migration-status documents.
 
 ## Checkpoint Summary
 

@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-import os
-from typing import Final
 
 from .._pyopencl.executors import (
     PyOpenCLFeatureBackend,
@@ -10,14 +8,10 @@ from .._pyopencl.executors import (
     PyOpenCLTransientBackend,
 )
 from .._pyopencl.runtime import OpenCLRuntime
-from ..runtime import CLDeviceType, CLVendor
-from ..runtime import OpenCLResource
+from ..runtime import CLDeviceType, CLVendor, OpenCLResource, resolve_backend_name
 from ..types import ObserverParams, ProblemInfo
 from .protocol import FeatureBackend, SimulatorBackend, TrajectoryBackend
 from .rhs import RhsSource
-
-_DEFAULT_BACKEND: Final[str] = "cpp"
-_BACKEND_ENVVAR: Final[str] = "_CLODE_BACKEND"
 
 
 @dataclass(frozen=True, slots=True)
@@ -30,12 +24,7 @@ class RuntimeSelection:
 
 
 def _resolve_backend_name(backend_name: str | None = None) -> str:
-    resolved = backend_name or os.getenv(_BACKEND_ENVVAR, _DEFAULT_BACKEND)
-    if resolved not in {"cpp", "pyopencl"}:
-        raise ValueError(
-            f"Unsupported clODE backend '{resolved}'. Supported backends: ['cpp', 'pyopencl']"
-        )
-    return resolved
+    return resolve_backend_name(backend_name)
 
 
 def _create_pyopencl_runtime(runtime_selection: RuntimeSelection | None) -> OpenCLRuntime:

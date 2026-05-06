@@ -56,14 +56,11 @@ The current state is strong on backend parity and noticeably weaker on packaging
 - the PyOpenCL backend runs transient, trajectory, and feature paths
 - the public Python types and runtime facade are now Python-owned
 - `import clode` no longer requires the C++ extension when the PyOpenCL path is selected
-- the 76-test PyOpenCL acceptance bundle is green on the stable local NVIDIA runtime
+- the default backend has now switched to PyOpenCL
+- the 77-test PyOpenCL acceptance bundle is green on the stable local NVIDIA runtime
 
 ### Not landed yet
 
-- the default package is still Bazel-backed
-- the default wheel is still not pure Python
-- kernel assets still live under `clode/cpp/`
-- the default backend has not switched to PyOpenCL
 - user-authored observers are not a polished public API
 - solver state and observer state are still only partially modeled as explicit Python concepts
 
@@ -118,9 +115,7 @@ This is the step that turns the project from "PyOpenCL-capable" into "PyOpenCL-o
 
 ### Step 2: Switch the default backend only after packaging is clean
 
-Only then should the default backend move to PyOpenCL.
-
-Switching the backend first would improve the default runtime choice but would still leave the package structurally tied to the legacy extension. That is the wrong order.
+This step is now landed. PyOpenCL is the default backend and the legacy wrapper is comparison-only through explicit `_CLODE_BACKEND=cpp` selection in a source checkout.
 
 ### Step 3: Do a focused post-migration cleanup pass
 
@@ -272,6 +267,10 @@ Recommendation:
 - make `pyopencl` required when the default backend flips
 - keep the runtime-environment troubleshooting in the docs, not in package extras
 
+Current status:
+
+- landed
+
 ## Recommendation on legacy C++ compatibility
 
 If a legacy C++ fallback is still worth keeping for one or two releases, it should not remain welded into the default package build.
@@ -283,6 +282,28 @@ Better options are:
 - a separate branch if no active users need packaged legacy support
 
 The cleanest long-term answer is a separate compatibility package. Keeping the legacy backend inside the default build path defeats most of the packaging win.
+
+## Recommended phase-out plan for the legacy C++ path
+
+Recommendation:
+
+1. treat the `0.10.x` line as the comparison window where `_CLODE_BACKEND=cpp` remains available only for source-checkout validation and side-by-side debugging
+2. do not add new features or new packaging complexity to the legacy path during that window
+3. decide in PR 17 whether the legacy backend should move to a separate compatibility package or be removed entirely from the main repository
+4. if there is no active user demand for packaged legacy support, prefer removal over a half-maintained extra or partial wheel path
+
+Why this is the right tradeoff:
+
+- it preserves one release line for backend-to-backend comparison without blocking cleanup
+- it keeps modern packaging work focused on the default product rather than on transition scaffolding
+- it avoids carrying two packaging stories indefinitely
+
+Recommendation on repository cleanup once that decision is made:
+
+- remove `clode/_backends/cpp.py` together with the wrapper build instructions if the legacy path is dropped
+- remove `clode/cpp/` host-side wrapper sources and Bazel-only Python packaging references from the mainline package path
+- keep only the packaged kernel assets needed by the Python runtime under `clode/kernels/`
+- archive migration-only tmp notes once one clean post-switch release has shipped
 
 ## Better Modeling of Solver Components
 
@@ -436,9 +457,9 @@ The docs should stop telling two different installation and runtime stories once
 
 ## Recommended Near-Term Decisions
 
-1. Do not let post-migration renaming block PR15 packaging cleanup.
-2. Move kernel assets into package data as part of PR15, even if the public API does not change.
-3. Treat PyOpenCL as the required runtime dependency once the default backend flips.
+1. Do not let post-migration renaming block PR17 cleanup planning.
+2. Keep legacy-comparison instructions separate from the default install story.
+3. Treat PyOpenCL as the required runtime dependency of the main package.
 4. Keep custom observers out of the public API until the internal observer-definition model is explicit.
 5. Plan one deliberate post-switch cleanup pass instead of letting transition structure linger indefinitely.
 

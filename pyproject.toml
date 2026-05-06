@@ -7,8 +7,10 @@ authors = [
 ]
 requires-python = ">=3.8"
 readme = "docs/README.md"
+license = "MIT"
 dependencies = [
     "numpy>=2.0.2",
+    "pyopencl>=2025.2",
 ]
 
 maintainers = [
@@ -19,7 +21,6 @@ maintainers = [
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: MIT License",
     "Operating System :: MacOS :: MacOS X",
     "Operating System :: Microsoft :: Windows",
     "Operating System :: POSIX",
@@ -30,7 +31,6 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
-    "Programming Language :: C++",
     "Topic :: Scientific/Engineering",
     "Topic :: Scientific/Engineering :: Mathematics",
     "Topic :: Scientific/Engineering :: Physics",
@@ -41,19 +41,27 @@ classifiers = [
 Documentation = "https://patrickfletcher.github.io/clODE/"
 Repository = "https://github.com/patrickfletcher/clODE"
 
-[project.optional-dependencies]
-pyopencl = [
-    "pyopencl>=2025.2",
-]
-
-
 [tool.setuptools.dynamic]
 version = {attr = "clode.__version__"}
 
+[tool.setuptools]
+include-package-data = false
+
+[tool.setuptools.packages.find]
+include = ["clode", "clode.*"]
+exclude = ["clode.cpp", "clode.cpp.*"]
+
+[tool.setuptools.package-data]
+clode = [
+    "py.typed",
+    "kernels/*.cl",
+    "kernels/observers/*.clh",
+    "kernels/steppers/*.clh",
+]
 
 [build-system]
 requires = [
     "setuptools>=75.0.0,<81",
     "wheel",
-    "setuptools_scm"
 ]
+build-backend = "setuptools.build_meta"

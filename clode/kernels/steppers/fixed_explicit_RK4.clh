@@ -1,0 +1,40 @@
+#include "realtype.cl"
+
+//Explicit Runge-Kutta 4 time step
+#define FIXED_STEPSIZE_EXPLICIT
+static inline void do_step(realtype *ti, realtype xi[], realtype k1[], const realtype pars[], const realtype dt, realtype aux[], const realtype wi[])
+{
+    realtype tmp[N_VAR], k2[N_VAR], k3[N_VAR], k4[N_VAR];
+    realtype h2 = dt * RCONST(0.5);
+    realtype th2 = *ti + h2;
+    realtype th = *ti + dt;
+
+    //k1 passed in
+    // getRHS(*ti, xi, pars, k1, aux, wi);
+
+    //compute k2 //~ tmp[k]=xi[k]+h2*k1[k]; fma(h2, k1[k], xi[k]);
+    for (int k = 0; k < N_VAR; k++)
+        tmp[k] = xi[k] + h2*k1[k];
+    getRHS(th2, tmp, pars, k2, aux, wi);
+
+    //compute k3 //~ tmp[k]=xi[k]+h2*k2[k]; fma(h2, k2[k], xi[k]);
+    for (int k = 0; k < N_VAR; k++)
+        tmp[k] = xi[k] + h2*k2[k]; 
+    getRHS(th2, tmp, pars, k3, aux, wi);
+
+    //compute k4  //~ tmp[k]=xi[k]+ dt*k3[k]; fma(dt, k3[k], xi[k]);
+    for (int k = 0; k < N_VAR; k++)
+        tmp[k] = xi[k] + dt*k3[k]; 
+    getRHS(th, tmp, pars, k4, aux, wi);
+
+    //update to new ti and xi
+    for (int k = 0; k < N_VAR; k++)
+        xi[k] += dt * (k1[k] + RCONST(2.0) * k2[k] + RCONST(2.0) * k3[k] + k4[k]) / RCONST(6.0);
+
+    *ti = th;
+
+    // do this in the stepper function to get the new random variable if desired...
+    // getRHS(th, xi, pars, k4, aux, wi); 
+    // for (int k = 0; k < N_VAR; k++) 
+    //     k1[k] = k4[k];
+}

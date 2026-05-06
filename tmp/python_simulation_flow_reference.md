@@ -1,5 +1,7 @@
 # Python Simulation Flow Reference
 
+Status: legacy comparison reference. This note documents the wrapper-backed simulator flow that remains available only through explicit `_CLODE_BACKEND=cpp` selection in a source checkout.
+
 ## Purpose
 
 This note documents how the current Python-side simulator wrappers actually drive the C++ and OpenCL layers, with emphasis on repeated calls and continuation.

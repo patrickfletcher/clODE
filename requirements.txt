@@ -1,5 +1,4 @@
 setuptools>=75.0.0,<81
-setuptools_scm>=8.0.0
 wheel>=0.42.0
 packaging>=24.0.0
 six>=1.16.0

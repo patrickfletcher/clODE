@@ -105,4 +105,4 @@ You can also print the devices visible to a specific simulator instance:
 simulator.print_devices()
 ```
 
-When validating the internal PyOpenCL backend during the current transition period, remember that platform ordering can differ from `clinfo -l`. Treat the backend-reported ordering as authoritative for the backend you are actually using.
+Platform ordering can differ from `clinfo -l`. The default runtime path reports the PyOpenCL-visible ordering. If you are comparing against the legacy wrapper, rerun the query helpers with `_CLODE_BACKEND=cpp` and treat that backend-reported ordering as authoritative for the comparison run.

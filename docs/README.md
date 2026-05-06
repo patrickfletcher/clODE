@@ -21,7 +21,7 @@ The public Python API is built around three simulator classes:
 
 clODE offers flexibility in simulator deployment across different hardware, allowing, for example, the `FeatureSimulator` to operate on a GPU while the `TrajectorySimulator` runs on a CPU.
 
-The repository is currently transitioning from a legacy C++/Bazel host runtime to a Python-owned PyOpenCL backend. The public API remains stable during that migration. Today, the default backend is still the legacy path, while the optional `clode[pyopencl]` dependency enables the transition backend for contributor workflows and validation.
+The current release line uses the Python-owned PyOpenCL backend by default. The public API remains stable while the remaining migration cleanup work continues. The legacy C++/Bazel host runtime is now an explicit source-checkout comparison path rather than part of the default package build.
 
 ## Installation
 

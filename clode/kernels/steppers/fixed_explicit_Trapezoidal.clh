@@ -1,0 +1,23 @@
+#include "realtype.cl"
+
+//Explicit trapezoidal (Heun's method, improved Euler) time step
+#define FIXED_STEPSIZE_EXPLICIT
+static inline void do_step(realtype *ti, realtype xi[], realtype k1[], const realtype pars[], const realtype dt, realtype aux[], const realtype wi[])
+{
+    realtype th = *ti + dt;
+    realtype tmp[N_VAR], k2[N_VAR];
+
+    //compute k1
+    // getRHS(*ti, xi, pars, k1, aux, wi);
+
+    //compute k2
+    for (int k = 0; k < N_VAR; k++)
+        tmp[k] = fma(dt, k1[k], xi[k]);
+    getRHS(th, tmp, pars, k2, aux, wi);
+
+    //update to new ti, xi, k1
+    for (int k = 0; k < N_VAR; k++)
+        xi[k] += dt * RCONST(0.5) * (k1[k] + k2[k]);
+
+    *ti = th;
+}

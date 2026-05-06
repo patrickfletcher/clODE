@@ -8,121 +8,64 @@ This audit checks whether the current Python packaging and release path matches 
 - no required Bazel or C++ build for the default Python install path
 - a release process that matches semantic versioning and the real distribution shape
 
-It also records the packaging state verified on this workspace on 2026-05-05.
+It also records the packaging and release state verified on this workspace through PR 16.
 
 ## Verified Current State
 
-- `pip wheel . --no-deps -w /tmp/clode-wheel-audit` succeeds after fixing invalid `pyproject.toml` table ordering
-- `python -m build` succeeds and produces both `clode-0.9.0-cp311-cp311-linux_x86_64.whl` and `clode-0.9.0.tar.gz`
-- installing the built wheel into an isolated target directory works, and `import clode` plus `clode.query_opencl()` both succeed there
-- the built wheel metadata reports version `0.9.0`
-- the repository tag state does not match that release identity: `git describe --tags --always --dirty` currently reports `v0.8.1-32-ged3de84-dirty`, and the newest tag is still `v0.8.1`
-- `matlab/` and `samples/` are now pruned from the source distribution via `MANIFEST.in`
+- `python -m build` now succeeds through the `pyproject.toml` path without invoking Bazel and emits `clode-0.10.0-py3-none-any.whl` plus `clode-0.10.0.tar.gz`
+- the default wheel contains Python modules plus packaged OpenCL assets under `clode/kernels/`; it no longer ships the wrapper extension or the `clode/cpp` source tree
+- an isolated install of the built wheel works outside the repository checkout, and the installed package resolves to the PyOpenCL runtime path when the wrapper is absent
+- focused PR 15 regression coverage passes on this workspace: `test/test_pyopencl_source_builder.py` and `test/test_pyopencl_runtime.py` both pass against the packaged kernel root
+- `twine check` passes for the built artifacts
+- `matlab/`, `samples/`, `paper/`, `tmp/`, and `.github/` are now outside the default source-distribution payload
+- the current branch version is now `0.10.0`, matching the intended first pure-Python default-backend release line; git tags still need to be advanced when the release is cut
 
 ## Findings
 
-### 1. The immediate packaging failure was metadata, not Bazel
+### 1. PR 15 converted the default package to a pure-Python endpoint
 
-The package was briefly not buildable because `pyproject.toml` placed normal `project` fields after a nested table. That made `pip wheel` fail during metadata preparation before the C++ build step even started.
+The default build path now runs entirely through `pyproject.toml` and a stub `setup.py`.
 
-That issue is now fixed locally. The current package can again build as a Bazel-backed binary wheel.
+Consequences:
 
-### 2. The current distribution is still a C++ and Bazel distribution
+- `python -m build` no longer compiles the wrapper extension
+- the default wheel is now `py3-none-any`
+- Bazel is no longer part of the default Python release path
 
-Even though the PyOpenCL backend is now implemented internally, the shipped wheel is still a platform-specific binary wheel containing:
+### 2. Runtime assets are now packaged explicitly instead of piggybacking on `clode/cpp`
 
-- the compiled `clode_cpp_wrapper` extension
-- the Python package
-- the OpenCL kernel source files
-- much of the C++ source tree and Bazel-side packaging context
+The OpenCL source files needed at runtime now live under `clode/kernels/` for packaging purposes.
 
-This means the current package is still fundamentally distributing the legacy backend as a required part of the install story.
+Consequences:
 
-### 3. The public Python import path still hard-requires the C++ wrapper
+- the wheel contains the actual runtime assets and not the legacy host-side source tree
+- the C++ compatibility path can still consume the same relative kernel layout when pointed at the packaged root
 
-The public package is not yet PyOpenCL-owned at import time.
+### 3. The package now defaults to PyOpenCL even in a source checkout
 
-Verified examples:
+In an installed wheel where the wrapper is absent, backend resolution uses PyOpenCL by default.
 
-- `clode/__init__.py` imports `ProblemInfo`, `SolverParams`, and `ObserverParams` directly from `clode.cpp.clode_cpp_wrapper`
-- `clode/runtime.py` imports `OpenCLResource`, runtime enums, logger types, and OpenCL query helpers from the same extension
-- `clode/solver.py`, `clode/features.py`, and `clode/trajectory.py` all import wrapper structs directly
-- the new `_pyopencl` implementation also still depends on C++-owned `ProblemInfo`, `SolverParams`, and `ObserverParams`
+In a source checkout that still contains a locally built wrapper binary, backend resolution now still uses PyOpenCL by default and only selects the legacy path when `_CLODE_BACKEND=cpp` is set explicitly.
 
 Consequence:
 
-- switching the default backend to PyOpenCL does not remove the compiled extension from the default package
-- a Bazel-free package is not possible until these public and internal type dependencies are replaced or isolated behind adapters
+- the selector policy is now aligned with the packaging story rather than depending on local checkout artifacts
 
-### 4. Versioning is currently split across incompatible sources of truth
+### 4. Release automation is now structurally aligned, but version policy is not yet settled
 
-The repository currently mixes three version identities:
+Push CI jobs no longer publish to PyPI. Release publication now lives in one dedicated tag-driven workflow.
 
-- `clode.__version__ = "0.9.0"`
-- `pyproject.toml` reads version dynamically from `clode.__version__`
-- `setup.py` still requests `use_scm_version` through `setuptools_scm`
+Remaining mismatch:
 
-At the same time, git tag history still stops at `v0.8.1`.
+- the package version is now sourced consistently from `clode.__version__`, but the repository tags still lag that version and no final semver policy has been adopted for the migration finish line
 
-Consequence:
+### 5. Package artifacts are materially leaner, though the sdist still carries docs, examples, and tests
 
-- the built artifact version is not currently explained by tag history
-- release automation cannot cleanly infer what should be published
-- the codebase is carrying versioning machinery that is no longer acting as the authoritative source
+The default source distribution now excludes several clearly non-runtime trees, including `.github/`, `paper/`, and `tmp/`, in addition to the already-pruned stale `matlab/` and `samples/` trees.
 
-### 5. Release automation is still aligned to the old binary-build world
+That is acceptable for the current transition stage. Further sdist slimming is optional rather than a blocker.
 
-The current GitHub workflows remain Bazel-centric and publish from per-OS CI jobs on push.
-
-That is a mismatch with the desired end state.
-
-For a true PyOpenCL-first package:
-
-- the default Python distribution should become pure Python plus packaged `.cl` assets
-- the wheel should become `py3-none-any`
-- Linux wheel publication stops being a special binary-build problem because no compiled extension remains in the wheel
-- publishing should be driven by release tags or an explicit release workflow, not by general push traffic from multiple platform jobs
-
-### 6. The package currently over-ships source content and emits package-discovery warnings
-
-The built wheel includes much more than the runtime actually needs, including the full `clode/cpp` source tree and Bazel-related files inside the package.
-
-The sdist is broader still and currently carries most of the repository, including:
-
-- `.github/workflows`
-- `matlab/`
-- `paper/`
-- `test/`
-- `tmp/`
-
-Immediate packaging policy update:
-
-- `matlab/` and `samples/` should no longer be included in source distributions because they are stale and unmaintained
-
-Current status:
-
-- implemented for sdists on this branch
-
-The `python -m build` output also emits setuptools warnings about importable-but-undiscovered packages under:
-
-- `clode.cpp.OpenCL`
-- `clode.cpp.logging`
-- `clode.cpp.observers`
-- `clode.cpp.steppers`
-
-This is acceptable while the package is still source-heavy and Bazel-backed, but it is not the right long-term layout for a clean PyOpenCL release.
-
-### 7. Build-system hygiene still needs cleanup
-
-The current build path still emits avoidable warnings:
-
-- `pkg_resources` deprecation from `setup.py`
-- unused or underconfigured `setuptools_scm` noise during build isolation
-- deprecated license-classifier warnings from setuptools
-
-These do not currently stop the build, but they are part of the packaging debt that should be removed before a migration-finish release.
-
-### 8. The modern PyOpenCL-only endpoint is now clear enough to target directly
+### 6. The modern PyOpenCL-only endpoint is now concrete rather than aspirational
 
 For the desired end state, the package should converge on standard modern Python packaging practices rather than a customized binary-extension build path.
 
@@ -146,9 +89,9 @@ Adopt one source of truth for the package version.
 
 Recommended approach:
 
-1. use tag-derived semantic versions via `setuptools_scm`
-2. generate or expose the installed package version from a dedicated version module
-3. remove the hardcoded `clode.__version__` literal and the current dual-source ambiguity
+1. decide whether `clode.__version__` remains the long-term source of truth or whether a later tag-derived workflow is worth reintroducing
+2. make that choice explicit in the release workflow and release notes before the first post-PR15 publication
+3. ensure git tags match the published artifact version before any release claiming the pure-Python packaging transition
 
 Recommended release semantics:
 
@@ -226,6 +169,11 @@ Success criterion:
 
 - `python -m build` emits a `py3-none-any` wheel for the default package
 
+Status update:
+
+- landed on this workspace
+- validated by `python -m build`, `twine check`, focused PyOpenCL runtime/source-builder tests, and an isolated wheel smoke test that resolves to PyOpenCL without the wrapper
+
 #### PR 16: Default Backend Switch
 
 Goal:
@@ -240,7 +188,13 @@ Deliverables:
 
 Success criterion:
 
-- the 74-test extended reference bundle passes with the default backend on the supported runtime set
+- the extended reference bundle passes with the default backend on the supported runtime set
+
+Status update:
+
+- landed on this workspace
+- the selector now defaults to PyOpenCL even when a locally built wrapper binary exists in `clode/cpp/`
+- legacy comparison remains possible through explicit `_CLODE_BACKEND=cpp` selection after building the wrapper in a source checkout
 
 #### PR 17: Legacy C++ Extraction Or Removal
 

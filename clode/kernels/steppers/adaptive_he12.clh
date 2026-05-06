@@ -1,0 +1,41 @@
+#include "realtype.cl"
+
+#define ADAPTIVE_STEPSIZE_EXPLICIT
+#define FSAL_STEP_PROPERTY
+#define LOCAL_ERROR_ORDER RCONST(1.0)
+#define ADAPTIVE_STEP_MAX_SHRINK RCONST(0.5)
+#define ADAPTIVE_STEP_MAX_GROW RCONST(5.0)
+
+static inline realtype do_step(realtype *ti, realtype xi[], realtype k1[], const realtype pars[], const realtype dt, realtype aux[], realtype err[], const realtype wi[])
+{
+    realtype tNew = *ti + dt;
+    realtype newDt = tNew - *ti; //use the effective part of dt
+    realtype xtmp[N_VAR], k2[N_VAR];
+
+    //compute k1
+    //getRHS(*ti, xi, pars, k1, aux, wi); //slope at *ti
+
+    //compute k2: xtmp[k]=xi[k]+dt*k1[k];  fma(dt, k1[k], xi[k]);
+    for (int k = 0; k < N_VAR; k++)
+        xtmp[k] = xi[k] + newDt*k1[k];  //Euler
+    getRHS(tNew, xtmp, pars, k2, aux, wi); //slope at *ti+dt
+
+    //update to new xi
+    for (int k = 0; k < N_VAR; k++)
+        xi[k] = xi[k] + newDt * RCONST(0.5) * (k1[k] + k2[k]); //average the above to get new xi
+
+    //error estimate in each variable
+    for (int k = 0; k < N_VAR; k++) 
+        err[k] = newDt * RCONST(0.5) * (-k1[k] + k2[k]);
+
+        //err[k] = xi[k] - xtmp[k];
+        // xi[k] = xtmp[k]; //use euler?
+        // xi[k] += err[k]; //Richardson?
+
+    getRHS(tNew, xi, pars, k2, aux, wi); //redo k2 at actual new point - alt, don't do FSAL.
+    for (int k = 0; k < N_VAR; k++) 
+        k1[k] = k2[k];
+        
+    *ti = tNew;
+    return newDt;
+}

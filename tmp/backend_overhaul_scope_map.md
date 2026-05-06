@@ -1,5 +1,7 @@
 # Backend Overhaul Scope Map
 
+Status: historical migration-planning reference. For the active rollout policy and current validation commands after PR 16, use `tmp/backend_pr_task_breakdown.md` and `tmp/pyopencl_rollout_guardrails.md`.
+
 ## Purpose
 
 This document is the durable low-token lookup map for the PyOpenCL backend overhaul.

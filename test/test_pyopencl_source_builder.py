@@ -13,10 +13,11 @@ from clode._pyopencl import (
     UnsupportedObserverError,
     UnsupportedStepperError,
 )
+from clode.runtime import _clode_root_dir
 from test.core_numerics.helpers import model_path
 
 
-KERNEL_ROOT = Path(__file__).resolve().parents[1] / "clode" / "cpp"
+KERNEL_ROOT = Path(_clode_root_dir)
 
 
 def test_kernel_registry_exposes_current_cpp_defines_and_entrypoints() -> None:

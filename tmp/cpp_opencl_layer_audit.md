@@ -1,5 +1,7 @@
 # C++ OpenCL Layer Audit
 
+Status: legacy comparison reference. This note intentionally documents the old C++ wrapper path, which is no longer the default backend after PR 16.
+
 ## Scope
 
 This report covers the current C++ and OpenCL solver layer under `clode/cpp` and the immediate Python wrappers in `clode/runtime.py`, `clode/solver.py`, `clode/trajectory.py`, and `clode/features.py`.

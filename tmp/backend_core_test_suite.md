@@ -1,5 +1,7 @@
 # Minimal Backend-Phase Test Suite
 
+Status: historical migration-planning reference. The active rollout gate after PR 16 is tracked in `tmp/pyopencl_rollout_guardrails.md` and `tmp/backend_pr_task_breakdown.md`.
+
 ## Purpose
 
 This document defines the authoritative fast test surface to protect clODE while the backend seam and PyOpenCL migration work proceed.

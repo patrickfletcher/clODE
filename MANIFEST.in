@@ -1,7 +1,10 @@
-include clode/cpp/*.cl
-include clode/cpp/observers/*.clh
-include clode/cpp/steppers/*.clh
+include clode/kernels/*.cl
+include clode/kernels/observers/*.clh
+include clode/kernels/steppers/*.clh
 include clode/py.typed
-include clode/cpp/clode_cpp_wrapper.pyi
+prune .github
+prune clode/cpp
 prune matlab
+prune paper
 prune samples
+prune tmp

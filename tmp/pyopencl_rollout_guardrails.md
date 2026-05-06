@@ -12,11 +12,11 @@ It exists to answer three questions quickly:
 
 ## Current Selector Policy
 
-- the public default backend remains the current C++ path
-- the PyOpenCL backend remains behind the internal `_CLODE_BACKEND=pyopencl` selector
-- the C++ backend remains the required fallback while PyOpenCL rollout is still runtime-qualified
-- the optional dependency path for the PyOpenCL backend is now exposed as `clode[pyopencl]`
-- packaging audit note: the current default distribution is still a Bazel-backed C++ wheel, so a backend default switch alone does not finish the migration
+- the published package ships only the Python runtime path plus packaged OpenCL assets
+- PyOpenCL is now the default backend for both tagged installs and source checkouts
+- the C++ backend remains available only through explicit `_CLODE_BACKEND=cpp` selection when a locally built wrapper is present
+- the C++ backend is now a comparison path rather than part of the default runtime story
+- `pyopencl` is now part of the default package dependency set
 
 ## Stable Runtime On This Workspace
 
@@ -45,7 +45,7 @@ If platform ordering looks ambiguous, confirm the actual runtime selected by the
 ### Authoritative backend-phase gate
 
 - scope: fast backend migration gate
-- current size: 54 tests
+- current size: 55 tests
 - current command:
 
 ```bash
@@ -55,14 +55,14 @@ CLODE_TEST_PLATFORM_ID=0 CLODE_TEST_DEVICE_ID=0 /home/fletcherpa/envs/clode/bin/
 ### Extended reference bundle
 
 - scope: authoritative gate plus higher-value reference coverage that is now worth carrying through rollout work
-- current size: 76 tests
+- current size: 77 tests
 - current command:
 
 ```bash
-CLODE_TEST_PLATFORM_ID=0 CLODE_TEST_DEVICE_ID=0 _CLODE_BACKEND=pyopencl /home/fletcherpa/envs/clode/bin/python -m pytest test/core_numerics/test_transient.py test/core_numerics/test_trajectory.py test/core_numerics/test_features_basicall.py test/core_numerics/test_stochastic.py test/test_backend_contracts.py test/test_backend_rhs_source.py test/test_pyopencl_models.py test/test_pyopencl_source_builder.py test/test_pyopencl_runtime.py test/test_pyopencl_buffers.py test/test_pyopencl_structs.py test/test_pyopencl_transient_backend.py test/test_pyopencl_trajectory_backend.py test/test_pyopencl_feature_backend.py test/test_vdp.py test/test_features.py test/test_aux_values.py test/test_ornl_thompson_a1.py test/test_opencl_builtins.py test/test_runtime.py test/test_logger.py -q
+CLODE_TEST_PLATFORM_ID=0 CLODE_TEST_DEVICE_ID=0 /home/fletcherpa/envs/clode/bin/python -m pytest test/core_numerics/test_transient.py test/core_numerics/test_trajectory.py test/core_numerics/test_features_basicall.py test/core_numerics/test_stochastic.py test/test_backend_contracts.py test/test_backend_rhs_source.py test/test_pyopencl_models.py test/test_pyopencl_source_builder.py test/test_pyopencl_runtime.py test/test_pyopencl_buffers.py test/test_pyopencl_structs.py test/test_pyopencl_transient_backend.py test/test_pyopencl_trajectory_backend.py test/test_pyopencl_feature_backend.py test/test_vdp.py test/test_features.py test/test_aux_values.py test/test_ornl_thompson_a1.py test/test_opencl_builtins.py test/test_runtime.py test/test_logger.py -q
 ```
 
-This bundle passed on the stable NVIDIA runtime on this workspace after the PR 14 runtime-facade updates.
+This bundle passed on the stable NVIDIA runtime on this workspace after the PR 16 default-switch updates.
 
 ## Tests Still Excluded From PR12
 
@@ -76,17 +76,17 @@ This bundle passed on the stable NVIDIA runtime on this workspace after the PR 1
 
 Do not switch the default backend until all of the following are true:
 
-1. the 74-test extended reference bundle is stable on the supported runtime set
+1. the extended reference bundle is stable on the supported runtime set
 2. the supported runtime policy is documented clearly enough that users can choose a working device tuple without guesswork
 3. the PyOpenCL dependency and installation story are explicit enough for the default path
 4. the C++ backend remains available as an explicit fallback during the transition
 5. the backend selector and diagnostics make it obvious which runtime was actually chosen
 6. the default package build no longer requires the C++ extension at import time
 
-Status on this workspace after PR 14:
+Status on this workspace after PR 16:
 
 - satisfied: 1, 2, 3, 4, 5, and 6 for the current stable NVIDIA runtime
-- remaining packaging blocker before any default switch: the default build and release path is still Bazel-backed and not yet a pure-Python endpoint
+- PR 16 resolved the last selector-policy blocker: source checkouts no longer prefer the legacy backend merely because a local wrapper binary is present
 - still unresolved for broader support: the Intel CPU runtime remains unstable for the `localmax` rebuild path
 
 ## Post-Switch Follow-Up Worth Keeping In Scope

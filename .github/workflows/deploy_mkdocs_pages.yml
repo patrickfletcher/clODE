@@ -41,12 +41,6 @@ jobs:
       - name: Install pip wheel
         run: make install_clode
 
-      - name: Find libclode_cpp_wrapper.dylib in bazel-out and record name
-        run: echo "CLODE_CPP_WRAPPER=$(find -L ./bazel-out -name libclode_cpp_wrapper.dylib)" >> "$GITHUB_ENV"
-
-      - name: Copy libclode_cpp_wrapper.dylib to clode/cpp
-        run: cp -f "$CLODE_CPP_WRAPPER" clode/cpp/clode_cpp_wrapper.so
-
       - name: Build docs with mkdocs
         run: python3 -m mkdocs build --clean
 

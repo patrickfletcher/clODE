@@ -1,0 +1,17 @@
+#include "realtype.cl"
+
+//Explicit (Forward) Euler
+#define FIXED_STEPSIZE_EXPLICIT
+#define STOCHASTIC_STEPPER
+static inline void do_step(realtype *ti, realtype xi[], realtype k1[], const realtype pars[], const realtype dt, realtype aux[], realtype wi[])
+{   
+    //k1 passed in
+    // getRHS(*ti, xi, pars, k1, aux, wi);
+    
+    //update to new ti, xi, k1
+    for (int k = 0; k < N_VAR; k++)
+        xi[k] = fma(dt, k1[k], xi[k]);
+        
+    *ti += dt;
+
+}
