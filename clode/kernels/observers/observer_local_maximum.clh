@@ -275,7 +275,7 @@ static inline void updateObserverData(realtype *ti, realtype xi[], realtype dxi[
         od->tLastMin = od->tbuffer[ix];
         od->xLastMin = thisXbuffer[ix];
 
-        if (od->eventcount <= N_STORE_EVENTS) {
+        if (od->eventcount > 0 && od->eventcount <= N_STORE_EVENTS) {
             od->tMinList[od->eventcount-1] = od->tLastMin;
             od->xMinList[od->eventcount-1] = od->xLastMin;
         }
