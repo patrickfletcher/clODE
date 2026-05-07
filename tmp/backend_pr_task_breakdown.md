@@ -61,8 +61,8 @@ Goal:
 
 Deliverables:
 
-- `tmp/backend_overhaul_scope_map.md`
-- `tmp/backend_core_test_suite.md`
+- `tmp/archived/backend_migration_history_2026_05_07/backend_overhaul_scope_map.md`
+- `tmp/archived/backend_migration_history_2026_05_07/backend_core_test_suite.md`
 - `tmp/backend_pr_task_breakdown.md`
 
 Checkpoint:
@@ -94,7 +94,7 @@ Checkpoint:
 
 Acceptance criteria:
 
-- new tests are added exactly as scoped in `tmp/backend_core_test_suite.md`
+- new tests are added exactly as scoped in `tmp/archived/backend_migration_history_2026_05_07/backend_core_test_suite.md`
 - no backend seam changes yet
 - the updated core suite passes on the current C++ backend
 
@@ -655,12 +655,12 @@ Keep as technical references while the legacy comparison path still exists:
 - `tmp/pyopencl_struct_audit.md`
 - `tmp/python_simulation_flow_reference.md`
 
-Candidate archive targets once PR 17 cleanup starts or once one post-switch release has shipped:
+Archived on 2026-05-07 during the first wrapper-removal cleanup pass:
 
-- `tmp/backend_overhaul_scope_map.md`
-- `tmp/backend_core_test_suite.md`
+- `tmp/archived/backend_migration_history_2026_05_07/backend_overhaul_scope_map.md`
+- `tmp/archived/backend_migration_history_2026_05_07/backend_core_test_suite.md`
 
-Forward-looking notes should continue to live separately in `tmp/pyopencl_post_migration_plan.md` rather than being mixed back into the migration-status documents.
+Forward-looking notes should continue to live separately in `tmp/pyopencl_post_migration_plan.md` and `tmp/cpp_wrapper_cleanup_plan.md` rather than being mixed back into the migration-status documents.
 
 ## Checkpoint Summary
 

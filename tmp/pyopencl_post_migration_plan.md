@@ -300,6 +300,7 @@ Why this is the right tradeoff:
 
 Recommendation on repository cleanup once that decision is made:
 
+- the detailed file-by-file cleanup inventory now lives in `tmp/cpp_wrapper_cleanup_plan.md`
 - remove `clode/_backends/cpp.py` together with the wrapper build instructions if the legacy path is dropped
 - remove `clode/cpp/` host-side wrapper sources and Bazel-only Python packaging references from the mainline package path
 - keep only the packaged kernel assets needed by the Python runtime under `clode/kernels/`

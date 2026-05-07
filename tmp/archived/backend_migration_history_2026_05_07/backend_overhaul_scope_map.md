@@ -16,7 +16,7 @@ This document should be treated as companion memory for:
 
 - `tmp/cpp_opencl_layer_audit.md`
 - `tmp/pyopencl_backend_design.md`
-- `tmp/backend_core_test_suite.md`
+- `tmp/archived/backend_migration_history_2026_05_07/backend_core_test_suite.md`
 - `tmp/backend_pr_task_breakdown.md`
 
 ## Core Memory Items Required To Land The Overhaul Reliably
@@ -210,7 +210,7 @@ These files are the current authoritative source pool for backend-phase gating.
 - `test/test_pyopencl_trajectory_backend.py`
 - `test/test_pyopencl_feature_backend.py`
 
-The exact suite definition is pinned in `tmp/backend_core_test_suite.md`.
+The exact suite definition is pinned in `tmp/archived/backend_migration_history_2026_05_07/backend_core_test_suite.md`.
 
 ## Rapid Lookup Guide
 
@@ -235,14 +235,14 @@ Use this section to answer common implementation questions with minimum token co
 | What behavior defines transient parity | `clode/cpp/transient.cl`, `clode/cpp/CLODE.cpp` |
 | What behavior defines trajectory parity | `clode/cpp/trajectory.cl`, `clode/cpp/CLODEtrajectory.cpp`, `test/core_numerics/test_trajectory.py` |
 | What behavior defines feature parity | `clode/cpp/features.cl`, `clode/cpp/initializeObserver.cl`, `clode/cpp/CLODEfeatures.cpp`, `test/core_numerics/test_features_basicall.py`, `test/test_backend_contracts.py` |
-| Which tests must not be used as parity authority | This document and `tmp/backend_core_test_suite.md` |
+| Which tests must not be used as parity authority | This document and `tmp/archived/backend_migration_history_2026_05_07/backend_core_test_suite.md` |
 
 ## Lookup Priority Rules
 
 When context is short, consult files in this order.
 
 1. `tmp/pyopencl_backend_design.md`
-2. `tmp/backend_core_test_suite.md`
+2. `tmp/archived/backend_migration_history_2026_05_07/backend_core_test_suite.md`
 3. This document
 4. `tmp/cpp_opencl_layer_audit.md`
 5. The current backend seam under `clode/_backends/`
