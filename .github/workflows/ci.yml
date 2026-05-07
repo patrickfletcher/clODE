@@ -73,7 +73,7 @@ jobs:
         run: python -c "import clode; print(clode.__version__)"
 
   opencl-linux:
-    name: Release Gate (Ubuntu PyPI PoCL, py3.12)
+    name: Release Gate (Ubuntu PoCL, py3.12)
     runs-on: ubuntu-22.04
     timeout-minutes: 30
     env:
@@ -83,6 +83,7 @@ jobs:
       POCL_LLVM_CPU_NAME: "x86-64"
       POCL_KERNEL_CACHE: "0"
       PYOPENCL_COMPILER_OUTPUT: "1"
+      PYTHONFAULTHANDLER: "1"
     defaults:
       run:
         shell: bash
@@ -98,106 +99,113 @@ jobs:
 
       - name: Install runtime test dependencies
         run: |
-          sudo apt install -y intel-opencl-icd
+          python -m pip install --upgrade pip
+          python -m pip install ".[test]" "pocl-binary-distribution==3.0"
+          python -m pip check
+
+      - name: Probe OpenCL runtime
+        continue-on-error: true
+        run: python tools/probe_opencl_runtime.py --traceback
+
+      - name: Run release gate bundle
+        run: |
+          python tools/run_test_bundle.py release -- \
+            -vv -s --maxfail=1 --full-trace --showlocals
+
+  opencl-linux-intel:
+    name: Release Gate Candidate (Ubuntu Intel CPU runtime, py3.12)
+    runs-on: ubuntu-22.04
+    continue-on-error: true
+    timeout-minutes: 40
+    env:
+      CLODE_TEST_PLATFORM_ID: "0"
+      CLODE_TEST_DEVICE_ID: "0"
+      PYOPENCL_COMPILER_OUTPUT: "1"
+      PYTHONFAULTHANDLER: "1"
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Intel CPU OpenCL runtime environment
+        run: |
+          MINIFORGE_DIR="$RUNNER_TEMP/miniforge"
+          INTEL_OPENCL_ENV_PREFIX="$RUNNER_TEMP/intel-opencl"
+          echo "MINIFORGE_DIR=$MINIFORGE_DIR" >> "$GITHUB_ENV"
+          echo "INTEL_OPENCL_ENV_PREFIX=$INTEL_OPENCL_ENV_PREFIX" >> "$GITHUB_ENV"
+          curl -L -o "$RUNNER_TEMP/miniforge.sh" \
+            "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh"
+          bash "$RUNNER_TEMP/miniforge.sh" -b -p "$MINIFORGE_DIR"
+          "$MINIFORGE_DIR/bin/conda" create -y -p "$INTEL_OPENCL_ENV_PREFIX" \
+            -c conda-forge python=3.12 pip pyopencl intel-opencl-rt
+          "$MINIFORGE_DIR/bin/conda" run -p "$INTEL_OPENCL_ENV_PREFIX" \
+            python -m pip install --upgrade pip
+          "$MINIFORGE_DIR/bin/conda" run -p "$INTEL_OPENCL_ENV_PREFIX" \
+            python -m pip install ".[test]"
+          "$MINIFORGE_DIR/bin/conda" run -p "$INTEL_OPENCL_ENV_PREFIX" \
+            python -m pip check
+
+      - name: Probe Intel OpenCL runtime
+        continue-on-error: true
+        run: |
+          "$MINIFORGE_DIR/bin/conda" run -p "$INTEL_OPENCL_ENV_PREFIX" \
+            python tools/probe_opencl_runtime.py --traceback
+
+      - name: Run Intel release gate bundle
+        run: |
+          "$MINIFORGE_DIR/bin/conda" run -p "$INTEL_OPENCL_ENV_PREFIX" \
+            python tools/run_test_bundle.py release -- \
+            -vv -s --maxfail=1 --full-trace --showlocals
+
+  opencl-macos:
+    name: Release Gate (macOS OpenCL, py3.12)
+    runs-on: macos-latest
+    timeout-minutes: 30
+    env:
+      CLODE_TEST_PLATFORM_ID: "0"
+      CLODE_TEST_DEVICE_ID: "0"
+      PYOPENCL_COMPILER_OUTPUT: "1"
+      PYTHONFAULTHANDLER: "1"
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Install runtime test dependencies
+        run: |
           python -m pip install --upgrade pip
           python -m pip install ".[test]"
           python -m pip check
 
-      - name: Inspect installed OpenCL runtime
-        run: |
-          python -m pip list | grep -Ei '^(pyopencl|pocl|opencl|ocl|llvm)' || true
-          python - <<'PY'
-          import os
-
-          import clode
-          import pyopencl as cl
-          import pyopencl._cl as cl_module
-
-          print(f"PYOPENCL_MODULE={cl_module.__file__}")
-          print("RELEVANT_ENV=")
-          for key in (
-            "CLODE_TEST_PLATFORM_ID",
-            "CLODE_TEST_DEVICE_ID",
-            "POCL_KERNELLIB_NAME",
-            "POCL_LLVM_CPU_NAME",
-            "POCL_KERNEL_CACHE",
-            "PYOPENCL_COMPILER_OUTPUT",
-          ):
-            print(f"  {key}={os.environ.get(key)}")
-          print("OPENCL_QUERY=")
-          print(clode.query_opencl())
-          for platform_index, platform in enumerate(cl.get_platforms()):
-            print(f"PLATFORM[{platform_index}] {platform.name} :: {platform.version}")
-            for device_index, device in enumerate(platform.get_devices()):
-              print(
-                f"  DEVICE[{device_index}] {device.name} :: "
-                f"vendor={device.vendor} :: driver={device.driver_version} :: "
-                f"version={device.version}"
-              )
-          PY
-
-      - name: Probe OpenCL compiler
+      - name: Probe OpenCL runtime
         continue-on-error: true
-        run: |
-          python - <<'PY'
-          import os
-          import traceback
-
-          import numpy as np
-          import pyopencl as cl
-          import pyopencl.tools
-
-          platform = cl.get_platforms()[int(os.environ["CLODE_TEST_PLATFORM_ID"])]
-          device = platform.get_devices()[int(os.environ["CLODE_TEST_DEVICE_ID"])]
-          print(f"SELECTED_PLATFORM={platform.name} :: {platform.version}")
-          print(f"SELECTED_DEVICE={device.name} :: {device.driver_version}")
-
-          context = cl.Context([device])
-          source = """
-          typedef struct {
-            float value;
-            unsigned int count;
-          } diagnostic_struct;
-
-          __kernel void add_one(__global float *x) {
-            const size_t i = get_global_id(0);
-            x[i] += 1.0f;
-          }
-          """
-
-          program = cl.Program(context, source)
-          try:
-            program.build()
-            print("MINIMAL_PROGRAM_BUILD=ok")
-          except Exception as exc:
-            print(f"MINIMAL_PROGRAM_BUILD=failed: {exc}")
-            try:
-              print(program.get_build_info(device, cl.program_build_info.LOG))
-            except Exception as build_log_exc:
-              print(f"BUILD_LOG_UNAVAILABLE={build_log_exc}")
-            traceback.print_exc()
-
-          dtype = np.dtype([("value", np.float32), ("count", np.uint32)], align=True)
-          try:
-            matched_dtype, declaration = pyopencl.tools.match_dtype_to_c_struct(
-              device, "diagnostic_struct", dtype
-            )
-            print(f"MATCHED_DTYPE={matched_dtype}")
-            print("MATCHED_DECLARATION=")
-            print(declaration)
-          except Exception as exc:
-            print(f"MATCH_DTYPE=failed: {exc}")
-            traceback.print_exc()
-          PY
+        run: python tools/probe_opencl_runtime.py --traceback
 
       - name: Run release gate bundle
-        run: python tools/run_test_bundle.py release
+        run: |
+          python tools/run_test_bundle.py release -- \
+            -vv -s --maxfail=1 --full-trace --showlocals
 
   docs:
     name: Docs (Ubuntu, py3.12)
     runs-on: ubuntu-latest
     if: github.event_name != 'push' || github.ref != 'refs/heads/main'
     timeout-minutes: 15
+    env:
+      POCL_KERNELLIB_NAME: "sse2"
+      POCL_LLVM_CPU_NAME: "x86-64"
+      POCL_KERNEL_CACHE: "0"
+      PYOPENCL_COMPILER_OUTPUT: "1"
+      PYTHONFAULTHANDLER: "1"
     defaults:
       run:
         shell: bash
@@ -213,9 +221,13 @@ jobs:
 
       - name: Install docs dependencies
         run: |
-          sudo apt install -y intel-opencl-icd
           python -m pip install --upgrade pip
-          python -m pip install .[docs]
+          python -m pip install ".[docs]" "pocl-binary-distribution==3.0"
+          python -m pip check
+
+      - name: Inspect available OpenCL platforms
+        run: |
+          python -c "import clode; print(clode.query_opencl())"
 
       - name: Build docs
         run: python -m mkdocs build --strict

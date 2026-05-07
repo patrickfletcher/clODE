@@ -49,6 +49,14 @@ import clode
 clode.print_opencl()
 ```
 
+If you need to distinguish an OpenCL runtime/compiler problem from a clODE kernel problem in a source checkout, run:
+
+```bash
+python tools/probe_opencl_runtime.py --platform-id 0 --device-id 0
+```
+
+The probe lists visible runtimes, builds a trivial kernel, asks PyOpenCL to match a small diagnostic struct, and then asks it to match clODE's generated `localmax` observer struct. If the first or second probe already fails, the issue is below clODE's kernel layer. The script defaults to `CLODE_TEST_PLATFORM_ID` and `CLODE_TEST_DEVICE_ID` when those environment variables are set.
+
 ## Installation from source
 
 To install the Python library from source, you will need the following dependencies:
