@@ -47,7 +47,7 @@ def read_ode_parameters(
 
     statements: list[str] = list()
 
-    match_dx = "\w+'\s*=\s*"  # Match the name of the variable
+    match_dx = r"\w+'\s*=\s*"  # Match the name of the variable
 
     for line in xpp_string.splitlines():
         if line.startswith("par ") or line.startswith("p "):
@@ -139,19 +139,19 @@ def format_opencl_rhs(
 
     cl_file += "}"
 
-    cl_file = re.sub("(\w+)\s*\^\s*2", r"\1*\1", cl_file, flags=re.MULTILINE)
-    cl_file = re.sub("(\w+)\s*\^\s*3", r"\1*\1*\1", cl_file, flags=re.MULTILINE)
-    cl_file = re.sub("(\w+)\s*\^\s*4", r"\1*\1*\1*\1", cl_file, flags=re.MULTILINE)
+    cl_file = re.sub(r"(\w+)\s*\^\s*2", r"\1*\1", cl_file, flags=re.MULTILINE)
+    cl_file = re.sub(r"(\w+)\s*\^\s*3", r"\1*\1*\1", cl_file, flags=re.MULTILINE)
+    cl_file = re.sub(r"(\w+)\s*\^\s*4", r"\1*\1*\1*\1", cl_file, flags=re.MULTILINE)
     cl_file = re.sub(
-        "(\w+)\s*\^\s*([0-9]+)", r"pown(\1, \2)", cl_file, flags=re.MULTILINE
+        r"(\w+)\s*\^\s*([0-9]+)", r"pown(\1, \2)", cl_file, flags=re.MULTILINE
     )
     cl_file = re.sub(
-        "(\w+)\s*\^\s*([-+]?(\d*\.*\d+))", r"pow(\1, \2)", cl_file, flags=re.MULTILINE
+        r"(\w+)\s*\^\s*([-+]?(\d*\.*\d+))", r"pow(\1, \2)", cl_file, flags=re.MULTILINE
     )
 
     # Convert all floating numbers to single precision
     # using the suffix 'f'
-    cl_file = re.sub("([-+]?(\d+\.\d*))", r"\1f", cl_file, flags=re.MULTILINE)
+    cl_file = re.sub(r"([-+]?(\d+\.\d*))", r"\1f", cl_file, flags=re.MULTILINE)
 
     cl_lines = cl_file.split("\n")
 
