@@ -177,6 +177,7 @@ Why:
 
 - users already think of runtime selection and device inspection as one concept
 - the current `runtime.py` is large enough that a package is more intuitive than a single file
+- `clode.runtime` should be the stable public package, with selection, query, and logging responsibilities split into submodules and re-exported through `runtime/__init__.py`
 
 Notes:
 
@@ -200,7 +201,8 @@ Why:
 - `SolverParams` belongs here because it configures the ODE solver itself: time-step bounds, tolerances, storage cadence, and related integration controls are part of how the simulation is carried out
 - those controls are distinct from `problem/`, which describes the dynamical system being solved, and from `runtime/`, which describes the OpenCL hardware/runtime used to execute the solver
 - `results.py` removes the current split where output-container classes live inside feature- or trajectory-specific files
-- a small `params.py` module keeps solver configuration adjacent to `Simulator` and `Stepper` without forcing a circular dependency between the transitional `solver.py` implementation file and `simulation/base.py`
+- `simulation/` should be the canonical implementation home for `Simulator`, `FeatureSimulator`, and `TrajectorySimulator`; the historical root modules `solver.py`, `features.py`, and `trajectory.py` should survive only as compatibility re-exports during the migration
+- a small `params.py` module keeps solver configuration adjacent to `Simulator` and `Stepper` without forcing circular imports inside the semantic `simulation/` package
 
 Later:
 
@@ -270,6 +272,7 @@ Specific consequence:
 - move observer-facing enums and params into `observers/`
 - move `ProblemInfo` out of `types.py`
 - move `SolverParams` out of `types.py` into `simulation/params.py`
+- move the actual simulator classes into `simulation/base.py`, `simulation/features.py`, and `simulation/trajectory.py`, leaving the flat root modules as compatibility barrels
 
 Why first:
 
