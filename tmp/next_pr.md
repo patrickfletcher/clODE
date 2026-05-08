@@ -4,6 +4,13 @@
 
 Split-window continuation correctness
 
+## Assumed Repo State
+
+- Canonical public homes are now `clode.problem`, `clode.observers`, `clode.simulation`, and `clode.runtime`.
+- `clode._opencl` is the canonical internal execution layer.
+- Root flat modules such as `clode.solver` and `clode.features` are compatibility barrels only; new work should target canonical packages unless the task is explicitly about compatibility cleanup.
+- Archived migration notes remain useful for reproduction details, but they are not the source of truth for the live package layout.
+
 ## Why this should be next
 
 Two archived continuation issues still reproduce on the current PyOpenCL implementation on the stable workspace runtime (`CLODE_TEST_PLATFORM_ID=0`, `CLODE_TEST_DEVICE_ID=0`):

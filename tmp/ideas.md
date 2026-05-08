@@ -44,7 +44,7 @@ Format:
 - [ ] P1 Solution-buffer / solver-state kernel abstraction shared by steppers and observers. depends: continuation semantics. refs: `clode/kernels/observers.cl`, `clode/kernels/odedriver.cl`
 - [ ] P2 Audit Python-level source assembly vs current `#define`/`#include` model. refs: `clode/_opencl/source_builder.py`, `clode/kernels/`, `tmp/archived/pyopencl_cleanup_closeout_2026_05_08/pyopencl_backend_design.md`
 - [ ] P1 Leverage PyOpenCL compiler cache, `MemoryPool`, `capture_call`, and `characterize` utilities before adding more custom runtime helpers. refs: `clode/_opencl/runtime.py`, `clode/_opencl/program_cache.py`, `clode/_opencl/buffers.py`, `tmp/pyopencl_leverage_audit.md`
-- [ ] P1 Role-based package layout migration after the PyOpenCL-first decision: collapse the transition-era `_backends/` seam, keep root compatibility re-exports, and reorganize around `problem/`, `runtime/`, `simulation/`, `observers/`, and `_opencl/`. depends: consensus on `tmp/module_layout_plan.md`. refs: `tmp/module_layout_plan.md`, `tmp/backend_strategy_audit.md`, `tmp/package_state.md`
+- [ ] P2 Compatibility-barrel deprecation plan: decide whether to keep only `clode.__init__` as the stable top-level barrel and retire flat modules such as `clode.solver`, `clode.features`, `clode.trajectory`, `clode.types`, `clode.function_converter`, `clode.xpp_parser`, and `clode.opencl_builtins`. depends: docs/examples shifted to canonical imports and deprecation appetite agreed. refs: `tmp/package_state.md`, `tmp/development_roadmap.md`, `pyproject.toml`
 - [ ] P3 Decide whether `device_ids` becomes real multi-device work or is retired. depends: explicit multi-device scope decision. refs: `docs/init_runtime.md`, `clode/runtime.py`
 
 ## RHS IR, Conversion, And Interop

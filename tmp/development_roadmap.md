@@ -132,12 +132,17 @@ This is worthwhile, but it is lower leverage than the items above.
 Key tasks:
 
 - decide whether `device_ids` should eventually be removed or made real
-- decide later whether the remaining flat public compatibility barrels still earn their keep
+- decide whether the package should eventually keep only `clode.__init__` as the stable top-level barrel and retire the remaining flat compatibility modules through a normal deprecation cycle
 - keep future runtime/package cleanup scoped to real API clarity rather than historical naming debt
 
 Why later:
 
 - these are architecture-hygiene improvements, not the main scientific bottlenecks right now
+
+Packaging note:
+
+- the flat compatibility barrels are not needed for package discovery or wheel correctness
+- their only real value is import-path continuity and module-path stability for downstream users during the transition
 
 ## Longer-Term Items That Likely Need API Discussion
 

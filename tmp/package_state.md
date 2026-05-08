@@ -8,6 +8,13 @@
 - Historical migration and bug notes are archived under `tmp/archived/`; they remain useful for rationale, but they are not the source of truth for the live package.
 - The current package still exposes a few transition-era surfaces, especially `device_ids` and the coupling between solver configuration and output/storage capacity.
 
+## Session-Start Guidance
+
+- Prefer canonical imports from `clode`, `clode.problem`, `clode.observers`, `clode.simulation`, and `clode.runtime`.
+- Treat root modules such as `clode.solver`, `clode.features`, `clode.trajectory`, `clode.types`, `clode.function_converter`, `clode.xpp_parser`, and `clode.opencl_builtins` as compatibility barrels only.
+- New implementation work should land in the canonical packages, not in the compatibility barrels.
+- Use `tmp/next_pr.md` to decide what to work on next; use this file to understand where code now belongs.
+
 ## Top-Level Repo Map
 
 | Path | Role | Notes |
@@ -45,6 +52,14 @@
 - `clode/_opencl/executors.py`: transient, trajectory, and feature executors.
 
 The historical backend-shim and binding-named compatibility layers have been removed.
+
+## Compatibility Surface
+
+- `clode.__init__` remains the main stable top-level import surface and is worth preserving.
+- The flat root files are packaging-neutral compatibility shims. They are not required by setuptools package discovery, package data shipping, or wheel/sdist correctness.
+- Their real value is import-path continuity for downstream users, examples, old notes, type annotations, and any serialized or pickled objects that still mention historical module paths.
+- Their main cost is duplicate API surface, extra documentation burden, and a greater chance that future work accidentally lands in the wrong module.
+- If they are removed later, do it as a normal deprecation cycle: shift docs/examples/tests first, optionally add warnings, then remove them in a deliberate release.
 
 ### Kernel tree
 
@@ -92,3 +107,4 @@ The historical backend-shim and binding-named compatibility layers have been rem
 - `MANIFEST.in`: current sdist include and prune rules.
 - Kernel assets ship as package data.
 - Docs and tests are not required for runtime execution. Tests are still useful for downstream verification, while docs are the easier thing to omit if sdist slimming becomes desirable.
+- From a packaging perspective, the flat compatibility barrels are optional; they exist only to preserve import compatibility, not because the build needs them.
