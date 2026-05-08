@@ -4,7 +4,8 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from ..types import ObserverParams, SolverParams
+from ..observers.types import ObserverParams
+from ..simulation.params import SolverParams
 from .models import Precision, ProblemShape
 from .runtime import OpenCLRuntime, _require_pyopencl
 from .structs import (

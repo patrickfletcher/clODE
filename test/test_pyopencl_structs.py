@@ -4,7 +4,6 @@ import pytest
 
 pytest.importorskip("pyopencl")
 
-from clode.types import ObserverParams, SolverParams
 from clode._pyopencl import (
     OpenCLRuntime,
     Precision,
@@ -13,6 +12,8 @@ from clode._pyopencl import (
     pack_observer_params,
     pack_solver_params,
 )
+from clode.observers import ObserverParams
+from clode.simulation import SolverParams
 from test.core_numerics.helpers import TEST_DEVICE_ID, TEST_PLATFORM_ID
 
 

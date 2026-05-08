@@ -27,7 +27,7 @@ from .runtime import (
     initialize_runtime,
     set_log_level,
 )
-from .types import SolverParams
+from .simulation.params import SolverParams
 
 
 # TODO[API]: different steppers use different parameters subsets.

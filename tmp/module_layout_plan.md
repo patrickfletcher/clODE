@@ -33,6 +33,7 @@ This is a layout and semantics plan only. It does not require immediate user-fac
 
 - The root package is doing too much. `solver.py`, `trajectory.py`, `features.py`, `runtime.py`, `function_converter.py`, `xpp_parser.py`, `types.py`, and `opencl_builtins.py` represent different roles, but they all sit flat at the top level.
 - `types.py` is too generic a name for three unrelated configuration and metadata dataclasses.
+- `SolverParams` is solver configuration, not generic type infrastructure. It governs how the numerical method advances a problem in time, so it belongs with simulation semantics rather than with problem definition or runtime/device selection.
 - `function_converter.py`, `xpp_parser.py`, and `opencl_builtins.py` are really one family: RHS authoring and ingestion.
 - `trajectory.py` and `features.py` each mix simulator classes with output container classes.
 - `_backends/` still names a choice the package no longer intends to offer.
@@ -116,6 +117,7 @@ clode/
     logging.py
   simulation/
     __init__.py
+    params.py
     base.py
     trajectory.py
     features.py
@@ -186,6 +188,7 @@ Public simulator orchestration surface.
 
 Expected contents:
 
+- `params.py`: `SolverParams`
 - `base.py`: `Simulator`, `Stepper`, and future internal state-related helpers
 - `trajectory.py`: `TrajectorySimulator`
 - `features.py`: `FeatureSimulator`
@@ -194,7 +197,10 @@ Expected contents:
 Why:
 
 - these modules all answer the same user question: how to run a model and what kind of result comes back
+- `SolverParams` belongs here because it configures the ODE solver itself: time-step bounds, tolerances, storage cadence, and related integration controls are part of how the simulation is carried out
+- those controls are distinct from `problem/`, which describes the dynamical system being solved, and from `runtime/`, which describes the OpenCL hardware/runtime used to execute the solver
 - `results.py` removes the current split where output-container classes live inside feature- or trajectory-specific files
+- a small `params.py` module keeps solver configuration adjacent to `Simulator` and `Stepper` without forcing a circular dependency between the transitional `solver.py` implementation file and `simulation/base.py`
 
 Later:
 
@@ -263,6 +269,7 @@ Specific consequence:
 - move output container classes into `simulation/results.py`
 - move observer-facing enums and params into `observers/`
 - move `ProblemInfo` out of `types.py`
+- move `SolverParams` out of `types.py` into `simulation/params.py`
 
 Why first:
 

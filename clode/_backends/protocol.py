@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from typing import Protocol, Sequence
 
-from ..types import ObserverParams, SolverParams
+from ..observers.types import ObserverParams
+from ..simulation.params import SolverParams
 
 
 class SimulatorBackend(Protocol):

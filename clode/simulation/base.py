@@ -1,4 +1,4 @@
 from ..solver import Simulator, Stepper
-from ..types import SolverParams
+from .params import SolverParams
 
 __all__ = ["Simulator", "SolverParams", "Stepper"]

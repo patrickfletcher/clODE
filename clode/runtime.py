@@ -5,8 +5,6 @@ from enum import IntEnum
 import os
 from typing import Any, Sequence
 
-from ._pyopencl.errors import PyOpenCLDependencyError
-
 _clode_root_dir: str = os.path.join(os.path.dirname(__file__), "kernels", "")
 _BACKEND_ENVVAR = "_CLODE_BACKEND"
 _DEFAULT_BACKEND = "pyopencl"
@@ -123,6 +121,8 @@ def _load_pyopencl() -> Any | None:
 def _require_pyopencl() -> Any:
     pyopencl = _load_pyopencl()
     if pyopencl is None:
+        from ._pyopencl.errors import PyOpenCLDependencyError
+
         raise PyOpenCLDependencyError(
             "pyopencl is required for this clODE installation. Install pyopencl into the active environment or reinstall the package with its default dependencies."
         )

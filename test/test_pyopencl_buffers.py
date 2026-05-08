@@ -6,7 +6,7 @@ import pytest
 pytest.importorskip("pyopencl")
 
 from clode._pyopencl import ArrayLayout, BufferManager, OpenCLRuntime, Precision, ProblemShape
-from clode.types import SolverParams
+from clode.simulation import SolverParams
 from test.core_numerics.helpers import TEST_DEVICE_ID, TEST_PLATFORM_ID
 
 

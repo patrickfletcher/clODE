@@ -4,59 +4,13 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import numpy as np
 
-# from numpy.typing import NDArray
-from numpy.lib import recfunctions as rfn
-
 from ._backends.factory import create_trajectory_backend
 from ._backends.protocol import TrajectoryBackend
 from .problem.python import OpenCLRhsEquation
 from .runtime import CLDeviceType, CLVendor, _clode_root_dir
 from .solver import Simulator, Stepper
-from .types import SolverParams
-
-
-# TODO: better even - use getitem?  trajectory["t"], trajectory["varname"], trajectory["dvar/dt"], ...
-class TrajectoryOutput:
-    def __init__(
-        self,
-        t: np.ndarray[Any, np.dtype[np.float64]],
-        x: np.ndarray[Any, np.dtype[np.float64]],
-        dx: np.ndarray[Any, np.dtype[np.float64]],
-        aux: np.ndarray[Any, np.dtype[np.float64]],
-        variable_names: list[str],
-        aux_names: list[str],
-    ) -> None:
-
-        self.t = t
-
-        x_dtype = np.dtype(
-            {"names": variable_names, "formats": [np.float64] * len(variable_names)}
-        )
-        self.x = rfn.unstructured_to_structured(x, dtype=x_dtype)
-        self.dx = rfn.unstructured_to_structured(dx, dtype=x_dtype)
-
-        if len(aux_names) > 0:
-            aux_dtype = np.dtype(
-                {"names": aux_names, "formats": [np.float64] * len(aux_names)}
-            )
-            self.aux = rfn.unstructured_to_structured(aux, dtype=aux_dtype)
-
-        self._variable_names = variable_names
-        self._aux_names = aux_names
-
-    def __repr__(self) -> str:
-        return f"TrajectoryOutput( length: {len(self.t)}, variable names: {self._variable_names}, aux variable names: {self._aux_names} )"
-
-    # helper to convert back to unstructured ndarray
-    # --> make this a class property decorator?
-    # alternatively: self.x.view(np.float64).reshape(-1,len(variables))?
-    def to_ndarray(self, slot: str, **kwargs):
-        if slot == "x":
-            return rfn.structured_to_unstructured(self.x, **kwargs)
-        elif slot == "dx":
-            return rfn.structured_to_unstructured(self.dx, **kwargs)
-        elif slot == "aux":
-            return rfn.structured_to_unstructured(self.aux, **kwargs)
+from .simulation.params import SolverParams
+from .simulation.results import TrajectoryOutput
 
 
 class TrajectorySimulator(Simulator):
