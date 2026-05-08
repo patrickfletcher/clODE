@@ -13,8 +13,10 @@ import numpy.typing as npt
 
 from ._backends.factory import RuntimeSelection, create_simulator_backend
 from ._backends.protocol import SimulatorBackend
-from ._backends.rhs import RhsSource, create_rhs_source, load_rhs_source
-from .function_converter import OpenCLConverter, OpenCLRhsEquation
+from .problem.definition import ProblemInfo
+from .problem.python import OpenCLConverter, OpenCLRhsEquation
+from .problem.source import RhsSource, create_rhs_source, load_rhs_source
+from .problem.xpp import convert_xpp_file
 from .runtime import (
     CLDeviceType,
     CLVendor,
@@ -25,8 +27,7 @@ from .runtime import (
     initialize_runtime,
     set_log_level,
 )
-from .types import ProblemInfo, SolverParams
-from .xpp_parser import convert_xpp_file
+from .types import SolverParams
 
 
 # TODO[API]: different steppers use different parameters subsets.

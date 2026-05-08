@@ -6,8 +6,9 @@ from typing import Sequence
 import numpy as np
 
 from .._backends.protocol import FeatureBackend, SimulatorBackend
-from .._backends.rhs import RhsSource
-from ..types import ObserverParams, ProblemInfo, SolverParams
+from ..problem.definition import ProblemInfo
+from ..problem.source import RhsSource
+from ..types import ObserverParams, SolverParams
 from .buffers import (
     ArrayLayout,
     BufferManager,

@@ -1,12 +1,16 @@
-from clode.features import FeatureSimulator, Observer, ObserverOutput
-from clode.function_converter import (
+from clode.observers import Observer, ObserverParams
+from clode.problem import (
     OpenCLConverter,
     OpenCLRhsEquation,
+    ProblemInfo,
     convert_str_to_opencl,
+    convert_xpp_file,
+    format_opencl_rhs,
+    read_ode_parameters,
 )
 
 # Import everything from opencl_builtins
-from clode.opencl_builtins import (
+from clode.problem.builtins import (
     acos,
     acosh,
     acospi,
@@ -74,10 +78,15 @@ from clode.runtime import (
     set_log_level,
     set_log_pattern,
 )
-from clode.solver import Simulator, Stepper
-from clode.trajectory import TrajectoryOutput, TrajectorySimulator
-from clode.types import ObserverParams, ProblemInfo, SolverParams
-from clode.xpp_parser import convert_xpp_file, format_opencl_rhs, read_ode_parameters
+from clode.simulation import (
+    FeatureSimulator,
+    ObserverOutput,
+    Simulator,
+    SolverParams,
+    Stepper,
+    TrajectoryOutput,
+    TrajectorySimulator,
+)
 
 __version__ = "0.10.0"
 

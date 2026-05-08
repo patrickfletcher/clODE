@@ -4,10 +4,10 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import TYPE_CHECKING
 
-from .._backends.rhs import RhsSource
+from ..problem.source import RhsSource
 
 if TYPE_CHECKING:
-    from ..types import ProblemInfo
+    from ..problem.definition import ProblemInfo
 
 
 PYOPENCL_BACKEND_VERSION = "1"

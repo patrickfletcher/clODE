@@ -9,7 +9,7 @@ from numpy.lib import recfunctions as rfn
 
 from ._backends.factory import create_trajectory_backend
 from ._backends.protocol import TrajectoryBackend
-from .function_converter import OpenCLRhsEquation
+from .problem.python import OpenCLRhsEquation
 from .runtime import CLDeviceType, CLVendor, _clode_root_dir
 from .solver import Simulator, Stepper
 from .types import SolverParams

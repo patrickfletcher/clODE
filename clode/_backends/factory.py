@@ -8,8 +8,9 @@ from .._pyopencl.executors import (
     PyOpenCLTransientBackend,
 )
 from .._pyopencl.runtime import OpenCLRuntime
+from ..problem.definition import ProblemInfo
 from ..runtime import CLDeviceType, CLVendor, OpenCLResource, resolve_backend_name
-from ..types import ObserverParams, ProblemInfo
+from ..types import ObserverParams
 from .protocol import FeatureBackend, SimulatorBackend, TrajectoryBackend
 from .rhs import RhsSource
 

@@ -4,7 +4,8 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from ..types import ObserverParams, ProblemInfo
+from ..problem.definition import ProblemInfo
+from ..types import ObserverParams
 from .models import Precision, ProblemShape
 from .runtime import OpenCLRuntime
 from .structs import MatchedStruct, match_struct_dtype
