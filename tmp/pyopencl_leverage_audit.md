@@ -7,7 +7,7 @@ clODE is using PyOpenCL at the right level for its custom kernels, but there are
 ## Where clODE is already using PyOpenCL well
 
 - Raw `Program`, `Kernel`, `Buffer`, `Context`, and `CommandQueue` usage is appropriate for the custom solver, trajectory, and observer kernels.
-- `pyopencl.tools.match_dtype_to_c_struct` is already being used correctly for device-matched struct layout in `clode/_pyopencl/structs.py`.
+- `pyopencl.tools.match_dtype_to_c_struct` is already being used correctly for device-matched struct layout in `clode/_opencl/structs.py`.
 - Direct kernel control keeps the performance-critical integration path in clODE's hands, which PyOpenCL is meant to enable rather than replace.
 
 ## High-value leverage points
@@ -24,7 +24,7 @@ Recommendation:
 
 ### 2. Memory pools
 
-`clode/_pyopencl/buffers.py` currently performs raw buffer allocation and manual reuse decisions. PyOpenCL already provides `ImmediateAllocator`, `MemoryPool`, `SVMAllocator`, and `SVMPool`.
+`clode/_opencl/buffers.py` currently performs raw buffer allocation and manual reuse decisions. PyOpenCL already provides `ImmediateAllocator`, `MemoryPool`, `SVMAllocator`, and `SVMPool`.
 
 Recommendation:
 
@@ -51,7 +51,7 @@ Recommendation:
 
 ### 5. Testing and device parametrization
 
-PyOpenCL ships `pytest_generate_tests_for_pyopencl`, which can help fan tests out across devices and platforms.
+PyOpenCL ships a pytest parametrization helper that can help fan tests out across devices and platforms.
 
 Recommendation:
 
@@ -78,8 +78,8 @@ Recommendation:
 
 ## Places where clODE still risks reinventing the wheel
 
-- `clode/_pyopencl/program_cache.py` should stay a small bundle cache, not become a parallel build-cache subsystem.
-- `clode/_pyopencl/buffers.py` should not drift into a homemade memory-pool framework if PyOpenCL's pool APIs are sufficient.
+- `clode/_opencl/program_cache.py` should stay a small bundle cache, not become a parallel build-cache subsystem.
+- `clode/_opencl/buffers.py` should not drift into a homemade memory-pool framework if PyOpenCL's pool APIs are sufficient.
 - Device diagnostics should use `pyopencl.characterize` where possible instead of growing ad hoc capability logic.
 - Large host-zero uploads should be rechecked against `enqueue_fill_buffer`.
 

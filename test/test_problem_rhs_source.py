@@ -2,7 +2,7 @@ from pathlib import Path
 
 import clode
 
-from clode._backends.rhs import compute_rhs_digest
+from clode.problem import compute_rhs_digest
 from test.core_numerics.helpers import (
     STABLE_LINEAR_PARAMETERS,
     STABLE_LINEAR_VARIABLES,

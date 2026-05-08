@@ -3,26 +3,25 @@ from __future__ import annotations
 from ..observers.types import ObserverParams
 from ..problem.definition import ProblemInfo
 from ..problem.source import RhsSource
-from ..runtime import OpenCLResource, resolve_backend_name
 from ..runtime.selection import RuntimeSelection
 from ..simulation._protocols import FeatureBackend, SimulatorBackend, TrajectoryBackend
 from .executors import (
-    PyOpenCLFeatureBackend,
-    PyOpenCLTrajectoryBackend,
-    PyOpenCLTransientBackend,
+    OpenCLFeatureExecutor,
+    OpenCLTrajectoryExecutor,
+    OpenCLTransientExecutor,
 )
 from .runtime import OpenCLRuntime
 
 
 def _create_opencl_runtime(runtime_selection: RuntimeSelection | None) -> OpenCLRuntime:
     if runtime_selection is None:
-        raise ValueError("PyOpenCL backend requires runtime selection metadata")
+        raise ValueError("OpenCL execution requires runtime selection metadata")
 
     device_id = runtime_selection.device_id
     if runtime_selection.device_ids is not None:
         if len(runtime_selection.device_ids) != 1:
             raise ValueError(
-                "PyOpenCL backend currently supports exactly one selected device"
+                "OpenCL execution currently supports exactly one selected device"
             )
         device_id = runtime_selection.device_ids[0]
 
@@ -39,14 +38,10 @@ def create_simulator_backend(
     rhs_source: RhsSource,
     stepper: str,
     single_precision: bool,
-    runtime: OpenCLResource,
     clode_root: str,
     runtime_selection: RuntimeSelection | None = None,
-    backend_name: str | None = None,
 ) -> SimulatorBackend:
-    del runtime
-    resolve_backend_name(backend_name)
-    return PyOpenCLTransientBackend(
+    return OpenCLTransientExecutor(
         problem_info,
         rhs_source,
         stepper,
@@ -61,14 +56,10 @@ def create_trajectory_backend(
     rhs_source: RhsSource,
     stepper: str,
     single_precision: bool,
-    runtime: OpenCLResource,
     clode_root: str,
     runtime_selection: RuntimeSelection | None = None,
-    backend_name: str | None = None,
 ) -> TrajectoryBackend:
-    del runtime
-    resolve_backend_name(backend_name)
-    return PyOpenCLTrajectoryBackend(
+    return OpenCLTrajectoryExecutor(
         problem_info,
         rhs_source,
         stepper,
@@ -85,14 +76,10 @@ def create_feature_backend(
     observer: str,
     observer_params: ObserverParams,
     single_precision: bool,
-    runtime: OpenCLResource,
     clode_root: str,
     runtime_selection: RuntimeSelection | None = None,
-    backend_name: str | None = None,
 ) -> FeatureBackend:
-    del runtime
-    resolve_backend_name(backend_name)
-    return PyOpenCLFeatureBackend(
+    return OpenCLFeatureExecutor(
         problem_info,
         rhs_source,
         stepper,

@@ -1,26 +1,26 @@
 from __future__ import annotations
 
 
-class PyOpenCLBackendError(RuntimeError):
+class OpenCLBackendError(RuntimeError):
     pass
 
 
-class PyOpenCLDependencyError(PyOpenCLBackendError):
+class OpenCLDependencyError(OpenCLBackendError):
     pass
 
 
-class PyOpenCLValidationError(PyOpenCLBackendError, ValueError):
+class OpenCLValidationError(OpenCLBackendError, ValueError):
     pass
 
 
-class RhsValidationError(PyOpenCLValidationError):
+class RhsValidationError(OpenCLValidationError):
     def __init__(self, message: str, origin_label: str | None = None) -> None:
         detail = message if origin_label is None else f"{message} (rhs={origin_label})"
         super().__init__(detail)
         self.origin_label = origin_label
 
 
-class RegistryValidationError(PyOpenCLValidationError):
+class RegistryValidationError(OpenCLValidationError):
     pass
 
 
@@ -36,7 +36,7 @@ class UnsupportedObserverError(RegistryValidationError):
         self.observer_name = observer_name
 
 
-class DoublePrecisionNotSupportedError(PyOpenCLBackendError):
+class DoublePrecisionNotSupportedError(OpenCLBackendError):
     def __init__(self, device_name: str | None = None) -> None:
         detail = "Selected device does not support double precision"
         if device_name is not None:
@@ -45,7 +45,7 @@ class DoublePrecisionNotSupportedError(PyOpenCLBackendError):
         self.device_name = device_name
 
 
-class BuildError(PyOpenCLBackendError):
+class BuildError(OpenCLBackendError):
     def __init__(
         self,
         message: str,

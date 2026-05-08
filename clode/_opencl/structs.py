@@ -8,7 +8,7 @@ import numpy as np
 from ..observers.types import ObserverParams
 from ..simulation.params import SolverParams
 from .models import Precision
-from .runtime import OpenCLRuntime, _require_pyopencl
+from .runtime import OpenCLRuntime, _require_opencl_binding
 
 
 @dataclass(frozen=True, slots=True)
@@ -62,10 +62,10 @@ def _match_struct(
     if cached is not None:
         return MatchedStruct(name, cached[0], cached[1])
 
-    pyopencl = _require_pyopencl()
+    opencl_binding = _require_opencl_binding()
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        matched_dtype, c_declaration = pyopencl.tools.match_dtype_to_c_struct(
+        matched_dtype, c_declaration = opencl_binding.tools.match_dtype_to_c_struct(
             runtime.device, name, base_dtype
         )
     runtime.struct_cache[name] = (matched_dtype, c_declaration)

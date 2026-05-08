@@ -10,8 +10,8 @@ import pytest
 
 pyopencl = pytest.importorskip("pyopencl")
 
-import clode.runtime as runtime_module
-from clode._pyopencl import BuildError, KernelKind, OpenCLRuntime, Precision, ProblemShape, SourceBuilder
+from clode._opencl import BuildError, KernelKind, OpenCLRuntime, Precision, ProblemShape, SourceBuilder
+from clode.problem import load_rhs_source
 from clode.runtime import _clode_root_dir
 from test.core_numerics.helpers import TEST_DEVICE_ID, TEST_PLATFORM_ID, model_path
 
@@ -27,8 +27,6 @@ def _explicit_runtime_kwargs() -> dict[str, int]:
 
 
 def _transient_source_bundle():
-    from clode._backends.rhs import load_rhs_source
-
     builder = SourceBuilder(KERNEL_ROOT)
     return builder.build(
         kernel_kind=KernelKind.TRANSIENT,
@@ -81,11 +79,6 @@ def test_program_cache_surfaces_build_failures_with_source_and_options() -> None
     assert error.build_log.strip() != ""
 
 
-def test_explicit_cpp_backend_is_rejected() -> None:
-    with pytest.raises(ValueError, match=r"Supported backends: \['pyopencl'\]"):
-        runtime_module.resolve_backend_name("cpp")
-
-
 def test_default_public_path_does_not_import_cpp_wrapper() -> None:
     repo_root = Path(__file__).resolve().parents[1]
     script = textwrap.dedent(
@@ -105,8 +98,6 @@ def test_default_public_path_does_not_import_cpp_wrapper() -> None:
             return real_import(name, globals, locals, fromlist, level)
 
         builtins.__import__ = guarded_import
-
-        os.environ.pop("_CLODE_BACKEND", None)
 
         import clode
 
@@ -133,14 +124,12 @@ def test_default_public_path_does_not_import_cpp_wrapper() -> None:
         )
         """
     )
-    env = os.environ.copy()
-    env.pop("_CLODE_BACKEND", None)
     completed = subprocess.run(
         [sys.executable, "-c", script],
         check=True,
         capture_output=True,
         cwd=repo_root,
-        env=env,
+        env=os.environ.copy(),
         text=True,
     )
     payload = json.loads(completed.stdout.strip().splitlines()[-1])

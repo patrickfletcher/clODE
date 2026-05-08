@@ -2,8 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from clode._backends.rhs import create_rhs_source, load_rhs_source
-from clode._pyopencl import (
+from clode._opencl import (
     KernelKind,
     KernelRegistry,
     Precision,
@@ -13,6 +12,7 @@ from clode._pyopencl import (
     UnsupportedObserverError,
     UnsupportedStepperError,
 )
+from clode.problem import create_rhs_source, load_rhs_source
 from clode.runtime import _clode_root_dir
 from test.core_numerics.helpers import model_path
 

@@ -6,7 +6,7 @@ import re
 
 from .errors import RhsValidationError, UnsupportedObserverError
 from .models import (
-    PYOPENCL_BACKEND_VERSION,
+    OPENCL_BACKEND_VERSION,
     BuildKey,
     KernelKind,
     Precision,
@@ -47,7 +47,7 @@ class SourceBuilder:
         kernel_tree_digest = self._compute_kernel_tree_digest()
 
         build_key = BuildKey(
-            backend_version=PYOPENCL_BACKEND_VERSION,
+            backend_version=OPENCL_BACKEND_VERSION,
             kernel_kind=kernel_kind,
             precision=precision,
             stepper_name=stepper_name,

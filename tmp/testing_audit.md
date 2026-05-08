@@ -2,11 +2,11 @@
 
 ## Bottom line
 
-The current bundle and marker taxonomy is a good base. The biggest missing piece is a middle layer between full end-to-end simulator tests and the small host-side `_pyopencl` support tests. That missing layer should be built around tiny synthetic models and tiny synthetic kernels.
+The current bundle and marker taxonomy is a good base. The biggest missing piece is a middle layer between full end-to-end simulator tests and the small host-side `_opencl` support tests. That missing layer should be built around tiny synthetic models and tiny synthetic kernels.
 
 ## What is already working well
 
-- `tools/run_test_bundle.py` already gives the suite a useful domain taxonomy: `smoke`, `frontend`, `runtime_api`, `numerics`, and `pyopencl_internal`.
+- `tools/run_test_bundle.py` already gives the suite a useful domain taxonomy: `smoke`, `frontend`, `runtime_api`, `numerics`, and `opencl_internal`.
 - `test/conftest.py` centrally injects markers by file and path, which keeps selection logic out of individual test modules.
 - `test/core_numerics/` already has the right shape for authoritative numerical regressions: small models, exact references, and reusable helpers.
 - CI already separates a broad cross-platform smoke matrix from a narrower OpenCL-backed release gate.
@@ -27,7 +27,7 @@ Keep the current bundles, but gradually organize tests into these layers:
 - `runtime_api`: public runtime selection, simulator contracts, defaults, logging, and backend-facing public behavior.
 - `core_numerics`: authoritative correctness tests against exact solutions or fixed expectations.
 - `kernel_components` or `opencl_components`: new middle layer for build options, struct layout, buffer semantics, observer storage behavior, and compile-time feature toggles.
-- `pyopencl_internal`: host-side support-layer tests that are genuinely internal to the PyOpenCL implementation.
+- `opencl_internal`: host-side support-layer tests that are genuinely internal to the OpenCL implementation.
 - `performance`: explicitly non-gating throughput, allocation, and compile-latency checks.
 
 The key point is not a perfect directory tree. The key point is separating correctness, API, component, and performance intent more clearly.
@@ -68,7 +68,7 @@ Rule of thumb:
 ## CI guidance
 
 - Keep the current `release = frontend + runtime_api + numerics` gate narrow and meaningful.
-- Do not put `pyopencl_internal` or `performance` into the default release gate.
+- Do not put `opencl_internal` or `performance` into the default release gate.
 - Add a new component-oriented bundle first for manual or Linux OpenCL validation, then decide later whether parts of it belong in the gate.
 - Consider PyOpenCL's own pytest parametrization helpers for signal-only multi-device coverage.
 

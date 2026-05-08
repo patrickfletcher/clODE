@@ -123,7 +123,6 @@ class FeatureSimulator(Simulator):
 			self._observer_type.value,
 			self._op,
 			self._single_precision,
-			self._runtime,
 			_clode_root_dir,
 			runtime_selection=self._runtime_selection,
 		)

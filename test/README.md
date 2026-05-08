@@ -7,16 +7,16 @@ The files are not being physically moved into a final long-term directory layout
 
 - `smoke`: driver-independent packaging and frontend smoke checks.
 - `frontend`: user-facing conversion and frontend integration tests.
-- `runtime_api`: public runtime, backend selection, and simulator contract tests.
+- `runtime_api`: public runtime and simulator contract tests.
 - `numerics`: exact-solution and fixed-expectation numerical regressions, including `test/core_numerics/`.
-- `pyopencl_internal`: focused tests for internal PyOpenCL support layers.
+- `opencl_internal`: focused tests for internal OpenCL support layers.
 
 ## Release gating
 
 - `smoke` runs on Linux, macOS, and Windows.
 - `release` is the OpenCL-backed release gate and currently combines `frontend`, `runtime_api`, and `numerics`.
 - `opencl` is kept as a compatibility alias for `release`.
-- `extended` is a convenience alias for the internal PyOpenCL checks used for manual verification.
+- `extended` is a convenience alias for the internal OpenCL checks used for manual verification.
 
 ## Running by bundle
 
@@ -25,7 +25,7 @@ The files are not being physically moved into a final long-term directory layout
 - `python tools/run_test_bundle.py runtime_api`
 - `python tools/run_test_bundle.py numerics`
 - `python tools/run_test_bundle.py release`
-- `python tools/run_test_bundle.py pyopencl_internal`
+- `python tools/run_test_bundle.py opencl_internal`
 - `python tools/run_test_bundle.py extended`
 
 ## Running by marker

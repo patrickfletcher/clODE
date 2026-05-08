@@ -11,7 +11,6 @@ from .selection import (
     OpenCLResource,
     _clode_root_dir,
     initialize_runtime,
-    resolve_backend_name,
 )
 
 __all__ = [
@@ -27,7 +26,6 @@ __all__ = [
     "initialize_runtime",
     "print_opencl",
     "query_opencl",
-    "resolve_backend_name",
     "set_log_level",
     "set_log_pattern",
 ]

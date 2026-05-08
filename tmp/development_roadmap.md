@@ -132,8 +132,8 @@ This is worthwhile, but it is lower leverage than the items above.
 Key tasks:
 
 - decide whether `device_ids` should eventually be removed or made real
-- decide later whether `_backends/` still earns its keep in a single-backend package
-- decide later whether `_pyopencl/` should be renamed around role rather than implementation history
+- decide later whether the remaining flat public compatibility barrels still earn their keep
+- keep future runtime/package cleanup scoped to real API clarity rather than historical naming debt
 
 Why later:
 

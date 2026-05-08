@@ -37,13 +37,13 @@ This is a layout and semantics plan only. It does not require immediate user-fac
 - `function_converter.py`, `xpp_parser.py`, and `opencl_builtins.py` are really one family: RHS authoring and ingestion.
 - `trajectory.py` and `features.py` each mix simulator classes with output container classes.
 - `_backends/` still names a choice the package no longer intends to offer.
-- `_pyopencl/` names the current binding library rather than the role those modules play in the package.
+- the previous binding-named internal package described implementation history rather than current role.
 
 ## Options considered
 
 ### Option A: minimal cleanup
 
-Keep the flat public root, keep `_pyopencl/`, and only remove `_backends/`.
+Keep the flat public root, keep the old binding-named internal package, and only remove `_backends/`.
 
 Pros:
 
@@ -230,7 +230,7 @@ Expected contents:
 
 - runtime ownership, compilation, buffers, struct layout, observer metadata, executors
 
-Why rename `_pyopencl/` to `_opencl`:
+Why use `_opencl` as the canonical internal name:
 
 - the role is "internal OpenCL execution layer", not "publicly interesting choice of host binding"
 - PyOpenCL remains the implementation detail, but no other binding is planned
@@ -247,7 +247,7 @@ Current status:
 
 - `_backends/` no longer acts as a live architectural seam for simulation/runtime code
 - canonical execution ownership now lives in `_opencl/`
-- `_backends/rhs.py` and the historical factory/protocol paths can remain only as compatibility wrappers until downstream imports and tests stop needing them
+- the historical backend-shim and binding-named compatibility layers have been removed
 
 Specific consequence:
 
@@ -294,13 +294,14 @@ Why first:
 
 - move `_backends/rhs.py` into `problem/source.py`
 - remove or inline `_backends/factory.py`
-- move `_pyopencl/` to `_opencl/`
+- finish the internal rename to `_opencl/`
 
 Status after the current migration:
 
 - `problem/`, `simulation/`, `observers/`, and `runtime/` now own the public semantic surface
 - `_opencl/` is now the canonical internal execution package
-- `_pyopencl/` has been reduced to a compatibility package-level shim
+- observer catalog logic now lives in `observers/metadata.py`
+- compatibility layers and legacy internal names have been removed from the live package
 
 ### Phase 5: internal clustering refinements after the first move lands
 
@@ -318,7 +319,7 @@ Status after the current migration:
 ## Consensus points to confirm before implementation
 
 1. Use public role-based subpackages rather than keeping a flat root package.
-2. Rename `_pyopencl/` to `_opencl/` as the long-term internal execution package.
+2. Use `_opencl/` as the long-term internal execution package.
 3. Remove `_backends/` as a named architectural concept during the migration.
 4. Keep `clode.__init__` as a stable compatibility barrel during the transition.
 5. Treat `problem/`, `simulation/`, `runtime/`, and `observers/` as the main public semantic areas.

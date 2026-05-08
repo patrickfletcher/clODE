@@ -97,10 +97,10 @@ addopts = "-ra"
 markers = [
     "smoke: driver-independent packaging and frontend smoke checks",
     "frontend: frontend-facing conversion or API-surface tests",
-    "runtime_api: public runtime and backend contract tests",
+    "runtime_api: public runtime and simulator contract tests",
     "numerics: numerical regression tests against exact solutions or fixed expectations",
     "core_numerics: authoritative kernel-level numerical regression tests",
-    "pyopencl_internal: focused tests for internal PyOpenCL support layers",
+    "opencl_internal: focused tests for internal OpenCL support layers",
     "release_gate: tests that should pass before publishing a release",
     "requires_opencl: tests that require an OpenCL runtime on the host",
     "slow: reserved marker for slower tests",

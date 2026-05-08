@@ -17,12 +17,12 @@ import pyopencl as cl
 import pyopencl._cl as cl_module
 import pyopencl.tools as cl_tools
 
-from clode._pyopencl.models import Precision, ProblemShape
-from clode._pyopencl.observer_metadata import (
+from clode._opencl.models import Precision, ProblemShape
+from clode._opencl.observer_metadata import (
     _observer_data_base_dtype,
     _observer_data_struct_name,
 )
-from clode.types import ProblemInfo
+from clode.problem import ProblemInfo
 
 ENV_VARS = (
     "CLODE_TEST_PLATFORM_ID",

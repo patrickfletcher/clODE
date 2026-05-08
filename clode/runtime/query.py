@@ -60,23 +60,23 @@ class PlatformInfo:
         )
 
 
-def _load_pyopencl() -> Any | None:
+def _load_opencl_binding() -> Any | None:
     try:
-        import pyopencl as cl
+        import pyopencl as opencl_binding
     except (ImportError, OSError):
         return None
-    return cl
+    return opencl_binding
 
 
-def _require_pyopencl() -> Any:
-    pyopencl = _load_pyopencl()
-    if pyopencl is None:
-        from .._opencl.errors import PyOpenCLDependencyError
+def _require_opencl_binding() -> Any:
+    opencl_binding = _load_opencl_binding()
+    if opencl_binding is None:
+        from .._opencl.errors import OpenCLDependencyError
 
-        raise PyOpenCLDependencyError(
+        raise OpenCLDependencyError(
             "pyopencl is required for this clODE installation. Install pyopencl into the active environment or reinstall the package with its default dependencies."
         )
-    return pyopencl
+    return opencl_binding
 
 
 def _double_support_from_device(device: Any) -> bool:
@@ -107,28 +107,10 @@ def _device_type_str(device_type: int) -> str:
     return "|".join(parts) if parts else str(device_type)
 
 
-def _device_info_from_cpp(device_info: Any) -> DeviceInfo:
-    return DeviceInfo(
-        name=str(device_info.name),
-        vendor=str(device_info.vendor),
-        version=str(device_info.version),
-        device_type=int(device_info.device_type),
-        device_type_str=str(device_info.device_type_str),
-        compute_units=int(device_info.compute_units),
-        max_clock=int(device_info.max_clock),
-        max_work_group_size=int(device_info.max_work_group_size),
-        device_memory_size=int(device_info.device_memory_size),
-        max_memory_alloc_size=int(device_info.max_memory_alloc_size),
-        extensions=str(device_info.extensions),
-        double_support=bool(device_info.double_support),
-        device_available=bool(device_info.device_available),
-    )
-
-
-def _query_opencl_pyopencl() -> list[PlatformInfo]:
-    pyopencl = _require_pyopencl()
+def _query_opencl_runtime() -> list[PlatformInfo]:
+    opencl_binding = _require_opencl_binding()
     platforms: list[PlatformInfo] = []
-    for platform in pyopencl.get_platforms():
+    for platform in opencl_binding.get_platforms():
         device_info: list[DeviceInfo] = []
         for device in platform.get_devices():
             device_type = int(getattr(device, "type", 0))
@@ -189,23 +171,17 @@ def _emit_opencl_report(platforms: list[PlatformInfo]) -> None:
 
 
 def query_opencl() -> list[PlatformInfo]:
-    from .selection import resolve_backend_name
-
-    resolve_backend_name()
-    return _query_opencl_pyopencl()
+    return _query_opencl_runtime()
 
 
 def print_opencl() -> None:
-    from .selection import resolve_backend_name
-
     old_level = get_log_level()
     if old_level == LogLevel.off:
         return
     if old_level > LogLevel.info:
         set_log_level(LogLevel.info)
     try:
-        resolve_backend_name()
-        _emit_opencl_report(_query_opencl_pyopencl())
+        _emit_opencl_report(_query_opencl_runtime())
     finally:
         if old_level > LogLevel.info:
             set_log_level(old_level)
@@ -214,8 +190,6 @@ def print_opencl() -> None:
 __all__ = [
     "DeviceInfo",
     "PlatformInfo",
-    "_load_pyopencl",
-    "_require_pyopencl",
     "print_opencl",
     "query_opencl",
 ]

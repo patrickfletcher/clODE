@@ -10,7 +10,7 @@ if TYPE_CHECKING:
     from ..problem.definition import ProblemInfo
 
 
-PYOPENCL_BACKEND_VERSION = "1"
+OPENCL_BACKEND_VERSION = "1"
 
 
 class Precision(str, Enum):

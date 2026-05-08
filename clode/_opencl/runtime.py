@@ -5,7 +5,7 @@ from typing import Any
 
 from clode.runtime import CLDeviceType, CLVendor
 
-from .errors import DoublePrecisionNotSupportedError, PyOpenCLDependencyError
+from .errors import DoublePrecisionNotSupportedError, OpenCLDependencyError
 
 try:
     import pyopencl as cl
@@ -13,10 +13,10 @@ except (ImportError, OSError):
     cl = None
 
 
-def _require_pyopencl() -> Any:
+def _require_opencl_binding() -> Any:
     if cl is None:
-        raise PyOpenCLDependencyError(
-            "pyopencl is required for the PyOpenCL backend. Install pyopencl into the active environment or reinstall clode with its default dependencies."
+        raise OpenCLDependencyError(
+            "pyopencl is required for clODE's OpenCL runtime. Install pyopencl into the active environment or reinstall clode with its default dependencies."
         )
     return cl
 
@@ -70,8 +70,8 @@ class OpenCLRuntime:
         platform_id: int | None = None,
         device_id: int | None = None,
     ) -> OpenCLRuntime:
-        pyopencl = _require_pyopencl()
-        platforms = pyopencl.get_platforms()
+        opencl_binding = _require_opencl_binding()
+        platforms = opencl_binding.get_platforms()
 
         if platform_id is not None:
             if device_type is not None:
@@ -117,9 +117,9 @@ class OpenCLRuntime:
         platform_id: int,
         device_id: int,
     ) -> OpenCLRuntime:
-        pyopencl = _require_pyopencl()
-        context = pyopencl.Context(devices=[device])
-        queue = pyopencl.CommandQueue(context)
+        opencl_binding = _require_opencl_binding()
+        context = opencl_binding.Context(devices=[device])
+        queue = opencl_binding.CommandQueue(context)
         return cls(context, queue, platform, device, platform_id, device_id)
 
     def get_double_support(self) -> bool:

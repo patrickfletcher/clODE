@@ -6,13 +6,11 @@ import os
 from typing import Any, Sequence
 
 from .logging import LogLevel, get_log_level
-from .query import _emit_opencl_report, _query_opencl_pyopencl
+from .query import _emit_opencl_report, _query_opencl_runtime
 
 _clode_root_dir: str = os.path.join(
     os.path.dirname(os.path.dirname(__file__)), "kernels", ""
 )
-_BACKEND_ENVVAR = "_CLODE_BACKEND"
-_DEFAULT_BACKEND = "pyopencl"
 
 
 class CLDeviceType(IntEnum):
@@ -42,19 +40,6 @@ class RuntimeSelection:
 
 _DEVICE_TYPE_VALUES = {member.value for member in CLDeviceType}
 _VENDOR_VALUES = {member.value for member in CLVendor}
-
-
-def resolve_backend_name(requested_backend: str | None = None) -> str:
-    backend_name = (
-        requested_backend
-        if requested_backend is not None
-        else os.getenv(_BACKEND_ENVVAR, _DEFAULT_BACKEND)
-    )
-    if backend_name != "pyopencl":
-        raise ValueError(
-            f"Unsupported clODE backend '{backend_name}'. Supported backends: ['pyopencl']"
-        )
-    return backend_name
 
 
 def _coerce_device_type(device_type: CLDeviceType | int | None) -> CLDeviceType | None:
@@ -189,7 +174,6 @@ class OpenCLResource:
             device_id,
             device_ids,
         )
-        resolve_backend_name()
         self._opencl_runtime: Any | None = None
         self._initialize_opencl_runtime()
 
@@ -199,7 +183,7 @@ class OpenCLResource:
         if self._device_ids is not None:
             if len(self._device_ids) != 1:
                 raise ValueError(
-                    "PyOpenCL backend currently supports exactly one selected device"
+                    "OpenCL execution currently supports exactly one selected device"
                 )
             self._device_id = self._device_ids[0]
 
@@ -227,7 +211,7 @@ class OpenCLResource:
         selected_device_id = 0 if self._device_id is None else self._device_id
         if device_id not in {0, selected_device_id}:
             raise ValueError(
-                "PyOpenCL runtime resource is bound to a single selected device"
+                "OpenCL runtime resource is bound to a single selected device"
             )
 
     def get_device_cl_version(self, device_id: int) -> str:
@@ -245,7 +229,7 @@ class OpenCLResource:
     def print_devices(self) -> None:
         if get_log_level() == LogLevel.off:
             return
-        _emit_opencl_report(_query_opencl_pyopencl())
+        _emit_opencl_report(_query_opencl_runtime())
 
 
 def initialize_runtime(
@@ -270,5 +254,4 @@ __all__ = [
     "OpenCLResource",
     "_clode_root_dir",
     "initialize_runtime",
-    "resolve_backend_name",
 ]

@@ -4,7 +4,7 @@ import pytest
 
 pytest.importorskip("pyopencl")
 
-from clode._pyopencl import (
+from clode._opencl import (
     OpenCLRuntime,
     Precision,
     get_observer_params_struct,

@@ -10,8 +10,10 @@ This audit is intentionally narrower than the earlier module-layout plan. The qu
 
 - Public semantic ownership now lives in `clode.problem`, `clode.simulation`, `clode.observers`, and `clode.runtime`.
 - Internal execution ownership now lives in `clode._opencl`.
-- `clode._pyopencl` is now only a compatibility package-level shim.
-- `_backends/` is no longer used as a live simulation/runtime seam; only compatibility wrappers remain.
+- The observer feature-name and two-pass catalog logic now lives in `clode.observers.metadata`.
+- The old binding-named compatibility package and `_backends/` have been removed.
+- The runtime package no longer re-exports or depends on backend-selection compatibility helpers.
+- Historical `PyOpenCL...` symbol names inside `_opencl` have been retired in favor of `OpenCL...` names.
 
 ## Confirmed Good Boundaries
 
@@ -31,30 +33,27 @@ These public modules also look correctly scoped after the refactor:
 - `observers/*`: observer enum and observer parameter schema.
 - `runtime/*`: public runtime/device selection, querying, and logging.
 
-## Real Remaining Candidates
+## Remaining Candidates
 
 ### 1. `clode._opencl.observer_metadata`
 
 Status:
 
-- this is the strongest remaining boundary question
+- the strongest boundary question from the previous audit has now been partially resolved
 
 Why it is mixed:
 
 - part of the file is clearly observer-domain logic: per-observer feature naming, count logic, and observer-specific data-shape decisions
 - part of the file is clearly execution-layer logic: matching observer data structs against OpenCL layouts for a specific runtime and precision
 
-Recommendation:
+Completed change:
 
-- do not move the whole file into `observers/`
-- instead, split it in a future pass:
-  - pure observer catalog/name/schema logic into `clode.observers` (likely `definitions.py` or a new `metadata.py`)
-  - runtime/precision-specific struct matching stays in `_opencl/`
+- pure observer catalog/name/two-pass logic has been moved into `clode.observers.metadata`
+- runtime/precision-specific struct matching remains in `_opencl/observer_metadata.py`
 
 Reason:
 
-- moving the whole module outward would leak OpenCL struct-layout concerns into the public observer namespace
-- keeping the whole module inward hides observer semantics that are not actually execution-specific
+- this keeps OpenCL struct-layout concerns out of the public observer namespace without hiding the observer catalog itself
 
 ### 2. `clode._opencl.registry`
 
@@ -80,55 +79,19 @@ Reason:
 
 Status:
 
-- package ownership is now semantic, but several internal symbol names still reflect the previous package name
+- resolved in the current follow-up pass
 
-Examples:
-
-- `PyOpenCLTransientBackend`
-- `PyOpenCLFeatureBackend`
-- `PYOPENCL_BACKEND_VERSION`
-- `PyOpenCLDependencyError`
-
-Recommendation:
-
-- no urgent correctness issue
-- migrate callers and tests toward the new canonical `_opencl` aliases first, then decide whether the old symbol names should be retired or kept indefinitely as compatibility aliases
-
-Reason:
-
-- this is naming debt, not architectural debt
-- removing it immediately would add churn without improving the module boundary itself
-
-### 4. Public re-export of `_load_pyopencl` and `_require_pyopencl`
+### 4. Public re-export of binding-loader helpers
 
 Status:
 
-- these remain reachable from `clode.runtime` via `runtime/__init__.py`
-
-Recommendation:
-
-- likely safe to keep for now because they are underscore-prefixed and already clearly internal
-- later, consider stopping the re-export from `clode.runtime.__init__` if there is no real downstream use
-
-Reason:
-
-- the functions are binding-specific implementation helpers, not part of the semantic public runtime surface
+- resolved in the current follow-up pass; these helpers are no longer re-exported from `clode.runtime`
 
 ### 5. Compatibility packages still present
 
 Status:
 
-- `clode._pyopencl` remains as a package-level shim
-- `_backends/` remains for compatibility, primarily `rhs.py` and historical factory/protocol imports
-
-Recommendation:
-
-- keep for now
-- remove only after internal tests/docs and any downstream imports stop relying on them
-
-Reason:
-
-- these are migration tails, not semantic placement mistakes
+- resolved in the current follow-up pass; both compatibility packages have been removed
 
 ## Non-Candidates
 
@@ -141,13 +104,12 @@ These items may look close to public semantics, but should stay internal:
 
 ## Suggested Follow-up Order
 
-1. If another semantic pass is desired, split `observer_metadata.py` rather than moving it wholesale.
-2. After compatibility appetite is clearer, decide whether `_pyopencl` and `_backends` shims can be removed.
-3. Only after that, decide whether historical `PyOpenCL...` symbol names should be retired in favor of `_opencl` aliases.
+1. Revisit `clode._opencl.registry` only if stepper or observer catalog data needs a shared declarative source of truth.
+2. If observer design work continues, separate public observer definitions further from runtime struct-layout concerns.
 
 ## Validation Snapshot
 
 Validation run after this refactor:
 
 - targeted pytest bundle covering backend-rhs, runtime, `_opencl` internals, and simulation/backend contracts: `41 passed`
-- smoke bundle: `21 passed`
+- smoke bundle: `22 passed`

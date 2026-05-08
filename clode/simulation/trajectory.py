@@ -87,7 +87,6 @@ class TrajectorySimulator(Simulator):
 			self._rhs_source,
 			self._stepper.value,
 			self._single_precision,
-			self._runtime,
 			_clode_root_dir,
 			runtime_selection=self._runtime_selection,
 		)

@@ -1,16 +1,11 @@
-from pathlib import Path
-
 import numpy as np
 import pytest
 
 pytest.importorskip("pyopencl")
 
-from clode._pyopencl import ArrayLayout, BufferManager, OpenCLRuntime, Precision, ProblemShape
+from clode._opencl import ArrayLayout, BufferManager, OpenCLRuntime, Precision, ProblemShape
 from clode.simulation import SolverParams
 from test.core_numerics.helpers import TEST_DEVICE_ID, TEST_PLATFORM_ID
-
-
-KERNEL_ROOT = Path(__file__).resolve().parents[1] / "clode" / "cpp"
 
 
 def _explicit_runtime_kwargs() -> dict[str, int]:

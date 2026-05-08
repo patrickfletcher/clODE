@@ -2,27 +2,27 @@ from dataclasses import replace
 
 import pytest
 
-from clode._backends.rhs import create_rhs_source
-from clode._pyopencl import (
+from clode._opencl import (
     BuildError,
     BuildKey,
     DoublePrecisionNotSupportedError,
     KernelKind,
+    OPENCL_BACKEND_VERSION,
     Precision,
     ProblemShape,
     ProgramBundle,
-    PYOPENCL_BACKEND_VERSION,
     RhsValidationError,
     SourceBundle,
     UnsupportedStepperError,
 )
-from clode.problem import ProblemInfo
+from clode.observers import ObserverParams, get_observer_feature_names, is_two_pass_observer
+from clode.problem import ProblemInfo, create_rhs_source
 
 
 def _make_build_key(**overrides: object) -> BuildKey:
     rhs = create_rhs_source("model.cl", "void getRHS() {}\n")
     build_key_kwargs = {
-        "backend_version": PYOPENCL_BACKEND_VERSION,
+        "backend_version": OPENCL_BACKEND_VERSION,
         "kernel_kind": KernelKind.TRANSIENT,
         "precision": Precision.SINGLE,
         "stepper_name": "rk4",
@@ -99,7 +99,7 @@ def test_program_bundle_validates_build_key_and_kernel_handles() -> None:
         )
 
 
-def test_pyopencl_errors_preserve_diagnostic_context() -> None:
+def test_opencl_errors_preserve_diagnostic_context() -> None:
     build_error = BuildError(
         "build failed",
         source_text="kernel source",
@@ -121,3 +121,30 @@ def test_pyopencl_errors_preserve_diagnostic_context() -> None:
     assert "bogus-stepper" in str(stepper_error)
     assert precision_error.device_name == "Mock GPU"
     assert "Mock GPU" in str(precision_error)
+
+
+def test_observer_catalog_helpers_expose_feature_names_and_two_pass_flags() -> None:
+    problem_info = ProblemInfo(
+        "stable_linear_aux.cl",
+        ["x", "y"],
+        ["k"],
+        ["aux0"],
+        0,
+    )
+
+    feature_names = get_observer_feature_names(
+        problem_info,
+        "basic",
+        ObserverParams(f_var_ix=1),
+    )
+
+    assert feature_names == (
+        "max y",
+        "min y",
+        "mean y",
+        "max dy/dt",
+        "min dy/dt",
+        "step count",
+    )
+    assert is_two_pass_observer("nhood2") is True
+    assert is_two_pass_observer("basic") is False

@@ -7,8 +7,8 @@ import sys
 PRIMARY_BUNDLES: dict[str, tuple[str, ...]] = {
     "smoke": (
         "test/test_function_converter.py",
-        "test/test_pyopencl_models.py",
-        "test/test_pyopencl_source_builder.py",
+        "test/test_opencl_models.py",
+        "test/test_opencl_source_builder.py",
     ),
     "frontend": (
         "test/test_function_converter.py",
@@ -16,9 +16,9 @@ PRIMARY_BUNDLES: dict[str, tuple[str, ...]] = {
         "test/test_xpp_parser.py",
     ),
     "runtime_api": (
-        "test/test_backend_contracts.py",
-        "test/test_backend_rhs_source.py",
-        "test/test_pyopencl_runtime.py",
+        "test/test_simulation_contracts.py",
+        "test/test_problem_rhs_source.py",
+        "test/test_opencl_runtime.py",
         "test/test_runtime.py",
         "test/test_logger.py",
     ),
@@ -29,29 +29,29 @@ PRIMARY_BUNDLES: dict[str, tuple[str, ...]] = {
         "test/test_aux_values.py",
         "test/test_features.py",
     ),
-    "pyopencl_internal": (
-        "test/test_pyopencl_models.py",
-        "test/test_pyopencl_source_builder.py",
-        "test/test_pyopencl_buffers.py",
-        "test/test_pyopencl_structs.py",
+    "opencl_internal": (
+        "test/test_opencl_models.py",
+        "test/test_opencl_source_builder.py",
+        "test/test_opencl_buffers.py",
+        "test/test_opencl_structs.py",
     ),
 }
 
 ALIASES: dict[str, tuple[str, ...]] = {
     "release": ("frontend", "runtime_api", "numerics"),
     "opencl": ("release",),
-    "extended": ("pyopencl_internal",),
+    "extended": ("opencl_internal",),
 }
 
 DESCRIPTIONS = {
     "smoke": "Cross-platform packaging and driver-independent smoke checks.",
     "frontend": "Frontend-facing conversion and API-surface tests.",
-    "runtime_api": "Public runtime, backend selection, and simulator contract tests.",
+    "runtime_api": "Public runtime and simulator contract tests.",
     "numerics": "Numerical regression tests, including the core OpenCL reference suite.",
-    "pyopencl_internal": "Focused tests for internal PyOpenCL support layers.",
+    "opencl_internal": "Focused tests for internal OpenCL support layers.",
     "release": "The OpenCL-backed release gate: frontend, runtime/API, and numerical regressions.",
     "opencl": "Compatibility alias for the release gate bundle.",
-    "extended": "Additional internal PyOpenCL checks for manual verification.",
+    "extended": "Additional internal OpenCL checks for manual verification.",
 }
 
 

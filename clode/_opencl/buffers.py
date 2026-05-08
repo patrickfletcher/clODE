@@ -7,7 +7,7 @@ import numpy as np
 from ..observers.types import ObserverParams
 from ..simulation.params import SolverParams
 from .models import Precision, ProblemShape
-from .runtime import OpenCLRuntime, _require_pyopencl
+from .runtime import OpenCLRuntime, _require_opencl_binding
 from .structs import (
     get_observer_params_struct,
     get_solver_params_struct,
@@ -78,14 +78,14 @@ class BufferManager:
         self._runtime = runtime
         self._precision = precision
         self._real_dtype = ArrayLayout.real_dtype(precision)
-        self._pyopencl = _require_pyopencl()
+        self._opencl_binding = _require_opencl_binding()
 
     @property
     def real_dtype(self) -> np.dtype:
         return self._real_dtype
 
     def allocate_common(self, ensemble_size: int, shape: ProblemShape) -> CommonBuffers:
-        flags = self._pyopencl.mem_flags
+        flags = self._opencl_binding.mem_flags
         real_bytes = self._real_dtype.itemsize
         x0_elements = max(1, ensemble_size * shape.n_var)
         pars_elements = max(1, ensemble_size * shape.n_par)
@@ -94,32 +94,32 @@ class BufferManager:
         return CommonBuffers(
             ensemble_size=ensemble_size,
             problem_shape=shape,
-            tspan=self._pyopencl.Buffer(
+            tspan=self._opencl_binding.Buffer(
                 self._runtime.context, flags.READ_ONLY, size=2 * real_bytes
             ),
-            solver_params=self._pyopencl.Buffer(
+            solver_params=self._opencl_binding.Buffer(
                 self._runtime.context,
                 flags.READ_ONLY,
                 size=get_solver_params_struct(self._runtime, self._precision).dtype.itemsize,
             ),
-            x0=self._pyopencl.Buffer(
+            x0=self._opencl_binding.Buffer(
                 self._runtime.context, flags.READ_WRITE, size=x0_elements * real_bytes
             ),
-            pars=self._pyopencl.Buffer(
+            pars=self._opencl_binding.Buffer(
                 self._runtime.context, flags.READ_ONLY, size=pars_elements * real_bytes
             ),
-            xf=self._pyopencl.Buffer(
+            xf=self._opencl_binding.Buffer(
                 self._runtime.context, flags.READ_WRITE, size=x0_elements * real_bytes
             ),
-            rng_state=self._pyopencl.Buffer(
+            rng_state=self._opencl_binding.Buffer(
                 self._runtime.context,
                 flags.READ_WRITE,
                 size=rng_elements * np.dtype(np.uint64).itemsize,
             ),
-            dt=self._pyopencl.Buffer(
+            dt=self._opencl_binding.Buffer(
                 self._runtime.context, flags.READ_WRITE, size=ensemble_size * real_bytes
             ),
-            tf=self._pyopencl.Buffer(
+            tf=self._opencl_binding.Buffer(
                 self._runtime.context, flags.WRITE_ONLY, size=ensemble_size * real_bytes
             ),
         )
@@ -127,7 +127,7 @@ class BufferManager:
     def allocate_trajectory(
         self, ensemble_size: int, shape: ProblemShape, max_store: int
     ) -> TrajectoryBuffers:
-        flags = self._pyopencl.mem_flags
+        flags = self._opencl_binding.mem_flags
         real_bytes = self._real_dtype.itemsize
         t_elements = max(1, ensemble_size * max_store)
         state_elements = max(1, ensemble_size * shape.n_var * max_store)
@@ -135,19 +135,19 @@ class BufferManager:
 
         return TrajectoryBuffers(
             max_store=max_store,
-            t=self._pyopencl.Buffer(
+            t=self._opencl_binding.Buffer(
                 self._runtime.context, flags.WRITE_ONLY, size=t_elements * real_bytes
             ),
-            x=self._pyopencl.Buffer(
+            x=self._opencl_binding.Buffer(
                 self._runtime.context, flags.WRITE_ONLY, size=state_elements * real_bytes
             ),
-            dx=self._pyopencl.Buffer(
+            dx=self._opencl_binding.Buffer(
                 self._runtime.context, flags.WRITE_ONLY, size=state_elements * real_bytes
             ),
-            aux=self._pyopencl.Buffer(
+            aux=self._opencl_binding.Buffer(
                 self._runtime.context, flags.WRITE_ONLY, size=aux_elements * real_bytes
             ),
-            n_stored=self._pyopencl.Buffer(
+            n_stored=self._opencl_binding.Buffer(
                 self._runtime.context,
                 flags.WRITE_ONLY,
                 size=ensemble_size * np.dtype(np.int32).itemsize,
@@ -160,26 +160,26 @@ class BufferManager:
         n_features: int,
         observer_data_nbytes: int,
     ) -> FeatureBuffers:
-        flags = self._pyopencl.mem_flags
+        flags = self._opencl_binding.mem_flags
         real_bytes = self._real_dtype.itemsize
         feature_elements = max(1, ensemble_size * n_features)
         observer_bytes = max(1, ensemble_size * observer_data_nbytes)
         return FeatureBuffers(
             n_features=n_features,
             observer_data_nbytes=observer_data_nbytes,
-            observer_data=self._pyopencl.Buffer(
+            observer_data=self._opencl_binding.Buffer(
                 self._runtime.context,
                 flags.READ_WRITE,
                 size=observer_bytes,
             ),
-            observer_params=self._pyopencl.Buffer(
+            observer_params=self._opencl_binding.Buffer(
                 self._runtime.context,
                 flags.READ_ONLY,
                 size=get_observer_params_struct(
                     self._runtime, self._precision
                 ).dtype.itemsize,
             ),
-            features=self._pyopencl.Buffer(
+            features=self._opencl_binding.Buffer(
                 self._runtime.context,
                 flags.WRITE_ONLY,
                 size=feature_elements * real_bytes,
@@ -312,7 +312,7 @@ class BufferManager:
         self, buffers: CommonBuffers, trajectory_buffers: TrajectoryBuffers
     ) -> np.ndarray:
         host = np.empty(buffers.ensemble_size, dtype=np.int32)
-        self._pyopencl.enqueue_copy(
+        self._opencl_binding.enqueue_copy(
             self._runtime.queue, host, trajectory_buffers.n_stored, is_blocking=True
         )
         return host
@@ -327,7 +327,7 @@ class BufferManager:
 
     def download_rng_state(self, buffers: CommonBuffers) -> np.ndarray:
         host = np.empty(buffers.ensemble_size * N_RNGSTATE, dtype=np.uint64)
-        self._pyopencl.enqueue_copy(
+        self._opencl_binding.enqueue_copy(
             self._runtime.queue, host, buffers.rng_state, is_blocking=True
         )
         return host.reshape((buffers.ensemble_size, N_RNGSTATE), order="F")
@@ -338,7 +338,7 @@ class BufferManager:
         if width == 0:
             return np.empty((ensemble_size, 0), dtype=np.float64)
         host = np.empty(ensemble_size * width, dtype=self._real_dtype)
-        self._pyopencl.enqueue_copy(
+        self._opencl_binding.enqueue_copy(
             self._runtime.queue, host, buffer, is_blocking=True
         )
         return ArrayLayout.reshape_state(host, ensemble_size, width)
@@ -347,7 +347,7 @@ class BufferManager:
         self, buffer: object, shape: tuple[int, ...]
     ) -> np.ndarray:
         host = np.empty(int(np.prod(shape)), dtype=self._real_dtype)
-        self._pyopencl.enqueue_copy(
+        self._opencl_binding.enqueue_copy(
             self._runtime.queue, host, buffer, is_blocking=True
         )
         return ArrayLayout.reshape_vector(host, shape)
@@ -355,6 +355,6 @@ class BufferManager:
     def _enqueue_copy(self, buffer: object, host: np.ndarray) -> None:
         if host.size == 0:
             return
-        self._pyopencl.enqueue_copy(
+        self._opencl_binding.enqueue_copy(
             self._runtime.queue, buffer, host, is_blocking=True
         )

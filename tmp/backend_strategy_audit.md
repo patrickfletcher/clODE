@@ -2,14 +2,14 @@
 
 ## Bottom line
 
-clODE no longer has a meaningfully generic backend architecture. It has a PyOpenCL implementation with a thin compatibility seam in front of it. Keeping that seam only makes sense if there is a concrete second backend target with real user value. Right now there is not.
+clODE no longer has a meaningfully generic backend architecture. It has a single internal OpenCL execution layer implemented through PyOpenCL. Preserving a faux-generic backend seam no longer buys the repo anything.
 
 ## Current reality
 
-- `clode/runtime.py` accepts only `pyopencl` as a backend.
-- `clode/_backends/factory.py` is already just a constructor shim into the PyOpenCL executors.
-- `clode/_pyopencl/runtime.py` is explicitly single-device and owns a single context and command queue.
-- `clode/_pyopencl/source_builder.py`, `registry.py`, and the kernel tree all assume OpenCL C assets and PyOpenCL host objects.
+- `clode.runtime` no longer exposes backend selection at all.
+- `clode._opencl` is the canonical internal execution package.
+- `clode._opencl/runtime.py` is explicitly single-device and owns a single context and command queue.
+- `clode._opencl/source_builder.py`, `registry.py`, and the kernel tree all assume OpenCL C assets and PyOpenCL host objects.
 - The public API still carries some broader-looking selection surface, such as `device_ids`, but the implementation does not actually provide general multi-device execution.
 
 ## What another backend would actually mean
@@ -92,8 +92,8 @@ The unrealistic choice is keeping a generic backend architecture in place today 
 
 ## Recommended repo decision
 
-- Treat clODE as a PyOpenCL-first package, not a backend-agnostic package.
-- Collapse or rename the `_backends/` seam when it starts fighting a cleaner module layout.
+- Treat clODE as a PyOpenCL-backed OpenCL package, not a backend-agnostic package.
+- Keep `_opencl/` as the internal execution package rather than restoring any generic backend seam.
 - Do not preserve interface complexity just to keep hypothetical backend optionality alive.
 - Either retire `device_ids` or document it explicitly as compatibility surface rather than real multi-device execution.
 - If a reference executor becomes desirable, introduce it as an explicitly scoped correctness tool.

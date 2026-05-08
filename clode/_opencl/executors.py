@@ -21,11 +21,11 @@ from .buffers import (
 from .models import KernelKind, Precision, ProblemShape, ProgramBundle
 from .observer_metadata import ObserverMetadata, get_observer_metadata
 from .registry import KernelRegistry
-from .runtime import OpenCLRuntime, _require_pyopencl
+from .runtime import OpenCLRuntime, _require_opencl_binding
 from .source_builder import SourceBuilder
 
 
-class PyOpenCLTransientBackend(SimulatorBackend):
+class OpenCLTransientExecutor(SimulatorBackend):
     def __init__(
         self,
         problem_info: ProblemInfo,
@@ -45,7 +45,7 @@ class PyOpenCLTransientBackend(SimulatorBackend):
         self._source_builder = SourceBuilder(self._kernel_root, self._registry)
         self._buffer_manager = BufferManager(self._runtime, self._precision)
         self._problem_shape = ProblemShape.from_problem_info(problem_info)
-        self._pyopencl = _require_pyopencl()
+        self._opencl_binding = _require_opencl_binding()
 
         self._solver_params = SolverParams()
         self._tspan: tuple[float, float] = (0.0, 0.0)
@@ -263,7 +263,7 @@ class PyOpenCLTransientBackend(SimulatorBackend):
 
     def shift_x0(self) -> None:
         buffers = self._require_buffers()
-        self._pyopencl.enqueue_copy(
+        self._opencl_binding.enqueue_copy(
             self._runtime.queue,
             buffers.x0,
             buffers.xf,
@@ -288,7 +288,7 @@ class PyOpenCLTransientBackend(SimulatorBackend):
             buffers.dt,
             buffers.tf,
         )
-        self._pyopencl.enqueue_nd_range_kernel(
+        self._opencl_binding.enqueue_nd_range_kernel(
             self._runtime.queue,
             kernel,
             (buffers.ensemble_size,),
@@ -353,7 +353,7 @@ class PyOpenCLTransientBackend(SimulatorBackend):
         return self._buffers
 
 
-class PyOpenCLTrajectoryBackend(PyOpenCLTransientBackend):
+class OpenCLTrajectoryExecutor(OpenCLTransientExecutor):
     def __init__(
         self,
         problem_info: ProblemInfo,
@@ -478,7 +478,7 @@ class PyOpenCLTrajectoryBackend(PyOpenCLTransientBackend):
             trajectory_buffers.aux,
             trajectory_buffers.n_stored,
         )
-        self._pyopencl.enqueue_nd_range_kernel(
+        self._opencl_binding.enqueue_nd_range_kernel(
             self._runtime.queue,
             kernel,
             (buffers.ensemble_size,),
@@ -515,7 +515,7 @@ class PyOpenCLTrajectoryBackend(PyOpenCLTransientBackend):
         return self._trajectory_buffers
 
 
-class PyOpenCLFeatureBackend(PyOpenCLTransientBackend, FeatureBackend):
+class OpenCLFeatureExecutor(OpenCLTransientExecutor, FeatureBackend):
     def __init__(
         self,
         problem_info: ProblemInfo,
@@ -599,7 +599,7 @@ class PyOpenCLFeatureBackend(PyOpenCLTransientBackend, FeatureBackend):
             feature_buffers.observer_params,
             feature_buffers.features,
         )
-        self._pyopencl.enqueue_nd_range_kernel(
+        self._opencl_binding.enqueue_nd_range_kernel(
             self._runtime.queue,
             kernel,
             (buffers.ensemble_size,),
@@ -651,7 +651,7 @@ class PyOpenCLFeatureBackend(PyOpenCLTransientBackend, FeatureBackend):
             feature_buffers.observer_data,
             feature_buffers.observer_params,
         )
-        self._pyopencl.enqueue_nd_range_kernel(
+        self._opencl_binding.enqueue_nd_range_kernel(
             self._runtime.queue,
             kernel,
             (buffers.ensemble_size,),

@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 import warnings
 
-from .errors import BuildError, PyOpenCLDependencyError
+from .errors import BuildError, OpenCLDependencyError
 from .models import ProgramBundle, SourceBundle
 
 if TYPE_CHECKING:
@@ -15,10 +15,10 @@ except ModuleNotFoundError:
     cl = None
 
 
-def _require_pyopencl() -> Any:
+def _require_opencl_binding() -> Any:
     if cl is None:
-        raise PyOpenCLDependencyError(
-            "pyopencl is required for the PyOpenCL backend. Install pyopencl into the active environment or reinstall clode with its default dependencies."
+        raise OpenCLDependencyError(
+            "pyopencl is required for clODE's OpenCL runtime. Install pyopencl into the active environment or reinstall clode with its default dependencies."
         )
     return cl
 
@@ -40,12 +40,12 @@ class ProgramCache:
         if existing is not None:
             return existing
 
-        pyopencl = _require_pyopencl()
-        program = pyopencl.Program(runtime.context, source_bundle.source_text)
+        opencl_binding = _require_opencl_binding()
+        program = opencl_binding.Program(runtime.context, source_bundle.source_text)
         try:
             program.build(options=list(source_bundle.build_options))
             kernels = {
-                kernel_name: pyopencl.Kernel(program, kernel_name)
+                kernel_name: opencl_binding.Kernel(program, kernel_name)
                 for kernel_name in source_bundle.kernel_names
             }
         except Exception as exc:
@@ -68,13 +68,13 @@ class ProgramCache:
     def _extract_build_log(
         self, program: object, runtime: OpenCLRuntime, exc: Exception
     ) -> str:
-        pyopencl = _require_pyopencl()
+        opencl_binding = _require_opencl_binding()
         details: list[str] = []
         try:
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore", UserWarning)
                 build_log = program.get_build_info(
-                    runtime.device, pyopencl.program_build_info.LOG
+                    runtime.device, opencl_binding.program_build_info.LOG
                 )
             if build_log:
                 details.append(str(build_log))
