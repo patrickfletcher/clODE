@@ -6,8 +6,7 @@ from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple, Union
 import numpy as np
 import numpy.typing as npt
 
-from .._backends.factory import RuntimeSelection, create_simulator_backend
-from .._backends.protocol import SimulatorBackend
+from .._opencl.factory import create_simulator_backend
 from ..problem.definition import ProblemInfo
 from ..problem.python import OpenCLConverter, OpenCLRhsEquation
 from ..problem.source import RhsSource, create_rhs_source, load_rhs_source
@@ -22,6 +21,8 @@ from ..runtime import (
 	initialize_runtime,
 	set_log_level,
 )
+from ..runtime.selection import RuntimeSelection
+from ._protocols import SimulatorBackend
 from .params import SolverParams
 
 

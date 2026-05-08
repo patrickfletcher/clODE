@@ -71,7 +71,7 @@ def _load_pyopencl() -> Any | None:
 def _require_pyopencl() -> Any:
     pyopencl = _load_pyopencl()
     if pyopencl is None:
-        from .._pyopencl.errors import PyOpenCLDependencyError
+        from .._opencl.errors import PyOpenCLDependencyError
 
         raise PyOpenCLDependencyError(
             "pyopencl is required for this clODE installation. Install pyopencl into the active environment or reinstall the package with its default dependencies."

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from enum import IntEnum
 import os
 from typing import Any, Sequence
@@ -28,6 +29,15 @@ class CLVendor(IntEnum):
     VENDOR_NVIDIA = 1
     VENDOR_AMD = 2
     VENDOR_INTEL = 3
+
+
+@dataclass(frozen=True, slots=True)
+class RuntimeSelection:
+    device_type: CLDeviceType | None
+    vendor: CLVendor | None
+    platform_id: int | None
+    device_id: int | None
+    device_ids: tuple[int, ...] | None
 
 
 _DEVICE_TYPE_VALUES = {member.value for member in CLDeviceType}
@@ -180,11 +190,11 @@ class OpenCLResource:
             device_ids,
         )
         resolve_backend_name()
-        self._pyopencl_runtime: Any | None = None
-        self._initialize_pyopencl_runtime()
+        self._opencl_runtime: Any | None = None
+        self._initialize_opencl_runtime()
 
-    def _initialize_pyopencl_runtime(self) -> None:
-        from .._pyopencl.runtime import OpenCLRuntime
+    def _initialize_opencl_runtime(self) -> None:
+        from .._opencl.runtime import OpenCLRuntime
 
         if self._device_ids is not None:
             if len(self._device_ids) != 1:
@@ -194,13 +204,13 @@ class OpenCLResource:
             self._device_id = self._device_ids[0]
 
         if self._platform_id is not None:
-            self._pyopencl_runtime = OpenCLRuntime.create(
+            self._opencl_runtime = OpenCLRuntime.create(
                 platform_id=self._platform_id,
                 device_id=self._device_id,
             )
             return
 
-        self._pyopencl_runtime = OpenCLRuntime.create(
+        self._opencl_runtime = OpenCLRuntime.create(
             device_type=(
                 CLDeviceType.DEVICE_TYPE_DEFAULT
                 if self._device_type is None
@@ -208,11 +218,11 @@ class OpenCLResource:
             ),
             vendor=CLVendor.VENDOR_ANY if self._vendor is None else self._vendor,
         )
-        self._platform_id = self._pyopencl_runtime.platform_id
-        self._device_id = self._pyopencl_runtime.device_id
+        self._platform_id = self._opencl_runtime.platform_id
+        self._device_id = self._opencl_runtime.device_id
 
-    def _ensure_selected_pyopencl_device(self, device_id: int) -> None:
-        if self._pyopencl_runtime is None:
+    def _ensure_selected_opencl_device(self, device_id: int) -> None:
+        if self._opencl_runtime is None:
             return
         selected_device_id = 0 if self._device_id is None else self._device_id
         if device_id not in {0, selected_device_id}:
@@ -221,16 +231,16 @@ class OpenCLResource:
             )
 
     def get_device_cl_version(self, device_id: int) -> str:
-        self._ensure_selected_pyopencl_device(device_id)
-        return self._pyopencl_runtime.get_device_cl_version()
+        self._ensure_selected_opencl_device(device_id)
+        return self._opencl_runtime.get_device_cl_version()
 
     def get_double_support(self, device_id: int) -> bool:
-        self._ensure_selected_pyopencl_device(device_id)
-        return self._pyopencl_runtime.get_double_support()
+        self._ensure_selected_opencl_device(device_id)
+        return self._opencl_runtime.get_double_support()
 
     def get_max_memory_alloc_size(self, device_id: int) -> int:
-        self._ensure_selected_pyopencl_device(device_id)
-        return self._pyopencl_runtime.get_max_memory_alloc_size()
+        self._ensure_selected_opencl_device(device_id)
+        return self._opencl_runtime.get_max_memory_alloc_size()
 
     def print_devices(self) -> None:
         if get_log_level() == LogLevel.off:

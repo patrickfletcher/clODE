@@ -2,8 +2,6 @@ from .logging import DEFAULT_LOG_LEVEL, LogLevel, get_log_level, set_log_level, 
 from .query import (
     DeviceInfo,
     PlatformInfo,
-    _load_pyopencl,
-    _require_pyopencl,
     print_opencl,
     query_opencl,
 )
@@ -25,8 +23,6 @@ __all__ = [
     "OpenCLResource",
     "PlatformInfo",
     "_clode_root_dir",
-    "_load_pyopencl",
-    "_require_pyopencl",
     "get_log_level",
     "initialize_runtime",
     "print_opencl",

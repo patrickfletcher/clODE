@@ -4,11 +4,11 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import numpy as np
 
-from .._backends.factory import create_feature_backend
-from .._backends.protocol import FeatureBackend
+from .._opencl.factory import create_feature_backend
 from ..observers.types import Observer, ObserverParams
 from ..problem.python import OpenCLRhsEquation
 from ..runtime import CLDeviceType, CLVendor, _clode_root_dir
+from ._protocols import FeatureBackend
 from .base import Simulator, Stepper
 from .params import SolverParams
 from .results import ObserverOutput

@@ -243,6 +243,12 @@ Recommended direction:
 - remove `_backends/` as a named long-term subsystem
 - either inline the tiny remaining seam into `simulation/` plus `_opencl/`, or keep only a very small internal typing helper if it still pulls its weight
 
+Current status:
+
+- `_backends/` no longer acts as a live architectural seam for simulation/runtime code
+- canonical execution ownership now lives in `_opencl/`
+- `_backends/rhs.py` and the historical factory/protocol paths can remain only as compatibility wrappers until downstream imports and tests stop needing them
+
 Specific consequence:
 
 - `factory.py` should not survive as a major architectural boundary once the layout work begins
@@ -289,6 +295,12 @@ Why first:
 - move `_backends/rhs.py` into `problem/source.py`
 - remove or inline `_backends/factory.py`
 - move `_pyopencl/` to `_opencl/`
+
+Status after the current migration:
+
+- `problem/`, `simulation/`, `observers/`, and `runtime/` now own the public semantic surface
+- `_opencl/` is now the canonical internal execution package
+- `_pyopencl/` has been reduced to a compatibility package-level shim
 
 ### Phase 5: internal clustering refinements after the first move lands
 
