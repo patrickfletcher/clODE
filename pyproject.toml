@@ -74,7 +74,6 @@ include-package-data = false
 
 [tool.setuptools.packages.find]
 include = ["clode", "clode.*"]
-exclude = ["clode.cpp", "clode.cpp.*"]
 
 [tool.setuptools.package-data]
 clode = [
@@ -102,7 +101,6 @@ markers = [
     "numerics: numerical regression tests against exact solutions or fixed expectations",
     "core_numerics: authoritative kernel-level numerical regression tests",
     "pyopencl_internal: focused tests for internal PyOpenCL support layers",
-    "legacy_cpp_comparison: comparison tests that still rely on the legacy C++ wrapper backend",
     "release_gate: tests that should pass before publishing a release",
     "requires_opencl: tests that require an OpenCL runtime on the host",
     "slow: reserved marker for slower tests",

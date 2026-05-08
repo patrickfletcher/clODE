@@ -24,11 +24,8 @@ print(platforms[0].device_info)
 
 `query_opencl()` returns a list of `PlatformInfo` objects, each with a `device_info` list of `DeviceInfo` objects.
 
-## Backend-specific ordering note
+## Ordering note
 
-The platform ordering reported by `clode.print_opencl()` and `clode.query_opencl()` follows the active backend implementation.
-
-- by default, the ordering comes from PyOpenCL
-- with `_CLODE_BACKEND=cpp`, the ordering comes from the legacy wrapper runtime
+The platform ordering reported by `clode.print_opencl()` and `clode.query_opencl()` comes from PyOpenCL.
 
 That ordering may differ from `clinfo -l`, so choose platform and device IDs from the same toolchain you will actually use for the simulation.

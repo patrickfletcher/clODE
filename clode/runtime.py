@@ -2,9 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import IntEnum
-from importlib.machinery import EXTENSION_SUFFIXES
 import os
-import sys
 from typing import Any, Sequence
 
 from ._pyopencl.errors import PyOpenCLDependencyError
@@ -101,70 +99,17 @@ _DEVICE_TYPE_VALUES = {member.value for member in CLDeviceType}
 _VENDOR_VALUES = {member.value for member in CLVendor}
 
 
-def _cpp_wrapper_available() -> bool:
-    cpp_dir = os.path.join(os.path.dirname(__file__), "cpp")
-    if not os.path.isdir(cpp_dir):
-        return False
-
-    return any(
-        entry.startswith("clode_cpp_wrapper")
-        and any(entry.endswith(suffix) for suffix in EXTENSION_SUFFIXES)
-        for entry in os.listdir(cpp_dir)
-    )
-
-
 def resolve_backend_name(requested_backend: str | None = None) -> str:
     backend_name = (
         requested_backend
         if requested_backend is not None
         else os.getenv(_BACKEND_ENVVAR, _DEFAULT_BACKEND)
     )
-    if backend_name not in {"cpp", "pyopencl"}:
+    if backend_name != "pyopencl":
         raise ValueError(
-            f"Unsupported clODE backend '{backend_name}'. Supported backends: ['cpp', 'pyopencl']"
-        )
-    if backend_name == "cpp" and not _cpp_wrapper_available():
-        raise ModuleNotFoundError(
-            "The legacy clODE C++ backend is not available in this installation. Build the wrapper in a source checkout and select it explicitly with _CLODE_BACKEND=cpp, or use the default PyOpenCL backend."
+            f"Unsupported clODE backend '{backend_name}'. Supported backends: ['pyopencl']"
         )
     return backend_name
-
-
-def _prefer_pyopencl_runtime() -> bool:
-    return resolve_backend_name() == "pyopencl"
-
-
-def _loaded_cpp_wrapper() -> Any | None:
-    return sys.modules.get("clode.cpp.clode_cpp_wrapper")
-
-
-def _sync_cpp_logger(cpp: Any) -> None:
-    logger = cpp.get_logger()
-    logger.set_log_level(cpp.LogLevel(int(_LOG_LEVEL)))
-    if _LOG_PATTERN is not None:
-        logger.set_log_pattern(_LOG_PATTERN)
-
-
-def _load_cpp_wrapper() -> Any | None:
-    cpp = _loaded_cpp_wrapper()
-    if cpp is not None:
-        _sync_cpp_logger(cpp)
-        return cpp
-    try:
-        from clode.cpp import clode_cpp_wrapper as cpp
-    except ModuleNotFoundError:
-        return None
-    _sync_cpp_logger(cpp)
-    return cpp
-
-
-def _require_cpp_wrapper() -> Any:
-    cpp = _load_cpp_wrapper()
-    if cpp is None:
-        raise ModuleNotFoundError(
-            "The legacy clODE C++ backend is not available in this installation. Build the wrapper in a source checkout and select it explicitly with _CLODE_BACKEND=cpp, or use the default PyOpenCL backend."
-        )
-    return cpp
 
 
 def _load_pyopencl() -> Any | None:
@@ -319,22 +264,6 @@ def _device_info_from_cpp(device_info: Any) -> DeviceInfo:
     )
 
 
-def _platform_info_from_cpp(platform_info: Any) -> PlatformInfo:
-    device_info = [_device_info_from_cpp(device) for device in platform_info.device_info]
-    return PlatformInfo(
-        name=str(platform_info.name),
-        vendor=str(platform_info.vendor),
-        version=str(platform_info.version),
-        device_count=int(platform_info.device_count),
-        device_info=device_info,
-    )
-
-
-def _query_opencl_cpp() -> list[PlatformInfo]:
-    cpp = _require_cpp_wrapper()
-    return [_platform_info_from_cpp(platform) for platform in cpp.query_opencl()]
-
-
 def _query_opencl_pyopencl() -> list[PlatformInfo]:
     pyopencl = _require_pyopencl()
     platforms: list[PlatformInfo] = []
@@ -443,14 +372,9 @@ class OpenCLResource:
             device_id,
             device_ids,
         )
-        self._backend_name = resolve_backend_name()
-        self._cpp_resource: Any | None = None
+        resolve_backend_name()
         self._pyopencl_runtime: Any | None = None
-
-        if self._backend_name == "pyopencl":
-            self._initialize_pyopencl_runtime()
-        else:
-            self._cpp_resource = self._build_cpp_resource()
+        self._initialize_pyopencl_runtime()
 
     def _initialize_pyopencl_runtime(self) -> None:
         from ._pyopencl.runtime import OpenCLRuntime
@@ -480,28 +404,6 @@ class OpenCLResource:
         self._platform_id = self._pyopencl_runtime.platform_id
         self._device_id = self._pyopencl_runtime.device_id
 
-    def _build_cpp_resource(self) -> Any:
-        cpp = _require_cpp_wrapper()
-        if self._platform_id is not None:
-            if self._device_id is not None:
-                return cpp.OpenCLResource(self._platform_id, self._device_id)
-            return cpp.OpenCLResource(self._platform_id, list(self._device_ids or ()))
-        device_type = (
-            CLDeviceType.DEVICE_TYPE_DEFAULT
-            if self._device_type is None
-            else self._device_type
-        )
-        vendor = CLVendor.VENDOR_ANY if self._vendor is None else self._vendor
-        return cpp.OpenCLResource(
-            cpp.CLDeviceType(int(device_type)),
-            cpp.CLVendor(int(vendor)),
-        )
-
-    def as_cpp(self) -> Any:
-        if self._cpp_resource is None:
-            self._cpp_resource = self._build_cpp_resource()
-        return self._cpp_resource
-
     def _ensure_selected_pyopencl_device(self, device_id: int) -> None:
         if self._pyopencl_runtime is None:
             return
@@ -512,30 +414,21 @@ class OpenCLResource:
             )
 
     def get_device_cl_version(self, device_id: int) -> str:
-        if self._pyopencl_runtime is not None:
-            self._ensure_selected_pyopencl_device(device_id)
-            return self._pyopencl_runtime.get_device_cl_version()
-        return self.as_cpp().get_device_cl_version(device_id)
+        self._ensure_selected_pyopencl_device(device_id)
+        return self._pyopencl_runtime.get_device_cl_version()
 
     def get_double_support(self, device_id: int) -> bool:
-        if self._pyopencl_runtime is not None:
-            self._ensure_selected_pyopencl_device(device_id)
-            return self._pyopencl_runtime.get_double_support()
-        return self.as_cpp().get_double_support(device_id)
+        self._ensure_selected_pyopencl_device(device_id)
+        return self._pyopencl_runtime.get_double_support()
 
     def get_max_memory_alloc_size(self, device_id: int) -> int:
-        if self._pyopencl_runtime is not None:
-            self._ensure_selected_pyopencl_device(device_id)
-            return self._pyopencl_runtime.get_max_memory_alloc_size()
-        return self.as_cpp().get_max_memory_alloc_size(device_id)
+        self._ensure_selected_pyopencl_device(device_id)
+        return self._pyopencl_runtime.get_max_memory_alloc_size()
 
     def print_devices(self) -> None:
         if get_log_level() == LogLevel.off:
             return
-        if self._pyopencl_runtime is not None:
-            _emit_opencl_report(_query_opencl_pyopencl())
-            return
-        self.as_cpp().print_devices()
+        _emit_opencl_report(_query_opencl_pyopencl())
 
 
 def initialize_runtime(
@@ -562,26 +455,16 @@ def set_log_level(level: LogLevel) -> None:
     global _LOG_LEVEL
 
     _LOG_LEVEL = _coerce_log_level(level)
-    cpp = _loaded_cpp_wrapper()
-    if cpp is not None:
-        _sync_cpp_logger(cpp)
 
 
 def set_log_pattern(pattern: str) -> None:
     global _LOG_PATTERN
 
     _LOG_PATTERN = pattern
-    cpp = _loaded_cpp_wrapper()
-    if cpp is not None:
-        _sync_cpp_logger(cpp)
 
 
 def query_opencl() -> list[PlatformInfo]:
-    if _prefer_pyopencl_runtime():
-        return _query_opencl_pyopencl()
-    cpp = _load_cpp_wrapper()
-    if cpp is not None:
-        return [_platform_info_from_cpp(platform) for platform in cpp.query_opencl()]
+    resolve_backend_name()
     return _query_opencl_pyopencl()
 
 
@@ -592,13 +475,7 @@ def print_opencl() -> None:
     if old_level > LogLevel.info:
         set_log_level(LogLevel.info)
     try:
-        if _prefer_pyopencl_runtime():
-            _emit_opencl_report(_query_opencl_pyopencl())
-            return
-        cpp = _load_cpp_wrapper()
-        if cpp is not None:
-            cpp._print_opencl()
-            return
+        resolve_backend_name()
         _emit_opencl_report(_query_opencl_pyopencl())
     finally:
         if old_level > LogLevel.info:

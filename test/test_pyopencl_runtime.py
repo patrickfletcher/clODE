@@ -81,9 +81,8 @@ def test_program_cache_surfaces_build_failures_with_source_and_options() -> None
     assert error.build_log.strip() != ""
 
 
-def test_explicit_cpp_backend_requires_wrapper(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(runtime_module, "_cpp_wrapper_available", lambda: False)
-    with pytest.raises(ModuleNotFoundError, match=r"legacy clODE C\+\+ backend is not available"):
+def test_explicit_cpp_backend_is_rejected() -> None:
+    with pytest.raises(ValueError, match=r"Supported backends: \['pyopencl'\]"):
         runtime_module.resolve_backend_name("cpp")
 
 

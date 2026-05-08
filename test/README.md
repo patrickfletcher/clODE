@@ -10,14 +10,13 @@ The files are not being physically moved into a final long-term directory layout
 - `runtime_api`: public runtime, backend selection, and simulator contract tests.
 - `numerics`: exact-solution and fixed-expectation numerical regressions, including `test/core_numerics/`.
 - `pyopencl_internal`: focused tests for internal PyOpenCL support layers.
-- `legacy_cpp_comparison`: tests that still rely on the legacy C++ wrapper backend.
 
 ## Release gating
 
 - `smoke` runs on Linux, macOS, and Windows.
 - `release` is the OpenCL-backed release gate and currently combines `frontend`, `runtime_api`, and `numerics`.
 - `opencl` is kept as a compatibility alias for `release`.
-- `extended` combines the internal PyOpenCL tests with the legacy C++ comparison tests for manual verification.
+- `extended` is a convenience alias for the internal PyOpenCL checks used for manual verification.
 
 ## Running by bundle
 
@@ -27,14 +26,13 @@ The files are not being physically moved into a final long-term directory layout
 - `python tools/run_test_bundle.py numerics`
 - `python tools/run_test_bundle.py release`
 - `python tools/run_test_bundle.py pyopencl_internal`
-- `python tools/run_test_bundle.py legacy_cpp_comparison`
+- `python tools/run_test_bundle.py extended`
 
 ## Running by marker
 
 - `pytest -m numerics`
 - `pytest -m runtime_api`
 - `pytest -m release_gate`
-- `pytest -m legacy_cpp_comparison`
 
 ## Retired items
 

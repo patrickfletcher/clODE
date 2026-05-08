@@ -30,7 +30,6 @@ nav:
       - Initializing the runtime: 'init_runtime.md'
       - Selecting logging levels: 'logging_levels.md'
       - Querying OpenCL devices: 'querying_opencl.md'
-      - Running in Matlab: 'matlab.md'
   #Generate the API reference from the python code in clode/python
   - API Reference: 'api_reference.md'
 

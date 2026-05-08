@@ -21,12 +21,6 @@ class RuntimeSelection:
     platform_id: int | None
     device_id: int | None
     device_ids: tuple[int, ...] | None
-
-
-def _resolve_backend_name(backend_name: str | None = None) -> str:
-    return resolve_backend_name(backend_name)
-
-
 def _create_pyopencl_runtime(runtime_selection: RuntimeSelection | None) -> OpenCLRuntime:
     if runtime_selection is None:
         raise ValueError("PyOpenCL backend requires runtime selection metadata")
@@ -57,13 +51,7 @@ def create_simulator_backend(
     runtime_selection: RuntimeSelection | None = None,
     backend_name: str | None = None,
 ) -> SimulatorBackend:
-    resolved = _resolve_backend_name(backend_name)
-    if resolved == "cpp":
-        from .cpp import CppSimulatorBackend
-
-        return CppSimulatorBackend(
-            problem_info, rhs_source, stepper, single_precision, runtime, clode_root
-        )
+    resolve_backend_name(backend_name)
     return PyOpenCLTransientBackend(
         problem_info,
         rhs_source,
@@ -84,20 +72,14 @@ def create_trajectory_backend(
     runtime_selection: RuntimeSelection | None = None,
     backend_name: str | None = None,
 ) -> TrajectoryBackend:
-    resolved = _resolve_backend_name(backend_name)
-    if resolved == "pyopencl":
-        return PyOpenCLTrajectoryBackend(
-            problem_info,
-            rhs_source,
-            stepper,
-            single_precision,
-            _create_pyopencl_runtime(runtime_selection),
-            clode_root,
-        )
-    from .cpp import CppTrajectoryBackend
-
-    return CppTrajectoryBackend(
-        problem_info, rhs_source, stepper, single_precision, runtime, clode_root
+    resolve_backend_name(backend_name)
+    return PyOpenCLTrajectoryBackend(
+        problem_info,
+        rhs_source,
+        stepper,
+        single_precision,
+        _create_pyopencl_runtime(runtime_selection),
+        clode_root,
     )
 
 
@@ -113,27 +95,14 @@ def create_feature_backend(
     runtime_selection: RuntimeSelection | None = None,
     backend_name: str | None = None,
 ) -> FeatureBackend:
-    resolved = _resolve_backend_name(backend_name)
-    if resolved == "pyopencl":
-        return PyOpenCLFeatureBackend(
-            problem_info,
-            rhs_source,
-            stepper,
-            observer,
-            observer_params,
-            single_precision,
-            _create_pyopencl_runtime(runtime_selection),
-            clode_root,
-        )
-    from .cpp import CppFeatureBackend
-
-    return CppFeatureBackend(
+    resolve_backend_name(backend_name)
+    return PyOpenCLFeatureBackend(
         problem_info,
         rhs_source,
         stepper,
         observer,
         observer_params,
         single_precision,
-        runtime,
+        _create_pyopencl_runtime(runtime_selection),
         clode_root,
     )

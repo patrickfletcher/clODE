@@ -11,7 +11,7 @@ The default package is a pure-Python distribution for Python 3.10 and newer. Ins
 An OpenCL runtime for your device is required. This is often included as part of your
 GPU driver (AMD APP SDK, Intel OpenCL SDK, NVIDIA CUDA, etc.)
 
-Tagged releases now ship the packaged OpenCL kernel assets needed by the Python-owned runtime path, and PyOpenCL is the default backend. In a source checkout, the legacy C++ backend remains available only as an explicit comparison path after its wrapper extension has been built into `clode/cpp/`.
+Tagged releases ship the packaged OpenCL kernel assets needed by the Python-owned runtime path. PyOpenCL is the only in-tree backend.
 
 For a concrete backend-selection example, see `examples/pyopencl_ornstein_uhlenbeck.py`.
 
@@ -72,74 +72,6 @@ You can then install the Python library using pip:
 ```
 
 This uses the same pure-Python packaging path as the published wheel.
-
-### Legacy C++ compatibility backend
-
-The legacy C++ backend is no longer part of the published wheel or the default Python build path. If you want to compare the legacy runtime against the default PyOpenCL path, use a source checkout.
-
-1. Install the checkout into the active environment:
-
-```bash
-pip install -e .
-```
-
-1. Build and install the legacy wrapper into the checkout:
-
-```bash
-make -C clode/cpp install-wrapper
-```
-
-This convenience target still uses Bazel under the hood. On Windows, or anywhere `make` is not convenient, run the two underlying steps directly:
-
-```bash
-bazel build //clode/cpp:clode_cpp_wrapper
-python tools/install_cpp_wrapper.py
-```
-
-1. Select the legacy backend explicitly when running a comparison script or test:
-
-```bash
-_CLODE_BACKEND=cpp python -m pytest test/test_vdp.py -q
-```
-
-You can compare the two backends by running the same command twice: once with the default PyOpenCL path or `_CLODE_BACKEND=pyopencl`, and once with `_CLODE_BACKEND=cpp`.
-
-When doing that, choose `platform_id` and `device_id` from the backend you are actually running. PyOpenCL and the legacy wrapper do not necessarily report platforms in the same order.
-
-### Windows
-
-On Windows, prior to building the legacy C++ path from source you will need the following dependencies in addition to those listed above:
-
-* The MSVC C++ compiler (e.g., Visual Studio Community installed to default path)
-* MSYS2 (add msys64/usr/bin to path)
-
-Bazel will use MSVC to build the C++ libraries.
-Further, Bazel will include the OpenCL SDK in the build.
-This means that you do not need to install the OpenCL SDK separately.
-
-Should you wish to change this behaviour, you can modify the
-library inside bazel/external/opencl_windows.BUILD and
-bazel/repository_locations.bzl.
-
-## C++ stand-alone source installation
-
-To install the C++ library, you will need the following dependencies:
-
-* A C++ compiler (GCC, Clang, MSVC, etc.)
-* Bazel (4.0 or later recommended)
-* An OpenCL runtime (AMD APP SDK, Intel OpenCL SDK, NVIDIA CUDA, etc.)
-
-You can build the C++ libraries using Bazel:
-
-```bash
-bazel build //clode/cpp:cpp
-```
-
-There are three libraries that will be built:
-
-* libclode_features.a: The feature extraction library
-* libclode_trajectory.a: The trajectory extraction library
-* libopencl_resources.a: The OpenCL resources library (to find your OpenCL runtime)
 
 ## License
 

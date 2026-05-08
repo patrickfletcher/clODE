@@ -35,17 +35,12 @@ PRIMARY_BUNDLES: dict[str, tuple[str, ...]] = {
         "test/test_pyopencl_buffers.py",
         "test/test_pyopencl_structs.py",
     ),
-    "legacy_cpp_comparison": (
-        "test/test_pyopencl_transient_backend.py",
-        "test/test_pyopencl_trajectory_backend.py",
-        "test/test_pyopencl_feature_backend.py",
-    ),
 }
 
 ALIASES: dict[str, tuple[str, ...]] = {
     "release": ("frontend", "runtime_api", "numerics"),
     "opencl": ("release",),
-    "extended": ("pyopencl_internal", "legacy_cpp_comparison"),
+    "extended": ("pyopencl_internal",),
 }
 
 DESCRIPTIONS = {
@@ -54,10 +49,9 @@ DESCRIPTIONS = {
     "runtime_api": "Public runtime, backend selection, and simulator contract tests.",
     "numerics": "Numerical regression tests, including the core OpenCL reference suite.",
     "pyopencl_internal": "Focused tests for internal PyOpenCL support layers.",
-    "legacy_cpp_comparison": "Comparison tests that still rely on the legacy C++ wrapper backend.",
     "release": "The OpenCL-backed release gate: frontend, runtime/API, and numerical regressions.",
     "opencl": "Compatibility alias for the release gate bundle.",
-    "extended": "Additional internal and legacy-comparison checks for manual verification.",
+    "extended": "Additional internal PyOpenCL checks for manual verification.",
 }
 
 

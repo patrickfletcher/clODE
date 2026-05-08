@@ -1,7 +1,7 @@
 PYTHON ?= python
 DIST_DIR ?= dist
 
-.PHONY: install-test install-docs install-dev test-smoke test-frontend test-runtime-api test-numerics test-release test-opencl test-pyopencl-internal test-legacy-cpp-comparison test-extended build-docs build-dist legacy-cpp-wrapper paper
+.PHONY: install-test install-docs install-dev test-smoke test-frontend test-runtime-api test-numerics test-release test-opencl test-pyopencl-internal test-extended build-docs build-dist paper
 
 install-test:
 	$(PYTHON) -m pip install --upgrade pip
@@ -36,9 +36,6 @@ test-opencl:
 test-pyopencl-internal:
 	$(PYTHON) tools/run_test_bundle.py pyopencl_internal
 
-test-legacy-cpp-comparison:
-	$(PYTHON) tools/run_test_bundle.py legacy_cpp_comparison
-
 test-extended:
 	$(PYTHON) tools/run_test_bundle.py extended
 
@@ -48,9 +45,6 @@ build-docs:
 build-dist:
 	$(PYTHON) -m build --outdir $(DIST_DIR)
 	$(PYTHON) -m twine check $(DIST_DIR)/*
-
-legacy-cpp-wrapper:
-	$(MAKE) -C clode/cpp install-wrapper PYTHON=$(PYTHON)
 
 paper:
 	docker run --rm \

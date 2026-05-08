@@ -20,9 +20,10 @@ A clear and concise description of what you expected to happen.
 If applicable, add screenshots to help explain your problem.
 
 **Desktop (please complete the following information):**
- - OS: [e.g. Windows 10]
- - C++ compiler and version [e.g. gcc 7.3]
- - Matlab Version [e.g. R2018b]
+
+- OS: [e.g. Windows 10]
+- Python version [e.g. 3.12]
+- OpenCL runtime / device [e.g. NVIDIA 570 + GeForce RTX 5080, PoCL CPU]
 
 **Additional context**
 Add any other context about the problem here.

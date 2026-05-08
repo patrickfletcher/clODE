@@ -105,4 +105,4 @@ You can also print the devices visible to a specific simulator instance:
 simulator.print_devices()
 ```
 
-Platform ordering can differ from `clinfo -l`. The default runtime path reports the PyOpenCL-visible ordering. If you are comparing against the legacy wrapper, rerun the query helpers with `_CLODE_BACKEND=cpp` and treat that backend-reported ordering as authoritative for the comparison run.
+Platform ordering can differ from `clinfo -l`. clODE reports the PyOpenCL-visible ordering, so choose platform and device IDs from `clode.query_opencl()` or `clode.print_opencl()` rather than assuming the `clinfo` order matches.

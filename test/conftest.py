@@ -26,9 +26,6 @@ MARKERS_BY_FILE: dict[str, tuple[str, ...]] = {
     "test/test_pyopencl_source_builder.py": ("pyopencl_internal", "smoke"),
     "test/test_pyopencl_buffers.py": ("pyopencl_internal", "requires_opencl"),
     "test/test_pyopencl_structs.py": ("pyopencl_internal", "requires_opencl"),
-    "test/test_pyopencl_transient_backend.py": ("legacy_cpp_comparison", "requires_opencl"),
-    "test/test_pyopencl_trajectory_backend.py": ("legacy_cpp_comparison", "requires_opencl"),
-    "test/test_pyopencl_feature_backend.py": ("legacy_cpp_comparison", "requires_opencl"),
 }
 
 
