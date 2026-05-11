@@ -3,19 +3,6 @@
 #ifndef OBSERVER_BASIC_H
 #define OBSERVER_BASIC_H
 
-#ifdef __cplusplus
-//Collect all the info for this observer
-static struct ObserverInfo getObserverInfo_basic(const ProblemInfo pi, const unsigned int fVarIx, const unsigned int eVarIx, const unsigned int nStoredEvents) {
-    struct ObserverInfo oi;
-    oi.define="USE_OBSERVER_BASIC";
-    oi.observerDataSizeFloat = 7*sizeof(cl_float) + sizeof(cl_uint);
-    oi.observerDataSizeDouble = 7*sizeof(cl_double) + sizeof(cl_uint); 
-    std::string varName=pi.varNames[fVarIx];
-    oi.featureNames={"max "+varName, "min "+varName, "mean "+varName, "max d"+varName+"/dt", "min d"+varName+"/dt", "step count"};
-    return oi;
-}
-#endif
-
 #ifdef USE_OBSERVER_BASIC
 
 struct ObserverData_basic

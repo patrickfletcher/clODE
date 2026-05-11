@@ -3,32 +3,13 @@
 #ifndef OBSERVER_TEMPLATE_H
 #define OBSERVER_TEMPLATE_H
 
+#ifdef USE_OBSERVER_TEMPLATE //should only be defined for OpenCL preprocessor, thus not included by C++ clODE codes
 
-//typedef to select the correct observer struct from the header
-#ifdef __cplusplus
-template <typename realtype>
-#endif
 struct ObserverData_template
 {
     unsigned int eventcount;
     unsigned int stepcount;
-}
-
-#ifdef __cplusplus
-static struct ObserverInfo getFeatureInfo_template(const ProblemInfo pi, const unsigned int fVarIx, const unsigned int eVarIx, const unsigned int nStoredEvents) {
-    struct ObserverInfo oi;
-    oi.define="USE_OBSERVER_TEMPLATE";
-    oi.observerDataSizeFloat=sizeof(ObserverData_basic<float>);
-    oi.observerDataSizeDouble=sizeof(ObserverData_basic<double>);
-
-    //feature names. Could depend on problem info; nVar, varNames, etc. make sure this matches number of features actually returned
-    oi.featureNames={}; 
-
-    return oi;
-}
-#endif
-
-#ifdef USE_OBSERVER_TEMPLATE //should only be defined for OpenCL preprocessor, thus not included by C++ clODE codes
+};
 
 typedef struct ObserverData_template ObserverData;
 

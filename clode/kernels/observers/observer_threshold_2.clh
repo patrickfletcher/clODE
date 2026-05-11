@@ -1,62 +1,6 @@
 #ifndef OBSERVER_THRESHOLD_2_H
 #define OBSERVER_THRESHOLD_2_H
 
-
-#ifdef __cplusplus
-//Collect all the info for this observer
-static struct ObserverInfo getObserverInfo_thresh2(const ProblemInfo pi, const unsigned int fVarIx, const unsigned int eVarIx, const unsigned int nStoredEvents) {
-    struct ObserverInfo oi;
-    oi.define="USE_OBSERVER_THRESHOLD_2";
-    size_t n_real = (3*pi.nVar*2 + pi.nVar*5 + pi.nAux*3 + nStoredEvents*2 + 3*8 + 16); //hard coded, because C++ code can't see the N_VAR, N_AUX etc...
-    size_t n_int = 4;
-    oi.observerDataSizeFloat = n_real*sizeof(cl_float) + n_int*sizeof(cl_uint);
-    oi.observerDataSizeDouble = n_real*sizeof(cl_double) + n_int*sizeof(cl_uint); 
-    
-    oi.featureNames.push_back("max period");
-    oi.featureNames.push_back("min period");
-    oi.featureNames.push_back("mean period");
-    oi.featureNames.push_back("max peaks");
-    oi.featureNames.push_back("min peaks");
-    oi.featureNames.push_back("mean peaks");
-    oi.featureNames.push_back("max upDuration");
-    oi.featureNames.push_back("min upDuration");
-    oi.featureNames.push_back("mean upDuration");
-    oi.featureNames.push_back("max downDuration");
-    oi.featureNames.push_back("min downDuration");
-    oi.featureNames.push_back("mean downDuration");
-    oi.featureNames.push_back("max duty");
-    oi.featureNames.push_back("min duty");
-    oi.featureNames.push_back("mean duty");
-    oi.featureNames.push_back("max activeDip");
-    oi.featureNames.push_back("min activeDip");
-    oi.featureNames.push_back("mean activeDip");
-    for (int j = 0; j < pi.nVar; ++j) {
-        oi.featureNames.push_back("max " + pi.varNames[j]);
-        oi.featureNames.push_back("min " + pi.varNames[j]);
-        oi.featureNames.push_back("mean " + pi.varNames[j]);
-        oi.featureNames.push_back("max d" + pi.varNames[j] + "/dt");
-        oi.featureNames.push_back("min d" + pi.varNames[j] + "/dt");
-    }
-    for (int j = 0; j < pi.nAux; ++j) {
-        oi.featureNames.push_back("max " + pi.auxNames[j]);
-        oi.featureNames.push_back("min " + pi.auxNames[j]);
-        oi.featureNames.push_back("mean " + pi.auxNames[j]);
-    }
-    for (int j = 0; j < nStoredEvents; ++j) {
-		oi.featureNames.push_back("up event time " + std::to_string(j));
-		oi.featureNames.push_back("down event time " + std::to_string(j));
-	}
-    oi.featureNames.push_back("event count");
-    oi.featureNames.push_back("step count");
-  	oi.featureNames.push_back("max dt");
-    oi.featureNames.push_back("min dt");
-    oi.featureNames.push_back("mean dt");
-    return oi;
-}
-#endif
-
-
-
 #ifdef USE_OBSERVER_THRESHOLD_2
 #define TWO_PASS_EVENT_DETECTOR
 
