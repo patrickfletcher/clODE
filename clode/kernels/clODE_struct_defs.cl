@@ -5,9 +5,6 @@
 //TODO: provide different structs for base vs trajectory solvers (expose relevant members)
 #include "realtype.cl"
 
-#ifdef __cplusplus
-template <typename realtype>
-#endif
 struct SolverParams
 {
 	realtype dt;

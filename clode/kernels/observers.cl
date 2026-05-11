@@ -19,9 +19,6 @@
 
 #include "realtype.cl"
 
-#ifdef __cplusplus
-template <typename realtype>
-#endif
 struct ObserverParams
 {
     unsigned int eVarIx; //variable for event detection
@@ -45,18 +42,6 @@ struct ObserverParams
     realtype eps_dx;
 };
 
-
-#ifdef __cplusplus
-//info about available observers for access in C++
-struct ObserverInfo 
-{
-	std::string define;
-	size_t observerDataSizeFloat;
-	size_t observerDataSizeDouble;
-	std::vector<std::string> featureNames;
-};
-
-#endif
 
 // Design criteria
 // - use online algorithms for features such as mean, median, etc.
@@ -114,34 +99,6 @@ struct ObserverInfo
 // Event trigger is the return of the trajectory to small neighborhood of a point Xstart in normalized state-space coordinates
 // - Use a first pass to find a good Xstart (e.g. absolute drop below 0.5*range of slowest variable)
 #include "observers/observer_neighborhood_2.clh"
-
-
-
-// collect available methods into "name"-ObserverInfo map, for C++ side access. Must come after including all the getObserverInfo_functions.
-#ifdef __cplusplus
-static void getObserverDefineMap(const ProblemInfo pi,
-								 const unsigned int fVarIx,
-								 const unsigned int eVarIx,
-								 const unsigned int nStoredEvents,
-								 std::map<std::string, struct ObserverInfo> &observerDefineMap,
-								 std::vector<std::string> &availableObserverNames) {
-    std::map<std::string, struct ObserverInfo> newMap;
-    newMap["basic"]=getObserverInfo_basic(pi, fVarIx, eVarIx, nStoredEvents);
-    newMap["basicall"]=getObserverInfo_basicAll(pi, fVarIx, eVarIx, nStoredEvents);
-    newMap["localmax"]=getObserverInfo_localmax(pi, fVarIx, eVarIx, nStoredEvents);
-    newMap["nhood1"]=getObserverInfo_nhood1(pi, fVarIx, eVarIx, nStoredEvents);
-    newMap["nhood2"]=getObserverInfo_nhood2(pi, fVarIx, eVarIx, nStoredEvents);
-    newMap["thresh2"]=getObserverInfo_thresh2(pi, fVarIx, eVarIx, nStoredEvents);
-
-	//export vector of names for access in C++
-	std::vector<std::string> newNames;
-	for (auto const& element : newMap)
-		newNames.push_back(element.first);
-
-	observerDefineMap=newMap;
-	availableObserverNames=newNames;
-}
-#endif
 
 
 #endif //OBSERVERS_H_
