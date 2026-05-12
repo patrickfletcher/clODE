@@ -1,5 +1,8 @@
 # git ignore list
 
+.github/instructions
+.design
+
 # Compiled source #
 ###################
 *.com
