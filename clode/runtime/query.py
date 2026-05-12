@@ -8,6 +8,8 @@ from .logging import LogLevel, get_log_level, set_log_level
 
 @dataclass(slots=True)
 class DeviceInfo:
+    """Summary of one OpenCL device visible to the active runtime."""
+
     name: str
     vendor: str
     version: str
@@ -43,6 +45,8 @@ class DeviceInfo:
 
 @dataclass(slots=True)
 class PlatformInfo:
+    """Summary of one OpenCL platform and its visible devices."""
+
     name: str
     vendor: str
     version: str
@@ -171,10 +175,14 @@ def _emit_opencl_report(platforms: list[PlatformInfo]) -> None:
 
 
 def query_opencl() -> list[PlatformInfo]:
+    """Return the OpenCL platforms and devices visible to clODE."""
+
     return _query_opencl_runtime()
 
 
 def print_opencl() -> None:
+    """Print a human-readable report of visible OpenCL platforms and devices."""
+
     old_level = get_log_level()
     if old_level == LogLevel.off:
         return

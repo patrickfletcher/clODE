@@ -5,6 +5,16 @@ from dataclasses import dataclass, field
 
 @dataclass(slots=True)
 class ProblemInfo:
+    """Static shape information for a modeled ODE problem.
+
+    Attributes:
+        src_file: Human-readable source label for the problem definition.
+        vars: Ordered state-variable names.
+        pars: Ordered parameter names.
+        aux: Ordered auxiliary-variable names.
+        num_noise: Number of Wiener-process inputs.
+    """
+
     src_file: str = ""
     vars: list[str] = field(default_factory=list)
     pars: list[str] = field(default_factory=list)

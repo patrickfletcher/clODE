@@ -1,7 +1,7 @@
 PYTHON ?= python
 DIST_DIR ?= dist
 
-.PHONY: install-test install-docs install-dev test-smoke test-frontend test-runtime-api test-numerics test-release test-opencl test-pyopencl-internal test-extended build-docs build-dist paper
+.PHONY: install-test install-docs install-dev test-smoke test-frontend test-runtime-api test-numerics test-release test-opencl test-opencl-internal test-extended build-docs build-dist paper
 
 install-test:
 	$(PYTHON) -m pip install --upgrade pip
@@ -33,8 +33,8 @@ test-release:
 test-opencl:
 	$(PYTHON) tools/run_test_bundle.py opencl
 
-test-pyopencl-internal:
-	$(PYTHON) tools/run_test_bundle.py pyopencl_internal
+test-opencl-internal:
+	$(PYTHON) tools/run_test_bundle.py opencl_internal
 
 test-extended:
 	$(PYTHON) tools/run_test_bundle.py extended

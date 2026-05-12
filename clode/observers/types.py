@@ -5,6 +5,8 @@ from enum import Enum
 
 
 class Observer(Enum):
+    """Built-in observer modes available to `FeatureSimulator`."""
+
     basic = "basic"
     basic_all_variables = "basicall"
     local_max = "localmax"
@@ -15,6 +17,23 @@ class Observer(Enum):
 
 @dataclass(slots=True)
 class ObserverParams:
+    """Configuration for built-in observer feature detection.
+
+    Attributes:
+        e_var_ix: Index of the variable used for event detection.
+        f_var_ix: Index of the variable used for feature readout.
+        max_event_count: Maximum number of events to accumulate.
+        max_event_timestamps: Maximum number of event timestamps to retain.
+        min_amp: Minimum amplitude threshold for event acceptance.
+        min_imi: Minimum inter-event interval.
+        nhood_radius: Neighborhood radius used by neighborhood observers.
+        x_up_threshold: Rising threshold for threshold-style observers.
+        x_down_threshold: Falling threshold for threshold-style observers.
+        dx_up_threshold: Rising derivative threshold for threshold-style observers.
+        dx_down_threshold: Falling derivative threshold for threshold-style observers.
+        eps_dx: Small derivative tolerance used around threshold crossings.
+    """
+
     e_var_ix: int = 0
     f_var_ix: int = 0
     max_event_count: int = 100

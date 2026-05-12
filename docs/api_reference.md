@@ -1,28 +1,60 @@
 # API Reference
 
+This page is a curated reference for the main public Python surfaces. For workflows and examples, start with the guides elsewhere in the docs.
+
+## Simulators
+
 ::: clode.Simulator
     :members:
-    :undoc-members:
     :show-inheritance:
-    :private-members:
-    :special-members: __init__
     :exclude-members: __weakref__
-    :inherited-members:
 
 ::: clode.FeatureSimulator
     :members:
-    :undoc-members:
     :show-inheritance:
-    :private-members:
-    :special-members: __init__
     :exclude-members: __weakref__
-    :inherited-members:
 
 ::: clode.TrajectorySimulator
     :members:
-    :undoc-members:
     :show-inheritance:
-    :private-members:
-    :special-members: __init__
     :exclude-members: __weakref__
-    :inherited-members:
+
+## Results and Configuration
+
+::: clode.ObserverOutput
+    :members:
+    :exclude-members: __weakref__
+
+::: clode.TrajectoryOutput
+    :members:
+    :exclude-members: __weakref__
+
+::: clode.Stepper
+
+::: clode.SolverParams
+
+::: clode.Observer
+
+::: clode.ObserverParams
+
+## Runtime Query
+
+::: clode.query_opencl
+
+::: clode.print_opencl
+
+::: clode.DeviceInfo
+
+::: clode.PlatformInfo
+
+::: clode.LogLevel
+
+## Problem Definition and Conversion
+
+::: clode.ProblemInfo
+
+::: clode.OpenCLConverter
+
+::: clode.convert_str_to_opencl
+
+::: clode.convert_xpp_file

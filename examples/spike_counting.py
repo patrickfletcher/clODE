@@ -1,11 +1,9 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from typing import List
-import time
 
 import clode
 from clode import exp
-# clode.set_log_level(clode.LogLevel.debug)
 
 def get_rhs(t: float,
             x: List[float],
@@ -50,14 +48,16 @@ variables = {"v": -50.0, "n": 0.01, "c": 0.12}
 parameters = {"gca": 1200.0, "gkca": 750.0, "kpmca": 0.1}
 
 # set up the solver
+t_span=(0.0, 30000.0)
 integrator = clode.FeatureSimulator(
     rhs_equation=get_rhs,
     variables=variables,
     parameters=parameters,
     single_precision=True,
+    t_span=t_span,
     stepper=clode.Stepper.dormand_prince,
     dt=0.001,
-    dtmax = 1000,
+    dtmax=1.0,
     abstol=1e-6,
     reltol=1e-5,
     event_var="v",
@@ -65,74 +65,79 @@ integrator = clode.FeatureSimulator(
     observer=clode.Observer.threshold_2,
     observer_x_up_thresh=0.5,
     observer_x_down_thresh=0.05,
-    observer_min_x_amp=0.5,
+    observer_min_x_amp=1.0,
+    observer_min_imi=0.0,
+    observer_max_event_count=50,
 )
 
 # set up the ensemble of systems
-nx = ny = 256
+nx = 256
+ny = 256
+nPts = nx * ny
 gca = np.linspace(550.0, 1050.0, nx)
 kpmca = np.linspace(0.095, 0.155, ny)
-gca_grid, kpmca_grid = np.meshgrid(gca, kpmca)
+px, py = np.meshgrid(gca, kpmca)
 
-# the 2D grid shape is noted internally, and features will be returned in this shape
-integrator.set_ensemble(parameters= {"gca" : gca_grid, "kpmca" : kpmca_grid})
+ensemble_parameters = {"gca" : px.flatten(), "kpmca" : py.flatten()} #gkca will have default value
+ensemble_parameters_names = list(ensemble_parameters.keys())
 
-t0 = time.perf_counter()
+integrator.set_ensemble(parameters=ensemble_parameters)
 
-integrator.transient(t_span=(0.0, 50000.0))
-features = integrator.features(t_span=(0.0, 10000.0))
+integrator.transient()
+integrator.features()
 
-tf = time.perf_counter()
+features = integrator.get_observer_results()
 
-print(f"elapsed time: {tf-t0} s")
+feature = features.get_var_max("peaks")
+feature = np.reshape(feature, (nx, ny))
 
-# the feature output knows to return the feature with shape matching the 2D grid input
-max_peaks = features.get_var_max("peaks")
-
-plt.pcolormesh(gca_grid, kpmca_grid, max_peaks, shading='nearest', vmax=10)
+plt.pcolormesh(px, py, feature, shading='nearest', vmax=12)
 plt.title("peaks")
 plt.colorbar()
-plt.xlabel("gca")
-plt.ylabel("kpmca")
+plt.xlabel(ensemble_parameters_names[0])
+plt.ylabel(ensemble_parameters_names[1])
 plt.axis("tight")
+
+# highlight a few example points - we'll get their trajectories next
+points = np.array([[950, 0.145], [700, 0.105], [750, 0.125], [800, 0.142]])
+plt.plot(points[:, 0], points[:, 1], 'o', color='black')
+for i, txt in enumerate(range(4)):
+    plt.annotate(txt, (points[i, 0] - 10, points[i, 1] - 0.003))
 
 plt.show()
 
-# # highlight a few example points - we'll get their trajectories next
-# points = np.array([[950, 0.145], [700, 0.105], [750, 0.125], [800, 0.142]])
-# plt.plot(points[:, 0], points[:, 1], 'o', color='black')
-# for i, txt in enumerate(range(4)):
-#     plt.annotate(txt, (points[i, 0] - 10, points[i, 1] - 0.003))
 
+# Now get the trajectories
+steps_taken = features.get_var_count("step")
+max_steps = int(np.max(steps_taken))
 
-# # Now get the trajectories
-# steps_taken = features.get_var_count("step")
-# max_store = int(np.max(steps_taken))+1
+integrator_traj = clode.TrajectorySimulator(
+    rhs_equation=get_rhs,
+    variables = variables,
+    parameters = parameters,
+    single_precision = True,
+    t_span=t_span,
+    stepper = clode.Stepper.dormand_prince,
+    dt = 0.001,
+    dtmax = 1.0,
+    abstol = 1e-6,
+    reltol = 1e-5,
+    max_steps = max_steps,
+    max_store = max_steps,
+)
 
-# integrator_traj = clode.TrajectorySimulator(
-#     rhs_equation=get_rhs,
-#     variables = variables,
-#     parameters = parameters,
-#     single_precision = True,
-#     stepper = clode.Stepper.dormand_prince,
-#     dt = 0.001,
-#     dtmax = 0.1,
-#     abstol = 1e-6,
-#     reltol = 1e-5,
-#     max_store = max_store,
-# )
+traj_parameters = {"gca":points[:, 0], "kpmca": points[:, 1]}
 
-# integrator_traj.set_ensemble(parameters = {"gca":points[:, 0], "kpmca": points[:, 1]})
+integrator_traj.set_ensemble(parameters = traj_parameters)
 
-# integrator_traj.transient(t_span=(0.0, 50000.0))
-# trajectories = integrator_traj.trajectory(t_span=(0.0, 10000.0))
+integrator_traj.transient()
+integrator_traj.set_tspan((0.0, 10000.0))
+trajectories = integrator_traj.trajectory()
 
-# fig, ax = plt.subplots(4, 1, sharex=True, sharey=True)
-# for i, trajectory in enumerate(trajectories):
-#     ax[i].plot(trajectory.t / 1000.0, trajectory.x["v"])
-#     print(trajectory.t[-1])
+fig, ax = plt.subplots(4, 1, sharex=True, sharey=True)
+for i, trajectory in enumerate(trajectories):
+    ax[i].plot(trajectory.t / 1000.0, trajectory.x["v"])
 
-# ax[1].set_ylabel("v")
-# ax[-1].set_xlabel("time (s)")
-
-# plt.show()
+ax[1].set_ylabel("v")
+ax[-1].set_xlabel("time (s)")
+plt.show()

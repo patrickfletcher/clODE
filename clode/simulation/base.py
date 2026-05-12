@@ -27,6 +27,8 @@ from .params import SolverParams
 
 
 class Stepper(Enum):
+	"""Supported time-stepping methods for the simulation backends."""
+
 	euler = "euler"
 	heun = "heun"
 	rk4 = "rk4"
@@ -38,9 +40,10 @@ class Stepper(Enum):
 class Simulator:
 	"""Base class for simulating an ensemble of instances of an ODE system.
 
-	It provides the core functionality for advancing the simulation in time without
-	storing any intermediate state. May be used directly when only the final state is
-	of interest, or as a base class for other simulators.
+	It provides the core functionality for advancing an ensemble in time without
+	storing intermediate trajectory samples. Use it directly for final-state or
+	transient-only workloads, or subclass it for feature extraction and trajectory
+	storage workflows.
 	"""
 
 	_integrator: SimulatorBackend
@@ -68,41 +71,6 @@ class Simulator:
 	_device_dt: Optional[np.ndarray] = None
 	_device_tf: Optional[np.ndarray] = None
 
-	@property
-	def variable_names(self) -> List[str]:
-		"""The list of ODE variable names"""
-		return self._pi.vars
-
-	@property
-	def num_variables(self) -> int:
-		"""The number of ODE state variables"""
-		return self._pi.num_var
-
-	@property
-	def parameter_names(self) -> List[str]:
-		"""The list of ODE system parameter names"""
-		return self._pi.pars
-
-	@property
-	def num_parameters(self) -> int:
-		"""The number of ODE system parameters"""
-		return self._pi.num_par
-
-	@property
-	def aux_names(self) -> List[str]:
-		"""The list of auxiliary variable names"""
-		return self._pi.aux
-
-	@property
-	def num_aux(self) -> int:
-		"""The number of auxiliary variables"""
-		return self._pi.num_aux
-
-	@property
-	def num_noise(self) -> int:
-		"""The number of Wiener variables in the system"""
-		return self._pi.num_noise
-
 	def __init__(
 		self,
 		variables: Dict[str, float],
@@ -129,6 +97,41 @@ class Simulator:
 		device_id: Optional[int] = None,
 		device_ids: Optional[List[int]] = None,
 	) -> None:
+		"""Create a simulator for one ODE model and one ensemble configuration.
+
+		Args:
+			variables: Mapping from state-variable name to its default initial value.
+			parameters: Mapping from parameter name to its default value.
+			aux: Ordered auxiliary-variable names written by the RHS.
+			num_noise: Number of Wiener-process inputs expected by the RHS.
+			src_file: Path to an OpenCL source file or XPP model file.
+			rhs_equation: Typed Python RHS function to convert to OpenCL.
+			supplementary_equations: Additional typed Python helper functions emitted
+				into the generated OpenCL source before `rhs_equation`.
+			stepper: Time-stepping method used by the backend.
+			dt: Initial or fixed time step.
+			dtmax: Maximum time step for adaptive steppers.
+			abstol: Absolute tolerance for adaptive steppers.
+			reltol: Relative tolerance for adaptive steppers.
+			max_steps: Maximum number of integration steps per solve.
+			max_store: Maximum number of stored time samples for trajectory solves.
+			nout: Output stride for stored trajectories.
+			solver_parameters: Optional prebuilt solver-parameter bundle. When
+				provided, it overrides the scalar solver arguments above.
+			t_span: Initial integration interval as `(t0, tf)`.
+			single_precision: Whether to build the backend in single precision.
+			device_type: Preferred OpenCL device class for runtime selection.
+			vendor: Preferred OpenCL vendor for runtime selection.
+			platform_id: Explicit OpenCL platform index.
+			device_id: Explicit OpenCL device index on the selected platform.
+			device_ids: Optional explicit device-ID list forwarded to the runtime
+				selection layer. For typical single-device workflows, prefer
+				`platform_id` together with `device_id`.
+
+		Raises:
+			ValueError: If both `src_file` and `rhs_equation` are provided, or if
+				neither is provided.
+		"""
 
 		self._rhs_source = self._prepare_rhs_source(
 			src_file, rhs_equation, supplementary_equations
@@ -188,6 +191,41 @@ class Simulator:
 		)
 		self._set_problem_data(default_initial_state, default_parameters)
 
+	@property
+	def variable_names(self) -> List[str]:
+		"""The list of ODE variable names"""
+		return self._pi.vars
+
+	@property
+	def num_variables(self) -> int:
+		"""The number of ODE state variables"""
+		return self._pi.num_var
+
+	@property
+	def parameter_names(self) -> List[str]:
+		"""The list of ODE system parameter names"""
+		return self._pi.pars
+
+	@property
+	def num_parameters(self) -> int:
+		"""The number of ODE system parameters"""
+		return self._pi.num_par
+
+	@property
+	def aux_names(self) -> List[str]:
+		"""The list of auxiliary variable names"""
+		return self._pi.aux
+
+	@property
+	def num_aux(self) -> int:
+		"""The number of auxiliary variables"""
+		return self._pi.num_aux
+
+	@property
+	def num_noise(self) -> int:
+		"""The number of Wiener variables in the system"""
+		return self._pi.num_noise
+
 	def _create_integrator(self) -> None:
 		self._integrator = create_simulator_backend(
 			self._pi,
@@ -237,16 +275,14 @@ class Simulator:
 			raise ValueError("Must specify either src_file or rhs_equation")
 
 	def set_repeat_ensemble(self, num_repeats: int) -> None:
-		"""Create an ensemble with identical parameters and initial states.
+		"""Create a 1D ensemble by repeating one parameter/state configuration.
 
-		This method uses the default parameters and initial state only. For other
-		options, see set_ensemble.
+		When the current ensemble size is 1, the current device state and parameter
+		vector are broadcast to `num_repeats` instances. When resizing from a larger
+		ensemble, the stored default values are used instead.
 
 		Args:
-			num_repeats (int): The number of repeats for the ensemble.
-
-		Returns:
-			None
+			num_repeats: Number of independent copies to create.
 		"""
 		initial_state, parameters = self._make_problem_data(
 			new_size=num_repeats, new_shape=(num_repeats, 1)
@@ -262,29 +298,25 @@ class Simulator:
 			Union[np.ndarray, Mapping[str, Union[float, List[float], np.ndarray]]]
 		] = None,
 	) -> None:
-		"""Set the parameters and/or initial states an ensemble ODE problem, possibly
-		changing the ensemble size.
+		"""Set or resize the ensemble by supplying state and/or parameter values.
 
-		Generates initial state and parameter arrays with shapes (ensemble_size,
-		num_variables) and (ensemble_size, num_parameters), respectively, with one row
-		per initial value problem.
+		You may pass full `(ensemble_size, n)` arrays or dictionaries keyed by
+		variable/parameter name. Dictionary values may be scalars or arrays with a
+		shared shape; scalar values are broadcast across the new ensemble.
 
-		Specifying full arrays or dictionaries mapping parameter/variable names to
-		values are supported. The values may be scalars or 1D arrays of a constant
-		length. This array length sets the new ensemble_size, and any scalars will be
-		broadcast to form fully specified arrays.
-
-		Unspecified values will be taken from the parameter and initial state default
-		values. In the case of initial state values, the most recent state from
-		simulation will be preferred in the following cases: - when expanding the
-		ensemble from size 1 - when the ensemble size does not change
-
-		To override the above behaviour and use the default initial state, specify the
-		default initial state as an argument.
+		Unspecified entries fall back to the stored defaults. When the ensemble size
+		stays unchanged or expands from size 1, the current device initial state is
+		reused before defaults are applied.
 
 		Args:
-			variables (np.array | dict): The initial state
-			parameters (np.array | dict): The parameters
+			variables: Full initial-state array or mapping from variable name to
+				scalar/array values.
+			parameters: Full parameter array or mapping from parameter name to
+				scalar/array values.
+
+		Raises:
+			ValueError: If both inputs are omitted, if names are unknown, or if the
+				provided array shapes are incompatible.
 		"""
 		if variables is None and parameters is None:
 			raise ValueError(f"initial_state and parameters cannot both be None")
@@ -448,17 +480,21 @@ class Simulator:
 		self._integrator.set_x0(initial_state.flatten(order="F"))
 
 	def set_tspan(self, t_span: tuple[float, float]) -> None:
-		"""Set the time span of the simulation."""
+		"""Set the integration interval used by subsequent solves.
+
+		Args:
+			t_span: Time interval as `(t0, tf)`.
+		"""
 		self._t_span = t_span
 		self._integrator.set_tspan(t_span)
 
 	def get_tspan(self) -> tuple[float, float]:
-		"""Returns the simulation time span currently set on the device."""
+		"""Return the integration interval currently stored on the device."""
 		self._t_span = tuple(self._integrator.get_tspan())
 		return self._t_span
 
 	def shift_tspan(self) -> None:
-		"""Shift the time span to the current time plus the time period."""
+		"""Advance the stored integration interval by one interval length."""
 		self._integrator.shift_tspan()
 		self._t_span = self._integrator.get_tspan()
 
@@ -473,7 +509,19 @@ class Simulator:
 		max_store: Optional[int] = None,
 		nout: Optional[int] = None,
 	) -> None:
-		"""Update solver parameters and push to the device."""
+		"""Update solver parameters and push them to the device.
+
+		Args:
+			solver_parameters: Optional complete parameter bundle. When provided, it
+				replaces the current solver settings.
+			dt: Initial or fixed time step.
+			dtmax: Maximum time step for adaptive steppers.
+			abstol: Absolute tolerance for adaptive steppers.
+			reltol: Relative tolerance for adaptive steppers.
+			max_steps: Maximum number of integration steps per solve.
+			max_store: Maximum number of stored samples for trajectory solves.
+			nout: Output stride for stored trajectories.
+		"""
 		if solver_parameters is not None:
 			self._sp = solver_parameters
 		else:
@@ -495,7 +543,7 @@ class Simulator:
 		self._device_dt = None
 
 	def get_solver_parameters(self) -> SolverParams:
-		"""Get the current ensemble parameters from the OpenCL device."""
+		"""Return the solver parameters currently stored on the device."""
 		return self._integrator.get_solver_params()
 
 	def seed_rng(self, seed: int | None = None) -> None:
@@ -512,7 +560,17 @@ class Simulator:
 		update_x0: bool = True,
 		fetch_results: bool = False,
 	) -> Optional[np.ndarray]:
-		"""Run a transient simulation."""
+		"""Run the simulator without storing trajectories or observer features.
+
+		Args:
+			t_span: Optional time interval override for this solve.
+			update_x0: Whether to promote the final state to the next initial state
+				after the solve.
+			fetch_results: Whether to fetch and return the final state immediately.
+
+		Returns:
+			The final-state array when `fetch_results` is true, otherwise `None`.
+		"""
 
 		self._ensure_cl_program()
 
@@ -530,7 +588,7 @@ class Simulator:
 			return self.get_final_state()
 
 	def get_initial_state(self) -> np.ndarray:
-		"""Get the initial state of the simulation from the device."""
+		"""Return the initial-state array with shape `(ensemble_size, num_variables)`."""
 		if self._device_initial_state is None:
 			self._device_initial_state = np.array(
 				self._integrator.get_x0(), dtype=np.float64
@@ -538,7 +596,11 @@ class Simulator:
 		return self._device_initial_state
 
 	def get_final_state(self) -> np.ndarray:
-		"""Get the final state of the simulation from the device."""
+		"""Return the final-state array with shape `(ensemble_size, num_variables)`.
+
+		Raises:
+			ValueError: If no solve has been run yet.
+		"""
 		if self._device_final_state is None:
 			final_state = self._integrator.get_xf()
 
@@ -551,7 +613,7 @@ class Simulator:
 		return self._device_final_state
 
 	def get_dt(self) -> np.ndarray:
-		"""Get the array of timestep sizes (dt) from the device."""
+		"""Return per-instance step sizes with shape matching the ensemble shape."""
 		if self._device_dt is None:
 			self._device_dt = np.array(
 				self._integrator.get_dt(), dtype=np.float64
@@ -559,7 +621,7 @@ class Simulator:
 		return self._device_dt
 
 	def get_final_time(self) -> np.ndarray:
-		"""Get the array of final times from the device."""
+		"""Return per-instance final times with shape matching the ensemble shape."""
 		if self._device_tf is None:
 			self._device_tf = np.array(
 				self._integrator.get_tf(), dtype=np.float64

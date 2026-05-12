@@ -14,7 +14,7 @@ from .results import TrajectoryOutput
 
 
 class TrajectorySimulator(Simulator):
-	"""Simulator class that stores trajectories."""
+	"""Simulator that stores time samples and returns `TrajectoryOutput` objects."""
 
 	_device_t: np.ndarray[Any, np.dtype[np.float64]] | None
 	_device_x: np.ndarray[Any, np.dtype[np.float64]] | None
@@ -48,7 +48,13 @@ class TrajectorySimulator(Simulator):
 		device_id: Optional[int] = None,
 		device_ids: Optional[List[int]] = None,
 	) -> None:
-		"""Construct a CLODE trajectory object."""
+		"""Create a trajectory simulator.
+
+		This constructor accepts the same model-definition, solver, and runtime
+		selection arguments as `Simulator`. In trajectory workflows, `max_store`
+		and `nout` determine how many time samples are retained and how densely they
+		are stored.
+		"""
 
 		super().__init__(
 			variables=variables,
@@ -97,7 +103,20 @@ class TrajectorySimulator(Simulator):
 		update_x0: bool = True,
 		fetch_results: bool = True,
 	) -> Optional[List[TrajectoryOutput] | TrajectoryOutput]:
-		"""Run a trajectory simulation."""
+		"""Run a solve that stores trajectory samples.
+
+		Args:
+			t_span: Optional time interval override for this solve.
+			update_x0: Whether to promote the final state to the next initial state
+				after the solve.
+			fetch_results: Whether to fetch and return the stored trajectory output
+				immediately.
+
+		Returns:
+			A single `TrajectoryOutput` for a size-1 ensemble, a list of
+			`TrajectoryOutput` objects for larger ensembles, or `None` when
+			`fetch_results` is false.
+		"""
 		self._ensure_cl_program()
 
 		if t_span is not None:
@@ -115,7 +134,15 @@ class TrajectorySimulator(Simulator):
 			return self.get_trajectory()
 
 	def get_trajectory(self) -> List[TrajectoryOutput] | TrajectoryOutput:
-		"""Get the trajectory data."""
+		"""Return the most recently stored trajectory output.
+
+		Returns:
+			A single `TrajectoryOutput` for a size-1 ensemble or a list of outputs
+			for larger ensembles.
+
+		Raises:
+			ValueError: If `trajectory()` has not been run yet.
+		"""
 
 		self._device_n_stored = self._integrator.get_n_stored()
 		self._device_t = self._integrator.get_t()

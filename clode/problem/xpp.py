@@ -166,6 +166,8 @@ def format_opencl_rhs(
 
 
 def convert_xpp_file(filename: str) -> str:
+    """Convert an XPP `.ode` file into a generated OpenCL source file."""
+
     with open(filename, "r") as f:
         xpp_string = f.read()
 

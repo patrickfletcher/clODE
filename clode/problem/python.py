@@ -772,6 +772,8 @@ class OpenCLSyntaxTree:
 
 
 class OpenCLConverter(ast.NodeTransformer):
+    """Convert typed Python RHS functions into OpenCL source code."""
+
     syntax_tree: OpenCLSyntaxTree
     mutable_args: Optional[Union[List[str], List[int]]] = None
     function_name: Optional[str] = None
@@ -798,6 +800,8 @@ class OpenCLConverter(ast.NodeTransformer):
         mutable_args: Optional[Union[List[str], List[int]]] = None,
         function_name: Optional[str] = None,
     ) -> str:
+        """Convert one Python RHS function or source string to OpenCL code."""
+
         if isinstance(python_fn, str):
             python_source = python_fn
         else:
@@ -814,6 +818,8 @@ class OpenCLConverter(ast.NodeTransformer):
 
 
 def convert_str_to_opencl(python_code: str) -> str:
+    """Convert a Python source string containing a typed RHS function to OpenCL."""
+
     tree = ast.parse(python_code)
     converter = OpenCLConverter()
     converter.visit(tree)

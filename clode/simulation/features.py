@@ -15,7 +15,7 @@ from .results import ObserverOutput
 
 
 class FeatureSimulator(Simulator):
-	"""Simulator class that stores trajectory features, computed on-the-fly."""
+	"""Simulator that computes observer features and event data on the device."""
 
 	_device_features: np.ndarray[Any, np.dtype[np.float64]] | None = None
 	_num_features: int | None = None
@@ -61,6 +61,36 @@ class FeatureSimulator(Simulator):
 		observer_eps_dx: float = 0.0,
 		observer_parameters: Optional[ObserverParams] = None,
 	) -> None:
+		"""Create a feature-extraction simulator.
+
+		This constructor accepts the same model-definition, solver, and runtime
+		selection arguments as `Simulator`, plus configuration for the built-in
+		observers used by `features()`.
+
+		Args:
+			observer: Built-in observer mode used during feature extraction.
+			event_var: Variable name used for event detection when the observer
+				requires one.
+			feature_var: Variable name used for feature readout when the observer
+				distinguishes detection and measurement variables.
+			observer_max_event_count: Maximum number of events accumulated by the
+				observer.
+			observer_max_event_timestamps: Maximum number of event timestamps
+				retained in the output.
+			observer_min_x_amp: Minimum accepted event amplitude.
+			observer_min_imi: Minimum inter-event interval.
+			observer_neighbourhood_radius: Neighborhood radius for neighborhood-based
+				observers.
+			observer_x_up_thresh: Rising value threshold for threshold observers.
+			observer_x_down_thresh: Falling value threshold for threshold observers.
+			observer_dx_up_thresh: Rising derivative threshold for threshold
+				observers.
+			observer_dx_down_thresh: Falling derivative threshold for threshold
+				observers.
+			observer_eps_dx: Derivative tolerance used near threshold crossings.
+			observer_parameters: Optional complete observer-parameter bundle. When
+				provided, it overrides the individual `observer_*` arguments above.
+		"""
 
 		self._observer_type = observer
 
@@ -132,8 +162,12 @@ class FeatureSimulator(Simulator):
 		self._num_features = None
 		self._invalidate_solution_cache()
 
-	def set_observer(self, observer_type: Observer):
-		"""Change the observer."""
+	def set_observer(self, observer_type: Observer) -> None:
+		"""Switch to a different built-in observer.
+
+		Args:
+			observer_type: New observer mode to use for subsequent feature solves.
+		"""
 		if observer_type != self._observer_type:
 			self._integrator.set_observer(observer_type.value)
 			self._observer_type = observer_type
@@ -156,7 +190,24 @@ class FeatureSimulator(Simulator):
 		dx_down_threshold: Optional[float] = None,
 		eps_dx: Optional[float] = None,
 	) -> None:
-		"""Update observer parameters and push them to the device."""
+		"""Update observer parameters and push them to the device.
+
+		Args:
+			op: Optional complete observer-parameter bundle. When provided, it
+				replaces the current observer settings.
+			event_var: Variable name used for event detection.
+			feature_var: Variable name used for feature readout.
+			max_event_count: Maximum number of tracked events.
+			max_event_timestamps: Maximum number of retained event timestamps.
+			min_amp: Minimum accepted event amplitude.
+			min_imi: Minimum inter-event interval.
+			nhood_radius: Neighborhood radius for neighborhood-based observers.
+			x_up_threshold: Rising value threshold for threshold observers.
+			x_down_threshold: Falling value threshold for threshold observers.
+			dx_up_threshold: Rising derivative threshold for threshold observers.
+			dx_down_threshold: Falling derivative threshold for threshold observers.
+			eps_dx: Derivative tolerance used near threshold crossings.
+		"""
 		current_max_event_timestamps = self._op.max_event_timestamps
 
 		if op is not None:
@@ -193,20 +244,20 @@ class FeatureSimulator(Simulator):
 		self._integrator.set_observer_params(self._op)
 		self._invalidate_feature_cache()
 
-	def get_observer_parameters(self):
-		"""Get the current observer parameter struct."""
+	def get_observer_parameters(self) -> ObserverParams:
+		"""Return the current observer-parameter bundle from the backend."""
 		return self._integrator.get_observer_params()
 
 	def get_feature_names(self) -> List[str]:
 		"""Get the list of feature names for the current observer."""
 		return self._integrator.get_feature_names()
 
-	def is_observer_initialized(self):
-		"""Get whether the current observer is initialized."""
+	def is_observer_initialized(self) -> bool:
+		"""Return whether the active observer has completed its warmup pass."""
 		return self._integrator.is_observer_initialized()
 
-	def initialize_observer(self):
-		"""Run the observer's initialization warmup pass, if it has one."""
+	def initialize_observer(self) -> None:
+		"""Run the observer warmup pass, if the active observer requires one."""
 		self._ensure_cl_program()
 		self._integrator.initialize_observer()
 
@@ -217,7 +268,21 @@ class FeatureSimulator(Simulator):
 		update_x0: bool = True,
 		fetch_results: bool = True,
 	) -> Optional[ObserverOutput]:
-		"""Run a simulation with feature detection."""
+		"""Run feature extraction for the current ensemble.
+
+		Args:
+			t_span: Optional time interval override for this solve.
+			initialize_observer: Whether to rerun the observer initialization pass
+				before extracting features. If `None`, use the backend default for the
+				active observer.
+			update_x0: Whether to promote the final state to the next initial state
+				after the solve.
+			fetch_results: Whether to fetch and return the observer output
+				immediately.
+
+		Returns:
+			An `ObserverOutput` when `fetch_results` is true, otherwise `None`.
+		"""
 		self._ensure_cl_program()
 
 		if t_span is not None:
@@ -238,7 +303,11 @@ class FeatureSimulator(Simulator):
 			return self.get_observer_results()
 
 	def get_observer_results(self) -> ObserverOutput:
-		"""Get the features measured by the observer."""
+		"""Return the most recent observer output.
+
+		Raises:
+			ValueError: If `features()` has not been run yet.
+		"""
 		if self._device_features is None:
 			self._device_features = self._integrator.get_f()
 			self._num_features = self._integrator.get_n_features()

@@ -6,7 +6,7 @@ authors = [
     {name="Patrick Fletcher", email="patrick.allen.fletcher@gmail.com"},
 ]
 requires-python = ">=3.10"
-readme = "docs/README.md"
+readme = "README.md"
 license = "MIT"
 license-files = ["docs/LICENSE.md"]
 dependencies = [
@@ -64,6 +64,7 @@ dev = [
 
 [project.urls]
 Documentation = "https://patrickfletcher.github.io/clODE/"
+Issues = "https://github.com/patrickfletcher/clODE/issues"
 Repository = "https://github.com/patrickfletcher/clODE"
 
 [tool.setuptools.dynamic]

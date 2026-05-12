@@ -4,6 +4,8 @@ from enum import IntEnum
 
 
 class LogLevel(IntEnum):
+    """Runtime logging levels used by clODE."""
+
     trace = 0
     debug = 1
     info = 2

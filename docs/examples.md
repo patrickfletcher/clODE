@@ -1,0 +1,24 @@
+# Examples
+
+The scripts in the `examples/` directory are the fastest way to see complete clODE workflows in one place. Examples that generate plots require `matplotlib`; from a source checkout, `pip install .[docs]` is the simplest way to run the full set.
+
+## Runtime and device inspection
+
+- [dump_opencl_info.py](https://github.com/patrickfletcher/clODE/blob/main/examples/dump_opencl_info.py): print the OpenCL platforms and devices visible to clODE.
+- [dump_device_performance.py](https://github.com/patrickfletcher/clODE/blob/main/examples/dump_device_performance.py): compare transient-solver throughput across visible devices with a Lorenz benchmark.
+
+## Core simulation workflows
+
+- [find_steady_states.py](https://github.com/patrickfletcher/clODE/blob/main/examples/find_steady_states.py): run repeated transient solves until a small ensemble approaches steady state.
+- [Ornstein_Uhlenbeck.py](https://github.com/patrickfletcher/clODE/blob/main/examples/Ornstein_Uhlenbeck.py): simulate a stochastic ensemble with the stochastic Euler stepper and compare sample statistics against the expected distribution.
+
+## Feature extraction and event observers
+
+- [van_der_pol_periods.py](https://github.com/patrickfletcher/clODE/blob/main/examples/van_der_pol_periods.py): measure oscillation period across an ensemble and generate the same plot used in the feature-extraction docs.
+- [observe_sine_curve.py](https://github.com/patrickfletcher/clODE/blob/main/examples/observe_sine_curve.py): use a threshold observer on a simple analytic signal and inspect event timestamps.
+- [spike_counting.py](https://github.com/patrickfletcher/clODE/blob/main/examples/spike_counting.py): run feature extraction across a two-parameter grid and visualize spike-count outputs.
+- [visualize_events_threshold2.py](https://github.com/patrickfletcher/clODE/blob/main/examples/visualize_events_threshold2.py): visualize the `threshold_2` observer.
+- [visualize_events_localmax.py](https://github.com/patrickfletcher/clODE/blob/main/examples/visualize_events_localmax.py): visualize the `local_max` observer.
+- [visualize_events_nhood2.py](https://github.com/patrickfletcher/clODE/blob/main/examples/visualize_events_nhood2.py): visualize the `neighbourhood_2` observer.
+
+For the underlying APIs and concepts, see [getting_started.md](getting_started.md), [feature_extraction.md](feature_extraction.md), [trajectory_simulation.md](trajectory_simulation.md), and [specifying_odes.md](specifying_odes.md). For reproducibility guidance around timings and device comparisons, see [performance_notes.md](performance_notes.md).

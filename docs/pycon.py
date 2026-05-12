@@ -129,7 +129,7 @@ class StreamOut:
         self.stdout = None
 
 
-def execute(cmd, no_except=True, init="", ipy=None) -> Tuple[str, List[BytesIO]]:
+def execute(cmd, no_except=True, init="", ipy=None, echo=True) -> Tuple[str, List[BytesIO]]:
     """Execute color commands."""
 
     # Setup global initialization
@@ -222,8 +222,9 @@ def execute(cmd, no_except=True, init="", ipy=None) -> Tuple[str, List[BytesIO]]
                 if text:
                     result.append(text)
 
-                # Execution went well, so append command
-                console += command
+                # Execution went well, so append command when requested
+                if echo:
+                    console += command
 
         except Exception as e:
             if no_except:
@@ -241,7 +242,11 @@ def execute(cmd, no_except=True, init="", ipy=None) -> Tuple[str, List[BytesIO]]
             plt.show = pyplot_show
 
         # If we got a result, output it as well
-        console += "\n{}".format("".join(result))
+        if result:
+            if echo:
+                console += "\n{}".format("".join(result))
+            else:
+                console += "{}".format("".join(result))
 
     return console, pyplot_buffers
 
@@ -258,7 +263,7 @@ def colorize(src, lang, **options):
 def py_command_validator(language, inputs, options, attrs, md) -> bool:
     """Python validator."""
 
-    valid_inputs = set(["exceptions", "run"])
+    valid_inputs = set(["exceptions", "run", "source"])
 
     for k, v in inputs.items():
         if k in valid_inputs:
@@ -281,25 +286,61 @@ def _py_command_formatter(
         # Check if we should allow exceptions
         exceptions = options.get("exceptions", False) if options is not None else False
         run = options.get("run", False) if options is not None else False
+        source = options.get("source", False) if options is not None else False
 
         if run:
-            console, pyplot_buffers = execute(src.strip(), not exceptions, init=init)
-            language = "pycon"
+            if source:
+                console, pyplot_buffers = execute(
+                    src.strip(), not exceptions, init=init, echo=False
+                )
+                el = md.preprocessors["fenced_code_block"].extension.superfences[0][
+                    "formatter"
+                ](
+                    src=src,
+                    class_name="class_name",
+                    language="py",
+                    md=md,
+                    options=options,
+                    **kwargs
+                )
+                if console.strip():
+                    el += md.preprocessors["fenced_code_block"].extension.superfences[0][
+                        "formatter"
+                    ](
+                        src=console.rstrip(),
+                        class_name="class_name",
+                        language="text",
+                        md=md,
+                        options=options,
+                        **kwargs
+                    )
+            else:
+                console, pyplot_buffers = execute(src.strip(), not exceptions, init=init)
+                language = "pycon"
+                el = md.preprocessors["fenced_code_block"].extension.superfences[0][
+                    "formatter"
+                ](
+                    src=console,
+                    class_name="class_name",
+                    language=language,
+                    md=md,
+                    options=options,
+                    **kwargs
+                )
         else:
             console = src
             pyplot_buffers = []
             language = "py"
-
-        el = md.preprocessors["fenced_code_block"].extension.superfences[0][
-            "formatter"
-        ](
-            src=console,
-            class_name="class_name",
-            language=language,
-            md=md,
-            options=options,
-            **kwargs
-        )
+            el = md.preprocessors["fenced_code_block"].extension.superfences[0][
+                "formatter"
+            ](
+                src=console,
+                class_name="class_name",
+                language=language,
+                md=md,
+                options=options,
+                **kwargs
+            )
         # Populate el with pyplot buffers
 
         for buf in pyplot_buffers:
