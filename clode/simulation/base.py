@@ -14,12 +14,9 @@ from ..problem.xpp import convert_xpp_file
 from ..runtime import (
 	CLDeviceType,
 	CLVendor,
-	LogLevel,
 	OpenCLResource,
 	_clode_root_dir,
-	get_log_level,
 	initialize_runtime,
-	set_log_level,
 )
 from ..runtime.selection import RuntimeSelection
 from ._protocols import SimulatorBackend

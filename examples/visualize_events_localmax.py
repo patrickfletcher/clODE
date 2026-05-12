@@ -4,8 +4,6 @@ import clode
 from clode import exp
 from typing import List
 
-# clode.set_log_level(clode.LogLevel.debug)
-
 def x_inf(v: float, vx: float, sx: float) -> float:
     return 1.0 / (1.0 + exp((vx - v) / sx))
 
@@ -61,8 +59,6 @@ def lactotroph(
     dx_[2] = dc
     aux_[0] = ica
     # aux_[1] = ik
-
-clode.set_log_level(clode.LogLevel.warn)
 
 variables = {
     "v": -60.0,

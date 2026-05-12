@@ -1,4 +1,4 @@
-from .logging import DEFAULT_LOG_LEVEL, LogLevel, get_log_level, set_log_level, set_log_pattern
+from .logging import configure_logging, get_logger
 from .query import (
     DeviceInfo,
     PlatformInfo,
@@ -16,16 +16,13 @@ from .selection import (
 __all__ = [
     "CLDeviceType",
     "CLVendor",
-    "DEFAULT_LOG_LEVEL",
     "DeviceInfo",
-    "LogLevel",
     "OpenCLResource",
     "PlatformInfo",
     "_clode_root_dir",
-    "get_log_level",
+    "configure_logging",
+    "get_logger",
     "initialize_runtime",
     "print_opencl",
     "query_opencl",
-    "set_log_level",
-    "set_log_pattern",
 ]

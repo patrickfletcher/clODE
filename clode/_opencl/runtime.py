@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+import logging
 from typing import Any
 
 from clode.runtime import CLDeviceType, CLVendor
@@ -11,6 +12,23 @@ try:
     import pyopencl as cl
 except (ImportError, OSError):
     cl = None
+
+try:
+    import pyopencl.characterize as cl_characterize
+except (ImportError, OSError):
+    cl_characterize = None
+
+
+LOGGER = logging.getLogger(__name__)
+
+
+def _source_build_cache_support(device: Any) -> bool | None:
+    if cl_characterize is None:
+        return None
+    try:
+        return cl_characterize.has_src_build_cache(device)
+    except Exception:
+        return None
 
 
 def _require_opencl_binding() -> Any:
@@ -70,6 +88,13 @@ class OpenCLRuntime:
         platform_id: int | None = None,
         device_id: int | None = None,
     ) -> OpenCLRuntime:
+        LOGGER.debug(
+            "Selecting OpenCL runtime with device_type=%s vendor=%s platform_id=%s device_id=%s",
+            device_type,
+            vendor,
+            platform_id,
+            device_id,
+        )
         opencl_binding = _require_opencl_binding()
         platforms = opencl_binding.get_platforms()
 
@@ -120,7 +145,13 @@ class OpenCLRuntime:
         opencl_binding = _require_opencl_binding()
         context = opencl_binding.Context(devices=[device])
         queue = opencl_binding.CommandQueue(context)
-        return cls(context, queue, platform, device, platform_id, device_id)
+        runtime = cls(context, queue, platform, device, platform_id, device_id)
+        LOGGER.info("Selected OpenCL runtime: %s", runtime.describe())
+        LOGGER.debug(
+            "PyOpenCL source-build cache support for selected device: %s",
+            _source_build_cache_support(device),
+        )
+        return runtime
 
     def get_double_support(self) -> bool:
         extensions = str(getattr(self.device, "extensions", "")).lower().split()

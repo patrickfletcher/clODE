@@ -12,6 +12,8 @@ clode.print_opencl()
 
 `print_opencl()` writes a formatted device report to standard output.
 
+It is an explicit reporting helper, so it prints regardless of the current clODE log level.
+
 ## Query OpenCL capabilities as Python objects
 
 ```python

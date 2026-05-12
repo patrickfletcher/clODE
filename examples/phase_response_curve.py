@@ -4,8 +4,6 @@ import clode
 from clode import exp, heaviside
 from typing import List
 
-# clode.set_log_level(clode.LogLevel.debug)
-
 # 1. first pass to get the period of each oscillator
 # 2. set perturbation times as linspace(0, T0), i.e. phase in [0,1]
 # 3. second pass with perturbations, record k event times

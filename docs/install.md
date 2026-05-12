@@ -20,4 +20,4 @@ from clode import query_opencl
 print(query_opencl())
 ```
 
-Compare `clinfo -l` with `clode.print_opencl()` carefully before pinning platform and device IDs. The visible ordering can differ between `clinfo`, the legacy runtime path, and PyOpenCL.
+Compare `clinfo -l` with `clode.print_opencl()` carefully before pinning platform and device IDs. clODE reports the PyOpenCL-visible ordering, which can differ from `clinfo`.

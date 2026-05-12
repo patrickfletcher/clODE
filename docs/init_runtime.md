@@ -105,4 +105,6 @@ You can also print the devices visible to a specific simulator instance:
 simulator.print_devices()
 ```
 
+Like `clode.print_opencl()`, this is an explicit report helper and does not depend on the current logging configuration.
+
 Platform ordering can differ from `clinfo -l`. clODE reports the PyOpenCL-visible ordering, so choose platform and device IDs from `clode.query_opencl()` or `clode.print_opencl()` rather than assuming the `clinfo` order matches.

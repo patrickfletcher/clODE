@@ -6,8 +6,6 @@ from matplotlib.patches import Ellipse
 import clode
 from clode import exp
 
-# clode.set_log_level(clode.LogLevel.debug)
-
 def x_inf(v: float, vx: float, sx: float) -> float:
     return 1.0 / (1.0 + exp((vx - v) / sx))
 

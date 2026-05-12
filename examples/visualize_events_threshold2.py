@@ -60,8 +60,6 @@ def lactotroph(
     aux_[0] = ica
     # aux_[1] = ik
 
-clode.set_log_level(clode.LogLevel.warn)
-
 variables = {
     "v": -60.0,
     "n": 0.1,

@@ -43,11 +43,13 @@ This page is a curated reference for the main public Python surfaces. For workfl
 
 ::: clode.print_opencl
 
+::: clode.configure_logging
+
+::: clode.get_logger
+
 ::: clode.DeviceInfo
 
 ::: clode.PlatformInfo
-
-::: clode.LogLevel
 
 ## Problem Definition and Conversion
 

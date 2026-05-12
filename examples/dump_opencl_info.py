@@ -2,4 +2,4 @@
 
 import clode
 print(clode.query_opencl())
-print(clode.print_opencl())
+clode.print_opencl()

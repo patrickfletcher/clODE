@@ -29,7 +29,7 @@ nav:
       - Specifying systems of ODEs: 'specifying_odes.md'
       - XPP files: 'xpp_files.md'
       - Initializing the runtime: 'init_runtime.md'
-      - Selecting logging levels: 'logging_levels.md'
+      - Logging and diagnostics: 'logging_levels.md'
       - Querying OpenCL devices: 'querying_opencl.md'
   #Generate the API reference from the python code in clode/python
   - API Reference: 'api_reference.md'

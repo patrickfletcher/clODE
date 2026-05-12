@@ -5,7 +5,6 @@ from enum import IntEnum
 import os
 from typing import Any, Sequence
 
-from .logging import LogLevel, get_log_level
 from .query import _emit_opencl_report, _query_opencl_runtime
 
 _clode_root_dir: str = os.path.join(
@@ -227,8 +226,6 @@ class OpenCLResource:
         return self._opencl_runtime.get_max_memory_alloc_size()
 
     def print_devices(self) -> None:
-        if get_log_level() == LogLevel.off:
-            return
         _emit_opencl_report(_query_opencl_runtime())
 
 

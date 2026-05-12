@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
+import sys
+from typing import Any, TextIO
 
-from .logging import LogLevel, get_log_level, set_log_level
 
 
 @dataclass(slots=True)
@@ -147,31 +147,39 @@ def _query_opencl_runtime() -> list[PlatformInfo]:
     return platforms
 
 
-def _emit_opencl_report(platforms: list[PlatformInfo]) -> None:
-    print("Querying OpenCL platforms...")
-    print(f"Number of platforms found: {len(platforms)}")
+def _format_opencl_report(platforms: list[PlatformInfo]) -> str:
+    lines = [
+        "Querying OpenCL platforms...",
+        f"Number of platforms found: {len(platforms)}",
+    ]
     for platform_index, platform in enumerate(platforms):
-        print()
-        print(f"Platform {platform_index}. ------------------------------")
-        print(f"Name:    {platform.name}")
-        print(f"Vendor:  {platform.vendor}")
-        print(f"Version: {platform.version}")
+        lines.append("")
+        lines.append(f"Platform {platform_index}. ------------------------------")
+        lines.append(f"Name:    {platform.name}")
+        lines.append(f"Vendor:  {platform.vendor}")
+        lines.append(f"Version: {platform.version}")
         for device_index, device in enumerate(platform.device_info):
             memory_mb = device.device_memory_size // (1024 * 1024)
             max_alloc_mb = device.max_memory_alloc_size // (1024 * 1024)
-            print()
-            print(f"Device {device_index}. --------------------")
-            print(f"Name:   {device.name}")
-            print(f"Type:   {device.device_type_str}")
-            print(f"Vendor: {device.vendor}")
-            print(f"Version: {device.version}")
-            print(f"Compute units (CUs): {device.compute_units}")
-            print(f"Clock frequency:     {device.max_clock} MHz")
-            print(f"Global memory size:  {memory_mb} MB")
-            print(f"Max allocation size: {max_alloc_mb} MB")
-            print(f"Max work group/CU:   {device.max_work_group_size}")
-            print(f"Double support:      {str(device.double_support).lower()}")
-            print(f"Device available:    {str(device.device_available).lower()}")
+            lines.append("")
+            lines.append(f"Device {device_index}. --------------------")
+            lines.append(f"Name:   {device.name}")
+            lines.append(f"Type:   {device.device_type_str}")
+            lines.append(f"Vendor: {device.vendor}")
+            lines.append(f"Version: {device.version}")
+            lines.append(f"Compute units (CUs): {device.compute_units}")
+            lines.append(f"Clock frequency:     {device.max_clock} MHz")
+            lines.append(f"Global memory size:  {memory_mb} MB")
+            lines.append(f"Max allocation size: {max_alloc_mb} MB")
+            lines.append(f"Max work group/CU:   {device.max_work_group_size}")
+            lines.append(f"Double support:      {str(device.double_support).lower()}")
+            lines.append(f"Device available:    {str(device.device_available).lower()}")
+    return "\n".join(lines)
+
+
+def _emit_opencl_report(platforms: list[PlatformInfo], stream: TextIO | None = None) -> None:
+    destination = sys.stdout if stream is None else stream
+    destination.write(f"{_format_opencl_report(platforms)}\n")
 
 
 def query_opencl() -> list[PlatformInfo]:
@@ -183,16 +191,7 @@ def query_opencl() -> list[PlatformInfo]:
 def print_opencl() -> None:
     """Print a human-readable report of visible OpenCL platforms and devices."""
 
-    old_level = get_log_level()
-    if old_level == LogLevel.off:
-        return
-    if old_level > LogLevel.info:
-        set_log_level(LogLevel.info)
-    try:
-        _emit_opencl_report(_query_opencl_runtime())
-    finally:
-        if old_level > LogLevel.info:
-            set_log_level(old_level)
+    _emit_opencl_report(_query_opencl_runtime())
 
 
 __all__ = [
