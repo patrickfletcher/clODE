@@ -92,7 +92,6 @@ class Simulator:
 		vendor: Optional[CLVendor] = None,
 		platform_id: Optional[int] = None,
 		device_id: Optional[int] = None,
-		device_ids: Optional[List[int]] = None,
 	) -> None:
 		"""Create a simulator for one ODE model and one ensemble configuration.
 
@@ -121,9 +120,6 @@ class Simulator:
 			vendor: Preferred OpenCL vendor for runtime selection.
 			platform_id: Explicit OpenCL platform index.
 			device_id: Explicit OpenCL device index on the selected platform.
-			device_ids: Optional explicit device-ID list forwarded to the runtime
-				selection layer. For typical single-device workflows, prefer
-				`platform_id` together with `device_id`.
 
 		Raises:
 			ValueError: If both `src_file` and `rhs_equation` are provided, or if
@@ -151,7 +147,6 @@ class Simulator:
 			vendor=vendor,
 			platform_id=platform_id,
 			device_id=device_id,
-			device_ids=None if device_ids is None else tuple(device_ids),
 		)
 
 		self._runtime = initialize_runtime(
@@ -159,7 +154,6 @@ class Simulator:
 			vendor,
 			platform_id,
 			device_id,
-			device_ids,
 		)
 
 		self._create_integrator()

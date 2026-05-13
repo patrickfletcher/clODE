@@ -47,14 +47,13 @@ def test_opencl_runtime_selects_explicit_device_and_reports_capabilities() -> No
     assert "OpenCL" in runtime.get_device_cl_version()
 
 
-def test_opencl_runtime_from_selection_accepts_single_device_ids() -> None:
+def test_opencl_runtime_from_selection_accepts_explicit_device_id() -> None:
     runtime = OpenCLRuntime.from_selection(
         RuntimeSelection(
             device_type=None,
             vendor=None,
             platform_id=_explicit_runtime_kwargs()["platform_id"],
-            device_id=None,
-            device_ids=(_explicit_runtime_kwargs()["device_id"],),
+            device_id=_explicit_runtime_kwargs()["device_id"],
         )
     )
 
@@ -62,15 +61,14 @@ def test_opencl_runtime_from_selection_accepts_single_device_ids() -> None:
     assert runtime.device_id == _explicit_runtime_kwargs()["device_id"]
 
 
-def test_opencl_runtime_from_selection_rejects_multi_device_ids() -> None:
-    with pytest.raises(ValueError, match="exactly one selected device"):
+def test_opencl_runtime_from_selection_requires_explicit_device_id() -> None:
+    with pytest.raises(ValueError, match="Must specify device_id"):
         OpenCLRuntime.from_selection(
             RuntimeSelection(
                 device_type=None,
                 vendor=None,
                 platform_id=_explicit_runtime_kwargs()["platform_id"],
                 device_id=None,
-                device_ids=(0, 1),
             )
         )
 

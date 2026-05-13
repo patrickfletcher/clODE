@@ -143,18 +143,10 @@ class OpenCLRuntime:
         if runtime_selection is None:
             raise ValueError("OpenCL execution requires runtime selection metadata")
 
-        device_id = runtime_selection.device_id
-        if runtime_selection.device_ids is not None:
-            if len(runtime_selection.device_ids) != 1:
-                raise ValueError(
-                    "OpenCL execution currently supports exactly one selected device"
-                )
-            device_id = runtime_selection.device_ids[0]
-
         if runtime_selection.platform_id is not None:
             return cls.create(
                 platform_id=runtime_selection.platform_id,
-                device_id=device_id,
+                device_id=runtime_selection.device_id,
             )
 
         return cls.create(

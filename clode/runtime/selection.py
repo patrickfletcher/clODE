@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import IntEnum
 import os
-from typing import Any, Sequence
+from typing import Any
 
 from .query import _emit_opencl_report, _query_opencl_runtime
 
@@ -34,7 +34,6 @@ class RuntimeSelection:
     vendor: CLVendor | None
     platform_id: int | None
     device_id: int | None
-    device_ids: tuple[int, ...] | None
 
 
 _DEVICE_TYPE_VALUES = {member.value for member in CLDeviceType}
@@ -58,58 +57,49 @@ def _normalize_runtime_selection(
     vendor: CLVendor | int | None,
     platform_id: int | None,
     device_id: int | None,
-    device_ids: Sequence[int] | None,
-) -> tuple[CLDeviceType | None, CLVendor | None, int | None, int | None, tuple[int, ...] | None]:
+) -> tuple[CLDeviceType | None, CLVendor | None, int | None, int | None]:
     normalized_device_type = _coerce_device_type(device_type)
     normalized_vendor = _coerce_vendor(vendor)
     normalized_platform_id = None if platform_id is None else int(platform_id)
     normalized_device_id = None if device_id is None else int(device_id)
-    normalized_device_ids = (
-        None if device_ids is None else tuple(int(candidate) for candidate in device_ids)
-    )
 
     if normalized_platform_id is not None:
         if normalized_device_type is not None:
             raise ValueError("Cannot specify device_type when platform_id is specified")
         if normalized_vendor is not None:
             raise ValueError("Cannot specify vendor when platform_id is specified")
-        if normalized_device_id is not None and normalized_device_ids is not None:
-            raise ValueError("Cannot specify both device_id and device_ids")
-        if normalized_device_id is None and normalized_device_ids is None:
-            raise ValueError("Must specify one of device_id and device_ids")
+        if normalized_device_id is None:
+            raise ValueError("Must specify device_id when platform_id is specified")
     elif normalized_device_id is not None:
         raise ValueError("Must specify platform_id when specifying device_id")
-    elif normalized_device_ids is not None:
-        raise ValueError("Must specify platform_id when specifying device_ids")
 
     return (
         normalized_device_type,
         normalized_vendor,
         normalized_platform_id,
         normalized_device_id,
-        normalized_device_ids,
     )
 
 
 def _parse_opencl_resource_args(
     args: tuple[Any, ...]
-) -> tuple[CLDeviceType | None, CLVendor | None, int | None, int | None, tuple[int, ...] | None]:
+) -> tuple[CLDeviceType | None, CLVendor | None, int | None, int | None]:
     if len(args) == 0:
-        return None, None, None, None, None
+        return None, None, None, None
 
     if len(args) == 1:
         arg0 = args[0]
         if isinstance(arg0, CLDeviceType):
-            return arg0, None, None, None, None
+            return arg0, None, None, None
         if isinstance(arg0, CLVendor):
-            return None, arg0, None, None, None
+            return None, arg0, None, None
         if isinstance(arg0, int):
             matches_device_type = int(arg0) in _DEVICE_TYPE_VALUES
             matches_vendor = int(arg0) in _VENDOR_VALUES
             if matches_device_type and not matches_vendor:
-                return CLDeviceType(int(arg0)), None, None, None, None
+                return CLDeviceType(int(arg0)), None, None, None
             if matches_vendor and not matches_device_type:
-                return None, CLVendor(int(arg0)), None, None, None
+                return None, CLVendor(int(arg0)), None, None
             raise TypeError(
                 "Ambiguous single integer argument for OpenCLResource; use CLDeviceType or CLVendor explicitly."
             )
@@ -117,12 +107,10 @@ def _parse_opencl_resource_args(
 
     if len(args) == 2:
         arg0, arg1 = args
-        if isinstance(arg1, Sequence) and not isinstance(arg1, (str, bytes)):
-            return None, None, int(arg0), None, tuple(int(candidate) for candidate in arg1)
         if isinstance(arg1, CLVendor):
-            return _coerce_device_type(arg0), arg1, None, None, None
+            return _coerce_device_type(arg0), arg1, None, None
         if isinstance(arg0, int) and isinstance(arg1, int):
-            return None, None, int(arg0), int(arg1), None
+            return None, None, int(arg0), int(arg1)
         raise TypeError("Unsupported OpenCLResource constructor arguments")
 
     raise TypeError("OpenCLResource accepts at most two positional arguments")
@@ -135,9 +123,8 @@ class OpenCLResource:
             vendor,
             platform_id,
             device_id,
-            device_ids,
         ) = _parse_opencl_resource_args(args)
-        self._initialize(device_type, vendor, platform_id, device_id, device_ids)
+        self._initialize(device_type, vendor, platform_id, device_id)
 
     @classmethod
     def from_selection(
@@ -146,10 +133,9 @@ class OpenCLResource:
         vendor: CLVendor | int | None,
         platform_id: int | None,
         device_id: int | None,
-        device_ids: Sequence[int] | None,
     ) -> OpenCLResource:
         resource = cls.__new__(cls)
-        resource._initialize(device_type, vendor, platform_id, device_id, device_ids)
+        resource._initialize(device_type, vendor, platform_id, device_id)
         return resource
 
     def _initialize(
@@ -158,20 +144,17 @@ class OpenCLResource:
         vendor: CLVendor | int | None,
         platform_id: int | None,
         device_id: int | None,
-        device_ids: Sequence[int] | None,
     ) -> None:
         (
             self._device_type,
             self._vendor,
             self._platform_id,
             self._device_id,
-            self._device_ids,
         ) = _normalize_runtime_selection(
             device_type,
             vendor,
             platform_id,
             device_id,
-            device_ids,
         )
         self._opencl_runtime: Any | None = None
         self._initialize_opencl_runtime()
@@ -185,7 +168,6 @@ class OpenCLResource:
                 self._vendor,
                 self._platform_id,
                 self._device_id,
-                self._device_ids,
             )
         )
         self._platform_id = self._opencl_runtime.platform_id
@@ -221,14 +203,12 @@ def initialize_runtime(
     vendor: CLVendor | None,
     platform_id: int | None,
     device_id: int | None,
-    device_ids: list[int] | None,
 ) -> OpenCLResource:
     return OpenCLResource.from_selection(
         device_type,
         vendor,
         platform_id,
         device_id,
-        device_ids,
     )
 
 

@@ -1,6 +1,7 @@
 # (Advanced) Runtime selection
 
 Each simulator instance owns its own OpenCL runtime selection. That means you can construct different simulators for different devices in the same Python process.
+Each simulator binds to exactly one selected OpenCL device; multi-device execution is not part of the current API.
 
 Most users do not need to call `initialize_runtime(...)` directly. The common pattern is to pass runtime-selection arguments to `Simulator`, `FeatureSimulator`, or `TrajectorySimulator`.
 
@@ -75,16 +76,6 @@ simulator = clode.FeatureSimulator(
     device_id=0,
 )
 ```
-
-## Notes on `device_ids`
-
-The public constructors still accept `device_ids`, but the high-level simulator API does not implement real multi-device work partitioning. The supported path is explicit single-device selection.
-
-For new work, prefer one of:
-
-- automatic selection
-- `device_type` plus `vendor`
-- explicit `platform_id` plus `device_id`
 
 ## Inspecting the selected runtime
 

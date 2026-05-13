@@ -44,7 +44,6 @@ class FeatureSimulator(Simulator):
 		vendor: Optional[CLVendor] = None,
 		platform_id: Optional[int] = None,
 		device_id: Optional[int] = None,
-		device_ids: Optional[List[int]] = None,
 		observer: Observer = Observer.basic_all_variables,
 		event_var: str = "",
 		feature_var: str = "",
@@ -141,7 +140,6 @@ class FeatureSimulator(Simulator):
 			vendor=vendor,
 			platform_id=platform_id,
 			device_id=device_id,
-			device_ids=device_ids,
 		)
 
 	def _create_integrator(self) -> None:

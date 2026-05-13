@@ -45,7 +45,6 @@ class TrajectorySimulator(Simulator):
 		vendor: Optional[CLVendor] = None,
 		platform_id: Optional[int] = None,
 		device_id: Optional[int] = None,
-		device_ids: Optional[List[int]] = None,
 	) -> None:
 		"""Create a trajectory simulator.
 
@@ -78,7 +77,6 @@ class TrajectorySimulator(Simulator):
 			vendor=vendor,
 			platform_id=platform_id,
 			device_id=device_id,
-			device_ids=device_ids,
 		)
 
 		self._device_t = None
