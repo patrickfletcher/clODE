@@ -74,3 +74,18 @@ plt.legend()
 plt.title("FitzHugh-Nagumo time series")
 plt.show()
 ```
+
+## Continuation and split windows
+
+`trajectory()` continues the device state by default, but each returned `TrajectoryOutput`
+contains only the samples from the current requested window.
+
+To reproduce one long run with multiple windows:
+
+- advance the next requested window from `get_final_time()` rather than the requested end time
+- run `trajectory()` again
+- concatenate the returned windows on the host and drop the duplicated boundary sample from the
+    later window
+
+See `continuation.md` for the full continuation semantics and `examples/continuation.py` for a
+complete runnable example.

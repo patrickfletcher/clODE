@@ -27,6 +27,10 @@ class CommonBuffers:
     pars: object
     xf: object
     rng_state: object
+    rng_spare_normal: object
+    rng_spare_normal_valid: object
+    prepared_wiener: object
+    prepared_wiener_valid: object
     dt: object
     tf: object
 
@@ -90,6 +94,7 @@ class BufferManager:
         x0_elements = max(1, ensemble_size * shape.n_var)
         pars_elements = max(1, ensemble_size * shape.n_par)
         rng_elements = max(1, ensemble_size * N_RNGSTATE)
+        wiener_elements = max(1, ensemble_size * shape.n_wiener)
 
         return CommonBuffers(
             ensemble_size=ensemble_size,
@@ -115,6 +120,26 @@ class BufferManager:
                 self._runtime.context,
                 flags.READ_WRITE,
                 size=rng_elements * np.dtype(np.uint64).itemsize,
+            ),
+            rng_spare_normal=self._opencl_binding.Buffer(
+                self._runtime.context,
+                flags.READ_WRITE,
+                size=ensemble_size * real_bytes,
+            ),
+            rng_spare_normal_valid=self._opencl_binding.Buffer(
+                self._runtime.context,
+                flags.READ_WRITE,
+                size=ensemble_size * np.dtype(np.uint32).itemsize,
+            ),
+            prepared_wiener=self._opencl_binding.Buffer(
+                self._runtime.context,
+                flags.READ_WRITE,
+                size=wiener_elements * real_bytes,
+            ),
+            prepared_wiener_valid=self._opencl_binding.Buffer(
+                self._runtime.context,
+                flags.READ_WRITE,
+                size=ensemble_size * np.dtype(np.uint32).itemsize,
             ),
             dt=self._opencl_binding.Buffer(
                 self._runtime.context, flags.READ_WRITE, size=ensemble_size * real_bytes
@@ -246,6 +271,21 @@ class BufferManager:
         host = np.asarray(rng_state, dtype=np.uint64).flatten(order="F")
         self._enqueue_copy(buffers.rng_state, host)
         return host
+
+    def reset_rng_box_muller_cache(self, buffers: CommonBuffers) -> None:
+        spare_normal_host = np.zeros(buffers.ensemble_size, dtype=self._real_dtype)
+        spare_valid_host = np.zeros(buffers.ensemble_size, dtype=np.uint32)
+        self._enqueue_copy(buffers.rng_spare_normal, spare_normal_host)
+        self._enqueue_copy(buffers.rng_spare_normal_valid, spare_valid_host)
+
+    def clear_prepared_wiener_state(self, buffers: CommonBuffers) -> None:
+        prepared_wiener_host = np.zeros(
+            max(1, buffers.ensemble_size * buffers.problem_shape.n_wiener),
+            dtype=self._real_dtype,
+        )
+        prepared_valid_host = np.zeros(buffers.ensemble_size, dtype=np.uint32)
+        self._enqueue_copy(buffers.prepared_wiener, prepared_wiener_host)
+        self._enqueue_copy(buffers.prepared_wiener_valid, prepared_valid_host)
 
     def download_x0(self, buffers: CommonBuffers) -> np.ndarray:
         return self._download_state_buffer(buffers.x0, buffers.ensemble_size, buffers.problem_shape.n_var)

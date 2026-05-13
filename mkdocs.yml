@@ -21,6 +21,7 @@ nav:
   - Functionality:
     - Feature Extraction: 'feature_extraction.md'
     - Trajectory Simulation: 'trajectory_simulation.md'
+    - Continuation and Repeated Runs: 'continuation.md'
     - Stochastic Simulations: 'Ornstein-Uhlenbeck_process.md'
     - Spike Counting: 'spike_counting.md'
   - Observers:

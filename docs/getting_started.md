@@ -16,6 +16,10 @@ The main workflow is:
 3. broadcast an ensemble with `set_ensemble(...)`
 4. run `transient()`, `features()`, or `trajectory()`
 
+Repeated runs are stateful by default, but exact continuation also depends on how
+the requested `t_span` is advanced between calls. See `continuation.md` before
+building long-running split-window workflows.
+
 ## Example: Van der Pol period measurement
 
 [The Van der Pol oscillator](https://en.wikipedia.org/wiki/Van_der_Pol_oscillator) is

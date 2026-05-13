@@ -401,16 +401,6 @@ static inline void finalizeFeatures(realtype *ti, realtype xi[], realtype dxi[],
 
 //Perform and post-integration cleanup of observer data to ensure it is ready for continuation if needed
 static inline void finalizeObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op, __constant realtype *tspan) {
-    //shift all time-based observer members left by [tf-t0]
-    realtype T = *ti - tspan[0];
-    od->t_start -= T;
-    od->tLastEvent -= T; //i.e. tLastUp
-    od->tThisDown -= T;
-    od->tLastMax -= T;
-    od->tLastMin -= T;
-    for (int j = 0; j < 3; ++j) {
-        od->tbuffer[j] -= T;
-    }
 }
 
 #endif // USE_OBSERVER_THRESHOLD_2

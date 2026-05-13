@@ -13,6 +13,10 @@ __kernel void transient(
     __constant struct SolverParams *sp, //dtmin/max, tols
     __global realtype *xf,              //final state 		   [nPts*nVar]
     __global ulong *RNGstate,           //final RNG	state	   [nPts*nRNGstate]
+    __global realtype *RNGspareNormal,  //cached Box-Muller spare normal [nPts]
+    __global uint *RNGspareNormalValid, //cached Box-Muller availability [nPts]
+    __global realtype *preparedWiener,  //prepared next-step Wiener sample [nPts*nWiener]
+    __global uint *preparedWienerValid, //prepared next-step Wiener availability [nPts]
     __global realtype *d_dt,            //final dt values      [nPts]
     __global realtype *tf)              //final time values    [nPts]
 {
@@ -38,11 +42,13 @@ __kernel void transient(
     for (int j = 0; j < N_RNGSTATE; ++j)
         rd.state[j] = RNGstate[j * nPts + i];
 
+    rd.randnUselast = RNGspareNormalValid[i] != 0;
+    rd.randnLast = RNGspareNormal[i];
+
     // generate random numbers if needed
-    rd.randnUselast = 0;
     for (int j = 0; j < N_WIENER; ++j)
 #ifdef STOCHASTIC_STEPPER
-        wi[j] = randn(&rd) / sqrt(dt);
+        wi[j] = preparedWienerValid[i] != 0 ? preparedWiener[j * nPts + i] : randn(&rd) / sqrt(dt);
 #else
         wi[j] = ZERO;
 #endif
@@ -68,6 +74,17 @@ __kernel void transient(
     // To get same RNG on repeat (non-continued) run, need to set the seed to same value
     for (int j = 0; j < N_RNGSTATE; ++j)
         RNGstate[j * nPts + i] = rd.state[j];
+
+    RNGspareNormal[i] = rd.randnLast;
+    RNGspareNormalValid[i] = rd.randnUselast ? 1 : 0;
+
+#ifdef STOCHASTIC_STEPPER
+    for (int j = 0; j < N_WIENER; ++j)
+        preparedWiener[j * nPts + i] = wi[j];
+    preparedWienerValid[i] = 1;
+#else
+    preparedWienerValid[i] = 0;
+#endif
 
     // update dt to its final value (for adaptive stepper continue)
     d_dt[i] = dt;

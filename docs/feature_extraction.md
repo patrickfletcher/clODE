@@ -59,6 +59,19 @@ integrator.set_observer_parameters(
 - `get_var_count(name)`
 - `get_event_data(name, type="time")`
 
+## Continuation and repeated calls
+
+`features()` continues device state by default and also continues the observer state unless
+it is explicitly reinitialized. The requested `t_span` does not advance automatically.
+
+For exact absolute-time continuation, advance the next requested window from
+`get_final_time()` before calling `features()` again. This is especially important for
+fixed-step methods, time-based feature accumulators, event timestamps, and non-autonomous
+systems.
+
+See `continuation.md` for the full continuation model and `examples/continuation.py` for a
+runnable comparison between one long feature run and split-window continuation.
+
 ## Current customization status
 
 The built-in observers are stable and supported. Authoring completely custom observers is still an internal workflow tied to the OpenCL observer kernels and Python-side observer metadata. That is an active design area for the post-migration cleanup, but it is not yet a polished public extension API.

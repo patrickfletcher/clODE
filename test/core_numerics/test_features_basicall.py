@@ -19,6 +19,8 @@ FIXED_WINDOW = 1.0
 FIXED_MAX_STEPS = 256
 FIXED_ATOL = 1e-5
 ADAPTIVE_ATOL = 1e-4
+CONTINUATION_DT = 0.125
+CONTINUATION_ATOL = 1e-12
 
 
 def _settled_feature_simulator(model_name: str) -> clode.FeatureSimulator:
@@ -33,6 +35,10 @@ def _settled_feature_simulator(model_name: str) -> clode.FeatureSimulator:
     simulator.transient(update_x0=True)
     simulator.set_tspan((FIXED_SETTLE_END, FIXED_SETTLE_END + FIXED_WINDOW))
     return simulator
+
+
+def _feature_matrix(output: clode.ObserverOutput) -> np.ndarray:
+    return np.asarray(output.to_ndarray(), dtype=np.float64)
 
 
 def test_rk4_basicall_linear_state_statistics_match_exact_values() -> None:
@@ -190,3 +196,46 @@ def test_dormand_prince_basicall_hopf_cycle_statistics_match_exact_values() -> N
     np.testing.assert_allclose(output.get_var_max("r2"), 1.0, atol=ADAPTIVE_ATOL, rtol=0.0)
     np.testing.assert_allclose(output.get_var_min("r2"), 1.0, atol=ADAPTIVE_ATOL, rtol=0.0)
     np.testing.assert_allclose(output.get_var_mean("r2"), 1.0, atol=ADAPTIVE_ATOL, rtol=0.0)
+
+
+def test_rk4_basicall_continuation_matches_single_run() -> None:
+    full = make_feature_simulator(
+        "stable_linear_aux",
+        stepper=clode.Stepper.rk4,
+        t_span=(0.0, 1.0),
+        dt=CONTINUATION_DT,
+        dtmax=CONTINUATION_DT,
+        max_steps=64,
+        single_precision=False,
+    )
+    split = make_feature_simulator(
+        "stable_linear_aux",
+        stepper=clode.Stepper.rk4,
+        t_span=(0.0, 0.5),
+        dt=CONTINUATION_DT,
+        dtmax=CONTINUATION_DT,
+        max_steps=64,
+        single_precision=False,
+    )
+
+    full_output = full.features()
+    split.features()
+    first_final_time = float(split.get_final_time()[0])
+    split.set_tspan((first_final_time, 1.0))
+    split_output = split.features()
+
+    assert full_output is not None
+    assert split_output is not None
+
+    np.testing.assert_allclose(
+        _feature_matrix(split_output),
+        _feature_matrix(full_output),
+        atol=CONTINUATION_ATOL,
+        rtol=0.0,
+    )
+    np.testing.assert_allclose(
+        split.get_final_time(),
+        full.get_final_time(),
+        atol=CONTINUATION_ATOL,
+        rtol=0.0,
+    )

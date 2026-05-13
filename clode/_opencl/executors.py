@@ -158,6 +158,8 @@ class OpenCLTransientExecutor:
         rng_state = self._make_rng_state(self._buffers.ensemble_size, seed)
         self._rng_state_host = rng_state
         self._buffer_manager.upload_rng_state(self._buffers, rng_state)
+        self._buffer_manager.reset_rng_box_muller_cache(self._buffers)
+        self._buffer_manager.clear_prepared_wiener_state(self._buffers)
 
     def set_pars(self, parameters: Sequence[float]) -> None:
         buffers = self._require_buffers()
@@ -207,6 +209,7 @@ class OpenCLTransientExecutor:
             pars_matrix = np.empty((ensemble_size, 0), dtype=np.float64)
 
         self._buffer_manager.upload_problem_data(self._buffers, x0_matrix, pars_matrix)
+        self._buffer_manager.clear_prepared_wiener_state(self._buffers)
         self._x0_host = initial_state_host.copy()
         self._pars_host = parameter_host.copy()
         self._xf_host = None
@@ -224,6 +227,7 @@ class OpenCLTransientExecutor:
             return
 
         self._buffer_manager.upload_solver_params(self._buffers, self._solver_params)
+        self._buffer_manager.clear_prepared_wiener_state(self._buffers)
         self._dt_host = np.full(
             self._buffers.ensemble_size, self._solver_params.dt, dtype=np.float64
         )
@@ -252,6 +256,7 @@ class OpenCLTransientExecutor:
             (buffers.ensemble_size, self._problem_shape.n_var), order="F"
         )
         self._buffer_manager.upload_x0(buffers, matrix)
+        self._buffer_manager.clear_prepared_wiener_state(buffers)
         self._x0_host = host.copy()
         self._has_transient_result = False
 
@@ -284,6 +289,10 @@ class OpenCLTransientExecutor:
             buffers.solver_params,
             buffers.xf,
             buffers.rng_state,
+            buffers.rng_spare_normal,
+            buffers.rng_spare_normal_valid,
+            buffers.prepared_wiener,
+            buffers.prepared_wiener_valid,
             buffers.dt,
             buffers.tf,
         )
@@ -469,6 +478,10 @@ class OpenCLTrajectoryExecutor(OpenCLTransientExecutor):
             buffers.solver_params,
             buffers.xf,
             buffers.rng_state,
+            buffers.rng_spare_normal,
+            buffers.rng_spare_normal_valid,
+            buffers.prepared_wiener,
+            buffers.prepared_wiener_valid,
             buffers.dt,
             buffers.tf,
             trajectory_buffers.t,
@@ -592,6 +605,10 @@ class OpenCLFeatureExecutor(OpenCLTransientExecutor):
             buffers.solver_params,
             buffers.xf,
             buffers.rng_state,
+            buffers.rng_spare_normal,
+            buffers.rng_spare_normal_valid,
+            buffers.prepared_wiener,
+            buffers.prepared_wiener_valid,
             buffers.dt,
             buffers.tf,
             feature_buffers.observer_data,
@@ -646,6 +663,10 @@ class OpenCLFeatureExecutor(OpenCLTransientExecutor):
             buffers.pars,
             buffers.solver_params,
             buffers.rng_state,
+            buffers.rng_spare_normal,
+            buffers.rng_spare_normal_valid,
+            buffers.prepared_wiener,
+            buffers.prepared_wiener_valid,
             buffers.dt,
             feature_buffers.observer_data,
             feature_buffers.observer_params,
