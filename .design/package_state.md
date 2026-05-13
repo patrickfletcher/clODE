@@ -1,0 +1,125 @@
+# clODE Package State
+
+Purpose: factual package and repo map for the live codebase.
+Read when: you need to know where code belongs, which public surfaces are live, or which constraints still apply.
+Update when: canonical module homes, public compatibility surfaces, packaging rules, or runtime assumptions change.
+
+## Snapshot
+
+- clODE is now a pure-Python, PyOpenCL-only package.
+- The public API is centered on `Simulator`, `TrajectorySimulator`, and `FeatureSimulator`, but the simulator classes are increasingly better understood as orchestration objects rather than the semantic owners of ensembles or solver state.
+- Public simulators now construct the `_opencl` executors directly; the migration-era backend protocol/factory facade is gone.
+- Split-window continuation correctness is now covered by live regressions for `basicall` features and seeded stochastic Euler on the current PyOpenCL path.
+- Runtime logging now uses standard Python logging via `clode.configure_logging(...)` and `clode.get_logger(...)`; the old log-level compatibility API has been removed.
+- Runtime-critical OpenCL source assets live under `clode/kernels/` and ship as package data.
+- Historical migration and bug notes are archived under `.design/archived/`; they remain useful for rationale, but they are not the source of truth for the live package.
+- The current package still has a few cleanup targets, especially a first-class `InitialValueProblem` that can also own basic batch shaping and remembered ensemble shape at the simulator boundary, followed by clearer solver-state and output-policy separation.
+
+## Session-Start Guidance
+
+- Prefer canonical imports from `clode`, `clode.problem`, `clode.observers`, `clode.simulation`, and `clode.runtime`.
+- Treat root modules such as `clode.solver`, `clode.features`, `clode.trajectory`, `clode.types`, `clode.function_converter`, `clode.xpp_parser`, and `clode.opencl_builtins` as compatibility barrels only.
+- New implementation work should land in the canonical packages, not in the compatibility barrels.
+- Use `.design/next_pr.md` to decide what to work on next; use this file to understand where code now belongs.
+
+## Top-Level Repo Map
+
+| Path | Role | Notes |
+| --- | --- | --- |
+| `clode/` | Maintained package source | All runtime-critical code lives here |
+| `docs/` | MkDocs source | Current user-facing Python docs |
+| `examples/` | Current example scripts and sample RHS files | Live Python/OpenCL examples |
+| `test/` | Supported regression suite | Organized by bundle and marker rather than final directory layout |
+| `tools/` | Development and diagnostics helpers | Includes the test-bundle runner and OpenCL probe |
+| `.design/archived/` | Archived migration, cleanup, and bug notes | High-signal design history, but some statements are historical only |
+| `dist/`, `site/`, `clode.egg-info/` | Generated packaging or docs artifacts | Useful locally, not authoritative source |
+| `paper/` | Paper describing this project (target: Journal of Open Source Software) | Orthogonal to the runtime and package internals |
+
+## Package Map
+
+### Public layer
+
+- `clode/__init__.py`: curated export surface and package version.
+- `clode/problem/*`: current problem metadata, source loading, Python/XPP ingestion, and OpenCL equation authoring helpers.
+- `clode/runtime/*`: public OpenCL query, device selection, and stdlib-logging helpers.
+- `clode/simulation/*`: solver params, simulator orchestration, current ensemble helpers, and result containers.
+- `clode/observers/*`: observer enums, parameter schema, and feature-name catalog helpers.
+- Root compatibility barrels remain for public flat imports such as `solver.py`, `features.py`, `trajectory.py`, `function_converter.py`, `xpp_parser.py`, and `opencl_builtins.py`.
+
+### Internal OpenCL implementation
+
+- `clode/_opencl/models.py`: build keys, source bundles, problem shape, and precision enums.
+- `clode/_opencl/runtime.py`: explicit single-device context and queue creation plus `RuntimeSelection` normalization into a concrete PyOpenCL runtime.
+- `clode/_opencl/registry.py`: stepper and observer define registry plus entrypoint mapping.
+- `clode/_opencl/source_builder.py`: kernel assembly, build options, and kernel-tree digesting.
+- `clode/_opencl/program_cache.py`: runtime-scoped OpenCL program cache.
+- `clode/_opencl/structs.py`: device-matched struct dtypes.
+- `clode/_opencl/buffers.py`: buffer allocation plus flatten/reshape rules.
+- `clode/_opencl/observer_metadata.py`: runtime-specific observer-data struct modeling.
+- `clode/_opencl/executors.py`: transient, trajectory, and feature executors constructed directly by the simulator layer.
+
+The historical backend-shim, protocol/factory facade, and binding-named compatibility layers have been removed.
+
+## Compatibility Surface
+
+- `clode.__init__` remains the main stable top-level import surface and is worth preserving.
+- The flat root files are packaging-neutral compatibility shims. They are not required by setuptools package discovery, package data shipping, or wheel/sdist correctness.
+- Their real value is import-path continuity for downstream users, examples, old notes, type annotations, any serialized or pickled objects that still mention historical module paths, and collaborator orientation while the semantic package layout continues to settle.
+- Their main cost is duplicate API surface, extra documentation burden, and a greater chance that future work accidentally lands in the wrong module.
+- If they are removed later, do it as a normal deprecation cycle: shift docs/examples/tests first, optionally add warnings, then remove them in a deliberate release.
+
+### Kernel tree
+
+- `clode/kernels/transient.cl`: base transient kernel.
+- `clode/kernels/trajectory.cl`: trajectory storage path.
+- `clode/kernels/initializeObserver.cl` and `clode/kernels/features.cl`: feature and observer lifecycle.
+- `clode/kernels/steppers/*.clh`: explicit and adaptive stepper implementations.
+- `clode/kernels/observers/*.clh`: built-in observer implementations.
+- `clode/kernels/odedriver.cl`: currently unused unified-driver prototype; intentionally kept as deferred future-design context, not active runtime code.
+
+## Runtime Model
+
+- One OpenCL work-item advances one ODE instance.
+- Problem arrays are flattened in Fortran order on the Python side.
+- Kernel builds remain compile-time specialized by precision, stepper, observer, and problem dimensions.
+- Simulators currently orchestrate RHS and metadata helpers, default parameter and initial-state values, runtime binding, continuation state, output policy, and ensemble helpers; there is not yet a first-class `InitialValueProblem` with built-in batch semantics.
+- `FeatureSimulator` uses persistent observer state plus an optional warmup kernel for two-pass observers.
+- The solver now owns the authoritative continuation time base. Observer finalizers no longer rebase time, and exact split-window continuation is defined by continuing from the attained per-item `tf`.
+- Common execution state currently persists `x0`, per-item `dt`, per-item `tf`, RNG state, the cached Box-Muller spare normal, and the prepared next-step Wiener sample; these continuation facts are real in the runtime, but not yet expressed as one explicit semantic `SolverState`.
+- Exact absolute-time continuation still requires caller-managed `t_span`. For fixed-step runs, the robust handoff point is the attained `tf` from `get_final_time()`, not the requested endpoint.
+
+## Current Constraints And Live Debt
+
+- The runtime is explicitly single-device only. Any future multi-device execution would require a dedicated API and execution model rather than reviving removed transition-era selectors.
+- The current problem layer is split between `ProblemInfo`, `RhsSource`, and the required `variables` and `parameters` simulator constructor mappings; there is no first-class `InitialValueProblem` object even though default initial state and parameter values are mandatory in the API.
+- Simulators still own batch generation, broadcasting helpers, and remembered ensemble shape in `Simulator`; that behavior has not yet been moved under an IVP-owned or helper-owned semantic layer.
+- Common continuation state is still split across simulator caches, executor fields, and OpenCL buffers; there is no explicit per-work-item `SolverState` with `t0`, `tf`, `dt`, completion/error flags, and continuation-specific RNG data.
+- `SolverParams` still mixes integration controls with trajectory-storage controls (`max_store`, `nout`).
+- `ObserverParams` defaults are still duplicated between the public constructors and the dataclass.
+- Observer metadata is explicit but still hardcoded through large conditional logic rather than a cleaner observer-definition model.
+- `ObserverData` in the kernels acts as persistent observer state, but the naming and Python-side semantics have not caught up to that role yet.
+- Optional event storage still participates in compile-time observer layout and buffer sizing.
+- `shift_tspan()` still advances the requested window rather than the attained final time, so exact absolute-time continuation remains a caller-managed policy.
+- Fixed-step kernels still advance time with `ti += dt`, so very long absolute-time runs with small `dt` remain precision-sensitive; evaluating `t0 + step * dt` or related structured-time models is still future work.
+- RNG continuation details are persisted in separate common buffers rather than a clearer per-work-item state object, which will matter again when evaluating Random123.
+- `.design/archived/` is useful for rationale and bug archaeology, but some archived statements about the old wrapper path are now historical only.
+
+## Test And Tooling Quick Lookup
+
+- `tools/run_test_bundle.py`: authoritative bundle map.
+- `test/core_numerics/`: exact-solution and kernel-level regression backbone.
+- `test/core_numerics/test_stochastic.py`: seeded stochastic continuation and Ornstein-Uhlenbeck stationary-moment coverage.
+- `test/core_numerics/test_features_basicall.py`: `basicall` exact-statistics and split-window continuation coverage.
+- `test/test_simulation_contracts.py`: current simulation and observer behavior contracts.
+- `test/test_problem_rhs_source.py`: RHS source-ingestion and digest coverage.
+- `test/test_opencl_models.py`, `test/test_opencl_source_builder.py`, `test/test_opencl_runtime.py`, `test/test_opencl_buffers.py`, `test/test_opencl_structs.py`: canonical internal OpenCL support-layer tests.
+- `tools/probe_opencl_runtime.py`: distinguishes runtime/compiler failures from clODE kernel failures.
+- `docs/init_runtime.md`: current single-device runtime-selection story.
+
+## Packaging Quick Lookup
+
+- `pyproject.toml`: authoritative packaging and dependency configuration.
+- `MANIFEST.in`: current sdist include and prune rules.
+- Kernel assets ship as package data.
+- Docs and tests are not required for runtime execution. Tests are still useful for downstream verification, while docs are the easier thing to omit if sdist slimming becomes desirable.
+- From a packaging perspective, the flat compatibility barrels are optional; they exist only to preserve import compatibility, not because the build needs them.
