@@ -78,7 +78,7 @@ simulator = clode.FeatureSimulator(
 
 ## Notes on `device_ids`
 
-The public constructors still accept `device_ids`, but the high-level simulator API does not implement real multi-device work partitioning. During the PyOpenCL transition, the supported path is explicit single-device selection.
+The public constructors still accept `device_ids`, but the high-level simulator API does not implement real multi-device work partitioning. The supported path is explicit single-device selection.
 
 For new work, prefer one of:
 

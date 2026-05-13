@@ -179,27 +179,14 @@ class OpenCLResource:
     def _initialize_opencl_runtime(self) -> None:
         from .._opencl.runtime import OpenCLRuntime
 
-        if self._device_ids is not None:
-            if len(self._device_ids) != 1:
-                raise ValueError(
-                    "OpenCL execution currently supports exactly one selected device"
-                )
-            self._device_id = self._device_ids[0]
-
-        if self._platform_id is not None:
-            self._opencl_runtime = OpenCLRuntime.create(
-                platform_id=self._platform_id,
-                device_id=self._device_id,
+        self._opencl_runtime = OpenCLRuntime.from_selection(
+            RuntimeSelection(
+                self._device_type,
+                self._vendor,
+                self._platform_id,
+                self._device_id,
+                self._device_ids,
             )
-            return
-
-        self._opencl_runtime = OpenCLRuntime.create(
-            device_type=(
-                CLDeviceType.DEVICE_TYPE_DEFAULT
-                if self._device_type is None
-                else self._device_type
-            ),
-            vendor=CLVendor.VENDOR_ANY if self._vendor is None else self._vendor,
         )
         self._platform_id = self._opencl_runtime.platform_id
         self._device_id = self._opencl_runtime.device_id

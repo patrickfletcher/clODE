@@ -5,6 +5,7 @@ import logging
 from typing import Any
 
 from clode.runtime import CLDeviceType, CLVendor
+from clode.runtime.selection import RuntimeSelection
 
 from .errors import DoublePrecisionNotSupportedError, OpenCLDependencyError
 
@@ -133,6 +134,41 @@ class OpenCLRuntime:
                 )
 
         raise ValueError("No matching OpenCL device found")
+
+    @classmethod
+    def from_selection(
+        cls,
+        runtime_selection: RuntimeSelection | None,
+    ) -> OpenCLRuntime:
+        if runtime_selection is None:
+            raise ValueError("OpenCL execution requires runtime selection metadata")
+
+        device_id = runtime_selection.device_id
+        if runtime_selection.device_ids is not None:
+            if len(runtime_selection.device_ids) != 1:
+                raise ValueError(
+                    "OpenCL execution currently supports exactly one selected device"
+                )
+            device_id = runtime_selection.device_ids[0]
+
+        if runtime_selection.platform_id is not None:
+            return cls.create(
+                platform_id=runtime_selection.platform_id,
+                device_id=device_id,
+            )
+
+        return cls.create(
+            device_type=(
+                CLDeviceType.DEVICE_TYPE_DEFAULT
+                if runtime_selection.device_type is None
+                else runtime_selection.device_type
+            ),
+            vendor=(
+                CLVendor.VENDOR_ANY
+                if runtime_selection.vendor is None
+                else runtime_selection.vendor
+            ),
+        )
 
     @classmethod
     def _from_selected_device(

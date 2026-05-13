@@ -1,6 +1,7 @@
 # git ignore list
 
 .github/instructions
+.github/skills
 .design
 
 # Compiled source #

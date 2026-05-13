@@ -6,7 +6,8 @@ from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple, Union
 import numpy as np
 import numpy.typing as npt
 
-from .._opencl.factory import create_simulator_backend
+from .._opencl.executors import OpenCLTransientExecutor
+from .._opencl.runtime import OpenCLRuntime
 from ..problem.definition import ProblemInfo
 from ..problem.python import OpenCLConverter, OpenCLRhsEquation
 from ..problem.source import RhsSource, create_rhs_source, load_rhs_source
@@ -19,7 +20,6 @@ from ..runtime import (
 	initialize_runtime,
 )
 from ..runtime.selection import RuntimeSelection
-from ._protocols import SimulatorBackend
 from .params import SolverParams
 
 
@@ -43,7 +43,7 @@ class Simulator:
 	storage workflows.
 	"""
 
-	_integrator: SimulatorBackend
+	_integrator: OpenCLTransientExecutor
 	_runtime: OpenCLResource
 	_runtime_selection: RuntimeSelection
 	_single_precision: bool
@@ -223,14 +223,17 @@ class Simulator:
 		"""The number of Wiener variables in the system"""
 		return self._pi.num_noise
 
+	def _create_opencl_runtime(self) -> OpenCLRuntime:
+		return OpenCLRuntime.from_selection(self._runtime_selection)
+
 	def _create_integrator(self) -> None:
-		self._integrator = create_simulator_backend(
+		self._integrator = OpenCLTransientExecutor(
 			self._pi,
 			self._rhs_source,
 			self._stepper.value,
 			self._single_precision,
+			self._create_opencl_runtime(),
 			_clode_root_dir,
-			runtime_selection=self._runtime_selection,
 		)
 
 	def _build_cl_program(self):

@@ -11,6 +11,7 @@ import pytest
 pyopencl = pytest.importorskip("pyopencl")
 
 from clode._opencl import BuildError, KernelKind, OpenCLRuntime, Precision, ProblemShape, SourceBuilder
+from clode.runtime.selection import RuntimeSelection
 from clode.problem import load_rhs_source
 from clode.runtime import _clode_root_dir
 from test.core_numerics.helpers import TEST_DEVICE_ID, TEST_PLATFORM_ID, model_path
@@ -44,6 +45,34 @@ def test_opencl_runtime_selects_explicit_device_and_reports_capabilities() -> No
     assert runtime.device_id == _explicit_runtime_kwargs()["device_id"]
     assert runtime.get_max_memory_alloc_size() > 0
     assert "OpenCL" in runtime.get_device_cl_version()
+
+
+def test_opencl_runtime_from_selection_accepts_single_device_ids() -> None:
+    runtime = OpenCLRuntime.from_selection(
+        RuntimeSelection(
+            device_type=None,
+            vendor=None,
+            platform_id=_explicit_runtime_kwargs()["platform_id"],
+            device_id=None,
+            device_ids=(_explicit_runtime_kwargs()["device_id"],),
+        )
+    )
+
+    assert runtime.platform_id == _explicit_runtime_kwargs()["platform_id"]
+    assert runtime.device_id == _explicit_runtime_kwargs()["device_id"]
+
+
+def test_opencl_runtime_from_selection_rejects_multi_device_ids() -> None:
+    with pytest.raises(ValueError, match="exactly one selected device"):
+        OpenCLRuntime.from_selection(
+            RuntimeSelection(
+                device_type=None,
+                vendor=None,
+                platform_id=_explicit_runtime_kwargs()["platform_id"],
+                device_id=None,
+                device_ids=(0, 1),
+            )
+        )
 
 
 def test_program_cache_is_runtime_scoped_and_reuses_build_key_hits() -> None:

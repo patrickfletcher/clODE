@@ -9,7 +9,6 @@ from ..observers.types import ObserverParams
 from ..problem.definition import ProblemInfo
 from ..problem.source import RhsSource
 from ..simulation.params import SolverParams
-from ..simulation._protocols import FeatureBackend, SimulatorBackend
 from .buffers import (
     ArrayLayout,
     BufferManager,
@@ -25,7 +24,7 @@ from .runtime import OpenCLRuntime, _require_opencl_binding
 from .source_builder import SourceBuilder
 
 
-class OpenCLTransientExecutor(SimulatorBackend):
+class OpenCLTransientExecutor:
     def __init__(
         self,
         problem_info: ProblemInfo,
@@ -515,7 +514,7 @@ class OpenCLTrajectoryExecutor(OpenCLTransientExecutor):
         return self._trajectory_buffers
 
 
-class OpenCLFeatureExecutor(OpenCLTransientExecutor, FeatureBackend):
+class OpenCLFeatureExecutor(OpenCLTransientExecutor):
     def __init__(
         self,
         problem_info: ProblemInfo,

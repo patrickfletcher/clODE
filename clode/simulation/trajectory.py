@@ -4,10 +4,9 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import numpy as np
 
-from .._opencl.factory import create_trajectory_backend
+from .._opencl.executors import OpenCLTrajectoryExecutor
 from ..problem.python import OpenCLRhsEquation
 from ..runtime import CLDeviceType, CLVendor, _clode_root_dir
-from ._protocols import TrajectoryBackend
 from .base import Simulator, Stepper
 from .params import SolverParams
 from .results import TrajectoryOutput
@@ -20,7 +19,7 @@ class TrajectorySimulator(Simulator):
 	_device_x: np.ndarray[Any, np.dtype[np.float64]] | None
 	_device_dx: np.ndarray[Any, np.dtype[np.float64]] | None
 	_device_aux: np.ndarray[Any, np.dtype[np.float64]] | None
-	_integrator: TrajectoryBackend
+	_integrator: OpenCLTrajectoryExecutor
 
 	def __init__(
 		self,
@@ -88,13 +87,13 @@ class TrajectorySimulator(Simulator):
 		self._device_aux = None
 
 	def _create_integrator(self) -> None:
-		self._integrator = create_trajectory_backend(
+		self._integrator = OpenCLTrajectoryExecutor(
 			self._pi,
 			self._rhs_source,
 			self._stepper.value,
 			self._single_precision,
+			self._create_opencl_runtime(),
 			_clode_root_dir,
-			runtime_selection=self._runtime_selection,
 		)
 
 	def trajectory(

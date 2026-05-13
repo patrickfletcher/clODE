@@ -4,11 +4,10 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import numpy as np
 
-from .._opencl.factory import create_feature_backend
+from .._opencl.executors import OpenCLFeatureExecutor
 from ..observers.types import Observer, ObserverParams
 from ..problem.python import OpenCLRhsEquation
 from ..runtime import CLDeviceType, CLVendor, _clode_root_dir
-from ._protocols import FeatureBackend
 from .base import Simulator, Stepper
 from .params import SolverParams
 from .results import ObserverOutput
@@ -19,7 +18,7 @@ class FeatureSimulator(Simulator):
 
 	_device_features: np.ndarray[Any, np.dtype[np.float64]] | None = None
 	_num_features: int | None = None
-	_integrator: FeatureBackend
+	_integrator: OpenCLFeatureExecutor
 
 	def __init__(
 		self,
@@ -146,15 +145,15 @@ class FeatureSimulator(Simulator):
 		)
 
 	def _create_integrator(self) -> None:
-		self._integrator = create_feature_backend(
+		self._integrator = OpenCLFeatureExecutor(
 			self._pi,
 			self._rhs_source,
 			self._stepper.value,
 			self._observer_type.value,
 			self._op,
 			self._single_precision,
+			self._create_opencl_runtime(),
 			_clode_root_dir,
-			runtime_selection=self._runtime_selection,
 		)
 
 	def _invalidate_feature_cache(self) -> None:
