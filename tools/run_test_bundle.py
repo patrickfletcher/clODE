@@ -7,15 +7,18 @@ import sys
 PRIMARY_BUNDLES: dict[str, tuple[str, ...]] = {
     "smoke": (
         "test/test_function_converter.py",
+        "test/test_initial_value_problem.py",
         "test/test_opencl_models.py",
         "test/test_opencl_source_builder.py",
     ),
     "frontend": (
         "test/test_function_converter.py",
+        "test/test_initial_value_problem.py",
         "test/test_opencl_builtins.py",
         "test/test_xpp_parser.py",
     ),
     "runtime_api": (
+        "test/test_initial_value_problem_runtime.py",
         "test/test_simulation_contracts.py",
         "test/test_problem_rhs_source.py",
         "test/test_opencl_runtime.py",

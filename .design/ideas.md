@@ -22,7 +22,8 @@ Format:
 
 ## Core Execution And State Semantics
 
-- [ ] P0 InitialValueProblem-first batch semantics at the simulator boundary: make defaults, batch shaping, and remembered result shape first-class so simulators read as orchestration objects rather than the semantic home of IVPs and batches. blocks: clearer simulator construction, batch-generation helpers, batching ergonomics. refs: `.design/next_pr.md`, `clode/problem/definition.py`, `clode/problem/source.py`, `clode/simulation/base.py`, `.design/reference/semantic_layout_audit.md`
+- [x] P0 InitialValueProblem-first batch semantics at the simulator boundary: defaults, batch shaping, remembered result shape, simulator `ivp=` construction, and Python-backed SciPy-style callability now live around `InitialValueProblem` so simulators read more clearly as orchestration objects. refs: `.design/next_pr.md`, `clode/problem/ivp.py`, `clode/simulation/base.py`, `test/test_initial_value_problem.py`, `test/test_initial_value_problem_runtime.py`
+- [ ] P1 IVP public-surface cleanup: keep `InitialValueProblem` as the promoted user-facing problem API, treat `ProblemInfo`/`RhsSource` as derived support concepts in curated docs, and only add more batch helpers when concrete workflows justify them. refs: `docs/api_reference.md`, `docs/specifying_odes.md`, `clode/problem/__init__.py`, `.design/reference/ivp_api_test_plan.md`
 - [ ] P1 Explicit per-work-item solver-state model with `t0`, `tf`, `dt`, status flags, and RNG continuation as a follow-on internal semantic layer distinct from IVP/ensemble modeling. blocks: continuation-policy helper, stepper-definition cleanup, solver-state kernel abstractions, Random123 evaluation, implicit methods. refs: `.design/reference/continuation_timebase_note.md`, `clode/_opencl/executors.py`, `clode/_opencl/buffers.py`
 - [ ] P1 Public continuation-policy helper/API (`requested-window` vs attained-`tf` continuation) so callers do not have to hand-roll `set_tspan(get_final_time())`. depends: explicit solver-state model. refs: `docs/continuation.md`, `clode/simulation/base.py`
 - [ ] P1 Separate integration state from output/storage policy (`max_store`, `nout`, event storage). depends: IVP-owned batch semantics and explicit solver-state model. blocks: chunked trajectory storage, observer-storage cleanup. refs: `clode/trajectory.py`, `clode/kernels/trajectory.cl`, `.design/development_roadmap.md`
@@ -61,7 +62,7 @@ Format:
 ## RHS IR, Conversion, And Interop
 
 - [ ] P2 Stronger internal RHS representation and simplification passes. blocks: Jacobian emission, round-tripping, better interop. refs: `clode/function_converter.py`, `.design/ideas.md`
-- [ ] P2 Python RHS interop with SciPy/other solver packages and fewer converter restrictions. depends: stronger RHS IR. refs: `clode/function_converter.py`
+- [ ] P2 Generic RHS interop with SciPy/other solver packages and fewer converter restrictions across Python, OpenCL, and XPP-defined problems. depends: stronger RHS IR. refs: `clode/function_converter.py`, `.design/next_pr.md`
 - [ ] P2 Finish the lark-based XPP parser path and configuration handling. refs: `clode/xpp_parser.py`
 - [ ] P3 Export paths from internal RHS form back to Python/XPP. depends: stronger RHS IR. refs: `clode/xpp_parser.py`, `clode/function_converter.py`
 

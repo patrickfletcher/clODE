@@ -5,6 +5,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 import numpy as np
 
 from .._opencl.executors import OpenCLTrajectoryExecutor
+from ..problem.ivp import InitialValueProblem
 from ..problem.python import OpenCLRhsEquation
 from ..runtime import CLDeviceType, CLVendor, _clode_root_dir
 from .base import Simulator, Stepper
@@ -23,8 +24,8 @@ class TrajectorySimulator(Simulator):
 
 	def __init__(
 		self,
-		variables: Dict[str, float],
-		parameters: Dict[str, float],
+		variables: Optional[Dict[str, float]] = None,
+		parameters: Optional[Dict[str, float]] = None,
 		aux: Optional[List[str]] = None,
 		num_noise: int = 0,
 		src_file: Optional[str] = None,
@@ -45,6 +46,7 @@ class TrajectorySimulator(Simulator):
 		vendor: Optional[CLVendor] = None,
 		platform_id: Optional[int] = None,
 		device_id: Optional[int] = None,
+		ivp: Optional[InitialValueProblem] = None,
 	) -> None:
 		"""Create a trajectory simulator.
 
@@ -77,6 +79,7 @@ class TrajectorySimulator(Simulator):
 			vendor=vendor,
 			platform_id=platform_id,
 			device_id=device_id,
+			ivp=ivp,
 		)
 
 		self._device_t = None

@@ -53,7 +53,7 @@ This page is a curated reference for the main public Python surfaces. For workfl
 
 ## Problem Definition and Conversion
 
-::: clode.ProblemInfo
+::: clode.InitialValueProblem
 
 ::: clode.OpenCLConverter
 

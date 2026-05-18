@@ -11,6 +11,8 @@ MARKERS_BY_PREFIX: tuple[tuple[str, tuple[str, ...]], ...] = (
 
 MARKERS_BY_FILE: dict[str, tuple[str, ...]] = {
     "test/test_function_converter.py": ("frontend", "smoke"),
+    "test/test_initial_value_problem.py": ("frontend", "smoke"),
+    "test/test_initial_value_problem_runtime.py": ("runtime_api", "release_gate", "requires_opencl"),
     "test/test_opencl_builtins.py": ("frontend", "release_gate", "requires_opencl"),
     "test/test_xpp_parser.py": ("frontend", "release_gate", "requires_opencl"),
     "test/test_simulation_contracts.py": ("runtime_api", "release_gate", "requires_opencl"),

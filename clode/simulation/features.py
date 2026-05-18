@@ -6,6 +6,7 @@ import numpy as np
 
 from .._opencl.executors import OpenCLFeatureExecutor
 from ..observers.types import Observer, ObserverParams
+from ..problem.ivp import InitialValueProblem
 from ..problem.python import OpenCLRhsEquation
 from ..runtime import CLDeviceType, CLVendor, _clode_root_dir
 from .base import Simulator, Stepper
@@ -22,8 +23,8 @@ class FeatureSimulator(Simulator):
 
 	def __init__(
 		self,
-		variables: Dict[str, float],
-		parameters: Dict[str, float],
+		variables: Optional[Dict[str, float]] = None,
+		parameters: Optional[Dict[str, float]] = None,
 		aux: Optional[List[str]] = None,
 		num_noise: int = 0,
 		src_file: Optional[str] = None,
@@ -44,6 +45,7 @@ class FeatureSimulator(Simulator):
 		vendor: Optional[CLVendor] = None,
 		platform_id: Optional[int] = None,
 		device_id: Optional[int] = None,
+		ivp: Optional[InitialValueProblem] = None,
 		observer: Observer = Observer.basic_all_variables,
 		event_var: str = "",
 		feature_var: str = "",
@@ -91,12 +93,15 @@ class FeatureSimulator(Simulator):
 		"""
 
 		self._observer_type = observer
+		problem_variable_names = (
+			ivp.variable_names if ivp is not None else list((variables or {}).keys())
+		)
 
 		event_var_idx = (
-			list(variables.keys()).index(event_var) if event_var != "" else 0
+			problem_variable_names.index(event_var) if event_var != "" else 0
 		)
 		feature_var_idx = (
-			list(variables.keys()).index(feature_var) if feature_var != "" else 0
+			problem_variable_names.index(feature_var) if feature_var != "" else 0
 		)
 
 		if observer_parameters is not None:
@@ -140,6 +145,7 @@ class FeatureSimulator(Simulator):
 			vendor=vendor,
 			platform_id=platform_id,
 			device_id=device_id,
+			ivp=ivp,
 		)
 
 	def _create_integrator(self) -> None:

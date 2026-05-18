@@ -9,9 +9,9 @@ import numpy.typing as npt
 from .._opencl.executors import OpenCLTransientExecutor
 from .._opencl.runtime import OpenCLRuntime
 from ..problem.definition import ProblemInfo
-from ..problem.python import OpenCLConverter, OpenCLRhsEquation
-from ..problem.source import RhsSource, create_rhs_source, load_rhs_source
-from ..problem.xpp import convert_xpp_file
+from ..problem.ivp import InitialValueProblem
+from ..problem.python import OpenCLRhsEquation
+from ..problem.source import RhsSource
 from ..runtime import (
 	CLDeviceType,
 	CLVendor,
@@ -55,9 +55,7 @@ class Simulator:
 
 	_sp: SolverParams
 	_t_span: Tuple[float, float]
-
-	_variable_defaults: Dict[str, float]
-	_parameter_defaults: Dict[str, float]
+	_ivp: InitialValueProblem
 
 	_ensemble_size: int
 	_ensemble_shape: Tuple
@@ -70,8 +68,8 @@ class Simulator:
 
 	def __init__(
 		self,
-		variables: Dict[str, float],
-		parameters: Dict[str, float],
+		variables: Optional[Dict[str, float]] = None,
+		parameters: Optional[Dict[str, float]] = None,
 		aux: Optional[List[str]] = None,
 		num_noise: int = 0,
 		src_file: Optional[str] = None,
@@ -92,6 +90,7 @@ class Simulator:
 		vendor: Optional[CLVendor] = None,
 		platform_id: Optional[int] = None,
 		device_id: Optional[int] = None,
+		ivp: Optional[InitialValueProblem] = None,
 	) -> None:
 		"""Create a simulator for one ODE model and one ensemble configuration.
 
@@ -120,26 +119,25 @@ class Simulator:
 			vendor: Preferred OpenCL vendor for runtime selection.
 			platform_id: Explicit OpenCL platform index.
 			device_id: Explicit OpenCL device index on the selected platform.
+			ivp: Optional explicit initial-value problem object. When provided, it
+				replaces the model-definition arguments above.
 
 		Raises:
-			ValueError: If both `src_file` and `rhs_equation` are provided, or if
-				neither is provided.
+			ValueError: If the model-definition arguments are inconsistent.
 		"""
 
-		self._rhs_source = self._prepare_rhs_source(
-			src_file, rhs_equation, supplementary_equations
+		self._ivp = self._coerce_initial_value_problem(
+			ivp=ivp,
+			variables=variables,
+			parameters=parameters,
+			aux=aux,
+			num_noise=num_noise,
+			src_file=src_file,
+			rhs_equation=rhs_equation,
+			supplementary_equations=supplementary_equations,
 		)
-
-		if aux is None:
-			aux = []
-
-		self._pi = ProblemInfo(
-			self._rhs_source.origin_label,
-			list(variables.keys()),
-			list(parameters.keys()),
-			aux,
-			num_noise,
-		)
+		self._rhs_source = self._ivp.rhs_source
+		self._pi = self._ivp.problem_info
 		self._stepper = stepper
 		self._single_precision = single_precision
 		self._runtime_selection = RuntimeSelection(
@@ -168,19 +166,7 @@ class Simulator:
 		self.set_solver_parameters()
 
 		self.set_tspan(t_span=t_span)
-
-		self._variable_defaults = variables
-		self._parameter_defaults = parameters
-
-		self._ensemble_size = 1
-		self._ensemble_shape = (1,)
-		default_initial_state = np.array(
-			list(self._variable_defaults.values()), dtype=np.float64, ndmin=2
-		)
-		default_parameters = np.array(
-			list(self._parameter_defaults.values()), dtype=np.float64, ndmin=2
-		)
-		self._set_problem_data(default_initial_state, default_parameters)
+		self._sync_problem_data_from_ivp()
 
 	@property
 	def variable_names(self) -> List[str]:
@@ -217,6 +203,11 @@ class Simulator:
 		"""The number of Wiener variables in the system"""
 		return self._pi.num_noise
 
+	@property
+	def ivp(self) -> InitialValueProblem:
+		"""The initial-value problem currently owned by the simulator."""
+		return self._ivp
+
 	def _create_opencl_runtime(self) -> OpenCLRuntime:
 		return OpenCLRuntime.from_selection(self._runtime_selection)
 
@@ -241,32 +232,68 @@ class Simulator:
 	def _invalidate_solution_cache(self) -> None:
 		self._device_final_state = self._device_dt = self._device_tf = None
 
-	def _prepare_rhs_source(
+	def _coerce_initial_value_problem(
 		self,
-		src_file: str | None = None,
-		rhs_equation: OpenCLRhsEquation | None = None,
-		supplementary_equations: List[Callable[[Any], Any]] | None = None,
-	) -> RhsSource:
+		*,
+		ivp: InitialValueProblem | None,
+		variables: Dict[str, float] | None,
+		parameters: Dict[str, float] | None,
+		aux: List[str] | None,
+		num_noise: int,
+		src_file: str | None,
+		rhs_equation: OpenCLRhsEquation | None,
+		supplementary_equations: List[Callable[[Any], Any]] | None,
+	) -> InitialValueProblem:
+		if ivp is not None:
+			if any(
+				value is not None
+				for value in (
+					variables,
+					parameters,
+					aux,
+					src_file,
+					rhs_equation,
+					supplementary_equations,
+				)
+			) or num_noise != 0:
+				raise ValueError(
+					"Cannot combine ivp with variables, parameters, or other model-definition arguments"
+				)
+			return ivp
 
-		if src_file is not None and rhs_equation is not None:
-			raise ValueError("Cannot specify both src_file and rhs_equation")
-		elif src_file is not None:
-			if src_file.endswith(".xpp"):
-				input_file = convert_xpp_file(src_file)
-			else:
-				input_file = src_file
-			return load_rhs_source(input_file)
-		elif rhs_equation is not None:
-			converter = OpenCLConverter()
-			if supplementary_equations is not None:
-				for eq in supplementary_equations:
-					converter.convert_to_opencl(eq)
-			eqn = converter.convert_to_opencl(
-				rhs_equation, mutable_args=[3, 4], function_name="getRHS"
-			)
-			return create_rhs_source("clode_rhs.cl", eqn)
-		else:
-			raise ValueError("Must specify either src_file or rhs_equation")
+		if variables is None or parameters is None:
+			raise ValueError("Must specify either ivp or both variables and parameters")
+
+		return InitialValueProblem(
+			variables=variables,
+			parameters=parameters,
+			aux=aux,
+			num_noise=num_noise,
+			src_file=src_file,
+			rhs_equation=rhs_equation,
+			supplementary_equations=supplementary_equations,
+		)
+
+	def _sync_problem_data_from_ivp(self) -> None:
+		self._ensemble_size = self._ivp.ensemble_size
+		self._ensemble_shape = self._ivp.ensemble_shape
+		self._set_problem_data(
+			self._ivp.get_initial_state(),
+			self._ivp.get_parameter_values(),
+		)
+
+	def _sync_ivp_from_device_problem_data(self) -> None:
+		initial_state = self.get_initial_state()
+		parameter_values = (
+			self._device_parameters
+			if self._device_parameters is not None
+			else self._ivp.get_parameter_values()
+		)
+		self._ivp._set_problem_data(
+			initial_state,
+			parameter_values,
+			ensemble_shape=self._ensemble_shape,
+		)
 
 	def set_repeat_ensemble(self, num_repeats: int) -> None:
 		"""Create a 1D ensemble by repeating one parameter/state configuration.
@@ -278,10 +305,9 @@ class Simulator:
 		Args:
 			num_repeats: Number of independent copies to create.
 		"""
-		initial_state, parameters = self._make_problem_data(
-			new_size=num_repeats, new_shape=(num_repeats, 1)
-		)
-		self._set_problem_data(initial_state=initial_state, parameters=parameters)
+		self._sync_ivp_from_device_problem_data()
+		self._ivp.set_repeat_ensemble(num_repeats)
+		self._sync_problem_data_from_ivp()
 
 	def set_ensemble(
 		self,
@@ -312,152 +338,22 @@ class Simulator:
 			ValueError: If both inputs are omitted, if names are unknown, or if the
 				provided array shapes are incompatible.
 		"""
-		if variables is None and parameters is None:
-			raise ValueError(f"initial_state and parameters cannot both be None")
-
-		if isinstance(variables, np.ndarray):
-			if len(variables.shape) != 2 or variables.shape[1] != self.num_variables:
-				raise ValueError(
-					f"initial_state must be a matrix with {self.num_variables} columns"
-				)
-		elif isinstance(variables, Mapping):
-			unknown_variables = set(variables.keys()) - set(self.variable_names)
-			if len(unknown_variables) > 0:
-				raise ValueError(f"Unknown variable name(s): {unknown_variables}")
-		elif variables is not None:
-			raise ValueError(
-				f"Expected np.ndarray or Mapping for variables, but got {type(variables)}"
-			)
-
-		if isinstance(parameters, np.ndarray):
-			if len(parameters.shape) != 2 or parameters.shape[1] != self.num_parameters:
-				raise ValueError(
-					f"parameters must be a matrix with {self.num_parameters} columns"
-				)
-		elif isinstance(parameters, Mapping):
-			unknown_parameters = set(parameters.keys()) - set(self.parameter_names)
-			if len(unknown_parameters) > 0:
-				raise ValueError(f"Unknown parameter name(s): {unknown_parameters}")
-		elif parameters is not None:
-			raise ValueError(
-				f"Expected np.ndarray or Mapping for parameters, but got {type(variables)}"
-			)
-
-		var_size = 1
-		var_shape = (1,)
-		if isinstance(variables, np.ndarray):
-			var_size = variables.shape[0]
-			var_shape = (var_size, 1)
-		elif isinstance(variables, Mapping):
-			variables = {k: np.array(v, dtype=np.float64) for k, v in variables.items()}
-			var_sizes = [v.size for v in variables.values() if v.size > 1]
-			var_shapes = [v.shape for v in variables.values() if v.size > 1]
-			if len(set(var_shapes)) > 1:
-				shapes = {k: v.shape for k, v in variables.items() if v.size > 1}
-				raise ValueError(f"Shape of arrays for variables don't match: {shapes}")
-			if len(var_sizes) > 0:
-				var_size = var_sizes[0]
-				var_shape = var_shapes[0]
-
-		par_size = 1
-		par_shape = (1,)
-		if isinstance(parameters, np.ndarray):
-			par_size = parameters.shape[0]
-			par_shape = (par_size, 1)
-		elif isinstance(parameters, Mapping):
-			parameters = {
-				k: np.array(v, dtype=np.float64) for k, v in parameters.items()
-			}
-			par_sizes = [v.size for v in parameters.values() if v.size > 1]
-			par_shapes = [v.shape for v in parameters.values() if v.size > 1]
-			if len(set(par_shapes)) > 1:
-				shapes = {k: v.shape for k, v in parameters.items() if v.size > 1}
-				raise ValueError(
-					f"Shape of arrays for parameters don't match: {shapes}"
-				)
-			if len(par_sizes) > 0:
-				par_size = par_sizes[0]
-				par_shape = par_shapes[0]
-
-		if var_size > 1 and par_size > 1:
-			if var_size != par_size or var_size != par_size:
-				raise ValueError(
-					"Arrays specified for parameters and initial states must have the same size"
-				)
-
-		new_size = var_size if var_size > 1 else par_size
-		new_shape = var_shape if var_size > 1 else par_shape
-
-		vars_array, pars_array = self._make_problem_data(
-			variables=variables,
-			parameters=parameters,
-			new_size=new_size,
-			new_shape=new_shape,
-		)
-		self._set_problem_data(vars_array, pars_array)
-
-	def _make_problem_data(
-		self,
-		variables: Optional[dict[str, np.ndarray]] = None,
-		parameters: Optional[dict[str, np.ndarray]] = None,
-		new_size: Optional[int] = None,
-		new_shape: Optional[tuple[int, ...]] = None,
-	) -> tuple[np.ndarray, np.ndarray]:
-		"""Create initial state and parameter arrays from default values.
-
-		The resulting arrays by convention have shapes (ensemble_size, num_variables)
-		and (ensemble_size, num_parameters)
-		"""
-
-		if len(new_shape) == 1:
-			new_shape = (new_size, 1)
-
-		previous_size = self._ensemble_size
-		valid_previous_size = (previous_size == new_size) | (previous_size == 1)
-
-		if valid_previous_size:
-			initial_state_array = self.get_initial_state()
-			parameter_array = self._device_parameters
-		else:
-			initial_state_array = np.array(
-				list(self._variable_defaults.values()), dtype=np.float64, ndmin=2
-			)
-			parameter_array = np.array(
-				list(self._parameter_defaults.values()), dtype=np.float64, ndmin=2
-			)
-
-		if initial_state_array.shape[0] == 1:
-			initial_state_array = np.tile(initial_state_array, (new_size, 1))
-
-		if parameter_array.shape[0] == 1:
-			parameter_array = np.tile(parameter_array, (new_size, 1))
-
-		if isinstance(variables, np.ndarray):
-			initial_state_array = variables
-		elif isinstance(variables, Mapping):
-			for key, value in variables.items():
-				index = self.variable_names.index(key)
-				value = np.repeat(value, new_size) if value.size == 1 else value
-				initial_state_array[:, index] = np.array(value.flatten())
-
-		if isinstance(parameters, np.ndarray):
-			parameter_array = parameters
-		elif isinstance(parameters, Mapping):
-			for key, value in parameters.items():
-				index = self.parameter_names.index(key)
-				value = np.repeat(value, new_size) if value.size == 1 else value
-				parameter_array[:, index] = np.array(value.flatten())
-
-		self._ensemble_size = new_size
-		self._ensemble_shape = new_shape
-		return initial_state_array, parameter_array
+		self._sync_ivp_from_device_problem_data()
+		self._ivp.set_ensemble(variables=variables, parameters=parameters)
+		self._sync_problem_data_from_ivp()
 
 	def _set_problem_data(
 		self, initial_state: np.ndarray, parameters: np.ndarray
 	) -> None:
 		"""Set both initial state and parameters at the same time."""
+		self._ensemble_size = initial_state.shape[0]
 		self._device_initial_state = initial_state
 		self._device_parameters = parameters
+		self._ivp._set_problem_data(
+			initial_state,
+			parameters,
+			ensemble_shape=self._ensemble_shape,
+		)
 		self._integrator.set_problem_data(
 			initial_state.flatten(order="F"),
 			parameters.flatten(order="F"),
@@ -466,11 +362,13 @@ class Simulator:
 	def _set_parameters(self, parameters: np.ndarray) -> None:
 		"""Set the ensemble parameters without changing ensemble size."""
 		self._device_parameters = parameters
+		self._ivp._set_parameter_values(parameters)
 		self._integrator.set_pars(parameters.flatten(order="F"))
 
 	def _set_initial_state(self, initial_state: np.ndarray) -> None:
 		"""Set the initial state without changing ensemble size."""
 		self._device_initial_state = initial_state
+		self._ivp._set_initial_state(initial_state)
 		self._integrator.set_x0(initial_state.flatten(order="F"))
 
 	def set_tspan(self, t_span: tuple[float, float]) -> None:

@@ -1,5 +1,6 @@
 from clode.observers import Observer, ObserverParams
 from clode.problem import (
+    InitialValueProblem,
     OpenCLConverter,
     OpenCLRhsEquation,
     ProblemInfo,
@@ -98,6 +99,7 @@ __all__ = [
     "query_opencl",
     "configure_logging",
     "get_logger",
+    "InitialValueProblem",
     "ProblemInfo",
     "SolverParams",
     "Stepper",

@@ -31,8 +31,40 @@ def getRHS(float t,
            list[float] weiner) -> None
 ```
 
-To support using the same function with Scipy's ```solve_ivp``, we provide a wrapper that
-provides the signature expected there [TODO].
+Python-authored IVPs can also be used directly with Scipy's `solve_ivp` through
+`InitialValueProblem`:
+
+```python
+from scipy.integrate import solve_ivp
+
+import clode
+
+
+def getRHS(
+    t: float,
+    variables: list[float],
+    parameters: list[float],
+    derivatives: list[float],
+    aux: list[float],
+    wiener: list[float],
+) -> None:
+    rate: float = parameters[0]
+    offset: float = parameters[1]
+    derivatives[0] = rate * variables[0] + offset
+
+
+ivp = clode.InitialValueProblem(
+    variables={"x": 0.0},
+    parameters={"rate": -0.5, "offset": 1.0},
+    rhs_equation=getRHS,
+)
+
+solution = solve_ivp(ivp, (0.0, 10.0), [0.0])
+solution_with_args = solve_ivp(ivp, (0.0, 10.0), [0.0], args=(-0.25, 0.5))
+```
+
+When `solve_ivp(..., args=(...))` is used, the positional values are mapped onto
+the IVP's declared parameter order.
 
 ## Arithmetic operations
 
@@ -93,19 +125,19 @@ The functions trigonometric currently available are:
 
 Additionally, the following functions are supported:
 
-| Exponential & Logarithmic  | Power & Root  | Rounding & Remainder | Miscellaneous |
-|----------------------------|---------------|----------------------|------------------------|
-| exp                        | cbrt          | ceil                 | copysign               |
-| exp2                       | pow           | floor                | fabs                   |
-| exp10                      | pown          | fmod                 | fdim                   |
-| expm1                      | powr          | remainder            | gamma                  |
-| log                        | sqrt          | rint                 | hypot                  |
-| log1p                      | rsqrt         | trunc                | ilogb                  |
-| log2                       | rootn         |                      | ldexp                  |
-| log10                      |               |                      | lgamma                 |
-|                            |               |                      | nextafter              |
-|                            |               |                      | erf                    |
-|                            |               |                      | erfc                   |
+| Exponential & Logarithmic | Power & Root | Rounding & Remainder | Miscellaneous |
+| ------------------------- | ------------ | -------------------- | ------------- |
+| exp                       | cbrt         | ceil                 | copysign      |
+| exp2                      | pow          | floor                | fabs          |
+| exp10                     | pown         | fmod                 | fdim          |
+| expm1                     | powr         | remainder            | gamma         |
+| log                       | sqrt         | rint                 | hypot         |
+| log1p                     | rsqrt        | trunc                | ilogb         |
+| log2                      | rootn        |                      | ldexp         |
+| log10                     |              |                      | lgamma        |
+|                           |              |                      | nextafter     |
+|                           |              |                      | erf           |
+|                           |              |                      | erfc          |
 
 You can change between int and float numbers by using
 the Python builtins `int()` and `float()`.

@@ -39,6 +39,7 @@ classifiers = [
 [project.optional-dependencies]
 test = [
     "pytest>=8.0.0",
+    "scipy>=1.14.0",
 ]
 docs = [
     "matplotlib>=3.8.0",
@@ -59,6 +60,7 @@ dev = [
     "pygments>=2.0.0",
     "pymdown-extensions>=10.0.0",
     "pytest>=8.0.0",
+    "scipy>=1.14.0",
     "twine>=5.0.0",
 ]
 

@@ -108,7 +108,7 @@ Do not treat this as locked. It is the current iteration target, not a promise t
 - Start with the types that users actually inspect in the reference:
   - `Simulator`, `FeatureSimulator`, `TrajectorySimulator`
   - `ObserverOutput`, `TrajectoryOutput`
-  - `SolverParams`, `ObserverParams`, `ProblemInfo`
+  - `InitialValueProblem`, `SolverParams`, `ObserverParams`
   - `DeviceInfo`, `PlatformInfo`, `query_opencl`, `print_opencl`
 - Do not try to document every compatibility barrel or every exported builtin at once.
 

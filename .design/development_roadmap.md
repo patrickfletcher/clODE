@@ -20,8 +20,8 @@ Use `.design/ideas.md` as the short living board. This file is the longer ration
 ### Current weaknesses
 
 - Continuation correctness is much better, but the state model is still only partially explicit. Solver-owned time, attained per-item `tf`, continued `dt`, observer state, and RNG continuation details are real in the implementation, but they are not yet represented as one clear internal model.
-- The current problem layer still stops short of an explicit IVP model. `ProblemInfo` and `RhsSource` exist, but the required default parameter and initial-state values still live in `Simulator` constructor arguments.
-- Simulators still carry too much semantic weight. Ensemble generation, broadcasting, and some continuation semantics still live in `Simulator` helpers instead of first-class ensemble/state concepts.
+- A first-pass IVP model now exists, but the public problem layer still exposes lower-level support types and source helpers more prominently than necessary; curated docs and examples should center `InitialValueProblem` instead.
+- Simulators still carry some semantic weight through compatibility delegates and cached mirrored problem data even though the core defaults and batch semantics now live on the IVP.
 - Each work item effectively owns `dt` and attained `tf`, but not an explicit `t0` or completion/error flags. That leaves friction around continuation helpers and windows where work items diverge.
 - `SolverParams` still mixes integration policy with output-storage policy. That makes chunking, batching, and trajectory streaming harder than they need to be.
 - Stepper, observer, solver-state, and problem concepts are still split across public enums/dataclasses, internal string registries, and kernel include trees rather than clearer Python-owned semantic definitions.
@@ -33,6 +33,13 @@ Use `.design/ideas.md` as the short living board. This file is the longer ration
 ## Prioritized Workstreams
 
 ### Priority 0: InitialValueProblem first, with built-in batch semantics at the simulator boundary
+
+Status on the current branch:
+
+- the first semantic IVP pass has landed
+- simulators can now consume `ivp=` directly while preserving the compatibility constructor path
+- Python-authored IVPs can act as SciPy-style `(t, y, *args) -> dydt` callables
+- the remaining work in this priority is mostly public-surface cleanup, docs centering, and future batch-helper follow-through rather than more boundary expansion in the same PR
 
 Continuation correctness is no longer the headline problem. The next durable improvement is to make the user-facing semantic unit explicit where the current API already points: one IVP, which can also cover the usual size-`(1,)` case plus basic batched inputs.
 
@@ -49,6 +56,7 @@ Key tasks:
 - introduce an `InitialValueProblem` model that owns RHS semantics plus default parameter and initial-state values
 - keep any lower-level shared definition metadata derived or internal unless a separate layer proves necessary later
 - let the IVP own the size-`(1,)` case plus basic batched parameter or initial-state semantics, with remembered shape metadata where that improves result reshaping workflows
+- ensure an intuitive user experience for IVP specification. Evaluate callable IVPs for SciPy `solve_ivp`, but bias toward a small Python-backed adapter on the IVP rather than widening this PR into generic OpenCL/XPP round-tripping or converter redesign
 - add helper functions for grid, random, quasi-random, and repeat-style batch generation before deciding whether a separate `IVPEnsemble` class is warranted
 - treat simulators as orchestration objects around IVP, runtime executor, and observer or trajectory policy
 - keep explicit solver-state, observer-state, and stepper-definition cleanup as follow-on internal work unless a small adapter falls out naturally
@@ -61,7 +69,7 @@ Expected payoff:
 
 API impact:
 
-- can start internally; public API may only need helpers later
+- can start internally; public API may only need helpers later. If callable IVPs land here, keep them conditional on retaining a Python RHS callable on the IVP and defer generic cross-source interop until stronger RHS IR work.
 
 ### Priority 1: Separate integration state from output and storage policy
 
