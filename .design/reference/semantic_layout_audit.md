@@ -10,6 +10,7 @@ Update when: the recommended layout direction changes, a major semantic model la
 - Keep the flat root barrels for now. They remain useful as collaborator signposts while the canonical package layout settles.
 - Do not start with a bulk kernel-file move.
 - The first-pass `InitialValueProblem` cleanup has landed, and the next highest-value semantic cleanup is explicit solver-state ownership so simulators read more clearly as orchestration objects with one state boundary per concern.
+- Keep compile-time build specification separate from runtime state so program-cache keys and rebuild triggers stay explicit rather than leaking through host-side cache invalidation.
 - Treat stepper definitions and richer observer definitions as follow-on internal semantic-layer work that should build on that clearer solver-state contract.
 - `_opencl` should stay focused on runtime/build/buffer/dispatch concerns and consume those semantic definitions, rather than continuing to define core concepts through strings, registries, and struct builders.
 
@@ -181,7 +182,21 @@ What this would buy:
 - continuation helpers and per-item divergence become easier to reason about
 - kernel signatures can move toward clearer state-oriented inputs rather than a growing list of parallel buffers
 
-### 6. Make stepper definitions first-class on the Python side
+### 6. Keep build specification separate from runtime state
+
+Likely shape:
+
+- an explicit `BuildSpec` or `KernelSpec` carrying only compile-time specialization inputs such as precision, problem shape, stepper family, observer definition, and any remaining compile-time storage-layout choices
+- runtime values such as `x0`, parameters, `t_span`, RNG state, and fetched outputs stay out of that build specification
+- `_opencl/program_cache.py`, `_opencl/source_builder.py`, and simulator invalidation logic consume that explicit build spec rather than inferring rebuild decisions from mirrored runtime fields
+
+What this would buy:
+
+- clearer program-cache keys and rebuild triggers
+- less accidental coupling between runtime invalidation logic and kernel-specialization decisions
+- a cleaner separation between semantic state owners and the transfer details that implement them
+
+### 7. Make stepper definitions first-class on the Python side
 
 Likely shape:
 
@@ -198,7 +213,7 @@ What this would buy:
 - better source assembly than raw string registries
 - clearer documentation and contributor mental model
 
-### 7. Promote observers from “enum plus params plus kernel special cases” to definitions
+### 8. Promote observers from “enum plus params plus kernel special cases” to definitions
 
 Likely shape inside `clode.observers`:
 
@@ -216,7 +231,7 @@ What this would buy:
 - easier custom/composable observer work later
 - better separation between persistent observer state and optional event-output capacity
 
-### 8. Delay kernel relocation until the semantic models exist
+### 9. Delay kernel relocation until the semantic models exist
 
 This is the key sequencing choice.
 
@@ -226,9 +241,10 @@ The useful first move is not “put the `.clh` files next to some new Python fil
 
 1. Make lower-level solver state explicit so continuation helpers and diverged-work-item behavior have a clearer contract.
 2. Separate integration state from output and storage policy once the state model has a clearer home.
-3. Introduce a Python-owned stepper-definition model and refactor observer definitions around clearer semantic objects.
-4. Revisit whether IVP-owned batch helpers are enough or whether a dedicated ensemble type adds real value.
-5. Revisit kernel relocation only after those semantic models exist.
+3. Refactor observer definitions around explicit semantic objects and a cleaner split between persistent observer state and optional event-output capacity.
+4. Introduce a Python-owned stepper-definition model once the state and output boundaries stop moving.
+5. Revisit whether IVP-owned batch helpers are enough or whether a dedicated ensemble type adds real value.
+6. Revisit kernel relocation only after those semantic models exist.
 
 ## Guidance for future package moves
 

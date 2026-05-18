@@ -10,6 +10,7 @@ Read the root `.design` docs first. This directory is not default reading.
 
 - `project_principles.md`: settled project principles and open strategic design questions that should guide broad refactors, public wording, and scope decisions.
 - `semantic_layout_audit.md`: current package-layout guidance for IVP-first batch semantics, simulator orchestration, solver state, stepper definitions, and observer definitions.
+- `solver_state_implementation_plan.md`: code-facing implementation map for the active solver-state ownership PR, including file targets, phase ordering, and focused test coverage.
 - `ivp_api_test_plan.md`: closeout note for the landed first-pass `InitialValueProblem` API shape, staged delivery order, Python-backed callability, and the slim test matrix.
 - `continuation_timebase_note.md`: current solver-owned time-base semantics, attained-`tf` continuation guidance, and the remaining solver-state questions.
 - `testing_audit.md`: test taxonomy and the kernel-component testing strategy.

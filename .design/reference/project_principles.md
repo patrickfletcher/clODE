@@ -31,11 +31,20 @@ This note is not a backlog and does not override the root `.design` docs.
 ### Public API And Package Surface
 
 - `Simulator`, `TrajectorySimulator`, and `FeatureSimulator` are the durable user-facing entry points, with `clode` as the stable top-level import surface.
+- Keep public APIs workflow-shaped around IVPs, simulators, observers, trajectories, and features rather than exposing source bundles, transfer buffers, or cache objects as first-class concepts.
 - Runtime selection is explicitly single-device today. If multi-device execution is ever pursued, it should use a dedicated API rather than overloading the current selection arguments.
 - New implementation work should land in `clode.problem`, `clode.observers`, `clode.simulation`, `clode.runtime`, and `clode._opencl`, not in the flat compatibility barrels.
 - The flat compatibility barrels exist for import-path continuity, downstream stability, transition safety, and collaborator orientation while the semantic layout settles. They are not preferred homes for new code.
 - Public-facing docs, examples, and the paper should describe the current Python package and supported workflows, not removed wrappers, migration history, or internal archaeology.
 - Public API cleanup should happen through deliberate deprecation and documentation shifts rather than incidental breakage during internal refactors.
+
+### Semantic Ownership And Internal Modeling
+
+- Keep one semantic owner per concern. IVP-owned problem data, solver-owned execution state, persistent observer state, fetched outputs, and compile-time build specification should not share ownership.
+- Separate compile-time kernel-specialization inputs from runtime state. Program rebuilds and cache keys should follow an explicit build specification rather than incidental cache invalidation or mirrored host fields.
+- Treat device buffers and host mirrors as implementation details of those semantic owners. They should implement a semantic contract, not define solver or observer state.
+- Prefer Python-owned semantic definitions and OpenCL-owned execution. Stepper, observer, and state meaning should be legible in Python first, with `_opencl` consuming those definitions efficiently.
+- Prefer small, value-oriented, testable abstractions over backend-agnostic framework layers; do not generalize for hypothetical future backends before a second real backend exists.
 
 ### Implementation And Maintenance Guardrails
 
