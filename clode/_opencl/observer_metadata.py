@@ -5,7 +5,7 @@ from dataclasses import dataclass
 import numpy as np
 
 from ..observers.metadata import get_observer_feature_names, is_two_pass_observer
-from ..problem.definition import ProblemInfo
+from ..problem._core import ProblemInfo
 from ..observers.types import ObserverParams
 from .models import Precision, ProblemShape
 from .runtime import OpenCLRuntime

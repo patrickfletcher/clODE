@@ -22,7 +22,7 @@ from clode._opencl.observer_metadata import (
     _observer_data_base_dtype,
     _observer_data_struct_name,
 )
-from clode.problem import ProblemInfo
+from clode.problem._core import ProblemInfo
 
 ENV_VARS = (
     "CLODE_TEST_PLATFORM_ID",

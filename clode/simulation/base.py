@@ -8,10 +8,10 @@ import numpy.typing as npt
 
 from .._opencl.executors import OpenCLTransientExecutor
 from .._opencl.runtime import OpenCLRuntime
-from ..problem.definition import ProblemInfo
+from ..problem._core import ProblemInfo
 from ..problem.ivp import InitialValueProblem
 from ..problem.python import OpenCLRhsEquation
-from ..problem.source import RhsSource
+from ..problem._core import RhsSource
 from ..runtime import (
 	CLDeviceType,
 	CLVendor,

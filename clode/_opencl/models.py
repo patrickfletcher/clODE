@@ -4,10 +4,10 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import TYPE_CHECKING
 
-from ..problem.source import RhsSource
+from ..problem._core import RhsSource
 
 if TYPE_CHECKING:
-    from ..problem.definition import ProblemInfo
+    from ..problem._core import ProblemInfo
 
 
 OPENCL_BACKEND_VERSION = "1"

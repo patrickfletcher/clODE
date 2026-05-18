@@ -6,8 +6,7 @@ from typing import Sequence
 import numpy as np
 
 from ..observers.types import ObserverParams
-from ..problem.definition import ProblemInfo
-from ..problem.source import RhsSource
+from ..problem._core import ProblemInfo, RhsSource
 from ..simulation.params import SolverParams
 from .buffers import (
     ArrayLayout,

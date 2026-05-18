@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from ..problem.definition import ProblemInfo
+from ..problem._core import ProblemInfo
 from .types import Observer, ObserverParams
 
 

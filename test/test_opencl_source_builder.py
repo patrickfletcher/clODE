@@ -12,7 +12,7 @@ from clode._opencl import (
     UnsupportedObserverError,
     UnsupportedStepperError,
 )
-from clode.problem import create_rhs_source, load_rhs_source
+from clode.problem._core import create_rhs_source, load_rhs_source
 from clode.runtime import _clode_root_dir
 from test.core_numerics.helpers import model_path
 

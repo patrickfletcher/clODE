@@ -9,8 +9,8 @@ Update when: the recommended layout direction changes, a major semantic model la
 - Keep the current top-level semantic packages: `clode.problem`, `clode.observers`, `clode.simulation`, `clode.runtime`, and `clode._opencl`.
 - Keep the flat root barrels for now. They remain useful as collaborator signposts while the canonical package layout settles.
 - Do not start with a bulk kernel-file move.
-- The highest-value immediate cleanup is to make `InitialValueProblem` first-class and let it absorb the size-`(1,)` case plus basic batched input semantics so simulators read as orchestration objects rather than the semantic home of defaults and batches.
-- Treat explicit solver state, stepper definitions, and richer observer definitions as follow-on internal semantic-layer work rather than part of the same first PR boundary.
+- The first-pass `InitialValueProblem` cleanup has landed, and the next highest-value semantic cleanup is explicit solver-state ownership so simulators read more clearly as orchestration objects with one state boundary per concern.
+- Treat stepper definitions and richer observer definitions as follow-on internal semantic-layer work that should build on that clearer solver-state contract.
 - `_opencl` should stay focused on runtime/build/buffer/dispatch concerns and consume those semantic definitions, rather than continuing to define core concepts through strings, registries, and struct builders.
 
 Historical peer-library comparisons and broader layout-option analysis from the earlier, longer version of this note now live in `../archived/reference_cleanup_2026_05_13/semantic_layout_background.md`.
@@ -30,18 +30,17 @@ Historical peer-library comparisons and broader layout-option analysis from the 
 
 - `Simulator` still owns `set_ensemble()`, `set_repeat_ensemble()`, problem-data shaping, cached readbacks, `t_span`, and public continuation helpers that forward into `_opencl`.
 - `TrajectorySimulator` and `FeatureSimulator` add storage or observer policy, but still inherit the same broad state-owning base object.
-- The current problem layer still stops short of one explicit `InitialValueProblem` that owns RHS semantics, defaults, batched inputs, and remembered result shape.
+- The current problem layer now has an explicit `InitialValueProblem` that owns RHS semantics, defaults, batched inputs, and remembered result shape, but simulator-side compatibility delegates and caches still carry more semantic weight than they should.
 
 What is missing:
 
-- no first-class `InitialValueProblem` object
-- no settled home yet for batch generation, broadcasting helpers, and remembered ensemble shape outside `Simulator`
-- no sharper distinction between simulator orchestration and the semantic objects being orchestrated
+- no settled home yet for richer batch generation, broadcasting helpers, and longer-term result-shape policy beyond the current IVP-owned first pass
+- no sharper distinction yet between simulator orchestration, solver execution state, and fetched output state
 
 Consequence:
 
-- the semantic unit of one solved instance is still implicit even though the public API already requires default parameter and initial-state values
-- simulator classes still feel like the semantic home for defaults, batching, and some continuation policy
+- the semantic unit of one solved instance is now explicit, but simulator classes still carry too much convenience, cache ownership, and continuation-adjacent state
+- later solver-state cleanup still has to peel orchestration concerns away from cached execution state and output state
 
 #### 2. Solver-owned continuation state exists, but mostly as scattered execution state
 
@@ -225,10 +224,10 @@ The useful first move is not “put the `.clh` files next to some new Python fil
 
 ## Productive near-term follow-on order
 
-1. Introduce explicit IVP semantics with built-in batch shaping, then revisit whether a dedicated ensemble type is warranted before tackling per-work-item solver state.
-2. Make lower-level solver state explicit so continuation helpers and diverged-work-item behavior have a clearer contract.
+1. Make lower-level solver state explicit so continuation helpers and diverged-work-item behavior have a clearer contract.
+2. Separate integration state from output and storage policy once the state model has a clearer home.
 3. Introduce a Python-owned stepper-definition model and refactor observer definitions around clearer semantic objects.
-4. Separate integration state from output and storage policy once the state model has a clearer home.
+4. Revisit whether IVP-owned batch helpers are enough or whether a dedicated ensemble type adds real value.
 5. Revisit kernel relocation only after those semantic models exist.
 
 ## Guidance for future package moves

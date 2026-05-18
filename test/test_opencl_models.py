@@ -16,7 +16,7 @@ from clode._opencl import (
     UnsupportedStepperError,
 )
 from clode.observers import ObserverParams, get_observer_feature_names, is_two_pass_observer
-from clode.problem import ProblemInfo, create_rhs_source
+from clode.problem._core import ProblemInfo, create_rhs_source
 
 
 def _make_build_key(**overrides: object) -> BuildKey:

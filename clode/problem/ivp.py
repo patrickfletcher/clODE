@@ -5,9 +5,9 @@ from typing import Any, Callable
 
 import numpy as np
 
-from .definition import ProblemInfo
+from ._core import ProblemInfo
 from .python import OpenCLConverter, OpenCLRhsEquation
-from .source import RhsSource, create_rhs_source, load_rhs_source
+from ._core import RhsSource, create_rhs_source, load_rhs_source
 from .xpp import convert_xpp_file
 
 ArrayValue = float | Sequence[float] | np.ndarray[Any, np.dtype[np.float64]]

@@ -9,7 +9,7 @@ import clode
 import pytest
 
 from clode._opencl import BuildError, KernelKind, OpenCLRuntime, Precision, ProblemShape, SourceBuilder
-from clode.problem import load_rhs_source
+from clode.problem._core import load_rhs_source
 from clode.runtime import _clode_root_dir
 from test.core_numerics.helpers import device_kwargs_for_tests, model_path
 

@@ -1,8 +1,8 @@
 # IVP API And Test Plan
 
-Purpose: define the first-pass `InitialValueProblem` API, the delivery order for the active PR, and a deliberately slim test matrix.
-Read when: implementing the IVP PR, reviewing the public problem-facing API, or deciding what to test first.
-Update when: the staged plan, exposed IVP surface, or agreed test scope changes.
+Purpose: record the landed first-pass `InitialValueProblem` API, the delivery order used for that PR, and a deliberately slim test matrix.
+Read when: reviewing the IVP pass, checking the retained public problem-facing API, or deciding how much IVP coverage follow-on refactors should preserve.
+Update when: the retained IVP surface, closeout status, or agreed slim test scope changes.
 
 ## Bottom line
 
@@ -12,6 +12,16 @@ Update when: the staged plan, exposed IVP surface, or agreed test scope changes.
 - Keep the curated `clode.problem` public story centered on `InitialValueProblem`, `OpenCLConverter`, and format-ingestion helpers; treat `ProblemInfo`, `RhsSource`, and low-level source preparation as derived support concepts rather than promoted user-facing API.
 - Add SciPy only as a development and test dependency for this PR.
 - Keep the first test pass small: focus on ownership, shaping contracts, Python-backed callability, and one or two end-to-end confirmation paths.
+
+## Closeout status
+
+The first semantic IVP pass is now landed on the branch.
+
+Deferred follow-on items:
+
+- richer batch-generation helpers layered on top of the IVP
+- generic SciPy or cross-solver interop for OpenCL-only and XPP-backed problems
+- explicit solver-state and cache-ownership cleanup so IVP data, solver execution state, persistent observer state, and fetched output state each have a clearer single source of truth
 
 ## Delivery order for this PR
 
@@ -178,7 +188,7 @@ If marker separation becomes useful, a small frontend or runtime marker split fo
 
 ## Likely file targets
 
-- `clode/problem/definition.py` or a neighboring problem-layer module for `InitialValueProblem`
+- `clode/problem/ivp.py` for `InitialValueProblem`
 - `clode/problem/__init__.py` and `clode/__init__.py` for exports
 - `clode/simulation/base.py` and simulator subclasses for IVP ownership and delegation
 - `test/` contract tests focused on IVP ownership and Python-backed callability

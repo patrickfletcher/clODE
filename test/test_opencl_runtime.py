@@ -12,7 +12,7 @@ pyopencl = pytest.importorskip("pyopencl")
 
 from clode._opencl import BuildError, KernelKind, OpenCLRuntime, Precision, ProblemShape, SourceBuilder
 from clode.runtime.selection import RuntimeSelection
-from clode.problem import load_rhs_source
+from clode.problem._core import load_rhs_source
 from clode.runtime import _clode_root_dir
 from test.core_numerics.helpers import TEST_DEVICE_ID, TEST_PLATFORM_ID, model_path
 

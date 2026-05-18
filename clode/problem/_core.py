@@ -1,19 +1,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+import hashlib
+from pathlib import Path
 
 
 @dataclass(slots=True)
 class ProblemInfo:
-    """Static shape information for a modeled ODE problem.
-
-    Attributes:
-        src_file: Human-readable source label for the problem definition.
-        vars: Ordered state-variable names.
-        pars: Ordered parameter names.
-        aux: Ordered auxiliary-variable names.
-        num_noise: Number of Wiener-process inputs.
-    """
+    """Static shape metadata derived from one modeled ODE problem."""
 
     src_file: str = ""
     vars: list[str] = field(default_factory=list)
@@ -42,4 +36,34 @@ class ProblemInfo:
         return len(self.aux)
 
 
-__all__ = ["ProblemInfo"]
+@dataclass(frozen=True)
+class RhsSource:
+    origin_label: str
+    text: str
+    digest: str
+
+
+def compute_rhs_digest(text: str) -> str:
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def create_rhs_source(origin_label: str, text: str) -> RhsSource:
+    return RhsSource(
+        origin_label=origin_label,
+        text=text,
+        digest=compute_rhs_digest(text),
+    )
+
+
+def load_rhs_source(source_path: str) -> RhsSource:
+    text = Path(source_path).read_text(encoding="utf-8")
+    return create_rhs_source(source_path, text)
+
+
+__all__ = [
+    "ProblemInfo",
+    "RhsSource",
+    "compute_rhs_digest",
+    "create_rhs_source",
+    "load_rhs_source",
+]

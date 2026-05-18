@@ -20,13 +20,14 @@ Use `.design/ideas.md` as the short living board. This file is the longer ration
 ### Current weaknesses
 
 - Continuation correctness is much better, but the state model is still only partially explicit. Solver-owned time, attained per-item `tf`, continued `dt`, observer state, and RNG continuation details are real in the implementation, but they are not yet represented as one clear internal model.
-- A first-pass IVP model now exists, but the public problem layer still exposes lower-level support types and source helpers more prominently than necessary; curated docs and examples should center `InitialValueProblem` instead.
+- A first-pass IVP model now exists, and the curated public problem layer now centers `InitialValueProblem`; lower-level support types and source-preparation helpers are internal support concepts rather than promoted surface area.
 - Simulators still carry some semantic weight through compatibility delegates and cached mirrored problem data even though the core defaults and batch semantics now live on the IVP.
+- The next internal friction point is clearer now: solver/execution state, cached host mirrors, and fetched output state are still spread across `Simulator`, `_opencl/executors.py`, and device buffers without one deliberate single-source-of-truth model.
 - Each work item effectively owns `dt` and attained `tf`, but not an explicit `t0` or completion/error flags. That leaves friction around continuation helpers and windows where work items diverge.
 - `SolverParams` still mixes integration policy with output-storage policy. That makes chunking, batching, and trajectory streaming harder than they need to be.
 - Stepper, observer, solver-state, and problem concepts are still split across public enums/dataclasses, internal string registries, and kernel include trees rather than clearer Python-owned semantic definitions.
 - Observer metadata is now Python-owned, but it is still expressed as a large conditional manifest rather than a cleaner observer-definition model.
-- Optional event storage is still entangled with persistent observer state and build-time sizing.
+- Optional event storage is still entangled with persistent observer state and build-time sizing, which means the solver-state cleanup needs to preserve a clean boundary for later observer-definition work instead of hard-coding today’s feature-buffer assumptions more deeply.
 - The runtime is intentionally single-device only. If multi-device execution ever becomes worthwhile, it will need a dedicated API and execution model rather than an extension of the current selectors.
 - There is still no good path for stiff systems or implicit stepping, which limits the package for an important class of dynamical-systems problems.
 
@@ -39,7 +40,7 @@ Status on the current branch:
 - the first semantic IVP pass has landed
 - simulators can now consume `ivp=` directly while preserving the compatibility constructor path
 - Python-authored IVPs can act as SciPy-style `(t, y, *args) -> dydt` callables
-- the remaining work in this priority is mostly public-surface cleanup, docs centering, and future batch-helper follow-through rather than more boundary expansion in the same PR
+- the remaining work in this priority is now mostly future batch-helper follow-through rather than more boundary expansion in the same PR
 
 Continuation correctness is no longer the headline problem. The next durable improvement is to make the user-facing semantic unit explicit where the current API already points: one IVP, which can also cover the usual size-`(1,)` case plus basic batched inputs.
 
@@ -110,6 +111,29 @@ Note on `odedriver.cl`:
 
 - keep it as deferred design context for possible later unification, but do not use it as the starting point for the next PR sequence
 
+### Priority 0: Explicit solver-owned state and cache ownership cleanup
+
+With the first IVP semantic pass landed, this is now the next active implementation target.
+
+Key tasks:
+
+- introduce a per-work-item solver-state model with a clear home for requested window, attained `tf`, current `dt`, status flags, and continuation-specific RNG state
+- define a sharper ownership split between IVP-owned problem data, solver-owned execution state, and fetched output caches
+- make that ownership split explicit enough that later observer-definition work can separate persistent observer state from optional event-output capacity without reintroducing simulator/executor duplication
+- reduce redundant host-side mirrors and resynchronization paths between `Simulator` and `_opencl/executors.py`
+- make invalidation rules explicit when callers change IVP data, solver parameters, time windows, or observer/runtime configuration
+
+Why now:
+
+- the IVP work made the remaining ownership friction easier to see
+- continuation correctness is already good enough that the next leverage point is semantics and cache ownership rather than more boundary expansion in the problem layer
+- later continuation helpers, output-policy cleanup, and stepper-definition work all want a clearer solver-state contract first
+- observer-definition cleanup also wants that contract first so feature execution can depend on an explicit solver-state boundary rather than today’s mixed simulator and executor caches
+
+API impact:
+
+- should start as an internal semantic cleanup with minimal public API change
+
 ### Priority 1: Explicit solver-owned state and stepper semantics
 
 The lower-level execution model still needs a clearer internal contract, but it no longer has to define the active user-facing PR boundary.
@@ -119,7 +143,7 @@ Key tasks:
 - introduce a per-work-item solver-state model with a clear home for `t0`, `tf`, `dt`, status flags, and continuation-specific RNG state
 - use that model as the basis for continuation-policy helpers and later batching behavior where per-item windows can diverge
 - introduce a Python-owned stepper-definition layer only after that state contract is clearer
-- keep observer-definition cleanup adjacent but separate; `ObserverData` and optional event storage are their own modeling problem
+- keep observer-definition cleanup adjacent but separate; `ObserverData` and optional event storage are their own modeling problem, but this PR should leave behind ownership boundaries they can consume directly
 
 Why after Priority 0:
 

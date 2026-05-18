@@ -14,7 +14,8 @@ Update when: canonical module homes, public compatibility surfaces, packaging ru
 - Runtime-critical OpenCL source assets live under `clode/kernels/` and ship as package data.
 - Historical migration and bug notes are archived under `.design/archived/`; they remain useful for rationale, but they are not the source of truth for the live package.
 - A first-pass `InitialValueProblem` now owns default state, default parameters, basic batch shaping, remembered ensemble shape, and Python-backed SciPy-style RHS callability at the simulator boundary.
-- The current package still has a few cleanup targets, especially clearer solver-state and output-policy separation plus continued public-surface cleanup so the problem layer centers `InitialValueProblem` rather than lower-level helper types.
+- Lower-level helper types such as `ProblemInfo` and `RhsSource` now live only under `clode.problem._core`; the curated public problem API centers `InitialValueProblem` and the authoring/conversion helpers instead.
+- The current package still has a few cleanup targets, especially clearer solver-state, observer-state, and output-policy separation at the simulator/runtime boundary.
 
 ## Session-Start Guidance
 
@@ -41,7 +42,7 @@ Update when: canonical module homes, public compatibility surfaces, packaging ru
 ### Public layer
 
 - `clode/__init__.py`: curated export surface and package version.
-- `clode/problem/*`: user-facing problem definition via `InitialValueProblem` plus Python/OpenCL/XPP authoring helpers. Lower-level support types such as `ProblemInfo` and `RhsSource` still exist and remain exported for compatibility, but they are derived support concepts rather than the primary user-facing API.
+- `clode/problem/*`: user-facing problem definition via `InitialValueProblem` plus Python/OpenCL/XPP authoring helpers. Lower-level support types such as `ProblemInfo` and `RhsSource` live only in the internal `_core` module as derived support concepts.
 - `clode/runtime/*`: public OpenCL query, device selection, and stdlib-logging helpers.
 - `clode/simulation/*`: solver params, simulator orchestration, current ensemble helpers, and result containers.
 - `clode/observers/*`: observer enums, parameter schema, and feature-name catalog helpers.
@@ -92,8 +93,9 @@ The historical backend-shim, protocol/factory facade, and binding-named compatib
 ## Current Constraints And Live Debt
 
 - The runtime is explicitly single-device only. Any future multi-device execution would require a dedicated API and execution model rather than reviving removed transition-era selectors.
-- The first semantic IVP pass is now live, but `clode.problem` still exposes lower-level helper types such as `ProblemInfo`, `RhsSource`, and source helpers more broadly than the curated docs should promote; public docs and examples should center `InitialValueProblem` instead.
+- The first semantic IVP pass is now live, and the curated public problem API now centers `InitialValueProblem`; lower-level helper types such as `ProblemInfo` and `RhsSource` remain internal support concepts under `clode.problem._core`.
 - Simulators still carry compatibility delegates for batch reshaping and maintain cached problem arrays alongside the IVP; richer batch-generation helpers (`grid`, random, quasi-random) have not yet been added around the IVP model.
+- Solver-related execution state is still spread across `Simulator` caches, `_opencl/executors.py` host mirrors, and device buffers. The remaining ownership friction is now less about IVP definition and more about per-work-item solver state, invalidation rules, and output-cache boundaries.
 - Common continuation state is still split across simulator caches, executor fields, and OpenCL buffers; there is no explicit per-work-item `SolverState` with `t0`, `tf`, `dt`, completion/error flags, and continuation-specific RNG data.
 - `SolverParams` still mixes integration controls with trajectory-storage controls (`max_store`, `nout`).
 - `ObserverParams` defaults are still duplicated between the public constructors and the dataclass.
