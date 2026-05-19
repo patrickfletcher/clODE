@@ -122,7 +122,7 @@ What remains for later:
 
 - no device-side per-work-item `t0` or richer completion/error status model yet
 - exact absolute-time continuation still needs caller-managed `t_span` or a later public continuation helper
-- the next leverage point is output or storage separation rather than reopening the ownership cleanup itself
+- the next leverage point is observer-definition cleanup rather than reopening the ownership or output-policy work itself
 
 ### Priority 1: Python-owned stepper semantics after the observer cleanup
 

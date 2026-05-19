@@ -1,5 +1,6 @@
 from dataclasses import replace
 
+import numpy as np
 import pytest
 
 from clode._opencl import (
@@ -15,6 +16,7 @@ from clode._opencl import (
     SourceBundle,
     UnsupportedStepperError,
 )
+from clode.observers._definitions import resolve_observer_spec
 from clode.observers import ObserverParams, get_observer_feature_names, is_two_pass_observer
 from clode.problem._core import ProblemInfo, create_rhs_source
 
@@ -26,7 +28,7 @@ def _make_build_key(**overrides: object) -> BuildKey:
         "kernel_kind": KernelKind.TRANSIENT,
         "precision": Precision.SINGLE,
         "stepper_name": "rk4",
-        "observer_name": None,
+        "observer_define": None,
         "problem_shape": ProblemShape(n_var=2, n_par=1, n_aux=1, n_wiener=0),
         "n_store_events": 0,
         "rhs_digest": rhs.digest,
@@ -59,7 +61,7 @@ def test_build_key_is_hashable_and_validates_observer_event_contract() -> None:
 
     assert {build_key: "cached"}[build_key] == "cached"
 
-    with pytest.raises(ValueError, match="observer_name"):
+    with pytest.raises(ValueError, match="observer_define"):
         _make_build_key(n_store_events=1)
 
 
@@ -148,3 +150,36 @@ def test_observer_catalog_helpers_expose_feature_names_and_two_pass_flags() -> N
     )
     assert is_two_pass_observer("nhood2") is True
     assert is_two_pass_observer("basic") is False
+
+
+def test_resolved_observer_spec_splits_persistent_and_event_layout() -> None:
+    problem_info = ProblemInfo(
+        "stable_linear_aux.cl",
+        ["x", "y"],
+        ["k"],
+        ["aux0"],
+        0,
+    )
+
+    resolved_spec = resolve_observer_spec(
+        problem_info,
+        "localmax",
+        ObserverParams(max_event_timestamps=2),
+        real_dtype=np.dtype(np.float32),
+    )
+
+    assert resolved_spec.observer_name == "localmax"
+    assert resolved_spec.build_define == "USE_OBSERVER_LOCAL_MAX"
+    assert resolved_spec.uses_two_pass is False
+    assert tuple(field[0] for field in resolved_spec.layout.event_output_fields) == (
+        "tMaxList",
+        "xMaxList",
+        "tMinList",
+        "xMinList",
+    )
+    assert "tMaxList" not in tuple(
+        field[0] for field in resolved_spec.layout.persistent_fields
+    )
+    assert resolved_spec.observer_data_struct_name == (
+        "clode_observer_data_localmax_float_v2_a1_e2"
+    )

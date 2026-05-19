@@ -57,7 +57,7 @@ class BuildKey:
     kernel_kind: KernelKind
     precision: Precision
     stepper_name: str
-    observer_name: str | None
+    observer_define: str | None
     problem_shape: ProblemShape
     n_store_events: int
     rhs_digest: str
@@ -69,12 +69,12 @@ class BuildKey:
             raise ValueError("backend_version must not be empty")
         if not self.stepper_name:
             raise ValueError("stepper_name must not be empty")
-        if self.observer_name == "":
-            raise ValueError("observer_name must be None or a non-empty string")
+        if self.observer_define == "":
+            raise ValueError("observer_define must be None or a non-empty string")
         if self.n_store_events < 0:
             raise ValueError("n_store_events must be non-negative")
-        if self.observer_name is None and self.n_store_events != 0:
-            raise ValueError("n_store_events requires an observer_name")
+        if self.observer_define is None and self.n_store_events != 0:
+            raise ValueError("n_store_events requires an observer_define")
         if not self.rhs_digest:
             raise ValueError("rhs_digest must not be empty")
         if not self.kernel_tree_digest:

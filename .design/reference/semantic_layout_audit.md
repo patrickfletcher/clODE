@@ -9,7 +9,7 @@ Update when: the recommended layout direction changes, a major semantic model la
 - Keep the current top-level semantic packages: `clode.problem`, `clode.observers`, `clode.simulation`, `clode.runtime`, and `clode._opencl`.
 - Keep the flat root barrels for now. They remain useful as collaborator signposts while the canonical package layout settles.
 - Do not start with a bulk kernel-file move.
-- The first-pass `InitialValueProblem` cleanup has landed, and the next highest-value semantic cleanup is explicit solver-state ownership so simulators read more clearly as orchestration objects with one state boundary per concern.
+- The first-pass `InitialValueProblem`, solver-state, and output-policy cleanup has landed, and the next highest-value semantic cleanup is explicit observer definitions so feature workflows read more clearly as composition over durable semantic objects.
 - Keep compile-time build specification separate from runtime state so program-cache keys and rebuild triggers stay explicit rather than leaking through host-side cache invalidation.
 - Treat stepper definitions and richer observer definitions as follow-on internal semantic-layer work that should build on that clearer solver-state contract.
 - `_opencl` should stay focused on runtime/build/buffer/dispatch concerns and consume those semantic definitions, rather than continuing to define core concepts through strings, registries, and struct builders.

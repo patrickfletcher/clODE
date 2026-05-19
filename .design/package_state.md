@@ -15,7 +15,7 @@ Update when: canonical module homes, public compatibility surfaces, packaging ru
 - Historical migration and bug notes are archived under `.design/archived/`; they remain useful for rationale, but they are not the source of truth for the live package.
 - A first-pass `InitialValueProblem` now owns default state, default parameters, basic batch shaping, remembered ensemble shape, and Python-backed SciPy-style RHS callability at the simulator boundary.
 - Lower-level helper types such as `ProblemInfo` and `RhsSource` now live only under `clode.problem._core`; the curated public problem API centers `InitialValueProblem` and the authoring/conversion helpers instead.
-- The current package still has a few cleanup targets, especially explicit observer-definition cleanup and cleaner observer-state modeling on top of the landed first-pass solver-state and output-policy boundaries.
+- The current package still has a few cleanup targets, especially observer-state naming/default cleanup on top of the landed observer-definition model and the first-pass solver-state and output-policy boundaries.
 
 ## Session-Start Guidance
 
@@ -45,7 +45,7 @@ Update when: canonical module homes, public compatibility surfaces, packaging ru
 - `clode/problem/*`: user-facing problem definition via `InitialValueProblem` plus Python/OpenCL/XPP authoring helpers. Lower-level support types such as `ProblemInfo` and `RhsSource` live only in the internal `_core` module as derived support concepts.
 - `clode/runtime/*`: public OpenCL query, device selection, and stdlib-logging helpers.
 - `clode/simulation/*`: solver params, simulator orchestration, current ensemble helpers, and result containers.
-- `clode/observers/*`: observer enums, parameter schema, and feature-name catalog helpers.
+- `clode/observers/*`: observer enums, parameter schema, public feature-name helpers, and the internal built-in observer-definition catalog in `_definitions.py`.
 - Root compatibility barrels remain for public flat imports such as `solver.py`, `features.py`, `trajectory.py`, `function_converter.py`, `xpp_parser.py`, and `opencl_builtins.py`.
 
 ### Internal OpenCL implementation
@@ -57,7 +57,7 @@ Update when: canonical module homes, public compatibility surfaces, packaging ru
 - `clode/_opencl/program_cache.py`: runtime-scoped OpenCL program cache.
 - `clode/_opencl/structs.py`: device-matched struct dtypes.
 - `clode/_opencl/buffers.py`: buffer allocation plus flatten/reshape rules.
-- `clode/_opencl/observer_metadata.py`: runtime-specific observer-data struct modeling.
+- `clode/_opencl/observer_metadata.py`: runtime-specific matched observer-data struct resolution driven by the observer-definition catalog.
 - `clode/_opencl/executors.py`: transient, trajectory, and feature executors constructed directly by the simulator layer.
 
 The historical backend-shim, protocol/factory facade, and binding-named compatibility layers have been removed.
@@ -99,7 +99,7 @@ The historical backend-shim, protocol/factory facade, and binding-named compatib
 - Common continuation state now has a Python-owned first pass via `SolverState`, but there is still no device-side per-work-item `t0` or richer completion/error status model.
 - `SolverParams` still mixes integration controls with trajectory-storage controls (`max_store`, `nout`) in the public compatibility bundle even though the internal and kernel-facing execution path now treats them separately.
 - `ObserverParams` defaults are still duplicated between the public constructors and the dataclass.
-- Observer metadata is explicit but still hardcoded through large conditional logic rather than a cleaner observer-definition model.
+- Built-in observer definitions now live in `clode/observers/_definitions.py`, and shared resolved observer specs now drive feature-build defines, build-key selection, and feature-executor invalidation boundaries.
 - `ObserverData` in the kernels acts as persistent observer state, but the naming and Python-side semantics have not caught up to that role yet.
 - Optional event storage still participates in compile-time observer layout and buffer sizing, but runtime observer settings now exclude event timestamp capacity and treat it as explicit output/layout policy instead.
 - `shift_tspan()` still advances the requested window rather than the attained final time, so exact absolute-time continuation remains a caller-managed policy.

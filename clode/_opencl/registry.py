@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from ..observers._definitions import get_observer_definition
 from .errors import UnsupportedObserverError, UnsupportedStepperError
 from .models import KernelKind
 
@@ -14,15 +15,6 @@ class KernelRegistry:
         "bs23": "EXPLICIT_BS23",
         "dopri5": "EXPLICIT_DOPRI5",
         "seuler": "STOCHASTIC_EULER",
-    }
-
-    _OBSERVERS = {
-        "basic": "USE_OBSERVER_BASIC",
-        "basicall": "USE_OBSERVER_BASIC_ALLVAR",
-        "localmax": "USE_OBSERVER_LOCAL_MAX",
-        "nhood1": "USE_OBSERVER_NEIGHBORHOOD_1",
-        "nhood2": "USE_OBSERVER_NEIGHBORHOOD_2",
-        "thresh2": "USE_OBSERVER_THRESHOLD_2",
     }
 
     _ENTRYPOINTS = {
@@ -49,8 +41,7 @@ class KernelRegistry:
         return self._STEPPERS[stepper_name]
 
     def get_observer_define(self, observer_name: str) -> str:
-        self.validate_observer(observer_name)
-        return self._OBSERVERS[observer_name]
+        return self._resolve_observer_definition(observer_name).build_define
 
     def get_entrypoint_paths(self, kernel_kind: KernelKind) -> tuple[Path, ...]:
         return tuple(self._kernel_root / entrypoint for entrypoint in self._ENTRYPOINTS[kernel_kind])
@@ -65,5 +56,10 @@ class KernelRegistry:
     def validate_observer(self, observer_name: str | None) -> None:
         if observer_name is None:
             return
-        if observer_name not in self._OBSERVERS:
-            raise UnsupportedObserverError(observer_name)
+        self._resolve_observer_definition(observer_name)
+
+    def _resolve_observer_definition(self, observer_name: str):
+        try:
+            return get_observer_definition(observer_name)
+        except ValueError as error:
+            raise UnsupportedObserverError(observer_name) from error

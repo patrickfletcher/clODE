@@ -6,6 +6,7 @@ from typing import Sequence
 
 import numpy as np
 
+from ..observers._definitions import ResolvedObserverSpec, resolve_observer_spec
 from ..observers.types import (
     ObserverParams,
     _EventOutputSettings,
@@ -653,6 +654,7 @@ class OpenCLFeatureExecutor(OpenCLTransientExecutor):
         self._observer_params = self._copy_observer_params(observer_params)
         self._observer_runtime_settings = observer_params.runtime_settings
         self._event_output_settings = observer_params.event_output_settings
+        self._resolved_observer_spec = self._resolve_observer_spec()
         self._feature_metadata = self._resolve_feature_metadata()
         self._feature_buffers: FeatureBuffers | None = None
         self._feature_cache = _FeatureTransferCache()
@@ -685,8 +687,7 @@ class OpenCLFeatureExecutor(OpenCLTransientExecutor):
             stepper_name=self._stepper,
             problem_shape=self._problem_shape,
             rhs=self._rhs_source,
-            observer_name=self._observer_name,
-            n_store_events=self._event_output_settings.max_event_timestamps,
+            resolved_observer_spec=self._resolved_observer_spec,
         )
         self._program_bundle = self._runtime.program_cache.get_or_build(
             self._runtime, source_bundle
@@ -797,7 +798,7 @@ class OpenCLFeatureExecutor(OpenCLTransientExecutor):
         self._recreate_feature_metadata()
 
     def set_observer_params(self, observer_params: ObserverParams) -> None:
-        previous_event_output_settings = self._event_output_settings
+        previous_spec = self._resolved_observer_spec
         previous_runtime_settings = self._observer_runtime_settings
         previous_metadata = self._feature_metadata
         self._observer_params = self._copy_observer_params(observer_params)
@@ -805,20 +806,23 @@ class OpenCLFeatureExecutor(OpenCLTransientExecutor):
         self._event_output_settings = _EventOutputSettings(
             self._observer_params.max_event_timestamps
         )
-        layout_changed = previous_event_output_settings != self._event_output_settings
-        if layout_changed:
+        self._resolved_observer_spec = self._resolve_observer_spec()
+        build_changed = (
+            previous_spec.build_signature != self._resolved_observer_spec.build_signature
+        )
+        if build_changed:
             self._program_bundle = None
         self._observer_initialized = False
         self._invalidate_feature_cache()
         self._feature_metadata = self._resolve_feature_metadata()
 
         if self._feature_buffers is not None:
-            metadata_changed = (
-                self._feature_metadata.n_features != previous_metadata.n_features
-                or self._feature_metadata.observer_data_nbytes
-                != previous_metadata.observer_data_nbytes
+            buffer_shape_changed = (
+                self._resolved_observer_spec.layout_signature
+                != previous_spec.layout_signature
+                or self._feature_metadata.n_features != previous_metadata.n_features
             )
-            if layout_changed or metadata_changed:
+            if buffer_shape_changed:
                 self._feature_buffers = None
             elif previous_runtime_settings != self._observer_runtime_settings:
                 self._buffer_manager.upload_observer_runtime_settings(
@@ -879,6 +883,7 @@ class OpenCLFeatureExecutor(OpenCLTransientExecutor):
     def _recreate_feature_metadata(self) -> None:
         if self._feature_buffers is not None:
             self._feature_buffers = None
+        self._resolved_observer_spec = self._resolve_observer_spec()
         self._feature_metadata = self._resolve_feature_metadata()
 
     def _require_feature_buffers(self) -> FeatureBuffers:
@@ -893,5 +898,16 @@ class OpenCLFeatureExecutor(OpenCLTransientExecutor):
             self._observer_name,
             self._observer_params,
             self._precision,
+            resolved_observer_spec=self._resolved_observer_spec,
+        )
+
+    def _resolve_observer_spec(self) -> ResolvedObserverSpec:
+        return resolve_observer_spec(
+            self._problem_info,
+            self._observer_name,
+            self._observer_params,
+            real_dtype=np.dtype(
+                np.float32 if self._precision is Precision.SINGLE else np.float64
+            ),
             n_store_events=self._event_output_settings.max_event_timestamps,
         )

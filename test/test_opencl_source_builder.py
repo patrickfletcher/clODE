@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 from clode._opencl import (
@@ -12,6 +13,9 @@ from clode._opencl import (
     UnsupportedObserverError,
     UnsupportedStepperError,
 )
+from clode.observers._definitions import resolve_observer_spec
+from clode.observers import ObserverParams
+from clode.problem._core import ProblemInfo
 from clode.problem._core import create_rhs_source, load_rhs_source
 from clode.runtime import _clode_root_dir
 from test.core_numerics.helpers import model_path
@@ -105,10 +109,35 @@ def test_source_builder_features_include_observer_options_and_build_key_changes(
     assert "__kernel void features" in first.source_text
     assert "-DUSE_OBSERVER_BASIC_ALLVAR" in first.build_options
     assert "-DN_STORE_EVENTS=7" in first.build_options
+    assert first.build_key.observer_define == "USE_OBSERVER_BASIC_ALLVAR"
     assert "-g" in first.build_options
     assert "-cl-opt-disable" in first.build_options
     assert first.build_key.rhs_digest != second.build_key.rhs_digest
     assert first.build_key.kernel_tree_digest == second.build_key.kernel_tree_digest
+
+
+def test_source_builder_accepts_resolved_observer_spec_for_feature_builds() -> None:
+    builder = SourceBuilder(KERNEL_ROOT)
+    rhs = create_rhs_source("rhs.cl", "void getRHS() {}\n")
+    resolved_spec = resolve_observer_spec(
+        ProblemInfo("model.cl", ["x", "y"], ["k"], ["aux0"], 0),
+        "nhood2",
+        ObserverParams(max_event_timestamps=4),
+        real_dtype=np.dtype(np.float32),
+    )
+
+    bundle = builder.build(
+        kernel_kind=KernelKind.FEATURES,
+        precision=Precision.SINGLE,
+        stepper_name="rk4",
+        problem_shape=ProblemShape(n_var=2, n_par=1, n_aux=1, n_wiener=0),
+        rhs=rhs,
+        resolved_observer_spec=resolved_spec,
+    )
+
+    assert bundle.build_key.observer_define == "USE_OBSERVER_NEIGHBORHOOD_2"
+    assert "-DUSE_OBSERVER_NEIGHBORHOOD_2" in bundle.build_options
+    assert "-DN_STORE_EVENTS=4" in bundle.build_options
 
 
 def test_source_builder_validates_rhs_and_feature_configuration() -> None:

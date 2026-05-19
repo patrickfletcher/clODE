@@ -38,6 +38,15 @@ This note is not a backlog and does not override the root `.design` docs.
 - Public-facing docs, examples, and the paper should describe the current Python package and supported workflows, not removed wrappers, migration history, or internal archaeology.
 - Public API cleanup should happen through deliberate deprecation and documentation shifts rather than incidental breakage during internal refactors.
 
+### Refactoring End State
+
+- The end state of the current refactoring is not a brand-new public API. It is a stable internal semantic model underneath the existing workflow-shaped public surface, with thin compatibility layers kept close to the legacy user-facing entry points until deliberate deprecation work begins.
+- Python should own the meaning of the core concepts: IVP/problem data, solver state, observer definitions, stepper definitions, output policy, and compile-time build specification. `_opencl` should consume those definitions to execute efficiently, not define them first.
+- Each concern should have one clear semantic owner: IVP for next-solve problem data, solver state for execution progress and continuation facts, observer definitions for feature schema and warmup/event semantics, persistent observer state for cross-solve observer continuity, output policy for retained trajectory/event data, and build specification for compile-time specialization inputs.
+- Program rebuilds, buffer reallocations, and runtime cache invalidation should follow explicit policy boundaries rather than broad mirrored-state resets.
+- Chunking, batching, continuation helpers, and later public ergonomics should be orchestration layers over those stable owners, not new semantic owners themselves.
+- Broader public config redesign should wait until observer-definition and stepper-definition work have landed, so the eventual public cleanup reflects stable internal boundaries rather than another moving target.
+
 ### Semantic Ownership And Internal Modeling
 
 - Keep one semantic owner per concern. IVP-owned problem data, solver-owned execution state, persistent observer state, fetched outputs, and compile-time build specification should not share ownership.

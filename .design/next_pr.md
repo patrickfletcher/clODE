@@ -32,6 +32,15 @@ This is the right next PR because it builds directly on the newly landed boundar
 - preserve the current public `FeatureSimulator` and `ObserverParams` surface except for incidental compatibility-safe polish
 - document which internal cleanups should finish before any broader public config redesign begins
 
+## Likely Internal Shape
+
+- keep the public `Observer` enum and `ObserverParams` compatibility bundle as the user-facing selector and parameter surface for now
+- add one Python-owned `ObserverDefinition` per built-in observer that owns stable semantic facts: observer id/name, warmup/two-pass requirement, feature-schema factory, runtime-setting interpretation, and the distinction between persistent state and optional event-output layout
+- resolve a selected observer plus `ProblemInfo`, runtime settings, precision, and event-output settings into a problem-shaped `ResolvedObserverSpec` or equivalent value object used by `_opencl`
+- let that resolved spec provide the inputs currently scattered across `clode/observers/metadata.py`, `clode/_opencl/observer_metadata.py`, `_opencl/executors.py`, and `_opencl/registry.py`
+- keep kernel implementations in the existing observer `.clh` files for now, but make build defines and layout decisions flow from the Python observer definition instead of parallel hardcoded conditionals
+- keep `ObserverRuntimeSettings` and `EventOutputSettings` as separate concerns: runtime tuning versus layout/output policy
+
 ## Design Constraints
 
 - no public observer or config API redesign yet
