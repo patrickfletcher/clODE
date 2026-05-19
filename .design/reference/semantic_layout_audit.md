@@ -239,12 +239,11 @@ The useful first move is not “put the `.clh` files next to some new Python fil
 
 ## Productive near-term follow-on order
 
-1. Make lower-level solver state explicit so continuation helpers and diverged-work-item behavior have a clearer contract.
-2. Separate integration state from output and storage policy once the state model has a clearer home.
-3. Refactor observer definitions around explicit semantic objects and a cleaner split between persistent observer state and optional event-output capacity.
-4. Introduce a Python-owned stepper-definition model once the state and output boundaries stop moving.
-5. Revisit whether IVP-owned batch helpers are enough or whether a dedicated ensemble type adds real value.
-6. Revisit kernel relocation only after those semantic models exist.
+1. Keep the landed solver-state and output-policy boundary as the contract for follow-on work.
+2. Refactor observer definitions around explicit semantic objects and a cleaner split between persistent observer state and optional event-output capacity.
+3. Introduce a Python-owned stepper-definition model once the observer boundary stops moving.
+4. Revisit whether IVP-owned batch helpers are enough or whether a dedicated ensemble type adds real value.
+5. Revisit kernel relocation only after those semantic models exist.
 
 ## Guidance for future package moves
 

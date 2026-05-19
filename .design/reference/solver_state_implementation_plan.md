@@ -51,7 +51,7 @@ Update when: the solver-state boundary changes materially or this note becomes h
 ## Handoff to the next PR
 
 - Treat the landed solver-state boundary as stable enough to build on, not as the next thing to reopen.
-- The next structural cleanup is output/storage separation: trajectory capacity, `nout`, and feature/event capacity should stop reading like solver state.
+- The planned output/storage separation follow-on has now landed; the next structural cleanup is observer-definition work around persistent observer state, optional event-output layout, and clearer runtime/layout boundaries.
 - Keep the current owner split intact in follow-on work:
   - IVP owns next-solve problem data
   - solver state owns execution progress and continuation facts

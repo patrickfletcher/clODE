@@ -10,7 +10,7 @@ __kernel void transient(
     __constant realtype *tspan,         //time interval
     __global realtype *x0,              //initial state 	   [nPts*nVar]
     __constant realtype *pars,          //parameter values	   [nPts*nPar]
-    __constant struct SolverParams *sp, //dtmin/max, tols
+    __constant struct IntegrationSettings *settings, //dtmin/max, tols
     __global realtype *xf,              //final state 		   [nPts*nVar]
     __global ulong *RNGstate,           //final RNG	state	   [nPts*nRNGstate]
     __global realtype *RNGspareNormal,  //cached Box-Muller spare normal [nPts]
@@ -59,10 +59,10 @@ __kernel void transient(
 	//time-stepping loop
     unsigned int step = 0;
     int stepflag = 0;
-    while (ti < tspan[1] && step < sp->max_steps)
+    while (ti < tspan[1] && step < settings->max_steps)
     {
 		++step;
-        stepflag = stepper(&ti, xi, dxi, p, sp, &dt, tspan, auxi, wi, &rd);
+        stepflag = stepper(&ti, xi, dxi, p, settings, &dt, tspan, auxi, wi, &rd);
         // if (stepflag!=0)
         //     break;
     }

@@ -236,3 +236,43 @@ def test_feature_max_event_timestamps_rebuild_updates_event_storage() -> None:
     assert len([name for name in feature_names if name.startswith("localmax event time")]) == 3
     assert "-DN_STORE_EVENTS=3" in simulator._integrator.get_program_string()
 
+
+def test_feature_non_layout_observer_change_preserves_program_and_buffers() -> None:
+    simulator = clode.FeatureSimulator(
+        src_file=model_path("stable_linear.cl"),
+        variables=STABLE_LINEAR_VARIABLES.copy(),
+        parameters=STABLE_LINEAR_PARAMETERS.copy(),
+        aux=STABLE_LINEAR_AUX.copy(),
+        num_noise=0,
+        observer=clode.Observer.basic,
+        stepper=clode.Stepper.rk4,
+        dt=FIXED_DT,
+        dtmax=FIXED_DT,
+        t_span=(0.0, 1.0),
+        max_steps=FIXED_MAX_STEPS,
+        single_precision=True,
+        **device_kwargs_for_tests(),
+    )
+
+    first = simulator.features(update_x0=False)
+    program_bundle = simulator._integrator._program_bundle
+    feature_buffers = simulator._integrator._feature_buffers
+
+    assert first is not None
+    assert program_bundle is not None
+    assert feature_buffers is not None
+    assert first.get_feature_names()[0] == "max x"
+
+    simulator.set_observer_parameters(feature_var="y")
+
+    assert simulator._integrator._program_bundle is program_bundle
+    assert simulator._integrator._feature_buffers is feature_buffers
+
+    with pytest.raises(ValueError, match=r"features\(\)"):
+        simulator.get_observer_results()
+
+    second = simulator.features(update_x0=False)
+
+    assert second is not None
+    assert second.get_feature_names()[0] == "max y"
+

@@ -5,8 +5,12 @@ import warnings
 
 import numpy as np
 
-from ..observers.types import ObserverParams
-from ..simulation.params import SolverParams
+from ..observers.types import ObserverParams, _ObserverRuntimeSettings
+from ..simulation.params import (
+    SolverParams,
+    _IntegrationSettings,
+    _TrajectoryOutputSettings,
+)
 from .models import Precision
 from .runtime import OpenCLRuntime, _require_opencl_binding
 
@@ -18,7 +22,7 @@ class MatchedStruct:
     c_declaration: str
 
 
-def _solver_params_base_dtype(precision: Precision) -> np.dtype:
+def _integration_settings_base_dtype(precision: Precision) -> np.dtype:
     real_dtype = np.dtype(np.float32 if precision is Precision.SINGLE else np.float64)
     return np.dtype(
         [
@@ -27,6 +31,14 @@ def _solver_params_base_dtype(precision: Precision) -> np.dtype:
             ("abstol", real_dtype),
             ("reltol", real_dtype),
             ("max_steps", np.uint32),
+        ],
+        align=True,
+    )
+
+
+def _trajectory_output_settings_base_dtype() -> np.dtype:
+    return np.dtype(
+        [
             ("max_store", np.uint32),
             ("nout", np.uint32),
         ],
@@ -34,14 +46,13 @@ def _solver_params_base_dtype(precision: Precision) -> np.dtype:
     )
 
 
-def _observer_params_base_dtype(precision: Precision) -> np.dtype:
+def _observer_runtime_settings_base_dtype(precision: Precision) -> np.dtype:
     real_dtype = np.dtype(np.float32 if precision is Precision.SINGLE else np.float64)
     return np.dtype(
         [
             ("eVarIx", np.uint32),
             ("fVarIx", np.uint32),
             ("maxEventCount", np.uint32),
-            ("maxEventTimestamps", np.uint32),
             ("minXamp", real_dtype),
             ("minIMI", real_dtype),
             ("nHoodRadius", real_dtype),
@@ -78,64 +89,119 @@ def match_struct_dtype(
     return _match_struct(runtime, name, base_dtype)
 
 
-def get_solver_params_struct(
+def get_integration_settings_struct(
     runtime: OpenCLRuntime, precision: Precision
 ) -> MatchedStruct:
     name = (
-        "clode_solver_params_float"
+        "clode_integration_settings_float"
         if precision is Precision.SINGLE
-        else "clode_solver_params_double"
+        else "clode_integration_settings_double"
     )
-    return _match_struct(runtime, name, _solver_params_base_dtype(precision))
+    return _match_struct(runtime, name, _integration_settings_base_dtype(precision))
 
 
-def get_observer_params_struct(
+def get_trajectory_output_settings_struct(runtime: OpenCLRuntime) -> MatchedStruct:
+    return _match_struct(
+        runtime,
+        "clode_trajectory_output_settings",
+        _trajectory_output_settings_base_dtype(),
+    )
+
+
+def get_observer_runtime_settings_struct(
     runtime: OpenCLRuntime, precision: Precision
 ) -> MatchedStruct:
     name = (
-        "clode_observer_params_float"
+        "clode_observer_runtime_settings_float"
         if precision is Precision.SINGLE
-        else "clode_observer_params_double"
+        else "clode_observer_runtime_settings_double"
     )
-    return _match_struct(runtime, name, _observer_params_base_dtype(precision))
+    return _match_struct(runtime, name, _observer_runtime_settings_base_dtype(precision))
+
+
+def pack_integration_settings(
+    runtime: OpenCLRuntime,
+    integration_settings: _IntegrationSettings,
+    precision: Precision,
+) -> np.ndarray:
+    struct_spec = get_integration_settings_struct(runtime, precision)
+    return np.array(
+        (
+            integration_settings.dt,
+            integration_settings.dtmax,
+            integration_settings.abstol,
+            integration_settings.reltol,
+            integration_settings.max_steps,
+        ),
+        dtype=struct_spec.dtype,
+    )
+
+
+def pack_trajectory_output_settings(
+    runtime: OpenCLRuntime,
+    output_settings: _TrajectoryOutputSettings,
+) -> np.ndarray:
+    struct_spec = get_trajectory_output_settings_struct(runtime)
+    return np.array(
+        (
+            output_settings.max_store,
+            output_settings.nout,
+        ),
+        dtype=struct_spec.dtype,
+    )
+
+
+def pack_observer_runtime_settings(
+    runtime: OpenCLRuntime,
+    observer_runtime_settings: _ObserverRuntimeSettings,
+    precision: Precision,
+) -> np.ndarray:
+    struct_spec = get_observer_runtime_settings_struct(runtime, precision)
+    return np.array(
+        (
+            observer_runtime_settings.e_var_ix,
+            observer_runtime_settings.f_var_ix,
+            observer_runtime_settings.max_event_count,
+            observer_runtime_settings.min_amp,
+            observer_runtime_settings.min_imi,
+            observer_runtime_settings.nhood_radius,
+            observer_runtime_settings.x_up_threshold,
+            observer_runtime_settings.x_down_threshold,
+            observer_runtime_settings.dx_up_threshold,
+            observer_runtime_settings.dx_down_threshold,
+            observer_runtime_settings.eps_dx,
+        ),
+        dtype=struct_spec.dtype,
+    )
 
 
 def pack_solver_params(
     runtime: OpenCLRuntime, solver_params: SolverParams, precision: Precision
 ) -> np.ndarray:
-    struct_spec = get_solver_params_struct(runtime, precision)
-    return np.array(
-        (
-            solver_params.dt,
-            solver_params.dtmax,
-            solver_params.abstol,
-            solver_params.reltol,
-            solver_params.max_steps,
-            solver_params.max_store,
-            solver_params.nout,
-        ),
-        dtype=struct_spec.dtype,
+    return pack_integration_settings(
+        runtime,
+        solver_params.integration_settings,
+        precision,
     )
 
 
 def pack_observer_params(
     runtime: OpenCLRuntime, observer_params: ObserverParams, precision: Precision
 ) -> np.ndarray:
-    struct_spec = get_observer_params_struct(runtime, precision)
-    return np.array(
-        (
-            observer_params.e_var_ix,
-            observer_params.f_var_ix,
-            observer_params.max_event_count,
-            observer_params.max_event_timestamps,
-            observer_params.min_amp,
-            observer_params.min_imi,
-            observer_params.nhood_radius,
-            observer_params.x_up_threshold,
-            observer_params.x_down_threshold,
-            observer_params.dx_up_threshold,
-            observer_params.dx_down_threshold,
-            observer_params.eps_dx,
-        ),
-        dtype=struct_spec.dtype,
+    return pack_observer_runtime_settings(
+        runtime,
+        observer_params.runtime_settings,
+        precision,
     )
+
+
+def get_solver_params_struct(
+    runtime: OpenCLRuntime, precision: Precision
+) -> MatchedStruct:
+    return get_integration_settings_struct(runtime, precision)
+
+
+def get_observer_params_struct(
+    runtime: OpenCLRuntime, precision: Precision
+) -> MatchedStruct:
+    return get_observer_runtime_settings_struct(runtime, precision)

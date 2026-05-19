@@ -5,13 +5,17 @@
 //TODO: provide different structs for base vs trajectory solvers (expose relevant members)
 #include "realtype.cl"
 
-struct SolverParams
+struct IntegrationSettings
 {
 	realtype dt;
 	realtype dtmax;
 	realtype abstol;
 	realtype reltol;
 	unsigned int max_steps;
+};
+
+struct TrajectoryOutputSettings
+{
 	unsigned int max_store;
 	unsigned int nout;
 };

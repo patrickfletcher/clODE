@@ -4,15 +4,21 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from ..observers.types import ObserverParams
-from ..simulation.params import SolverParams
+from ..observers.types import ObserverParams, _ObserverRuntimeSettings
+from ..simulation.params import (
+    SolverParams,
+    _IntegrationSettings,
+    _TrajectoryOutputSettings,
+)
 from .models import Precision, ProblemShape
 from .runtime import OpenCLRuntime, _require_opencl_binding
 from .structs import (
-    get_observer_params_struct,
-    get_solver_params_struct,
-    pack_observer_params,
-    pack_solver_params,
+    get_integration_settings_struct,
+    get_observer_runtime_settings_struct,
+    get_trajectory_output_settings_struct,
+    pack_integration_settings,
+    pack_observer_runtime_settings,
+    pack_trajectory_output_settings,
 )
 
 
@@ -22,7 +28,7 @@ class CommonBuffers:
     ensemble_size: int
     problem_shape: ProblemShape
     tspan: object
-    solver_params: object
+    integration_settings: object
     x0: object
     pars: object
     xf: object
@@ -38,6 +44,7 @@ class CommonBuffers:
 @dataclass(slots=True)
 class TrajectoryBuffers:
     max_store: int
+    output_settings: object
     t: object
     x: object
     dx: object
@@ -50,7 +57,7 @@ class FeatureBuffers:
     n_features: int
     observer_data_nbytes: int
     observer_data: object
-    observer_params: object
+    observer_runtime_settings: object
     features: object
 
 
@@ -102,10 +109,12 @@ class BufferManager:
             tspan=self._opencl_binding.Buffer(
                 self._runtime.context, flags.READ_ONLY, size=2 * real_bytes
             ),
-            solver_params=self._opencl_binding.Buffer(
+            integration_settings=self._opencl_binding.Buffer(
                 self._runtime.context,
                 flags.READ_ONLY,
-                size=get_solver_params_struct(self._runtime, self._precision).dtype.itemsize,
+                size=get_integration_settings_struct(
+                    self._runtime, self._precision
+                ).dtype.itemsize,
             ),
             x0=self._opencl_binding.Buffer(
                 self._runtime.context, flags.READ_WRITE, size=x0_elements * real_bytes
@@ -150,16 +159,25 @@ class BufferManager:
         )
 
     def allocate_trajectory(
-        self, ensemble_size: int, shape: ProblemShape, max_store: int
+        self,
+        ensemble_size: int,
+        shape: ProblemShape,
+        output_settings: _TrajectoryOutputSettings,
     ) -> TrajectoryBuffers:
         flags = self._opencl_binding.mem_flags
         real_bytes = self._real_dtype.itemsize
+        max_store = output_settings.max_store
         t_elements = max(1, ensemble_size * max_store)
         state_elements = max(1, ensemble_size * shape.n_var * max_store)
         aux_elements = max(1, ensemble_size * shape.n_aux * max_store)
 
         return TrajectoryBuffers(
             max_store=max_store,
+            output_settings=self._opencl_binding.Buffer(
+                self._runtime.context,
+                flags.READ_ONLY,
+                size=get_trajectory_output_settings_struct(self._runtime).dtype.itemsize,
+            ),
             t=self._opencl_binding.Buffer(
                 self._runtime.context, flags.WRITE_ONLY, size=t_elements * real_bytes
             ),
@@ -197,10 +215,10 @@ class BufferManager:
                 flags.READ_WRITE,
                 size=observer_bytes,
             ),
-            observer_params=self._opencl_binding.Buffer(
+            observer_runtime_settings=self._opencl_binding.Buffer(
                 self._runtime.context,
                 flags.READ_ONLY,
-                size=get_observer_params_struct(
+                size=get_observer_runtime_settings_struct(
                     self._runtime, self._precision
                 ).dtype.itemsize,
             ),
@@ -218,19 +236,54 @@ class BufferManager:
         self._enqueue_copy(buffers.tspan, host)
         return host
 
+    def upload_integration_settings(
+        self, buffers: CommonBuffers, integration_settings: _IntegrationSettings
+    ) -> np.ndarray:
+        host = pack_integration_settings(
+            self._runtime,
+            integration_settings,
+            self._precision,
+        )
+        self._enqueue_copy(buffers.integration_settings, host)
+        return host
+
+    def upload_trajectory_output_settings(
+        self,
+        buffers: TrajectoryBuffers,
+        output_settings: _TrajectoryOutputSettings,
+    ) -> np.ndarray:
+        host = pack_trajectory_output_settings(self._runtime, output_settings)
+        self._enqueue_copy(buffers.output_settings, host)
+        return host
+
+    def upload_observer_runtime_settings(
+        self,
+        buffers: FeatureBuffers,
+        observer_runtime_settings: _ObserverRuntimeSettings,
+    ) -> np.ndarray:
+        host = pack_observer_runtime_settings(
+            self._runtime,
+            observer_runtime_settings,
+            self._precision,
+        )
+        self._enqueue_copy(buffers.observer_runtime_settings, host)
+        return host
+
     def upload_solver_params(
         self, buffers: CommonBuffers, solver_params: SolverParams
     ) -> np.ndarray:
-        host = pack_solver_params(self._runtime, solver_params, self._precision)
-        self._enqueue_copy(buffers.solver_params, host)
-        return host
+        return self.upload_integration_settings(
+            buffers,
+            solver_params.integration_settings,
+        )
 
     def upload_observer_params(
         self, buffers: FeatureBuffers, observer_params: ObserverParams
     ) -> np.ndarray:
-        host = pack_observer_params(self._runtime, observer_params, self._precision)
-        self._enqueue_copy(buffers.observer_params, host)
-        return host
+        return self.upload_observer_runtime_settings(
+            buffers,
+            observer_params.runtime_settings,
+        )
 
     def clear_observer_data(self, buffers: FeatureBuffers, ensemble_size: int) -> None:
         host = np.zeros(
@@ -266,9 +319,13 @@ class BufferManager:
         return host
 
     def reset_solver_dt(
-        self, buffers: CommonBuffers, solver_params: SolverParams
+        self, buffers: CommonBuffers, integration_settings: _IntegrationSettings
     ) -> np.ndarray:
-        dt_values = np.full(buffers.ensemble_size, solver_params.dt, dtype=np.float64)
+        dt_values = np.full(
+            buffers.ensemble_size,
+            integration_settings.dt,
+            dtype=np.float64,
+        )
         return self.upload_dt(buffers, dt_values)
 
     def upload_rng_state(

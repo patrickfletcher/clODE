@@ -15,7 +15,7 @@ __kernel void trajectory(
     __constant realtype *tspan,         //time interval
     __global realtype *x0,              //initial state 	   [nPts*nVar]
     __constant realtype *pars,          //parameter values	   [nPts*nPar]
-    __constant struct SolverParams *sp, //dtmin/max, tols
+    __constant struct IntegrationSettings *settings, //dtmin/max, tols
     __global realtype *xf,              //final state 		   [nPts*nVar]
     __global ulong *RNGstate,           //final RNG	state	   [nPts*nRNGstate]
     __global realtype *RNGspareNormal,  //cached Box-Muller spare normal [nPts]
@@ -24,6 +24,7 @@ __kernel void trajectory(
     __global uint *preparedWienerValid, //prepared next-step Wiener availability [nPts]
     __global realtype *d_dt,            //final dt values      [nPts]
     __global realtype *tf,              //final time values    [nPts]
+    __constant struct TrajectoryOutputSettings *output_settings, //trajectory storage policy
     __global realtype *t,               //stored time points
     __global realtype *x,               //stored state
     __global realtype *dx,              //stored derivatives
@@ -79,15 +80,19 @@ __kernel void trajectory(
 	//time-stepping loop
     unsigned int step = 0;
     int stepflag = 0;
-    while (ti < tspan[1] && step < sp->max_steps && storeix < sp->max_store)
+    while (
+        ti < tspan[1]
+        && step < settings->max_steps
+        && storeix < output_settings->max_store
+    )
     {
 		++step;
-        stepflag = stepper(&ti, xi, dxi, p, sp, &dt, tspan, auxi, wi, &rd);
+        stepflag = stepper(&ti, xi, dxi, p, settings, &dt, tspan, auxi, wi, &rd);
         // if (stepflag!=0)
         //     break;
 
-        //store every sp.nout'th step after the initial point
-        if (step % sp->nout == 0)
+        //store every output_settings.nout'th step after the initial point
+        if (step % output_settings->nout == 0)
         {
             ++storeix;
             t[storeix * nPts + i] = ti;

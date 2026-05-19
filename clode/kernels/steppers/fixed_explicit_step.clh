@@ -1,4 +1,4 @@
-#include "clODE_struct_defs.cl" //for SolverParams struct definition
+#include "clODE_struct_defs.cl" //for IntegrationSettings struct definition
 #include "realtype.cl"
 
 // time update: Which should it be? adaptive uses:
@@ -7,7 +7,7 @@
 
 //Wrapper to handle step-size adaptation.  note: wi should be zeros
 static inline int stepper(realtype *ti, realtype xi[], realtype k1[], const realtype pars[], 
-__constant struct SolverParams *sp, realtype *dt, __constant realtype *tspan, 
+__constant struct IntegrationSettings *settings, realtype *dt, __constant realtype *tspan, 
 realtype aux[], realtype wi[], __private struct rngData *rd)
 {
     // xi and ti are updated inside do_step. 

@@ -69,13 +69,11 @@ def test_buffer_manager_roundtrips_problem_data_and_dt() -> None:
     assert np.array_equal(manager.download_rng_state(buffers), rng_state)
 
 
-def test_buffer_manager_packs_solver_params_with_current_struct_layout() -> None:
+def test_buffer_manager_packs_runtime_settings_with_current_struct_layout() -> None:
     runtime = OpenCLRuntime.create(**_explicit_runtime_kwargs())
     manager = BufferManager(runtime, Precision.SINGLE)
-    buffers = manager.allocate_common(
-        ensemble_size=1,
-        shape=ProblemShape(n_var=1, n_par=0, n_aux=0, n_wiener=0),
-    )
+    shape = ProblemShape(n_var=1, n_par=0, n_aux=0, n_wiener=0)
+    buffers = manager.allocate_common(ensemble_size=1, shape=shape)
     solver_params = SolverParams(
         dt=0.125,
         dtmax=0.5,
@@ -86,9 +84,25 @@ def test_buffer_manager_packs_solver_params_with_current_struct_layout() -> None
         nout=7,
     )
 
-    packed = manager.upload_solver_params(buffers, solver_params)
+    packed_integration = manager.upload_integration_settings(
+        buffers,
+        solver_params.integration_settings,
+    )
+    trajectory_buffers = manager.allocate_trajectory(
+        ensemble_size=1,
+        shape=shape,
+        output_settings=solver_params.trajectory_output_settings,
+    )
+    packed_output = manager.upload_trajectory_output_settings(
+        trajectory_buffers,
+        solver_params.trajectory_output_settings,
+    )
 
-    assert packed.dtype.fields is not None
-    assert packed.dtype.itemsize == 28
-    assert float(packed["dt"]) == pytest.approx(0.125)
-    assert int(packed["max_steps"]) == 123
+    assert packed_integration.dtype.fields is not None
+    assert packed_integration.dtype.itemsize == 20
+    assert float(packed_integration["dt"]) == pytest.approx(0.125)
+    assert int(packed_integration["max_steps"]) == 123
+    assert packed_output.dtype.fields is not None
+    assert packed_output.dtype.itemsize == 8
+    assert int(packed_output["max_store"]) == 456
+    assert int(packed_output["nout"]) == 7

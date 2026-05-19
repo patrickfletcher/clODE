@@ -1,7 +1,7 @@
 # Chunked Execution Audit
 
 Purpose: evaluate future time-chunking and ensemble-batching work, including the current capabilities, the likely benefits, and the internal boundaries that should stay clean now.
-Read when: deciding how the landed solver-state boundary and the next output/storage PR should preserve room for chunked execution, progress reporting, long-run trajectory handling, or device-capacity batching.
+Read when: deciding how the landed solver-state boundary and the landed output/storage split should preserve room for chunked execution, progress reporting, long-run trajectory handling, or device-capacity batching.
 Update when: continuation semantics, output-policy boundaries, batching strategy, or the recommended public API direction for chunked execution changes.
 
 ## Bottom line
@@ -9,7 +9,7 @@ Update when: continuation semantics, output-policy boundaries, batching strategy
 - Treat time chunking and ensemble batching as two orthogonal execution-tiling policies layered on one semantic problem definition, not as new semantic owners.
 - The current runtime already has the right low-level execution atom for a first implementation: repeated solves with explicit continuation of `x0`, `dt`, attained `tf`, RNG state, and observer state where applicable.
 - The landed first-pass solver-state cleanup now makes that execution atom explicit and stable. Chunking still should not ship yet, but follow-on work should avoid re-coupling cache or buffer ownership in ways that would force another rewrite.
-- The next enabling PR after solver-state cleanup is still separation of integration state from output and storage policy. That is the layer that makes chunked trajectory reads and device-capacity batching straightforward rather than ad hoc.
+- The landed output/storage split is now the enabling layer that makes chunked trajectory reads and device-capacity batching straightforward rather than ad hoc.
 
 ## Current live capability
 
@@ -24,7 +24,7 @@ Update when: continuation semantics, output-policy boundaries, batching strategy
 
 - There is no explicit chunking helper or execution policy; users have to hand-roll the loop.
 - `shift_tspan()` advances the requested window, not the attained final time, so it is not the right primitive for exact chunked continuation.
-- `SolverParams` still mixes integration controls with trajectory-storage controls (`max_store`, `nout`), which makes time chunking and storage chunking look like one concern when they are not.
+- Public `SolverParams` still mixes integration controls with trajectory-storage controls (`max_store`, `nout`), but the internal and kernel-facing execution path now treats those as separate concerns.
 - The ensemble still uses one shared requested `t_span`, so step-budget chunking for adaptive or otherwise diverged work items does not yet have a clear shared-window policy.
 - Trajectory storage is still monolithic per call: `max_store` sizes one device allocation for the whole requested window instead of expressing a chunk or page policy.
 - There is no orchestration layer for splitting a large IVP-owned ensemble into device-capacity-sized batches and then reassembling results.
@@ -118,7 +118,7 @@ Recommended rule:
 
 ## Implications for the current next PR
 
-The next PR still should not implement chunking, but it should preserve the landed solver-state contract.
+The next PR still should not implement chunking, but it should preserve the landed solver-state and output-policy contract.
 
 ### Decisions that help later chunking
 
@@ -140,8 +140,8 @@ The next PR still should not implement chunking, but it should preserve the land
 
 ## Recommended follow-on order
 
-1. Keep the landed solver-state and cache-ownership cleanup as the contract.
-2. Split integration state from output and storage policy.
+1. Keep the landed solver-state and output-policy cleanup as the contract.
+2. Clean up observer definitions so feature chunking does not have to fight ambiguous observer state/layout boundaries.
 3. Add one internal chunk-orchestration path for repeated solves and progress hooks.
 4. Add trajectory paging or chunked readback helpers on top of that output-policy layer.
 5. Add device-capacity ensemble batching that composes with the same chunk loop.

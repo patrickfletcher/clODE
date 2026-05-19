@@ -5,6 +5,34 @@ from enum import Enum
 
 
 @dataclass(frozen=True, slots=True)
+class _ObserverRuntimeSettings:
+    e_var_ix: int = 0
+    f_var_ix: int = 0
+    max_event_count: int = 100
+    min_amp: float = 0.0
+    min_imi: float = 0.0
+    nhood_radius: float = 0.05
+    x_up_threshold: float = 0.2
+    x_down_threshold: float = 0.2
+    dx_up_threshold: float = 0.0
+    dx_down_threshold: float = 0.0
+    eps_dx: float = 0.0
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "e_var_ix", int(self.e_var_ix))
+        object.__setattr__(self, "f_var_ix", int(self.f_var_ix))
+        object.__setattr__(self, "max_event_count", int(self.max_event_count))
+        object.__setattr__(self, "min_amp", float(self.min_amp))
+        object.__setattr__(self, "min_imi", float(self.min_imi))
+        object.__setattr__(self, "nhood_radius", float(self.nhood_radius))
+        object.__setattr__(self, "x_up_threshold", float(self.x_up_threshold))
+        object.__setattr__(self, "x_down_threshold", float(self.x_down_threshold))
+        object.__setattr__(self, "dx_up_threshold", float(self.dx_up_threshold))
+        object.__setattr__(self, "dx_down_threshold", float(self.dx_down_threshold))
+        object.__setattr__(self, "eps_dx", float(self.eps_dx))
+
+
+@dataclass(frozen=True, slots=True)
 class _EventOutputSettings:
     max_event_timestamps: int = 0
 
@@ -68,6 +96,22 @@ class ObserverParams:
         self.dx_up_threshold = float(self.dx_up_threshold)
         self.dx_down_threshold = float(self.dx_down_threshold)
         self.eps_dx = float(self.eps_dx)
+
+    @property
+    def runtime_settings(self) -> _ObserverRuntimeSettings:
+        return _ObserverRuntimeSettings(
+            e_var_ix=self.e_var_ix,
+            f_var_ix=self.f_var_ix,
+            max_event_count=self.max_event_count,
+            min_amp=self.min_amp,
+            min_imi=self.min_imi,
+            nhood_radius=self.nhood_radius,
+            x_up_threshold=self.x_up_threshold,
+            x_down_threshold=self.x_down_threshold,
+            dx_up_threshold=self.dx_up_threshold,
+            dx_down_threshold=self.dx_down_threshold,
+            eps_dx=self.eps_dx,
+        )
 
     @property
     def event_output_settings(self) -> _EventOutputSettings:

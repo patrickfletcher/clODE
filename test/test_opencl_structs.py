@@ -7,10 +7,12 @@ pytest.importorskip("pyopencl")
 from clode._opencl import (
     OpenCLRuntime,
     Precision,
-    get_observer_params_struct,
-    get_solver_params_struct,
-    pack_observer_params,
-    pack_solver_params,
+    get_integration_settings_struct,
+    get_observer_runtime_settings_struct,
+    get_trajectory_output_settings_struct,
+    pack_integration_settings,
+    pack_observer_runtime_settings,
+    pack_trajectory_output_settings,
 )
 from clode.observers import ObserverParams
 from clode.simulation import SolverParams
@@ -24,19 +26,24 @@ def _explicit_runtime_kwargs() -> dict[str, int]:
     }
 
 
-def test_solver_and_observer_params_use_device_matched_struct_dtypes() -> None:
+def test_internal_config_structs_use_device_matched_struct_dtypes() -> None:
     runtime = OpenCLRuntime.create(**_explicit_runtime_kwargs())
 
-    solver_double = get_solver_params_struct(runtime, Precision.DOUBLE)
-    observer_double = get_observer_params_struct(runtime, Precision.DOUBLE)
+    integration_double = get_integration_settings_struct(runtime, Precision.DOUBLE)
+    trajectory_output = get_trajectory_output_settings_struct(runtime)
+    observer_runtime_double = get_observer_runtime_settings_struct(
+        runtime, Precision.DOUBLE
+    )
 
-    assert solver_double.dtype.itemsize == 48
-    assert observer_double.dtype.itemsize == 80
-    assert "double dt;" in solver_double.c_declaration
-    assert "uint eVarIx;" in observer_double.c_declaration
+    assert integration_double.dtype.itemsize == 40
+    assert trajectory_output.dtype.itemsize == 8
+    assert observer_runtime_double.dtype.itemsize == 80
+    assert "double dt;" in integration_double.c_declaration
+    assert "uint max_store;" in trajectory_output.c_declaration
+    assert "uint eVarIx;" in observer_runtime_double.c_declaration
 
 
-def test_pack_helpers_preserve_solver_and_observer_param_values() -> None:
+def test_pack_helpers_preserve_internal_config_values() -> None:
     runtime = OpenCLRuntime.create(**_explicit_runtime_kwargs())
     solver_params = SolverParams(
         dt=0.125,
@@ -62,14 +69,28 @@ def test_pack_helpers_preserve_solver_and_observer_param_values() -> None:
         eps_dx=0.9,
     )
 
-    packed_solver = pack_solver_params(runtime, solver_params, Precision.SINGLE)
-    packed_observer = pack_observer_params(runtime, observer_params, Precision.DOUBLE)
+    packed_integration = pack_integration_settings(
+        runtime,
+        solver_params.integration_settings,
+        Precision.SINGLE,
+    )
+    packed_trajectory_output = pack_trajectory_output_settings(
+        runtime,
+        solver_params.trajectory_output_settings,
+    )
+    packed_observer_runtime = pack_observer_runtime_settings(
+        runtime,
+        observer_params.runtime_settings,
+        Precision.DOUBLE,
+    )
 
-    assert float(packed_solver["dt"]) == pytest.approx(0.125)
-    assert int(packed_solver["max_steps"]) == 123
-    assert int(packed_observer["eVarIx"]) == 1
-    assert float(packed_observer["xDownThresh"]) == pytest.approx(0.6)
-    assert float(packed_observer["eps_dx"]) == pytest.approx(0.9)
+    assert float(packed_integration["dt"]) == pytest.approx(0.125)
+    assert int(packed_integration["max_steps"]) == 123
+    assert int(packed_trajectory_output["max_store"]) == 456
+    assert int(packed_trajectory_output["nout"]) == 7
+    assert int(packed_observer_runtime["eVarIx"]) == 1
+    assert float(packed_observer_runtime["xDownThresh"]) == pytest.approx(0.6)
+    assert float(packed_observer_runtime["eps_dx"]) == pytest.approx(0.9)
 
 
 def test_basic_observer_double_formula_underestimates_matched_struct_size() -> None:

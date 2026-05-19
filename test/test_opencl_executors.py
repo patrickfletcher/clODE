@@ -3,7 +3,10 @@ import pytest
 
 pytest.importorskip("pyopencl")
 
+import clode
+
 from clode._opencl import (
+    OpenCLFeatureExecutor,
     OpenCLRuntime,
     OpenCLTrajectoryExecutor,
     OpenCLTransientExecutor,
@@ -78,6 +81,35 @@ def _make_trajectory_executor() -> OpenCLTrajectoryExecutor:
     return executor
 
 
+def _make_feature_executor() -> OpenCLFeatureExecutor:
+    runtime = OpenCLRuntime.create(**_explicit_runtime_kwargs())
+    executor = OpenCLFeatureExecutor(
+        ProblemInfo("stable_linear.cl", ["x", "y"], ["a", "b"], [], 0),
+        load_rhs_source(model_path("stable_linear.cl")),
+        "rk4",
+        "basic",
+        clode.ObserverParams(f_var_ix=0),
+        True,
+        runtime,
+        _clode_root_dir,
+    )
+    executor.build_cl()
+    executor.set_solver_params(
+        SolverParams(
+            dt=REQUESTED_DT,
+            dtmax=REQUESTED_DT,
+            abstol=1e-7,
+            reltol=1e-6,
+            max_steps=256,
+            max_store=1,
+            nout=1,
+        )
+    )
+    executor.set_tspan((0.0, 1.0))
+    executor.set_problem_data([2.0, -1.5], [0.5, 1.25])
+    return executor
+
+
 def test_problem_data_reset_restores_requested_dt() -> None:
     executor = _make_transient_executor()
 
@@ -114,7 +146,46 @@ def test_tspan_change_preserves_current_dt_and_invalidates_old_results() -> None
     assert executor.get_tf() == []
 
 
-def test_trajectory_output_change_preserves_solver_state_and_invalidates_trajectory_buffers() -> None:
+def test_trajectory_stride_change_preserves_solver_state_and_reuses_trajectory_buffers() -> None:
+    executor = _make_trajectory_executor()
+
+    executor.trajectory()
+    continued_dt = np.asarray(executor.get_dt(), dtype=np.float64)
+    final_time = np.asarray(executor.get_tf(), dtype=np.float64)
+    trajectory_buffers = executor._trajectory_buffers
+
+    assert continued_dt[0] > 0.02
+    assert trajectory_buffers is not None
+
+    executor.set_solver_params(
+        SolverParams(
+            dt=0.01,
+            dtmax=0.2,
+            abstol=1e-9,
+            reltol=1e-8,
+            max_steps=1024,
+            max_store=16,
+            nout=2,
+        )
+    )
+
+    np.testing.assert_allclose(
+        np.asarray(executor.get_dt(), dtype=np.float64),
+        continued_dt,
+        atol=0.0,
+        rtol=0.0,
+    )
+    np.testing.assert_allclose(
+        np.asarray(executor.get_tf(), dtype=np.float64),
+        final_time,
+        atol=0.0,
+        rtol=0.0,
+    )
+    assert executor._trajectory_buffers is trajectory_buffers
+    assert executor.get_t() == []
+
+
+def test_trajectory_capacity_change_preserves_solver_state_and_invalidates_trajectory_buffers() -> None:
     executor = _make_trajectory_executor()
 
     executor.trajectory()
@@ -147,6 +218,26 @@ def test_trajectory_output_change_preserves_solver_state_and_invalidates_traject
         atol=0.0,
         rtol=0.0,
     )
+    assert executor._trajectory_buffers is None
+    assert executor.get_t() == []
 
-    with pytest.raises(RuntimeError, match="Trajectory buffers"):
-        executor.get_t()
+
+def test_feature_runtime_setting_change_preserves_program_and_buffers() -> None:
+    executor = _make_feature_executor()
+
+    executor.features()
+    feature_buffers = executor._feature_buffers
+    program_bundle = executor._program_bundle
+
+    assert feature_buffers is not None
+    assert program_bundle is not None
+    assert executor.get_feature_names()[0] == "max x"
+
+    updated_params = executor.get_observer_params()
+    updated_params.f_var_ix = 1
+    executor.set_observer_params(updated_params)
+
+    assert executor._feature_buffers is feature_buffers
+    assert executor._program_bundle is program_bundle
+    assert executor.get_feature_names()[0] == "max y"
+    assert executor.get_f() == []

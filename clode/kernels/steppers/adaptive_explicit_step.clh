@@ -1,4 +1,4 @@
-#include "clODE_struct_defs.cl" //for SolverParams struct definition
+#include "clODE_struct_defs.cl" //for IntegrationSettings struct definition
 #include "realtype.cl"
 
 #define SAFETY_FACTOR RCONST(0.8)
@@ -7,13 +7,13 @@
 
 //Wrapper to handle step-size adaptation.  note: wi should be zeros
 static inline int stepper(realtype *ti, realtype xi[], realtype k1[], const realtype pars[], 
-__constant struct SolverParams *sp, realtype *dt, __constant realtype *tspan, 
+__constant struct IntegrationSettings *settings, realtype *dt, __constant realtype *tspan, 
 realtype aux[], realtype wi[], __private struct rngData *rd)
 {
     realtype tNew, normErr, relErr, err[N_VAR], newxi[N_VAR], newk1[N_VAR];
 
     realtype newDt = *dt;
-    realtype threshold = sp->abstol / sp->reltol;
+    realtype threshold = settings->abstol / settings->reltol;
     realtype hmin = RCONST(16.0) * fabs(fabs(nextafter(*ti, RCONST(1.1)*tspan[1])) - *ti); //matches Matlab: hmin=16*eps(t)
 
     bool noFailedSteps = true;
@@ -26,7 +26,7 @@ realtype aux[], realtype wi[], __private struct rngData *rd)
             newk1[j] = k1[j];
         }
 
-        newDt = clamp(newDt, hmin, sp->dtmax); //limiters
+        newDt = clamp(newDt, hmin, settings->dtmax); //limiters
         newDt = do_step(&tNew, newxi, newk1, pars, newDt, aux, err, wi); //returns purified dt: roundoff reduces accuracy of ti+dt, so use the portion of dt that had an effect...
 
         //Error estimation - elementwise
@@ -36,7 +36,7 @@ realtype aux[], realtype wi[], __private struct rngData *rd)
         normErr = norm_inf(err, N_VAR); //largest relative error among variables (most conservative)
 
         //shrink dt if too much error
-        if (normErr > sp->reltol)
+        if (normErr > settings->reltol)
         {
             if (newDt <= hmin)
             {
@@ -48,7 +48,7 @@ realtype aux[], realtype wi[], __private struct rngData *rd)
             if (noFailedSteps)
             { //first failure: shrink proportional to error
                 noFailedSteps = false;
-                newDt *= fmax(ADAPTIVE_STEP_MAX_SHRINK, SAFETY_FACTOR*pow(sp->reltol / normErr, EXPON)); 
+                newDt *= fmax(ADAPTIVE_STEP_MAX_SHRINK, SAFETY_FACTOR*pow(settings->reltol / normErr, EXPON)); 
             }
             else
             { //repeated failed step: cut stepsize in half
@@ -63,10 +63,10 @@ realtype aux[], realtype wi[], __private struct rngData *rd)
 
     //no failure this step => attempt to increase dt for next timestep
     if (noFailedSteps)
-        newDt *= fmin(ADAPTIVE_STEP_MAX_GROW,  SAFETY_FACTOR*pow(sp->reltol / normErr, EXPON)); //matches matlab (double precision)
+        newDt *= fmin(ADAPTIVE_STEP_MAX_GROW,  SAFETY_FACTOR*pow(settings->reltol / normErr, EXPON)); //matches matlab (double precision)
 
     newDt = fmin(newDt, tspan[1] - tNew); //hit the final time exactly
-    newDt = clamp(newDt, hmin, sp->dtmax); //limiters
+    newDt = clamp(newDt, hmin, settings->dtmax); //limiters
 
     //update the solution and dt
     *dt = newDt; //new step size to attempt on next step

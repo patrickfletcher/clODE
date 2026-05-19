@@ -15,7 +15,7 @@ Update when: canonical module homes, public compatibility surfaces, packaging ru
 - Historical migration and bug notes are archived under `.design/archived/`; they remain useful for rationale, but they are not the source of truth for the live package.
 - A first-pass `InitialValueProblem` now owns default state, default parameters, basic batch shaping, remembered ensemble shape, and Python-backed SciPy-style RHS callability at the simulator boundary.
 - Lower-level helper types such as `ProblemInfo` and `RhsSource` now live only under `clode.problem._core`; the curated public problem API centers `InitialValueProblem` and the authoring/conversion helpers instead.
-- The current package still has a few cleanup targets, especially separation of integration state from output and storage policy plus cleaner observer-state modeling on top of the landed first-pass solver-state boundary.
+- The current package still has a few cleanup targets, especially explicit observer-definition cleanup and cleaner observer-state modeling on top of the landed first-pass solver-state and output-policy boundaries.
 
 ## Session-Start Guidance
 
@@ -95,13 +95,13 @@ The historical backend-shim, protocol/factory facade, and binding-named compatib
 - The runtime is explicitly single-device only. Any future multi-device execution would require a dedicated API and execution model rather than reviving removed transition-era selectors.
 - The first semantic IVP pass is now live, and the curated public problem API now centers `InitialValueProblem`; lower-level helper types such as `ProblemInfo` and `RhsSource` remain internal support concepts under `clode.problem._core`.
 - Simulators still carry compatibility delegates for batch reshaping and maintain cached problem arrays alongside the IVP; richer batch-generation helpers (`grid`, random, quasi-random) have not yet been added around the IVP model.
-- Solver-related execution state now has a clearer internal home in `clode/simulation/_state.py` and executor transfer caches, but integration policy is still entangled with output/storage policy through `SolverParams`, trajectory buffer sizing, and feature or event allocation rules.
+- Solver-related execution state now has a clearer internal home in `clode/simulation/_state.py` and executor transfer caches, and integration policy is now explicitly split from trajectory output/storage policy through internal settings views, OpenCL buffers, and kernel-facing structs. Public `SolverParams` remains a compatibility bundle at the simulator boundary.
 - Common continuation state now has a Python-owned first pass via `SolverState`, but there is still no device-side per-work-item `t0` or richer completion/error status model.
-- `SolverParams` still mixes integration controls with trajectory-storage controls (`max_store`, `nout`).
+- `SolverParams` still mixes integration controls with trajectory-storage controls (`max_store`, `nout`) in the public compatibility bundle even though the internal and kernel-facing execution path now treats them separately.
 - `ObserverParams` defaults are still duplicated between the public constructors and the dataclass.
 - Observer metadata is explicit but still hardcoded through large conditional logic rather than a cleaner observer-definition model.
 - `ObserverData` in the kernels acts as persistent observer state, but the naming and Python-side semantics have not caught up to that role yet.
-- Optional event storage still participates in compile-time observer layout and buffer sizing.
+- Optional event storage still participates in compile-time observer layout and buffer sizing, but runtime observer settings now exclude event timestamp capacity and treat it as explicit output/layout policy instead.
 - `shift_tspan()` still advances the requested window rather than the attained final time, so exact absolute-time continuation remains a caller-managed policy.
 - Fixed-step kernels still advance time with `ti += dt`, so very long absolute-time runs with small `dt` remain precision-sensitive; evaluating `t0 + step * dt` or related structured-time models is still future work.
 - RNG continuation details are persisted in separate common buffers rather than a clearer per-work-item state object, which will matter again when evaluating Random123.

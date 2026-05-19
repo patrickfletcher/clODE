@@ -18,7 +18,7 @@ Historical debugging detail from the earlier observer-time rebase investigation 
 - The solver now has a first-class Python-owned `SolverState` in `clode/simulation/_state.py`, but the runtime still exposes continuation through a shared requested `tspan` plus per-work-item `dt`, attained `tf`, and RNG continuation rather than a full device-side per-work-item state object.
 - Per-work-item `t0` and explicit completion or error flags would make continuation and diverged-work-item bookkeeping much simpler.
 - Per-work-item `t0` fits the current continuation model semantically, but the live kernels, observer initialization path, and two-pass rewind logic still assume `ti = tspan[0]`, so a real device-side `t0` is a coordinated runtime change rather than just another cache field.
-- The Python-level `SolverState` first pass is now live; a full matched device-side solver-state struct remains optional future follow-through once output/storage policy and observer-state boundaries stop moving.
+- The Python-level `SolverState` first pass is now live; a full matched device-side solver-state struct remains optional future follow-through once observer-definition and stepper-definition boundaries stop moving.
 - Stochastic continuation details are now preserved, but they may want a clearer per-work-item RNG-state home if Random123 or related RNG work becomes active.
 - If the package wants repeated solve calls to continue absolute time more ergonomically, it likely needs an explicit continuation-policy helper rather than more implicit rebasing rules.
 - Long-time fixed-step accumulation remains separate future work; fixed-step kernels still use `ti += dt`, so very long runs at small `dt` remain precision-sensitive.
