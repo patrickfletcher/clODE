@@ -10,11 +10,15 @@ struct ObserverState_basicAll
     realtype xTrajectoryMax[N_VAR];
     realtype xTrajectoryMin[N_VAR];
     realtype xTrajectoryMean[N_VAR];
+    realtype xTrajectoryIntegral[N_VAR];
+    realtype xTrajectoryIntegralCorrection[N_VAR];
     realtype dxTrajectoryMax[N_VAR];
     realtype dxTrajectoryMin[N_VAR];
     realtype auxTrajectoryMax[N_AUX];
     realtype auxTrajectoryMin[N_AUX];
     realtype auxTrajectoryMean[N_AUX];
+    realtype auxTrajectoryIntegral[N_AUX];
+    realtype auxTrajectoryIntegralCorrection[N_AUX];
     realtype t_last;
     realtype t_start;
     unsigned int stepcount;
@@ -27,6 +31,8 @@ static inline void initializeObserverState(realtype *ti, realtype xi[], realtype
         od->xTrajectoryMax[j] = -BIG_REAL;
         od->xTrajectoryMin[j] = BIG_REAL;
         od->xTrajectoryMean[j] = ZERO;
+        od->xTrajectoryIntegral[j] = ZERO;
+        od->xTrajectoryIntegralCorrection[j] = ZERO;
         od->dxTrajectoryMax[j] = -BIG_REAL;
         od->dxTrajectoryMin[j] = BIG_REAL;
     }
@@ -34,6 +40,8 @@ static inline void initializeObserverState(realtype *ti, realtype xi[], realtype
         od->auxTrajectoryMax[j] = -BIG_REAL;
         od->auxTrajectoryMin[j] = BIG_REAL;
         od->auxTrajectoryMean[j] = ZERO;
+        od->auxTrajectoryIntegral[j] = ZERO;
+        od->auxTrajectoryIntegralCorrection[j] = ZERO;
     }
     od->t_last = *ti;
     od->t_start = *ti;
@@ -67,14 +75,34 @@ static inline void updateObserverState(realtype *ti, realtype xi[], realtype dxi
     for (int j = 0; j < N_VAR; ++j) {
         od->xTrajectoryMax[j] = fmax(xi[j], od->xTrajectoryMax[j]);
         od->xTrajectoryMin[j] = fmin(xi[j], od->xTrajectoryMin[j]);
-        od->xTrajectoryMean[j] = runningMeanTime(od->xTrajectoryMean[j], xi[j], dt, elapsedTime);
+        compensatedIntegrateConstant(
+            &od->xTrajectoryIntegral[j],
+            &od->xTrajectoryIntegralCorrection[j],
+            dt,
+            xi[j]
+        );
+        od->xTrajectoryMean[j] = meanFromCompensatedIntegral(
+            od->xTrajectoryIntegral[j],
+            od->xTrajectoryIntegralCorrection[j],
+            elapsedTime
+        );
         od->dxTrajectoryMax[j] = fmax(dxi[j], od->dxTrajectoryMax[j]);
         od->dxTrajectoryMin[j] = fmin(dxi[j], od->dxTrajectoryMin[j]);
     }
     for (int j = 0; j < N_AUX; ++j) {
         od->auxTrajectoryMax[j] = fmax(auxi[j], od->auxTrajectoryMax[j]);
         od->auxTrajectoryMin[j] = fmin(auxi[j], od->auxTrajectoryMin[j]);
-        od->auxTrajectoryMean[j] = runningMeanTime(od->auxTrajectoryMean[j], auxi[j], dt, elapsedTime);
+        compensatedIntegrateConstant(
+            &od->auxTrajectoryIntegral[j],
+            &od->auxTrajectoryIntegralCorrection[j],
+            dt,
+            auxi[j]
+        );
+        od->auxTrajectoryMean[j] = meanFromCompensatedIntegral(
+            od->auxTrajectoryIntegral[j],
+            od->auxTrajectoryIntegralCorrection[j],
+            elapsedTime
+        );
     }
 }
 

@@ -141,24 +141,42 @@ other notes
 
 // compensated summation
 
-//TODO 2sum for accurate summation (e.g. t+=dt...)?
-// https://en.wikipedia.org/wiki/Kahan_summation_algorithm
+// Neumaier’s algorithm for summation - avoid loss of precision in accumulators.
+// The caller owns both the running sum and the correction term so kernels can
+// adopt compensation selectively without introducing a larger state object.
+static inline void compensatedSumAdd(realtype *sum, realtype *correction, realtype newValue) {
+	realtype total = *sum + newValue;
+	if (fabs(*sum) >= fabs(newValue))
+		*correction += (*sum - total) + newValue;
+	else
+		*correction += (newValue - total) + *sum;
+	*sum = total;
+}
 
-// Neumaier’s algorithm for summation - avoid loss of precision in accumulators
-// - requires adding the correction at the end, once
-// static inline void twoSum(realtype *sum, realtype *correction, realtype newValue)
-// {
-// 	realtype total;
-// 	volatile realtype diff; //is needed?
-// 	t = *sum + newValue;
-// 	if (fabs(*sum) >= fabs(newValue))
-// 		diff = (*sum - t);
-// 		*correction += diff + newValue;
-// 	else 
-// 		diff = (newValue - t);
-// 		*correction += diff + *sum;
-// 	*sum = t;
-// }
+static inline realtype compensatedSumValue(realtype sum, realtype correction) {
+	return sum + correction;
+}
+
+static inline void compensatedIntegrateConstant(
+	realtype *integral,
+	realtype *correction,
+	realtype dt,
+	realtype value
+) {
+	if (dt <= ZERO)
+		return;
+	compensatedSumAdd(integral, correction, dt * value);
+}
+
+static inline realtype meanFromCompensatedIntegral(
+	realtype integral,
+	realtype correction,
+	realtype total_delta
+) {
+	if (total_delta <= ZERO)
+		return ZERO;
+	return compensatedSumValue(integral, correction) / total_delta;
+}
 
 // TODO: evaluate incremental versions (below) vs running sum (two-sum) then a single division at the end. Need to do so for variance already anyway
 

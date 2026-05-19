@@ -29,7 +29,7 @@ Format:
 
 ## Observer And Feature Model
 
-- [ ] P1 Observer-system audit: decide which built-in observer helpers and kernels are semantically necessary, keep `ObserverDefinition` as the extension boundary for built-ins, and avoid preserving legacy complexity without a clear use case. refs: `clode/observers/_definitions.py`, `clode/simulation/features.py`, `clode/kernels/observers.cl`, `test/test_opencl_models.py`
+- [ ] P0 Observer-system audit: decide which built-in observer helpers and kernels are semantically necessary, keep `ObserverDefinition` as the extension boundary for built-ins, and avoid preserving legacy complexity without a clear use case. refs: `clode/observers/_definitions.py`, `clode/simulation/features.py`, `clode/kernels/observers.cl`, `test/test_opencl_models.py`, `test/kernel_components/test_kernel_math.py`
 - [ ] P2 FeatureSimulator observer-parameter surface cleanup: keep `ObserverParams` as the semantic owner and trim the oversized legacy `observer_*` compatibility surface only after the internal observer audit settles. depends: observer-system audit. refs: `clode/simulation/features.py`, `clode/observers/types.py`
 - [ ] P2 Observer-specific parameter models/classes instead of one broad `ObserverParams`. depends: explicit observer-definition model. refs: `clode/features.py`, `clode/kernels/observers.cl`
 - [ ] P2 Support aux variables as event/feature variables. depends: explicit observer-definition model. refs: `clode/kernels/observers.cl`
@@ -37,7 +37,7 @@ Format:
 
 ## Numerical Methods And Kernel Math
 
-- [ ] P0 Shared OpenCL numerical-helper foundation for observer and stepper internals: compensated accumulation, reusable precision-sensitive utilities, and clearly justified time or update helpers should live in one small layer instead of scattered TODOs. refs: `clode/kernels/clODE_utilities.cl`, `clode/kernels/realtype.cl`, `clode/kernels/observers.cl`, `clode/kernels/steppers.cl`, `.design/reference/testing_audit.md`
+- [ ] P1 Broaden shared numerical-helper adoption beyond the initial helper foundation: carry compensated or structured accumulation into the remaining observers and the stepper time-base path where it buys real clarity or robustness. refs: `clode/kernels/clODE_utilities.cl`, `clode/kernels/observers/`, `clode/kernels/steppers/`, `test/kernel_components/test_kernel_math.py`
 - [ ] P1 Better trajectory/output modes: chunking, variable subsets, specified output times, dense output. depends: integration/output separation. refs: `clode/trajectory.py`, `clode/kernels/trajectory.cl`, `.design/reference/chunked_execution_audit.md`
 - [ ] P2 Time-base and interpolation accuracy helpers (`TwoSum`, `t0 + step * dt`, dense interpolants, fixed-step endpoint handling). depends: explicit per-work-item `t0`. refs: `clode/kernels/clODE_utilities.cl`, `clode/kernels/realtype.cl`, `.design/archived/pre_backend_readiness_2026_05_05/fixed_step_endpoint_bug_audit.md`
 - [ ] P2 Better adaptive-step controllers (I/PI/PID). refs: `clode/kernels/steppers.cl`
@@ -71,15 +71,16 @@ Format:
 
 ## Testing, Diagnostics, And Scope
 
-- [ ] P0 Kernel-component tests with tiny synthetic models and kernels beyond end-to-end simulator tests. refs: `test/core_numerics/`, `clode/_opencl/source_builder.py`, `.design/reference/testing_audit.md`
+- [ ] P1 Expand kernel-component coverage beyond helper math and the basic-observer path into build-key invalidation, observer storage, and stepper execution contracts. refs: `test/kernel_components/`, `clode/_opencl/source_builder.py`, `.design/reference/testing_audit.md`
 - [ ] P1 Cache/build-key/invalidation coverage around program rebuilds and observer changes. refs: `clode/_opencl/program_cache.py`, `clode/_opencl/source_builder.py`, `clode/features.py`
 - [ ] P2 Package/API hygiene: typing cleanup, stepper-specific parameter subsets, and trajectory output ergonomics once continuation policy and stepper-specific public semantics are clearer. refs: `clode/solver.py`, `clode/features.py`, `clode/trajectory.py`
 - [ ] P1 Runtime-install guidance: reuse upstream PyOpenCL install/runtime guidance where it reduces local duplication and point users to optional runtime packaging where appropriate. refs: `docs/install.md`, `docs/querying_opencl.md`, `.design/reference/public_surfaces_plan.md`, `.design/reference/docs_layout_plan.md`
-- [ ] P1 Public-facing package narrative and publication-readiness: maintain the shared landing page, keep the docs IA iterative (`Getting Started` / `Guides` / narrow `Examples` / `Reference`) while API changes settle, add citation metadata, benchmark evidence, and release-tag hygiene, and keep the paper aligned with current supported workflows. refs: `README.md`, `CONTRIBUTING.md`, `docs/index.md`, `docs/examples.md`, `docs/performance_notes.md`, `paper/paper.md`, `.design/reference/project_principles.md`, `.design/reference/joss_audit.md`, `.design/reference/public_surfaces_plan.md`, `.design/reference/docs_layout_plan.md`
+- [ ] P2 Public-facing package narrative and publication-readiness: maintain the shared landing page, keep the docs IA iterative (`Getting Started` / `Guides` / narrow `Examples` / `Reference`) while API changes settle, and defer citation metadata plus release-tag hygiene until the scientific, numerical, performance, runtime, and UX surfaces are stronger. refs: `README.md`, `CONTRIBUTING.md`, `docs/index.md`, `docs/examples.md`, `docs/performance_notes.md`, `paper/paper.md`, `.design/reference/project_principles.md`, `.design/reference/joss_audit.md`, `.design/reference/public_surfaces_plan.md`, `.design/reference/docs_layout_plan.md`
 - [ ] P2 Scope audit: what belongs in clODE vs sibling/helper packages. refs: `.design/package_state.md`, `.design/development_roadmap.md`, `.design/reference/project_principles.md`
 
 ## Inbox
 
 Temporary holding area for rough notes. Process this section with the `design-ideas-inbox` skill when routing items into the maintained `.design` framework.
 
-- none currently
+- plan and add some simple observers/features inspired by dynamical systems theory (direction of crossing, Poincare sections, ... ?)
+- demos/examples showing how single-precision tricks like compensated summation actually help in practice, which would be nice in docs too for exposition of clODE's strengths

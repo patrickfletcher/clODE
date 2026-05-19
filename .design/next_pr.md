@@ -6,37 +6,37 @@ Update when: the active target changes, the scope narrows or broadens, or the ac
 
 ## Title
 
-Kernel-math helper foundation and component-test spine
+Observer-system audit and compatibility-surface cleanup
 
 ## Assumed Repo State
 
 - Canonical public homes are now `clode.problem`, `clode.observers`, `clode.simulation`, and `clode.runtime`.
 - `clode._opencl` is the canonical internal execution layer.
-- The first-pass solver-state boundary is live: IVP owns next-solve problem data, `clode/simulation/_state.py` owns Python-side solver state and fetched-output caches, and `_opencl/executors.py` treats host mirrors as transfer caches rather than semantic owners.
-- Integration settings and output/storage policy are now explicitly split all the way into the OpenCL layer, and execution-setting defaults now resolve through one canonical solver-settings helper.
-- The observer-definition and observer-state cleanup is now landed: built-in observer definitions resolve through `ObserverDefinition` and `ResolvedObserverSpec`, and the active kernels plus matched struct lookups now use observer-state naming consistently.
-- Built-in stepper traits and OpenCL build mapping now resolve through a Python-owned stepper-definition catalog.
+- The first-pass solver-state, observer-definition, and stepper-definition boundaries are live.
+- `clode/kernels/clODE_utilities.cl` now carries a small shared compensated-accumulation helper layer.
+- The `basic` and `basicall` observers now use compensated integral accumulation for their time-weighted means.
+- `test/kernel_components/` now provides direct OpenCL component coverage for helper math and a basic-observer contract.
 - Public `SolverParams`, `ObserverParams`, and the public `Stepper` enum remain thin compatibility surfaces; broader public config redesign is still intentionally deferred.
 
 ## Why this should be next
 
-The current codebase is strongest when its internals are explicit and testable. The kernels already contain TODOs around Kahan or TwoSum-style accumulation, FMA choices, and time-accumulation precision, and the live tests still jump from full end-to-end numerics to smaller host-side `_opencl` support checks without a dedicated middle layer.
+The observer-definition catalog is now good enough that the remaining observer complexity is easier to see clearly. The current package still carries a large legacy `observer_*` scalar surface in `FeatureSimulator`, and some of the built-in observer helper or kernel structure still reads as historical accumulation rather than deliberate design.
 
-This is the right next PR because it improves soundness, internal reasoning, and future extensibility for observers and steppers without forcing more public API churn. It also lines up with the current user priority: tighten internals first, then return to broader ergonomics once the numerical and testing substrate is stronger.
+This is the right next PR because it targets one of clODE's most distinctive workflows directly: on-device feature extraction. It improves internal reasoning and user-facing ergonomics without jumping into public packaging work or broader API redesign too early.
 
 ## Scope
 
-- introduce or tighten one small shared OpenCL numerical-helper layer for reusable precision-sensitive utilities used by observers and later steppers
-- add tiny synthetic component tests around those helpers, build specialization, and observer or stepper contracts that are currently hard to validate without end-to-end runs
-- keep kernel specialization, `KernelKind`, and source assembly explicit and legible; audit those boundaries only where the helper and test work touches them
-- keep the public API unchanged
-- document the deferred follow-ons clearly: continuation-state guardrails, observer-surface cleanup, and deeper numerical time-base work
+- audit the built-in observer helpers and kernels against the landed `ObserverDefinition` model and remove or simplify complexity that no longer carries its weight
+- keep `ObserverParams` as the semantic owner of observer configuration while reducing the amount of observer meaning carried by constructor-level scalar compatibility plumbing
+- extend component tests where needed so observer behavior is easier to validate directly than it is today
+- keep the public API stable in this PR
+- document that citation metadata, release-tag hygiene, and similar public packaging work remain intentionally later than core package-quality work
 
 ## Likely Internal Shape
 
-- keep shared numerical helpers in `clode/kernels/clODE_utilities.cl` and/or `clode/kernels/realtype.cl` rather than scattering them ad hoc across observer and stepper kernels
-- adopt those helpers only where they actually simplify duplicated or fragile arithmetic in the current kernels
-- add a small component-test layer using tiny synthetic models or kernels so observer accumulation and stepper-helper behavior can be checked directly
+- keep `ObserverDefinition` and `ResolvedObserverSpec` as the semantic boundary for built-ins instead of reopening observer meaning in `_opencl`
+- audit `FeatureSimulator` parameter resolution so scalar `observer_*` arguments behave as thin compatibility inputs layered over `ObserverParams`
+- extend `test/kernel_components/` only where the observer audit reveals contracts that are still too implicit
 - keep kernel files separate from Python definition catalogs; do not move OpenCL kernels into Python string literals in this PR
 
 ## Design Constraints
@@ -48,6 +48,7 @@ This is the right next PR because it improves soundness, internal reasoning, and
 - do not bulk-relocate kernel files or absorb them into Python definitions without strong evidence that it improves reasoning instead of just moving complexity around
 - keep fetched outputs and transfer caches as derived data, not semantic owners
 - preserve current kernel specialization by precision, stepper, observer, and problem shape unless a narrower path proves clearly better
+- leave citation metadata, release-tag alignment, and similar repo-surface packaging hygiene for later
 
 ## Non-goals
 
@@ -58,29 +59,30 @@ This is the right next PR because it improves soundness, internal reasoning, and
 - no public config redesign in the same PR
 - no chunked trajectory streaming or ensemble batching in the same PR
 - no multi-device work
+- no citation metadata or release-tag cleanup in the same PR
 
 ## Suggested Implementation Slices
 
-1. Audit the current kernels for precision-sensitive duplicated arithmetic and choose the smallest helper set that materially improves clarity or robustness.
-2. Add focused component tests for one observer path and one stepper or numerical-helper path without relying only on end-to-end simulator runs.
-3. Adopt the helper layer in a small, high-value slice rather than rewriting every observer or stepper kernel at once.
-4. Record the deferred follow-ons explicitly: continuation-state guardrails, observer-surface cleanup, adaptive-controller work, and deeper time-base refinements.
+1. Audit the built-in observer catalog and kernels for duplication, stale complexity, or unclear semantics.
+2. Tighten `FeatureSimulator` observer-parameter resolution so `ObserverParams` is clearly the semantic owner and scalar observer args remain only compatibility shims.
+3. Add or extend component tests for any audited observer contract that is still hard to reason about directly.
+4. Record the deferred follow-ons explicitly: continuation-state guardrails, broader helper adoption, adaptive-controller work, and later repo-surface packaging hygiene.
 
 ## Code-Facing Checklist
 
-- `clode/kernels/clODE_utilities.cl` and `clode/kernels/realtype.cl`: establish the reusable helper boundary clearly
-- relevant observer and stepper kernels under `clode/kernels/observers/` and `clode/kernels/steppers/`: adopt helpers only where they buy clarity or robustness
-- `test/`: add a component-test layer or equivalent focused tests for the new helper and kernel contracts
-- `.design/reference/testing_audit.md`: keep the test-strategy note aligned with the new middle layer
-- `.design/reference/pyopencl_leverage_audit.md`: keep the PyOpenCL boundary explicit if helper or test work changes how much host-side infrastructure clODE owns
+- `clode/simulation/features.py`: keep observer parameter resolution and compatibility inputs honest and narrow
+- `clode/observers/_definitions.py` and related metadata helpers: keep the semantic observer catalog authoritative
+- relevant observer kernels under `clode/kernels/observers/`: simplify only where the audit shows clear value
+- `test/kernel_components/`: extend direct observer contract coverage where it buys clarity
+- `.design/reference/testing_audit.md`: keep the component-test note aligned with the lived test surface
 
 ## Acceptance Criteria
 
-- one small shared numerical-helper layer exists or the current helper boundary is explicitly tightened instead of remaining scattered TODOs
-- the test surface now includes a focused middle layer between end-to-end numerics and small host-side support tests
-- at least one observer path and one stepper or numerical-helper path become easier to reason about through direct tests or clearer shared utilities
-- the root `.design` docs explicitly state that broader public config redesign still waits until these internal numerical and testing boundaries stabilize
+- the observer catalog and built-in observer kernels are easier to reason about after one explicit audit or cleanup pass
+- `FeatureSimulator` clearly treats `ObserverParams` as the semantic owner and scalar observer arguments as compatibility inputs
+- the component-test layer covers at least one additional observer contract if the audit exposes a still-implicit behavior boundary
+- the root `.design` docs explicitly state that public packaging hygiene remains later than the internal package-quality work
 
 ## Follow-on If This Lands Cleanly
 
-The next high-value follow-ons should be observer-system and stepper-extension cleanup, continuation-state guardrails, then deeper numerical time-base work such as structured-time updates. Broader public continuation or config API work should still wait until those internal boundaries stop moving.
+The next high-value follow-ons should be continuation-state guardrails, broader numerical-helper adoption into remaining observers and the stepper time-base path, then deeper numerical time-base work such as structured-time updates. Broader public continuation or config API work should still wait until those internal boundaries stop moving.

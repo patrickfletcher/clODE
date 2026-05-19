@@ -382,6 +382,8 @@ def _basic_layout(
             _real_field("xTrajectoryMax", real_dtype),
             _real_field("xTrajectoryMin", real_dtype),
             _real_field("xTrajectoryMean", real_dtype),
+            _real_field("xTrajectoryIntegral", real_dtype),
+            _real_field("xTrajectoryIntegralCorrection", real_dtype),
             _real_field("dxTrajectoryMax", real_dtype),
             _real_field("dxTrajectoryMin", real_dtype),
             _real_field("t_last", real_dtype),
@@ -402,11 +404,19 @@ def _basicall_layout(
             _real_field("xTrajectoryMax", real_dtype, problem_info.num_var),
             _real_field("xTrajectoryMin", real_dtype, problem_info.num_var),
             _real_field("xTrajectoryMean", real_dtype, problem_info.num_var),
+            _real_field("xTrajectoryIntegral", real_dtype, problem_info.num_var),
+            _real_field(
+                "xTrajectoryIntegralCorrection", real_dtype, problem_info.num_var
+            ),
             _real_field("dxTrajectoryMax", real_dtype, problem_info.num_var),
             _real_field("dxTrajectoryMin", real_dtype, problem_info.num_var),
             _real_field("auxTrajectoryMax", real_dtype, problem_info.num_aux),
             _real_field("auxTrajectoryMin", real_dtype, problem_info.num_aux),
             _real_field("auxTrajectoryMean", real_dtype, problem_info.num_aux),
+            _real_field("auxTrajectoryIntegral", real_dtype, problem_info.num_aux),
+            _real_field(
+                "auxTrajectoryIntegralCorrection", real_dtype, problem_info.num_aux
+            ),
             _real_field("t_last", real_dtype),
             _real_field("t_start", real_dtype),
             _uint_field("stepcount"),

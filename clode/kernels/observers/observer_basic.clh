@@ -10,6 +10,8 @@ struct ObserverState_basic
     realtype xTrajectoryMax;
     realtype xTrajectoryMin;
     realtype xTrajectoryMean;
+    realtype xTrajectoryIntegral;
+    realtype xTrajectoryIntegralCorrection;
     realtype dxTrajectoryMax;
     realtype dxTrajectoryMin;
     realtype t_last;
@@ -22,6 +24,8 @@ static inline void initializeObserverState(realtype *ti, realtype xi[], realtype
     od->xTrajectoryMax = -BIG_REAL;
     od->xTrajectoryMin = BIG_REAL;
     od->xTrajectoryMean = ZERO;
+    od->xTrajectoryIntegral = ZERO;
+    od->xTrajectoryIntegralCorrection = ZERO;
     od->dxTrajectoryMax = -BIG_REAL;
     od->dxTrajectoryMin = BIG_REAL;
     od->t_last = *ti;
@@ -54,7 +58,17 @@ static inline void updateObserverState(realtype *ti, realtype xi[], realtype dxi
     realtype elapsedTime = *ti - od->t_start;
     od->xTrajectoryMax = fmax(xi[op->fVarIx], od->xTrajectoryMax);
     od->xTrajectoryMin = fmin(xi[op->fVarIx], od->xTrajectoryMin);
-    od->xTrajectoryMean = runningMeanTime(od->xTrajectoryMean, xi[op->fVarIx], dt, elapsedTime);
+    compensatedIntegrateConstant(
+        &od->xTrajectoryIntegral,
+        &od->xTrajectoryIntegralCorrection,
+        dt,
+        xi[op->fVarIx]
+    );
+    od->xTrajectoryMean = meanFromCompensatedIntegral(
+        od->xTrajectoryIntegral,
+        od->xTrajectoryIntegralCorrection,
+        elapsedTime
+    );
     od->dxTrajectoryMax = fmax(dxi[op->fVarIx], od->dxTrajectoryMax);
     od->dxTrajectoryMin = fmin(dxi[op->fVarIx], od->dxTrajectoryMin);
 }

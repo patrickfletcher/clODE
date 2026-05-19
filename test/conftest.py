@@ -7,6 +7,7 @@ import pytest
 
 MARKERS_BY_PREFIX: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("test/core_numerics/", ("core_numerics", "numerics", "release_gate", "requires_opencl")),
+    ("test/kernel_components/", ("kernel_components", "requires_opencl")),
 )
 
 MARKERS_BY_FILE: dict[str, tuple[str, ...]] = {

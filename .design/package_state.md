@@ -18,7 +18,8 @@ Update when: canonical module homes, public compatibility surfaces, packaging ru
 - Built-in observer definitions, resolved observer specs, and observer-state naming are now aligned across the Python host layer, OpenCL metadata, and the active kernels.
 - Execution-setting defaults and compatibility resolution now flow through one canonical solver-settings path, and simulators keep internal copies of caller-provided `SolverParams` bundles instead of aliasing them.
 - Built-in stepper definitions, traits, and OpenCL build mapping now resolve through a Python-owned stepper-definition catalog instead of raw registry tables.
-- The current package still has a few cleanup targets, especially shared kernel-math helpers and component tests for observer/stepper internals, continuation-state semantics for diverged work-item times, and later chunking work on top of the landed IVP, solver-state, output-policy, observer, execution-setting, and stepper-definition boundaries.
+- A shared kernel-math helper foundation now lives in `clode/kernels/clODE_utilities.cl`, and the initial `test/kernel_components/` layer exercises helper and basic-observer contracts directly.
+- The current package still has a few cleanup targets, especially observer-system audit and `FeatureSimulator` observer-surface cleanup, continuation-state semantics for diverged work-item times, broader helper adoption across remaining observers and stepper time-base paths, and later chunking work on top of the landed IVP, solver-state, output-policy, observer, execution-setting, and stepper-definition boundaries.
 
 ## Session-Start Guidance
 
@@ -109,7 +110,7 @@ The historical backend-shim, protocol/factory facade, and binding-named compatib
 - Built-in observer definitions now live in `clode/observers/_definitions.py`, and shared resolved observer specs now drive feature-build defines, build-key selection, and feature-executor invalidation boundaries.
 - Optional event storage still participates in compile-time observer layout and buffer sizing, but runtime observer settings now exclude event timestamp capacity and treat it as explicit output/layout policy instead.
 - `shift_tspan()` still advances the requested window rather than the attained final time, so exact absolute-time continuation remains a caller-managed policy.
-- Shared OpenCL numerical helpers for compensated accumulation and structured time updates are still mostly TODOs or local kernel code rather than one small reusable utility layer.
+- Shared OpenCL numerical helpers now have a first small home in `clODE_utilities.cl`, and the `basic` and `basicall` observers now use compensated integral accumulation for their time-weighted means. Broader adoption across the remaining observers and stepper time-base paths is still future work.
 - Fixed-step kernels still advance time with `ti += dt`, so very long absolute-time runs with small `dt` remain precision-sensitive; evaluating `t0 + step * dt` or related structured-time models is still future work.
 - RNG continuation details are persisted in separate common buffers rather than a clearer per-work-item state object, which will matter again when evaluating Random123.
 - `.design/archived/` is useful for rationale and bug archaeology, but some archived statements about the old wrapper path are now historical only.
@@ -118,10 +119,11 @@ The historical backend-shim, protocol/factory facade, and binding-named compatib
 
 - `tools/run_test_bundle.py`: authoritative bundle map.
 - `test/core_numerics/`: exact-solution and kernel-level regression backbone.
+- `test/kernel_components/`: tiny synthetic OpenCL component tests for helper math and observer contracts.
 - `test/core_numerics/test_stochastic.py`: seeded stochastic continuation and Ornstein-Uhlenbeck stationary-moment coverage.
 - `test/core_numerics/test_features_basicall.py`: `basicall` exact-statistics and split-window continuation coverage.
 - `test/test_simulation_contracts.py`: current simulation and observer behavior contracts.
-- There is not yet a dedicated kernel-component test layer between the end-to-end numerical regressions and the `_opencl` support-layer tests.
+- The dedicated kernel-component layer now exists, but its current coverage is intentionally narrow.
 - `test/test_problem_rhs_source.py`: RHS source-ingestion and digest coverage.
 - `test/test_opencl_models.py`, `test/test_opencl_source_builder.py`, `test/test_opencl_runtime.py`, `test/test_opencl_buffers.py`, `test/test_opencl_structs.py`: canonical internal OpenCL support-layer tests.
 - `tools/probe_opencl_runtime.py`: distinguishes runtime/compiler failures from clODE kernel failures.
@@ -132,5 +134,6 @@ The historical backend-shim, protocol/factory facade, and binding-named compatib
 - `pyproject.toml`: authoritative packaging and dependency configuration.
 - `MANIFEST.in`: current sdist include and prune rules.
 - Kernel assets ship as package data.
+- Citation metadata and release-tag alignment are intentionally lower priority than scientific, numerical, performance, runtime, and UX work while the core package surface is still settling.
 - Docs and tests are not required for runtime execution. Tests are still useful for downstream verification, while docs are the easier thing to omit if sdist slimming becomes desirable.
 - From a packaging perspective, the flat compatibility barrels are optional; they exist only to preserve import compatibility, not because the build needs them.

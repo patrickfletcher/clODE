@@ -100,6 +100,8 @@ def test_basic_observer_double_formula_underestimates_matched_struct_size() -> N
             ("xTrajectoryMax", np.float64),
             ("xTrajectoryMin", np.float64),
             ("xTrajectoryMean", np.float64),
+            ("xTrajectoryIntegral", np.float64),
+            ("xTrajectoryIntegralCorrection", np.float64),
             ("dxTrajectoryMax", np.float64),
             ("dxTrajectoryMin", np.float64),
             ("t_last", np.float64),
@@ -113,5 +115,5 @@ def test_basic_observer_double_formula_underestimates_matched_struct_size() -> N
         runtime.device, "ObserverState_basic_double", basic_observer_dtype
     )
 
-    assert matched_dtype.itemsize == 64
-    assert matched_dtype.itemsize > 7 * np.dtype(np.float64).itemsize + np.dtype(np.uint32).itemsize
+    assert matched_dtype.itemsize == 80
+    assert matched_dtype.itemsize > 9 * np.dtype(np.float64).itemsize + np.dtype(np.uint32).itemsize

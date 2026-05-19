@@ -38,12 +38,15 @@ PRIMARY_BUNDLES: dict[str, tuple[str, ...]] = {
         "test/test_opencl_buffers.py",
         "test/test_opencl_structs.py",
     ),
+    "kernel_components": (
+        "test/kernel_components",
+    ),
 }
 
 ALIASES: dict[str, tuple[str, ...]] = {
     "release": ("frontend", "runtime_api", "numerics"),
     "opencl": ("release",),
-    "extended": ("opencl_internal",),
+    "extended": ("opencl_internal", "kernel_components"),
 }
 
 DESCRIPTIONS = {
@@ -52,9 +55,10 @@ DESCRIPTIONS = {
     "runtime_api": "Public runtime and simulator contract tests.",
     "numerics": "Numerical regression tests, including the core OpenCL reference suite.",
     "opencl_internal": "Focused tests for internal OpenCL support layers.",
+    "kernel_components": "Tiny synthetic OpenCL component tests for helpers, observers, and build contracts.",
     "release": "The OpenCL-backed release gate: frontend, runtime/API, and numerical regressions.",
     "opencl": "Compatibility alias for the release gate bundle.",
-    "extended": "Additional internal OpenCL checks for manual verification.",
+    "extended": "Additional OpenCL component and internal checks for manual verification.",
 }
 
 
