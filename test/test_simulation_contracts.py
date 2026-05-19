@@ -1,3 +1,4 @@
+import pytest
 import numpy as np
 
 import clode
@@ -61,6 +62,65 @@ def test_set_solver_parameters_resets_device_dt() -> None:
     simulator.set_solver_parameters(dt=0.025, dtmax=0.025)
 
     np.testing.assert_allclose(np.asarray(simulator.get_dt()).reshape(-1), [0.025])
+
+
+def test_get_initial_state_after_update_x0_pulls_runtime_state_back_into_ivp() -> None:
+    simulator = make_simulator(
+        "stable_linear",
+        stepper=clode.Stepper.rk4,
+        t_span=(0.0, 1.0),
+        dt=FIXED_DT,
+        max_steps=FIXED_MAX_STEPS,
+    )
+
+    simulator.transient(update_x0=True, fetch_results=False)
+
+    final_state = simulator.get_final_state()
+    next_initial_state = simulator.get_initial_state()
+
+    np.testing.assert_allclose(next_initial_state, final_state)
+    np.testing.assert_allclose(simulator.ivp.get_initial_state(), final_state)
+
+
+def test_set_tspan_invalidates_previous_transient_results() -> None:
+    simulator = make_simulator(
+        "stable_linear",
+        stepper=clode.Stepper.rk4,
+        t_span=(0.0, 1.0),
+        dt=FIXED_DT,
+        max_steps=FIXED_MAX_STEPS,
+    )
+
+    simulator.transient(update_x0=False, fetch_results=False)
+    simulator.get_final_state()
+    simulator.get_final_time()
+
+    simulator.set_tspan((1.0, 2.0))
+
+    with pytest.raises(ValueError, match="final state"):
+        simulator.get_final_state()
+
+    with pytest.raises(ValueError, match="final time"):
+        simulator.get_final_time()
+
+
+def test_set_tspan_invalidates_cached_feature_results() -> None:
+    simulator = make_feature_simulator(
+        "stable_linear",
+        stepper=clode.Stepper.rk4,
+        t_span=(0.0, 1.0),
+        dt=FIXED_DT,
+        max_steps=FIXED_MAX_STEPS,
+    )
+
+    first = simulator.features(update_x0=False)
+
+    assert first is not None
+
+    simulator.set_tspan((0.0, 2.0))
+
+    with pytest.raises(ValueError, match=r"features\(\)"):
+        simulator.get_observer_results()
 
 
 def test_feature_observer_switch_rebuilds_and_runs() -> None:

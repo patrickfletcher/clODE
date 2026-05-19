@@ -9,6 +9,7 @@ from ..observers.types import Observer, ObserverParams
 from ..problem.ivp import InitialValueProblem
 from ..problem.python import OpenCLRhsEquation
 from ..runtime import CLDeviceType, CLVendor, _clode_root_dir
+from ._state import FeatureCache
 from .base import Simulator, Stepper
 from .params import SolverParams
 from .results import ObserverOutput
@@ -17,8 +18,7 @@ from .results import ObserverOutput
 class FeatureSimulator(Simulator):
 	"""Simulator that computes observer features and event data on the device."""
 
-	_device_features: np.ndarray[Any, np.dtype[np.float64]] | None = None
-	_num_features: int | None = None
+	_feature_cache: FeatureCache
 	_integrator: OpenCLFeatureExecutor
 
 	def __init__(
@@ -93,6 +93,7 @@ class FeatureSimulator(Simulator):
 		"""
 
 		self._observer_type = observer
+		self._feature_cache = FeatureCache()
 		problem_variable_names = (
 			ivp.variable_names if ivp is not None else list((variables or {}).keys())
 		)
@@ -161,9 +162,12 @@ class FeatureSimulator(Simulator):
 		)
 
 	def _invalidate_feature_cache(self) -> None:
-		self._device_features = None
-		self._num_features = None
+		self._feature_cache.invalidate()
 		self._invalidate_solution_cache()
+
+	def _invalidate_runtime_caches(self) -> None:
+		super()._invalidate_runtime_caches()
+		self._feature_cache.invalidate()
 
 	def set_observer(self, observer_type: Observer) -> None:
 		"""Switch to a different built-in observer.
@@ -296,11 +300,12 @@ class FeatureSimulator(Simulator):
 		else:
 			self._integrator.features()
 
-		self._invalidate_feature_cache()
+		self._invalidate_solution_cache()
+		self._feature_cache.mark_result_pending()
 
 		if update_x0:
 			self._integrator.shift_x0()
-			self._device_initial_state = None
+			self._solver_state.continue_problem_time()
 
 		if fetch_results:
 			return self.get_observer_results()
@@ -311,21 +316,27 @@ class FeatureSimulator(Simulator):
 		Raises:
 			ValueError: If `features()` has not been run yet.
 		"""
-		if self._device_features is None:
-			self._device_features = self._integrator.get_f()
-			self._num_features = self._integrator.get_n_features()
-
-		if self._device_features is None or self._num_features is None:
+		if not self._feature_cache.has_result:
 			raise ValueError("Must run features() before getting observer results")
 
-		self._device_features = np.array(
-			self._device_features, dtype=np.float64
-		).reshape((self._ensemble_size, self._num_features), order="F")
+		if self._feature_cache.feature_array is None:
+			self._feature_cache.feature_array = self._integrator.get_f()
+			self._feature_cache.num_features = self._integrator.get_n_features()
+
+		if (
+			self._feature_cache.feature_array is None
+			or self._feature_cache.num_features is None
+		):
+			raise ValueError("Must run features() before getting observer results")
+
+		self._feature_cache.feature_array = np.array(
+			self._feature_cache.feature_array, dtype=np.float64
+		).reshape((self._ensemble_size, self._feature_cache.num_features), order="F")
 
 		return ObserverOutput(
 			self._op,
-			self._device_features,
-			self._num_features,
+			self._feature_cache.feature_array,
+			self._feature_cache.num_features,
 			self.variable_names,
 			self._observer_type,
 			self._integrator.get_feature_names(),

@@ -8,6 +8,7 @@ from .._opencl.executors import OpenCLTrajectoryExecutor
 from ..problem.ivp import InitialValueProblem
 from ..problem.python import OpenCLRhsEquation
 from ..runtime import CLDeviceType, CLVendor, _clode_root_dir
+from ._state import TrajectoryCache
 from .base import Simulator, Stepper
 from .params import SolverParams
 from .results import TrajectoryOutput
@@ -16,10 +17,7 @@ from .results import TrajectoryOutput
 class TrajectorySimulator(Simulator):
 	"""Simulator that stores time samples and returns `TrajectoryOutput` objects."""
 
-	_device_t: np.ndarray[Any, np.dtype[np.float64]] | None
-	_device_x: np.ndarray[Any, np.dtype[np.float64]] | None
-	_device_dx: np.ndarray[Any, np.dtype[np.float64]] | None
-	_device_aux: np.ndarray[Any, np.dtype[np.float64]] | None
+	_trajectory_cache: TrajectoryCache
 	_integrator: OpenCLTrajectoryExecutor
 
 	def __init__(
@@ -55,6 +53,7 @@ class TrajectorySimulator(Simulator):
 		and `nout` determine how many time samples are retained and how densely they
 		are stored.
 		"""
+		self._trajectory_cache = TrajectoryCache()
 
 		super().__init__(
 			variables=variables,
@@ -82,11 +81,6 @@ class TrajectorySimulator(Simulator):
 			ivp=ivp,
 		)
 
-		self._device_t = None
-		self._device_x = None
-		self._device_dx = None
-		self._device_aux = None
-
 	def _create_integrator(self) -> None:
 		self._integrator = OpenCLTrajectoryExecutor(
 			self._pi,
@@ -96,6 +90,10 @@ class TrajectorySimulator(Simulator):
 			self._create_opencl_runtime(),
 			_clode_root_dir,
 		)
+
+	def _invalidate_runtime_caches(self) -> None:
+		super()._invalidate_runtime_caches()
+		self._trajectory_cache.invalidate()
 
 	def trajectory(
 		self,
@@ -123,12 +121,12 @@ class TrajectorySimulator(Simulator):
 			self.set_tspan(t_span=t_span)
 
 		self._integrator.trajectory()
-		self._device_t = self._device_x = self._device_dx = self._device_aux = None
 		self._invalidate_solution_cache()
+		self._trajectory_cache.mark_result_pending()
 
 		if update_x0:
 			self._integrator.shift_x0()
-			self._device_initial_state = None
+			self._solver_state.continue_problem_time()
 
 		if fetch_results:
 			return self.get_trajectory()
@@ -143,49 +141,53 @@ class TrajectorySimulator(Simulator):
 		Raises:
 			ValueError: If `trajectory()` has not been run yet.
 		"""
+		if not self._trajectory_cache.has_result:
+			raise ValueError("Must run trajectory() before getting trajectory data")
 
-		self._device_n_stored = self._integrator.get_n_stored()
-		self._device_t = self._integrator.get_t()
-		self._device_x = self._integrator.get_x()
-		self._device_dx = self._integrator.get_dx()
-		self._device_aux = self._integrator.get_aux()
+		self._trajectory_cache.n_stored = np.asarray(
+			self._integrator.get_n_stored(), dtype=np.int32
+		)
+		self._trajectory_cache.t = np.asarray(self._integrator.get_t(), dtype=np.float64)
+		self._trajectory_cache.x = np.asarray(self._integrator.get_x(), dtype=np.float64)
+		self._trajectory_cache.dx = np.asarray(self._integrator.get_dx(), dtype=np.float64)
+		self._trajectory_cache.aux = np.asarray(self._integrator.get_aux(), dtype=np.float64)
 
-		if self._device_n_stored is None:
+		if self._trajectory_cache.n_stored is None:
 			raise ValueError("Must run trajectory() before getting trajectory data")
-		elif self._device_t is None:
+		elif self._trajectory_cache.t is None:
 			raise ValueError("Must run trajectory() before getting trajectory data")
-		elif self._device_x is None:
+		elif self._trajectory_cache.x is None:
 			raise ValueError("Must run trajectory() before getting trajectory data")
-		elif self._device_dx is None:
+		elif self._trajectory_cache.dx is None:
 			raise ValueError("Must run trajectory() before getting trajectory data")
-		elif self._device_aux is None:
+		elif self._trajectory_cache.aux is None:
 			raise ValueError("Must run trajectory() before getting trajectory data")
 
 		t_shape = (self._ensemble_size, self._sp.max_store)
-		self._device_t = np.array(
-			self._device_t[: np.prod(t_shape)], dtype=np.float64
+		self._trajectory_cache.t = np.array(
+			self._trajectory_cache.t[: np.prod(t_shape)], dtype=np.float64
 		).reshape(t_shape, order="F")
 
 		data_shape = (self._ensemble_size, self.num_variables, self._sp.max_store)
-		self._device_x = np.array(
-			self._device_x[: np.prod(data_shape)], dtype=np.float64
+		self._trajectory_cache.x = np.array(
+			self._trajectory_cache.x[: np.prod(data_shape)], dtype=np.float64
 		).reshape(data_shape, order="F")
-		self._device_dx = np.array(
-			self._device_dx[: np.prod(data_shape)], dtype=np.float64
+		self._trajectory_cache.dx = np.array(
+			self._trajectory_cache.dx[: np.prod(data_shape)], dtype=np.float64
 		).reshape(data_shape, order="F")
 
 		aux_shape = (self._ensemble_size, len(self.aux_names), self._sp.max_store)
-		self._device_aux = np.array(
-			self._device_aux[: np.prod(aux_shape)], dtype=np.float64
+		self._trajectory_cache.aux = np.array(
+			self._trajectory_cache.aux[: np.prod(aux_shape)], dtype=np.float64
 		).reshape(aux_shape, order="F")
 
 		results = list()
 		for i in range(self._ensemble_size):
-			ni = self._device_n_stored[i] + 1
-			ti = self._device_t[i, :ni].transpose()
-			xi = self._device_x[i, :, :ni].transpose()
-			dxi = self._device_dx[i, :, :ni].transpose()
-			auxi = self._device_aux[i, :, :ni].transpose()
+			ni = self._trajectory_cache.n_stored[i] + 1
+			ti = self._trajectory_cache.t[i, :ni].transpose()
+			xi = self._trajectory_cache.x[i, :, :ni].transpose()
+			dxi = self._trajectory_cache.dx[i, :, :ni].transpose()
+			auxi = self._trajectory_cache.aux[i, :, :ni].transpose()
 			result = TrajectoryOutput(
 				t=ti,
 				x=xi,

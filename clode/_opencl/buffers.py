@@ -265,6 +265,12 @@ class BufferManager:
         self._enqueue_copy(buffers.dt, host)
         return host
 
+    def reset_solver_dt(
+        self, buffers: CommonBuffers, solver_params: SolverParams
+    ) -> np.ndarray:
+        dt_values = np.full(buffers.ensemble_size, solver_params.dt, dtype=np.float64)
+        return self.upload_dt(buffers, dt_values)
+
     def upload_rng_state(
         self, buffers: CommonBuffers, rng_state: np.ndarray
     ) -> np.ndarray:

@@ -19,10 +19,10 @@ Use `.design/ideas.md` as the short living board. This file is the longer ration
 
 ### Current weaknesses
 
-- Continuation correctness is much better, but the state model is still only partially explicit. Solver-owned time, attained per-item `tf`, continued `dt`, observer state, and RNG continuation details are real in the implementation, but they are not yet represented as one clear internal model.
+- Continuation correctness is much better, and a first-pass Python-owned solver-state model plus explicit transfer-cache cleanup are now live. The next structural bottleneck is that integration policy and output or storage policy are still coupled in too many places.
 - A first-pass IVP model now exists, and the curated public problem layer now centers `InitialValueProblem`; lower-level support types and source-preparation helpers are internal support concepts rather than promoted surface area.
 - Simulators still carry some semantic weight through compatibility delegates and cached mirrored problem data even though the core defaults and batch semantics now live on the IVP.
-- The next internal friction point is clearer now: solver/execution state, cached host mirrors, and fetched output state are still spread across `Simulator`, `_opencl/executors.py`, and device buffers without one deliberate single-source-of-truth model.
+- The next internal friction point is clearer now: `SolverParams` still mixes integration policy with trajectory-storage controls, and feature or event capacity still leaks into executor and buffer lifecycle instead of reading like explicit output policy.
 - Each work item effectively owns `dt` and attained `tf`, but not an explicit `t0` or completion/error flags. That leaves friction around continuation helpers and windows where work items diverge.
 - `SolverParams` still mixes integration policy with output-storage policy. That makes chunking, batching, and trajectory streaming harder than they need to be.
 - Stepper, observer, solver-state, and problem concepts are still split across public enums/dataclasses, internal string registries, and kernel include trees rather than clearer Python-owned semantic definitions.
@@ -72,11 +72,11 @@ API impact:
 
 - can start internally; public API may only need helpers later. If callable IVPs land here, keep them conditional on retaining a Python RHS callable on the IVP and defer generic cross-source interop until stronger RHS IR work.
 
-### Priority 1: Separate integration state from output and storage policy
+### Priority 0: Separate integration state from output and storage policy
 
-This is the next structural bottleneck after continuation correctness.
+This is now the recommended current PR.
 
-This should be the recommended PR immediately after the active solver-state cleanup lands cleanly.
+The first solver-state cleanup pass landed cleanly and exposed `max_store`, `nout`, and feature or event allocation as the next mixed-responsibility boundary.
 
 Key tasks:
 
@@ -98,7 +98,7 @@ API impact:
 
 The current observer system works, but it is not yet shaped as a durable internal model.
 
-This should follow the output and storage split rather than being folded into the active solver-state PR.
+This should follow the output and storage split rather than reopening the landed solver-state PR.
 
 Key tasks:
 
@@ -117,29 +117,18 @@ Note on `odedriver.cl`:
 
 ### Priority 0: Explicit solver-owned state and cache ownership cleanup
 
-With the first IVP semantic pass landed, this is now the next active implementation target.
+Status on the current branch:
 
-Key tasks:
+- the first pass has landed
+- `clode/simulation/_state.py` now owns Python-side solver state and fetched-output caches
+- IVP owns next-solve problem data while `_opencl/executors.py` treats host mirrors as transfer caches rather than semantic owners
+- direct invalidation and continuation regressions now cover the new boundary
 
-- introduce a per-work-item solver-state model with a clear home for requested window, attained `tf`, current `dt`, status flags, and continuation-specific RNG state
-- define a sharper ownership split between IVP-owned problem data, solver-owned execution state, persistent observer state, and fetched output caches
-- make that ownership split explicit enough that later observer-definition work can separate persistent observer state from optional event-output capacity without reintroducing simulator/executor duplication
-- separate compile-time build specification from runtime value and state changes so rebuild logic follows explicit specialization inputs rather than incidental cache invalidation
-- reduce redundant host-side mirrors and resynchronization paths between `Simulator` and `_opencl/executors.py`
-- keep host and device mirrors as implementation details of those state owners rather than as parallel semantic state holders
-- make invalidation rules explicit when callers change IVP data, solver parameters, time windows, or observer/runtime configuration
+What remains for later:
 
-Why now:
-
-- the IVP work made the remaining ownership friction easier to see
-- continuation correctness is already good enough that the next leverage point is semantics and cache ownership rather than more boundary expansion in the problem layer
-- later continuation helpers, output-policy cleanup, and stepper-definition work all want a clearer solver-state contract first
-- observer-definition cleanup also wants that contract first so feature execution can depend on an explicit solver-state boundary rather than today’s mixed simulator and executor caches
-- this is higher leverage than broader solver-family work or backend generalization because it stabilizes the internal contract the next few PRs actually need
-
-API impact:
-
-- should start as an internal semantic cleanup with minimal public API change
+- no device-side per-work-item `t0` or richer completion/error status model yet
+- exact absolute-time continuation still needs caller-managed `t_span` or a later public continuation helper
+- the next leverage point is output or storage separation rather than reopening the ownership cleanup itself
 
 ### Priority 1: Python-owned stepper semantics after the state-model cleanup
 
@@ -223,11 +212,10 @@ Packaging note:
 
 ## Recommended Order Of Attack
 
-1. Make lower-level solver state explicit and separate it from IVP-owned problem data, persistent observer state, fetched outputs, and compile-time build decisions.
-2. Decouple integration state from output and storage policy so chunking and batching become feasible.
-3. Clean up observer definitions and separate persistent observer state from optional event storage.
-4. Introduce a Python-owned stepper-definition model once the state and output boundaries stop moving.
-5. Tackle numerical kernel refinements such as fixed-step endpoint handling, `t0 + step * dt`, and interpolation improvements.
-6. Do implicit-solver groundwork, then discuss the public API changes needed to expose it well.
+1. Decouple integration state from output and storage policy now that a first-pass solver-state boundary is in place.
+2. Clean up observer definitions and separate persistent observer state from optional event storage.
+3. Introduce a Python-owned stepper-definition model once the state and output boundaries stop moving.
+4. Tackle numerical kernel refinements such as fixed-step endpoint handling, `t0 + step * dt`, and interpolation improvements.
+5. Do implicit-solver groundwork, then discuss the public API changes needed to expose it well.
 
 Public continuation helpers, richer IVP batch helpers, and broader solver interop should follow once those internal boundaries are stable enough that they are unlikely to be redesigned immediately afterward.

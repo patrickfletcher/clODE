@@ -15,7 +15,7 @@ Update when: canonical module homes, public compatibility surfaces, packaging ru
 - Historical migration and bug notes are archived under `.design/archived/`; they remain useful for rationale, but they are not the source of truth for the live package.
 - A first-pass `InitialValueProblem` now owns default state, default parameters, basic batch shaping, remembered ensemble shape, and Python-backed SciPy-style RHS callability at the simulator boundary.
 - Lower-level helper types such as `ProblemInfo` and `RhsSource` now live only under `clode.problem._core`; the curated public problem API centers `InitialValueProblem` and the authoring/conversion helpers instead.
-- The current package still has a few cleanup targets, especially clearer solver-state, observer-state, and output-policy separation at the simulator/runtime boundary.
+- The current package still has a few cleanup targets, especially separation of integration state from output and storage policy plus cleaner observer-state modeling on top of the landed first-pass solver-state boundary.
 
 ## Session-Start Guidance
 
@@ -87,7 +87,7 @@ The historical backend-shim, protocol/factory facade, and binding-named compatib
 - Simulators now orchestrate an `InitialValueProblem`, runtime binding, continuation state, output policy, and compatibility helper methods such as simulator-side `set_ensemble()` delegation.
 - `FeatureSimulator` uses persistent observer state plus an optional warmup kernel for two-pass observers.
 - The solver now owns the authoritative continuation time base. Observer finalizers no longer rebase time, and exact split-window continuation is defined by continuing from the attained per-item `tf`.
-- Common execution state currently persists `x0`, per-item `dt`, per-item `tf`, RNG state, the cached Box-Muller spare normal, and the prepared next-step Wiener sample; these continuation facts are real in the runtime, but not yet expressed as one explicit semantic `SolverState`.
+- A first-pass internal solver-state boundary now lives in `clode/simulation/_state.py`, while `_opencl/executors.py` treats host-side mirrors as transfer caches rather than semantic owners. Current runtime continuation still uses a shared requested `tspan` plus per-item `dt`, attained `tf`, and RNG continuation rather than a full device-side per-work-item state object.
 - Exact absolute-time continuation still requires caller-managed `t_span`. For fixed-step runs, the robust handoff point is the attained `tf` from `get_final_time()`, not the requested endpoint.
 
 ## Current Constraints And Live Debt
@@ -95,8 +95,8 @@ The historical backend-shim, protocol/factory facade, and binding-named compatib
 - The runtime is explicitly single-device only. Any future multi-device execution would require a dedicated API and execution model rather than reviving removed transition-era selectors.
 - The first semantic IVP pass is now live, and the curated public problem API now centers `InitialValueProblem`; lower-level helper types such as `ProblemInfo` and `RhsSource` remain internal support concepts under `clode.problem._core`.
 - Simulators still carry compatibility delegates for batch reshaping and maintain cached problem arrays alongside the IVP; richer batch-generation helpers (`grid`, random, quasi-random) have not yet been added around the IVP model.
-- Solver-related execution state is still spread across `Simulator` caches, `_opencl/executors.py` host mirrors, and device buffers. The remaining ownership friction is now less about IVP definition and more about per-work-item solver state, invalidation rules, and output-cache boundaries.
-- Common continuation state is still split across simulator caches, executor fields, and OpenCL buffers; there is no explicit per-work-item `SolverState` with `t0`, `tf`, `dt`, completion/error flags, and continuation-specific RNG data.
+- Solver-related execution state now has a clearer internal home in `clode/simulation/_state.py` and executor transfer caches, but integration policy is still entangled with output/storage policy through `SolverParams`, trajectory buffer sizing, and feature or event allocation rules.
+- Common continuation state now has a Python-owned first pass via `SolverState`, but there is still no device-side per-work-item `t0` or richer completion/error status model.
 - `SolverParams` still mixes integration controls with trajectory-storage controls (`max_store`, `nout`).
 - `ObserverParams` defaults are still duplicated between the public constructors and the dataclass.
 - Observer metadata is explicit but still hardcoded through large conditional logic rather than a cleaner observer-definition model.

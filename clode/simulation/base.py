@@ -20,6 +20,7 @@ from ..runtime import (
 	initialize_runtime,
 )
 from ..runtime.selection import RuntimeSelection
+from ._state import SolverState, TransientCache
 from .params import SolverParams
 
 
@@ -54,17 +55,12 @@ class Simulator:
 	_cl_program_is_valid: bool = False
 
 	_sp: SolverParams
-	_t_span: Tuple[float, float]
+	_solver_state: SolverState
+	_transient_cache: TransientCache
 	_ivp: InitialValueProblem
 
 	_ensemble_size: int
 	_ensemble_shape: Tuple
-
-	_device_parameters: Optional[np.ndarray] = None
-	_device_initial_state: Optional[np.ndarray] = None
-	_device_final_state: Optional[np.ndarray] = None
-	_device_dt: Optional[np.ndarray] = None
-	_device_tf: Optional[np.ndarray] = None
 
 	def __init__(
 		self,
@@ -156,6 +152,8 @@ class Simulator:
 
 		self._create_integrator()
 		self._build_cl_program()
+		self._solver_state = SolverState()
+		self._transient_cache = TransientCache()
 
 		if solver_parameters is not None:
 			self._sp = solver_parameters
@@ -230,7 +228,11 @@ class Simulator:
 			self._build_cl_program()
 
 	def _invalidate_solution_cache(self) -> None:
-		self._device_final_state = self._device_dt = self._device_tf = None
+		self._transient_cache.invalidate()
+		self._solver_state.invalidate_results()
+
+	def _invalidate_runtime_caches(self) -> None:
+		self._invalidate_solution_cache()
 
 	def _coerce_initial_value_problem(
 		self,
@@ -283,17 +285,23 @@ class Simulator:
 		)
 
 	def _sync_ivp_from_device_problem_data(self) -> None:
-		initial_state = self.get_initial_state()
-		parameter_values = (
-			self._device_parameters
-			if self._device_parameters is not None
-			else self._ivp.get_parameter_values()
-		)
+		if not self._solver_state.problem_data_needs_pull:
+			return
+		initial_state = self._pull_initial_state_from_runtime()
 		self._ivp._set_problem_data(
 			initial_state,
-			parameter_values,
+			self._ivp.get_parameter_values(),
 			ensemble_shape=self._ensemble_shape,
 		)
+		self._solver_state.mark_problem_data_synced()
+
+	def _pull_initial_state_from_runtime(self) -> np.ndarray:
+		initial_state = np.array(
+			self._integrator.get_x0(), dtype=np.float64
+		).reshape((self._ensemble_size, self.num_variables), order="F")
+		self._ivp._set_initial_state(initial_state)
+		self._solver_state.mark_problem_data_synced()
+		return initial_state
 
 	def set_repeat_ensemble(self, num_repeats: int) -> None:
 		"""Create a 1D ensemble by repeating one parameter/state configuration.
@@ -347,8 +355,7 @@ class Simulator:
 	) -> None:
 		"""Set both initial state and parameters at the same time."""
 		self._ensemble_size = initial_state.shape[0]
-		self._device_initial_state = initial_state
-		self._device_parameters = parameters
+		self._invalidate_runtime_caches()
 		self._ivp._set_problem_data(
 			initial_state,
 			parameters,
@@ -358,18 +365,21 @@ class Simulator:
 			initial_state.flatten(order="F"),
 			parameters.flatten(order="F"),
 		)
+		self._solver_state.reset_problem_time(self._ensemble_shape)
 
 	def _set_parameters(self, parameters: np.ndarray) -> None:
 		"""Set the ensemble parameters without changing ensemble size."""
-		self._device_parameters = parameters
+		self._invalidate_runtime_caches()
 		self._ivp._set_parameter_values(parameters)
 		self._integrator.set_pars(parameters.flatten(order="F"))
+		self._solver_state.reset_problem_time(self._ensemble_shape)
 
 	def _set_initial_state(self, initial_state: np.ndarray) -> None:
 		"""Set the initial state without changing ensemble size."""
-		self._device_initial_state = initial_state
+		self._invalidate_runtime_caches()
 		self._ivp._set_initial_state(initial_state)
 		self._integrator.set_x0(initial_state.flatten(order="F"))
+		self._solver_state.reset_problem_time(self._ensemble_shape)
 
 	def set_tspan(self, t_span: tuple[float, float]) -> None:
 		"""Set the integration interval used by subsequent solves.
@@ -377,18 +387,20 @@ class Simulator:
 		Args:
 			t_span: Time interval as `(t0, tf)`.
 		"""
-		self._t_span = t_span
+		self._solver_state.set_requested_window(t_span)
 		self._integrator.set_tspan(t_span)
+		self._invalidate_runtime_caches()
 
 	def get_tspan(self) -> tuple[float, float]:
 		"""Return the integration interval currently stored on the device."""
-		self._t_span = tuple(self._integrator.get_tspan())
-		return self._t_span
+		self._solver_state.set_requested_window(tuple(self._integrator.get_tspan()))
+		return self._solver_state.t_span
 
 	def shift_tspan(self) -> None:
 		"""Advance the stored integration interval by one interval length."""
 		self._integrator.shift_tspan()
-		self._t_span = self._integrator.get_tspan()
+		self._solver_state.set_requested_window(tuple(self._integrator.get_tspan()))
+		self._invalidate_runtime_caches()
 
 	def set_solver_parameters(
 		self,
@@ -432,7 +444,7 @@ class Simulator:
 			if nout is not None:
 				self._sp.nout = nout
 		self._integrator.set_solver_params(self._sp)
-		self._device_dt = None
+		self._invalidate_runtime_caches()
 
 	def get_solver_parameters(self) -> SolverParams:
 		"""Return the solver parameters currently stored on the device."""
@@ -474,18 +486,16 @@ class Simulator:
 
 		if update_x0:
 			self._integrator.shift_x0()
-			self._device_initial_state = None
+			self._solver_state.continue_problem_time()
 
 		if fetch_results:
 			return self.get_final_state()
 
 	def get_initial_state(self) -> np.ndarray:
 		"""Return the initial-state array with shape `(ensemble_size, num_variables)`."""
-		if self._device_initial_state is None:
-			self._device_initial_state = np.array(
-				self._integrator.get_x0(), dtype=np.float64
-			).reshape((self._ensemble_size, self.num_variables), order="F")
-		return self._device_initial_state
+		if self._solver_state.problem_data_needs_pull:
+			return self._pull_initial_state_from_runtime()
+		return self._ivp.get_initial_state()
 
 	def get_final_state(self) -> np.ndarray:
 		"""Return the final-state array with shape `(ensemble_size, num_variables)`.
@@ -493,32 +503,42 @@ class Simulator:
 		Raises:
 			ValueError: If no solve has been run yet.
 		"""
-		if self._device_final_state is None:
+		if self._transient_cache.final_state is None:
 			final_state = self._integrator.get_xf()
 
 			if final_state is None:
 				raise ValueError("Must run a simulation before getting final state")
 
-			self._device_final_state = np.array(final_state, dtype=np.float64).reshape(
+			self._transient_cache.final_state = np.array(final_state, dtype=np.float64).reshape(
 				(self._ensemble_size, self.num_variables), order="F"
 			)
-		return self._device_final_state
+		return self._transient_cache.final_state
 
 	def get_dt(self) -> np.ndarray:
 		"""Return per-instance step sizes with shape matching the ensemble shape."""
-		if self._device_dt is None:
-			self._device_dt = np.array(
+		if self._solver_state.current_dt is None:
+			self._solver_state.current_dt = np.array(
 				self._integrator.get_dt(), dtype=np.float64
 			).reshape(self._ensemble_shape, order="F")
-		return self._device_dt
+		return self._solver_state.current_dt
 
 	def get_final_time(self) -> np.ndarray:
 		"""Return per-instance final times with shape matching the ensemble shape."""
-		if self._device_tf is None:
-			self._device_tf = np.array(
-				self._integrator.get_tf(), dtype=np.float64
+		if self._solver_state.final_time is None:
+			final_time = self._integrator.get_tf()
+			if len(final_time) == 0:
+				raise ValueError("Must run a simulation before getting final time")
+			self._solver_state.final_time = np.array(
+				final_time, dtype=np.float64
 			).reshape(self._ensemble_shape, order="F")
-		return self._device_tf
+			if (
+				self._solver_state.problem_data_needs_pull
+				and self._solver_state.current_time is None
+			):
+				self._solver_state.current_time = np.array(
+					self._solver_state.final_time, dtype=np.float64, copy=True
+				)
+		return self._solver_state.final_time
 
 	def get_max_memory_alloc_size(self, deviceID: int = 0) -> int:
 		"""Get the device maximum memory allocation size."""

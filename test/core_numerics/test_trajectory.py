@@ -86,7 +86,8 @@ def test_trajectory_nout_and_max_store_contract() -> None:
     expected_times = fixed_step_stored_times(0.0, 1.0, 0.25, 2)
 
     np.testing.assert_allclose(np.asarray(trajectory.t, dtype=np.float64), expected_times, atol=0.0, rtol=0.0)
-    assert int(simulator._device_n_stored[0]) == len(expected_times) - 1
+    assert simulator._trajectory_cache.n_stored is not None
+    assert int(simulator._trajectory_cache.n_stored[0]) == len(expected_times) - 1
 
 
 def test_dormand_prince_hopf_trajectory_matches_exact_cycle() -> None:

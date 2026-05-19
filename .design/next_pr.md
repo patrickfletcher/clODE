@@ -37,14 +37,16 @@ It is also the cleanup most likely to influence the next observer-definition and
 
 ## Scope
 
-- introduce an explicit internal solver-state model with a clear home for requested time window, attained final time, current `dt`, status flags, and continuation-specific RNG state
+- introduce an explicit internal solver-state model with a clear home for requested time window, per-work-item current-start time `t0`, attained final time, current `dt`, and continuation-specific RNG state, with only the minimal status or sync markers needed for this first pass
 - define a sharper ownership split between IVP-owned problem data, solver-owned execution state, persistent observer state, and fetched output caches
 - reduce duplicated host-side mirrors and synchronization paths between `Simulator` and `_opencl/executors.py`
 - make invalidation rules explicit when callers change IVP data, solver parameters, `t_span`, or observer/runtime configuration
 - separate compile-time build-spec decisions from runtime solver or observer state so rebuilds follow explicit kernel-specialization inputs rather than incidental cache invalidation
+- keep later time-chunking and ensemble-batching as orchestration policies layered on explicit solver state and output policy rather than as hidden side effects of `max_steps`, `max_store`, or simulator caches
 - leave observer metadata and feature-buffer code on the current public model, but make the solver-state boundary explicit enough that later observer-definition work can separate persistent observer state from optional event-output capacity without another ownership rewrite
 - keep simulator classes orchestration-focused while making their caches thinner and more obviously derived
 - keep public API changes minimal unless a tiny helper falls out naturally from the internal state cleanup
+- prefer a Python-owned first pass for solver state and fetched-output caches; defer richer per-work-item status modeling or a wholesale device-side solver-state ABI until it is clearly justified
 
 ## Design Constraints
 
@@ -54,6 +56,7 @@ It is also the cleanup most likely to influence the next observer-definition and
 - separate kernel build specification from runtime state; only true specialization inputs should drive program rebuilds
 - treat host mirrors and device buffers as transfer or cache details of those semantic owners, not as semantic state owners in their own right
 - make the internal ownership split legible in Python first, then let `_opencl/executors.py` and `_opencl/buffers.py` implement that contract
+- if a per-work-item `t0` path is added in this PR, prefer the narrowest implementation that clarifies continuation semantics; do not require a full matched device-side solver-state struct unless it clearly reduces complexity
 
 ## Non-goals
 
@@ -79,6 +82,8 @@ It is also the cleanup most likely to influence the next observer-definition and
 
 - `clode/simulation/_state.py` (new internal module): add the small internal state and cache types that let `Simulator` stop owning raw `_device_*` fields directly.
 - `clode/simulation/base.py`: move solver-state and fetched-output ownership onto those internal types, split IVP push/pull from solver invalidation, and make `update_x0=True` stop relying on `None` as the only state marker.
+- `clode/_opencl/executors.py` and `clode/_opencl/buffers.py`: if a narrow per-work-item `t0` path proves worthwhile during implementation, thread it through the common runtime state without turning this PR into a wholesale solver-state ABI redesign.
+- `clode/kernels/transient.cl`, `clode/kernels/trajectory.cl`, `clode/kernels/features.cl`, and `clode/kernels/initializeObserver.cl`: only touch these entrypoints if the PR adopts a real device-side `t0` buffer; all of them currently assume `ti = tspan[0]`.
 - `clode/simulation/features.py`: distinguish build-affecting observer changes from runtime-only observer changes, and route feature invalidation through the shared state or cache layer.
 - `clode/simulation/trajectory.py`: route trajectory invalidation and fetched trajectory cache ownership through the shared state or cache layer, keeping only trajectory-specific fetch and reshape logic local.
 - `clode/_opencl/models.py`: extend or reuse the existing build-model types so compile-time build inputs are explicit before they become a `BuildKey`.
