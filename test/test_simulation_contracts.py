@@ -1,3 +1,5 @@
+import inspect
+
 import pytest
 import numpy as np
 
@@ -20,6 +22,86 @@ from test.core_numerics.reference import fixed_step_step_count
 
 FIXED_DT = 0.05
 FIXED_MAX_STEPS = 512
+
+
+@pytest.mark.parametrize(
+    "constructor",
+    [clode.Simulator, clode.TrajectorySimulator, clode.FeatureSimulator],
+)
+def test_simulator_constructor_defaults_match_solver_params_defaults(
+    constructor: type[clode.Simulator],
+) -> None:
+    signature = inspect.signature(constructor.__init__)
+    defaults = clode.SolverParams()
+
+    assert signature.parameters["dt"].default == defaults.dt
+    assert signature.parameters["dtmax"].default == defaults.dtmax
+    assert signature.parameters["abstol"].default == defaults.abstol
+    assert signature.parameters["reltol"].default == defaults.reltol
+    assert signature.parameters["max_steps"].default == defaults.max_steps
+    assert signature.parameters["max_store"].default == defaults.max_store
+    assert signature.parameters["nout"].default == defaults.nout
+
+
+def test_scalar_solver_args_match_explicit_solver_params_bundle() -> None:
+    bundle = clode.SolverParams(
+        dt=0.125,
+        dtmax=0.25,
+        abstol=1e-7,
+        reltol=1e-5,
+        max_steps=2048,
+        max_store=64,
+        nout=4,
+    )
+
+    explicit = clode.Simulator(
+        src_file=model_path("stable_linear.cl"),
+        variables=STABLE_LINEAR_VARIABLES.copy(),
+        parameters=STABLE_LINEAR_PARAMETERS.copy(),
+        solver_parameters=bundle,
+        single_precision=True,
+        **device_kwargs_for_tests(),
+    )
+    scalar = clode.Simulator(
+        src_file=model_path("stable_linear.cl"),
+        variables=STABLE_LINEAR_VARIABLES.copy(),
+        parameters=STABLE_LINEAR_PARAMETERS.copy(),
+        dt=bundle.dt,
+        dtmax=bundle.dtmax,
+        abstol=bundle.abstol,
+        reltol=bundle.reltol,
+        max_steps=bundle.max_steps,
+        max_store=bundle.max_store,
+        nout=bundle.nout,
+        single_precision=True,
+        **device_kwargs_for_tests(),
+    )
+
+    assert explicit.get_solver_parameters() == bundle
+    assert scalar.get_solver_parameters() == bundle
+
+
+def test_simulator_copies_solver_parameter_bundles() -> None:
+    initial = clode.SolverParams(dt=0.2, dtmax=0.3, max_steps=128)
+    replacement = clode.SolverParams(dt=0.05, dtmax=0.06, max_steps=64)
+
+    simulator = clode.Simulator(
+        src_file=model_path("stable_linear.cl"),
+        variables=STABLE_LINEAR_VARIABLES.copy(),
+        parameters=STABLE_LINEAR_PARAMETERS.copy(),
+        solver_parameters=initial,
+        single_precision=True,
+        **device_kwargs_for_tests(),
+    )
+
+    simulator.set_solver_parameters(dt=0.125)
+    assert initial.dt == 0.2
+
+    simulator.set_solver_parameters(solver_parameters=replacement)
+    simulator.set_solver_parameters(dt=0.03125)
+
+    assert replacement.dt == 0.05
+    assert simulator.get_solver_parameters().dt == pytest.approx(0.03125)
 
 
 def test_get_tspan_returns_current_device_window() -> None:

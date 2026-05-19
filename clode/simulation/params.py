@@ -42,6 +42,10 @@ class _IntegrationSettings:
         )
 
 
+_DEFAULT_TRAJECTORY_OUTPUT_SETTINGS = _TrajectoryOutputSettings()
+_DEFAULT_INTEGRATION_SETTINGS = _IntegrationSettings()
+
+
 @dataclass(slots=True)
 class SolverParams:
     """Compatibility bundle for integration and trajectory-output settings.
@@ -56,13 +60,13 @@ class SolverParams:
         nout: Storage/output stride used by the trajectory path.
     """
 
-    dt: float = 0.1
-    dtmax: float = 0.5
-    abstol: float = 1e-6
-    reltol: float = 1e-3
-    max_steps: int = 1_000_000
-    max_store: int = 1_000_000
-    nout: int = 1
+    dt: float = _DEFAULT_INTEGRATION_SETTINGS.dt
+    dtmax: float = _DEFAULT_INTEGRATION_SETTINGS.dtmax
+    abstol: float = _DEFAULT_INTEGRATION_SETTINGS.abstol
+    reltol: float = _DEFAULT_INTEGRATION_SETTINGS.reltol
+    max_steps: int = _DEFAULT_INTEGRATION_SETTINGS.max_steps
+    max_store: int = _DEFAULT_TRAJECTORY_OUTPUT_SETTINGS.max_store
+    nout: int = _DEFAULT_TRAJECTORY_OUTPUT_SETTINGS.nout
 
     def __post_init__(self) -> None:
         self.dt = float(self.dt)
@@ -100,6 +104,34 @@ class SolverParams:
             max_store=self.max_store,
             nout=self.nout,
         )
+
+
+def _resolve_solver_params(
+    *,
+    solver_parameters: SolverParams | None = None,
+    dt: float = _DEFAULT_INTEGRATION_SETTINGS.dt,
+    dtmax: float = _DEFAULT_INTEGRATION_SETTINGS.dtmax,
+    abstol: float = _DEFAULT_INTEGRATION_SETTINGS.abstol,
+    reltol: float = _DEFAULT_INTEGRATION_SETTINGS.reltol,
+    max_steps: int = _DEFAULT_INTEGRATION_SETTINGS.max_steps,
+    max_store: int = _DEFAULT_TRAJECTORY_OUTPUT_SETTINGS.max_store,
+    nout: int = _DEFAULT_TRAJECTORY_OUTPUT_SETTINGS.nout,
+) -> SolverParams:
+    if solver_parameters is not None:
+        return solver_parameters.copy()
+
+    integration_settings = _IntegrationSettings(
+        dt=dt,
+        dtmax=dtmax,
+        abstol=abstol,
+        reltol=reltol,
+        max_steps=max_steps,
+    )
+    output_settings = _TrajectoryOutputSettings(
+        max_store=max_store,
+        nout=nout,
+    )
+    return integration_settings.to_solver_params(output_settings)
 
 
 __all__ = ["SolverParams"]

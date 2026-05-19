@@ -236,8 +236,8 @@ The useful first move is not “put the `.clh` files next to some new Python fil
 ## Productive near-term follow-on order
 
 1. Keep the landed solver-state and output-policy boundary as the contract for follow-on work.
-2. Canonicalize execution-setting defaults and compatibility resolution across `SolverParams` and the simulator constructors.
-3. Introduce a Python-owned stepper-definition model once that execution-setting boundary stops moving.
+2. Treat the landed execution-setting defaults and compatibility resolution path as stable enough to build on.
+3. Introduce a Python-owned stepper-definition model on top of that stable execution-setting boundary.
 4. Revisit whether IVP-owned batch helpers are enough or whether a dedicated ensemble type adds real value.
 5. Revisit kernel relocation only after those semantic models exist.
 

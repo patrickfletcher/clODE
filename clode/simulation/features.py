@@ -24,7 +24,11 @@ from ..problem.python import OpenCLRhsEquation
 from ..runtime import CLDeviceType, CLVendor, _clode_root_dir
 from ._state import FeatureCache
 from .base import Simulator, Stepper
-from .params import SolverParams
+from .params import (
+	_DEFAULT_INTEGRATION_SETTINGS,
+	_DEFAULT_TRAJECTORY_OUTPUT_SETTINGS,
+	SolverParams,
+)
 from .results import ObserverOutput
 
 
@@ -44,13 +48,13 @@ class FeatureSimulator(Simulator):
 		rhs_equation: Optional[OpenCLRhsEquation] = None,
 		supplementary_equations: Optional[List[Callable[[Any], Any]]] = None,
 		stepper: Stepper = Stepper.rk4,
-		dt: float = 0.1,
-		dtmax: float = 1.0,
-		abstol: float = 1e-6,
-		reltol: float = 1e-3,
-		max_steps: int = 10000000,
-		max_store: int = 10000000,
-		nout: int = 1,
+		dt: float = _DEFAULT_INTEGRATION_SETTINGS.dt,
+		dtmax: float = _DEFAULT_INTEGRATION_SETTINGS.dtmax,
+		abstol: float = _DEFAULT_INTEGRATION_SETTINGS.abstol,
+		reltol: float = _DEFAULT_INTEGRATION_SETTINGS.reltol,
+		max_steps: int = _DEFAULT_INTEGRATION_SETTINGS.max_steps,
+		max_store: int = _DEFAULT_TRAJECTORY_OUTPUT_SETTINGS.max_store,
+		nout: int = _DEFAULT_TRAJECTORY_OUTPUT_SETTINGS.nout,
 		solver_parameters: Optional[SolverParams] = None,
 		t_span: Tuple[float, float] = (0.0, 1000.0),
 		single_precision: bool = True,

@@ -20,10 +20,10 @@ Use `.design/ideas.md` as the short living board. This file is the longer ration
 
 ### Current weaknesses
 
-- Continuation correctness is much better, and the first-pass Python-owned solver-state model, the integration/output split, and the observer-definition cleanup are now live all the way into the OpenCL layer. The next structural bottleneck is keeping execution-setting defaults and compatibility resolution predictable across the simulator constructors and the internal settings split.
+- Continuation correctness is much better, and the first-pass Python-owned solver-state model, the integration/output split, the observer-definition cleanup, and the execution-setting cleanup are now live all the way into the OpenCL layer. The next structural bottleneck is stepper semantics, which are still split across the public enum, runtime registry tables, and kernel include selection.
 - A first-pass IVP model now exists, and the curated public problem layer now centers `InitialValueProblem`; lower-level support types and source-preparation helpers are internal support concepts rather than promoted surface area.
 - Simulators still carry some semantic weight through compatibility delegates and cached mirrored problem data even though the core defaults and batch semantics now live on the IVP.
-- The next internal friction point is clearer now: `SolverParams`, `_IntegrationSettings`, `_TrajectoryOutputSettings`, and the simulator constructor defaults still duplicate some defaults and sometimes disagree, which makes config choices less predictable than the underlying execution model now deserves.
+- The next internal friction point is clearer now: execution-setting defaults are finally consistent, but stepper traits and build mapping are still scattered across `Stepper`, `_opencl.registry`, and the kernel include tree rather than one Python-owned semantic definition.
 - Each work item effectively owns `dt` and attained `tf`, but not an explicit `t0` or completion/error flags. That leaves friction around continuation helpers and windows where work items diverge.
 - `SolverParams` still mixes integration policy with output-storage policy. That makes chunking, batching, and trajectory streaming harder than they need to be.
 - Stepper, solver-state, and problem concepts are still split across public enums/dataclasses, internal string registries, and kernel include trees rather than clearer Python-owned semantic definitions.
@@ -86,28 +86,19 @@ What this unlocked:
 - observer work can now focus on observer definitions and state/layout boundaries rather than reopening solver/output ownership
 - broader public config redesign can stay deferred until the observer and stepper semantics stop moving
 
-### Priority 0: Single source of truth for execution-setting defaults and compatibility resolution
-
-The next active cleanup should be narrower than a public config redesign and more concrete than a broad semantics pass: make execution-setting defaults resolve from one place.
+### Landed Priority 0: Single source of truth for execution-setting defaults and compatibility resolution
 
 Status on the current branch:
 
-- the internal execution path already splits integration settings from trajectory output/storage policy
-- observer defaults are now canonicalized through `ObserverParams`, which provides the pattern the solver side should follow
-- simulator constructor defaults still drift from `SolverParams` and the internal settings split in live code
+- canonical default integration and trajectory-output settings now live in one place under `clode/simulation/params.py`
+- `SolverParams` defaults and simulator constructor defaults no longer drift
+- transient, trajectory, and feature simulators now resolve scalar solver arguments and prebuilt `SolverParams` bundles through the same helper
+- simulators keep internal copies of caller-provided `SolverParams` bundles instead of aliasing them
 
-Key tasks:
+What this unlocked:
 
-- define one canonical internal source for default integration settings and trajectory-output settings
-- route initial solver-bundle construction through shared helpers rather than per-class literals
-- make transient, trajectory, and feature simulators resolve scalar arguments and prebuilt `SolverParams` bundles through one policy
-- add contract coverage for constructor defaults and default-resolution behavior
-
-Why this should come next:
-
-- config choices should mean one thing before stepper traits and mapping are refactored on top of them
-- this is compatibility-safe and much narrower than a broader public config redesign
-- it closes a live source-of-truth gap already visible in defaults such as `dtmax` and `max_store`
+- stepper work can now build on stable execution-setting semantics instead of another layer of duplicated defaults
+- later public config redesign can stay focused on API shape rather than cleanup of internal default-resolution drift
 
 ### Landed Priority 0: Observer-definition and observer-state cleanup
 
@@ -139,9 +130,9 @@ What remains for later:
 
 - no device-side per-work-item `t0` or richer completion/error status model yet
 - exact absolute-time continuation still needs caller-managed `t_span` or a later public continuation helper
-- the next leverage point is execution-setting source-of-truth cleanup rather than reopening the ownership or output-policy work itself
+- the next leverage point is stepper-definition cleanup rather than reopening the ownership or output-policy work itself
 
-### Priority 1: Python-owned stepper semantics after execution-setting cleanup
+### Priority 0: Python-owned stepper semantics after execution-setting cleanup
 
 The lower-level execution model still needs a clearer internal contract, but it no longer has to define the active user-facing PR boundary.
 
@@ -155,7 +146,7 @@ Why after Priority 0:
 
 - IVP-first batch cleanup clarifies what simulators orchestrate
 - the solver-state layer and observer-definition layer are now clearer internal contracts between `simulation` and `_opencl`
-- execution-setting cleanup should land first so stepper semantics do not have to move twice and so any later public config work is not built on drifting constructor defaults
+- execution-setting cleanup has now landed, so stepper semantics no longer need to carry default-resolution cleanup at the same time
 
 ### Priority 2: Numerical kernel refinements
 
@@ -223,10 +214,9 @@ Packaging note:
 
 ## Recommended Order Of Attack
 
-1. Canonicalize execution-setting defaults and compatibility resolution across `SolverParams` and the simulator constructors.
-2. Introduce a Python-owned stepper-definition model once the execution-setting boundary stops moving.
-3. Tackle numerical kernel refinements such as fixed-step endpoint handling, `t0 + step * dt`, and interpolation improvements.
-4. Do implicit-solver groundwork.
-5. Revisit broader public config/API redesign only after the execution-setting and stepper boundaries are stable.
+1. Introduce a Python-owned stepper-definition model on top of the landed execution-setting boundary.
+2. Tackle numerical kernel refinements such as fixed-step endpoint handling, `t0 + step * dt`, and interpolation improvements.
+3. Do implicit-solver groundwork.
+4. Revisit broader public config/API redesign only after the execution-setting and stepper boundaries are stable.
 
 Public continuation helpers, richer IVP batch helpers, and broader solver interop should follow once those internal boundaries are stable enough that they are unlikely to be redesigned immediately afterward.
