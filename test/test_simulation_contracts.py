@@ -12,6 +12,7 @@ from test.core_numerics.helpers import (
     device_kwargs_for_tests,
     make_feature_simulator,
     make_simulator,
+    make_trajectory_simulator,
     model_path,
 )
 from test.core_numerics.reference import fixed_step_step_count
@@ -121,6 +122,36 @@ def test_set_tspan_invalidates_cached_feature_results() -> None:
 
     with pytest.raises(ValueError, match=r"features\(\)"):
         simulator.get_observer_results()
+
+
+def test_output_only_trajectory_config_change_preserves_solver_state() -> None:
+    simulator = make_trajectory_simulator(
+        "stable_linear",
+        stepper=clode.Stepper.dormand_prince,
+        t_span=(0.0, 4.0),
+        dt=0.01,
+        dtmax=0.2,
+        abstol=1e-9,
+        reltol=1e-8,
+        max_steps=1024,
+        max_store=16,
+        nout=1,
+    )
+
+    simulator.trajectory(update_x0=False, fetch_results=False)
+
+    current_dt = simulator.get_dt().copy()
+    final_time = simulator.get_final_time().copy()
+
+    assert current_dt.reshape(-1)[0] > 0.02
+
+    simulator.set_solver_parameters(max_store=4, nout=2)
+
+    np.testing.assert_allclose(simulator.get_dt(), current_dt)
+    np.testing.assert_allclose(simulator.get_final_time(), final_time)
+
+    with pytest.raises(ValueError, match="trajectory data"):
+        simulator.get_trajectory()
 
 
 def test_feature_observer_switch_rebuilds_and_runs() -> None:

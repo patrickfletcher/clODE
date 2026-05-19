@@ -4,6 +4,14 @@ from dataclasses import dataclass
 from enum import Enum
 
 
+@dataclass(frozen=True, slots=True)
+class _EventOutputSettings:
+    max_event_timestamps: int = 0
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "max_event_timestamps", int(self.max_event_timestamps))
+
+
 class Observer(Enum):
     """Built-in observer modes available to `FeatureSimulator`."""
 
@@ -60,6 +68,12 @@ class ObserverParams:
         self.dx_up_threshold = float(self.dx_up_threshold)
         self.dx_down_threshold = float(self.dx_down_threshold)
         self.eps_dx = float(self.eps_dx)
+
+    @property
+    def event_output_settings(self) -> _EventOutputSettings:
+        return _EventOutputSettings(
+            max_event_timestamps=self.max_event_timestamps,
+        )
 
 
 __all__ = ["Observer", "ObserverParams"]

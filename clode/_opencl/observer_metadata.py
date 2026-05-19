@@ -34,9 +34,11 @@ def get_observer_metadata(
     observer_name: str,
     observer_params: ObserverParams,
     precision: Precision,
+    n_store_events: int | None = None,
 ) -> ObserverMetadata:
     shape = ProblemShape.from_problem_info(problem_info)
-    n_store_events = observer_params.max_event_timestamps
+    if n_store_events is None:
+        n_store_events = observer_params.event_output_settings.max_event_timestamps
     base_dtype = _observer_data_base_dtype(
         observer_name,
         shape,

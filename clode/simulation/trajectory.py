@@ -10,7 +10,7 @@ from ..problem.python import OpenCLRhsEquation
 from ..runtime import CLDeviceType, CLVendor, _clode_root_dir
 from ._state import TrajectoryCache
 from .base import Simulator, Stepper
-from .params import SolverParams
+from .params import SolverParams, _TrajectoryOutputSettings
 from .results import TrajectoryOutput
 
 
@@ -18,6 +18,7 @@ class TrajectorySimulator(Simulator):
 	"""Simulator that stores time samples and returns `TrajectoryOutput` objects."""
 
 	_trajectory_cache: TrajectoryCache
+	_trajectory_output_settings: _TrajectoryOutputSettings
 	_integrator: OpenCLTrajectoryExecutor
 
 	def __init__(
@@ -53,7 +54,15 @@ class TrajectorySimulator(Simulator):
 		and `nout` determine how many time samples are retained and how densely they
 		are stored.
 		"""
+		initial_solver_parameters = (
+			solver_parameters.copy()
+			if solver_parameters is not None
+			else SolverParams(dt, dtmax, abstol, reltol, max_steps, max_store, nout)
+		)
 		self._trajectory_cache = TrajectoryCache()
+		self._trajectory_output_settings = (
+			initial_solver_parameters.trajectory_output_settings
+		)
 
 		super().__init__(
 			variables=variables,
@@ -94,6 +103,77 @@ class TrajectorySimulator(Simulator):
 	def _invalidate_runtime_caches(self) -> None:
 		super()._invalidate_runtime_caches()
 		self._trajectory_cache.invalidate()
+
+	def set_solver_parameters(
+		self,
+		solver_parameters: Optional[SolverParams] = None,
+		dt: Optional[float] = None,
+		dtmax: Optional[float] = None,
+		abstol: Optional[float] = None,
+		reltol: Optional[float] = None,
+		max_steps: Optional[int] = None,
+		max_store: Optional[int] = None,
+		nout: Optional[int] = None,
+	) -> None:
+		"""Update integration and trajectory-output settings.
+
+		Integration changes invalidate solver state. Output-only changes only
+		invalidate stored trajectory results.
+		"""
+		if all(
+			value is None
+			for value in (
+				solver_parameters,
+				dt,
+				dtmax,
+				abstol,
+				reltol,
+				max_steps,
+				max_store,
+				nout,
+			)
+		):
+			super().set_solver_parameters()
+			self._trajectory_output_settings = self._sp.trajectory_output_settings
+			return
+
+		previous_solver_parameters = self._sp.copy()
+		previous_integration = previous_solver_parameters.integration_settings
+		previous_output = self._trajectory_output_settings
+
+		if solver_parameters is not None:
+			updated_solver_parameters = solver_parameters.copy()
+		else:
+			updated_solver_parameters = previous_solver_parameters.copy()
+			if dt is not None:
+				updated_solver_parameters.dt = dt
+			if dtmax is not None:
+				updated_solver_parameters.dtmax = dtmax
+			if abstol is not None:
+				updated_solver_parameters.abstol = abstol
+			if reltol is not None:
+				updated_solver_parameters.reltol = reltol
+			if max_steps is not None:
+				updated_solver_parameters.max_steps = max_steps
+			if max_store is not None:
+				updated_solver_parameters.max_store = max_store
+			if nout is not None:
+				updated_solver_parameters.nout = nout
+
+		if updated_solver_parameters == previous_solver_parameters:
+			return
+
+		updated_integration = updated_solver_parameters.integration_settings
+		updated_output = updated_solver_parameters.trajectory_output_settings
+
+		self._sp = updated_solver_parameters
+		self._trajectory_output_settings = updated_output
+		self._integrator.set_solver_params(self._sp)
+
+		if updated_integration != previous_integration:
+			self._invalidate_runtime_caches()
+		elif updated_output != previous_output:
+			self._trajectory_cache.invalidate()
 
 	def trajectory(
 		self,
@@ -163,12 +243,19 @@ class TrajectorySimulator(Simulator):
 		elif self._trajectory_cache.aux is None:
 			raise ValueError("Must run trajectory() before getting trajectory data")
 
-		t_shape = (self._ensemble_size, self._sp.max_store)
+		t_shape = (
+			self._ensemble_size,
+			self._trajectory_output_settings.max_store,
+		)
 		self._trajectory_cache.t = np.array(
 			self._trajectory_cache.t[: np.prod(t_shape)], dtype=np.float64
 		).reshape(t_shape, order="F")
 
-		data_shape = (self._ensemble_size, self.num_variables, self._sp.max_store)
+		data_shape = (
+			self._ensemble_size,
+			self.num_variables,
+			self._trajectory_output_settings.max_store,
+		)
 		self._trajectory_cache.x = np.array(
 			self._trajectory_cache.x[: np.prod(data_shape)], dtype=np.float64
 		).reshape(data_shape, order="F")
@@ -176,7 +263,11 @@ class TrajectorySimulator(Simulator):
 			self._trajectory_cache.dx[: np.prod(data_shape)], dtype=np.float64
 		).reshape(data_shape, order="F")
 
-		aux_shape = (self._ensemble_size, len(self.aux_names), self._sp.max_store)
+		aux_shape = (
+			self._ensemble_size,
+			len(self.aux_names),
+			self._trajectory_output_settings.max_store,
+		)
 		self._trajectory_cache.aux = np.array(
 			self._trajectory_cache.aux[: np.prod(aux_shape)], dtype=np.float64
 		).reshape(aux_shape, order="F")

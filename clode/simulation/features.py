@@ -215,7 +215,7 @@ class FeatureSimulator(Simulator):
 			dx_down_threshold: Falling derivative threshold for threshold observers.
 			eps_dx: Derivative tolerance used near threshold crossings.
 		"""
-		current_max_event_timestamps = self._op.max_event_timestamps
+		current_max_event_timestamps = self._op.event_output_settings.max_event_timestamps
 
 		if op is not None:
 			self._op = op
@@ -245,7 +245,7 @@ class FeatureSimulator(Simulator):
 			if eps_dx is not None:
 				self._op.eps_dx = eps_dx
 
-		if self._op.max_event_timestamps != current_max_event_timestamps:
+		if self._op.event_output_settings.max_event_timestamps != current_max_event_timestamps:
 			self._cl_program_is_valid = False
 
 		self._integrator.set_observer_params(self._op)

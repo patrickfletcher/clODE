@@ -6,9 +6,9 @@ from typing import Sequence
 
 import numpy as np
 
-from ..observers.types import ObserverParams
+from ..observers.types import ObserverParams, _EventOutputSettings
 from ..problem._core import ProblemInfo, RhsSource
-from ..simulation.params import SolverParams
+from ..simulation.params import SolverParams, _TrajectoryOutputSettings
 from .buffers import (
     ArrayLayout,
     BufferManager,
@@ -279,12 +279,7 @@ class OpenCLTransientExecutor:
 
     def set_solver_params(self, solver_params: SolverParams) -> None:
         self._solver_params = self._copy_solver_params(solver_params)
-        if self._buffers is None:
-            return
-
-        self._buffer_manager.upload_solver_params(self._buffers, self._solver_params)
-        self._buffer_manager.clear_prepared_wiener_state(self._buffers)
-        self._reset_solver_state_cache()
+        self._apply_solver_params_to_runtime(reset_solver_state=True)
 
     def set_tspan(self, tspan: Sequence[float]) -> None:
         if len(tspan) != 2:
@@ -366,6 +361,15 @@ class OpenCLTransientExecutor:
             current_dt=current_dt.reshape(-1),
         )
 
+    def _apply_solver_params_to_runtime(self, *, reset_solver_state: bool) -> None:
+        if self._buffers is None:
+            return
+
+        self._buffer_manager.upload_solver_params(self._buffers, self._solver_params)
+        if reset_solver_state:
+            self._buffer_manager.clear_prepared_wiener_state(self._buffers)
+            self._reset_solver_state_cache()
+
     def _infer_ensemble_size(
         self, initial_state: np.ndarray, parameters: np.ndarray
     ) -> int:
@@ -438,6 +442,7 @@ class OpenCLTrajectoryExecutor(OpenCLTransientExecutor):
         )
         self._trajectory_buffers: TrajectoryBuffers | None = None
         self._trajectory_cache = _TrajectoryTransferCache()
+        self._trajectory_output_settings = self._solver_params.trajectory_output_settings
 
     def build_cl(self) -> None:
         if self._precision is Precision.DOUBLE:
@@ -464,11 +469,25 @@ class OpenCLTrajectoryExecutor(OpenCLTransientExecutor):
             self._trajectory_buffers = None
 
     def set_solver_params(self, solver_params: SolverParams) -> None:
-        previous_max_store = self._solver_params.max_store
-        super().set_solver_params(solver_params)
-        if previous_max_store != self._solver_params.max_store and self._trajectory_buffers is not None:
+        previous_integration = self._solver_params.integration_settings
+        previous_output = self._trajectory_output_settings
+
+        self._solver_params = self._copy_solver_params(solver_params)
+        self._trajectory_output_settings = self._solver_params.trajectory_output_settings
+
+        integration_changed = previous_integration != self._solver_params.integration_settings
+        output_changed = previous_output != self._trajectory_output_settings
+
+        if not integration_changed and not output_changed:
+            return
+
+        self._apply_solver_params_to_runtime(reset_solver_state=integration_changed)
+
+        if output_changed and self._trajectory_buffers is not None:
             self._trajectory_buffers = None
-        self._invalidate_trajectory_cache()
+
+        if integration_changed or output_changed:
+            self._invalidate_trajectory_cache()
 
     def get_aux(self) -> list[float]:
         if self._buffers is None:
@@ -556,7 +575,7 @@ class OpenCLTrajectoryExecutor(OpenCLTransientExecutor):
             self._trajectory_buffers = self._buffer_manager.allocate_trajectory(
                 buffers.ensemble_size,
                 buffers.problem_shape,
-                self._solver_params.max_store,
+                self._trajectory_output_settings.max_store,
             )
         return self._trajectory_buffers
 
@@ -591,6 +610,7 @@ class OpenCLFeatureExecutor(OpenCLTransientExecutor):
         )
         self._observer_name = observer
         self._observer_params = self._copy_observer_params(observer_params)
+        self._event_output_settings = observer_params.event_output_settings
         self._feature_metadata = self._resolve_feature_metadata()
         self._feature_buffers: FeatureBuffers | None = None
         self._feature_cache = _FeatureTransferCache()
@@ -624,7 +644,7 @@ class OpenCLFeatureExecutor(OpenCLTransientExecutor):
             problem_shape=self._problem_shape,
             rhs=self._rhs_source,
             observer_name=self._observer_name,
-            n_store_events=self._observer_params.max_event_timestamps,
+            n_store_events=self._event_output_settings.max_event_timestamps,
         )
         self._program_bundle = self._runtime.program_cache.get_or_build(
             self._runtime, source_bundle
@@ -732,9 +752,12 @@ class OpenCLFeatureExecutor(OpenCLTransientExecutor):
         self._recreate_feature_metadata()
 
     def set_observer_params(self, observer_params: ObserverParams) -> None:
-        previous_max_event_timestamps = self._observer_params.max_event_timestamps
+        previous_event_output_settings = self._event_output_settings
         self._observer_params = self._copy_observer_params(observer_params)
-        if previous_max_event_timestamps != self._observer_params.max_event_timestamps:
+        self._event_output_settings = _EventOutputSettings(
+            self._observer_params.max_event_timestamps
+        )
+        if previous_event_output_settings != self._event_output_settings:
             self._program_bundle = None
         self._observer_initialized = False
         self._invalidate_feature_cache()
@@ -807,4 +830,5 @@ class OpenCLFeatureExecutor(OpenCLTransientExecutor):
             self._observer_name,
             self._observer_params,
             self._precision,
+            n_store_events=self._event_output_settings.max_event_timestamps,
         )
