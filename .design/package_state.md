@@ -18,7 +18,7 @@ Update when: canonical module homes, public compatibility surfaces, packaging ru
 - Built-in observer definitions, resolved observer specs, and observer-state naming are now aligned across the Python host layer, OpenCL metadata, and the active kernels.
 - Execution-setting defaults and compatibility resolution now flow through one canonical solver-settings path, and simulators keep internal copies of caller-provided `SolverParams` bundles instead of aliasing them.
 - Built-in stepper definitions, traits, and OpenCL build mapping now resolve through a Python-owned stepper-definition catalog instead of raw registry tables.
-- The current package still has a few cleanup targets, especially public continuation-policy ergonomics and later chunking work on top of the landed IVP, solver-state, output-policy, observer, execution-setting, and stepper-definition boundaries.
+- The current package still has a few cleanup targets, especially shared kernel-math helpers and component tests for observer/stepper internals, continuation-state semantics for diverged work-item times, and later chunking work on top of the landed IVP, solver-state, output-policy, observer, execution-setting, and stepper-definition boundaries.
 
 ## Session-Start Guidance
 
@@ -100,13 +100,16 @@ The historical backend-shim, protocol/factory facade, and binding-named compatib
 - Simulators still carry compatibility delegates for batch reshaping and maintain cached problem arrays alongside the IVP; richer batch-generation helpers (`grid`, random, quasi-random) have not yet been added around the IVP model.
 - Solver-related execution state now has a clearer internal home in `clode/simulation/_state.py` and executor transfer caches, and integration policy is now explicitly split from trajectory output/storage policy through internal settings views, OpenCL buffers, and kernel-facing structs. Public `SolverParams` remains a compatibility bundle at the simulator boundary.
 - Common continuation state now has a Python-owned first pass via `SolverState`, but there is still no device-side per-work-item `t0` or richer completion/error status model.
+- Exact shared-window continuation is only representable when the ensemble agrees on one attained `tf`; with diverged per-work-item final times, any next shared `t_span` is an explicit approximation or policy choice rather than one exact continuation update.
 - `SolverParams` still mixes integration controls with trajectory-storage controls (`max_store`, `nout`) in the public compatibility bundle even though the internal and kernel-facing execution path now treats them separately.
+- `FeatureSimulator` still exposes a broad legacy `observer_*` scalar compatibility surface alongside `ObserverParams`, even though the observer-definition model is now the clearer internal semantic boundary.
 - `Simulator`, `TrajectorySimulator`, and `FeatureSimulator` now resolve scalar solver arguments and prebuilt `SolverParams` bundles through the same canonical helper, but `SolverParams` still mixes integration controls with trajectory-output policy at the public compatibility boundary.
 - Built-in stepper definitions now live in `clode/simulation/_stepper_definitions.py`, and runtime validation plus source-building now consume those definitions instead of raw stepper string tables.
 - `ObserverParams` now owns the canonical built-in observer defaults, but the legacy constructor alias names in `FeatureSimulator` remain as the compatibility surface.
 - Built-in observer definitions now live in `clode/observers/_definitions.py`, and shared resolved observer specs now drive feature-build defines, build-key selection, and feature-executor invalidation boundaries.
 - Optional event storage still participates in compile-time observer layout and buffer sizing, but runtime observer settings now exclude event timestamp capacity and treat it as explicit output/layout policy instead.
 - `shift_tspan()` still advances the requested window rather than the attained final time, so exact absolute-time continuation remains a caller-managed policy.
+- Shared OpenCL numerical helpers for compensated accumulation and structured time updates are still mostly TODOs or local kernel code rather than one small reusable utility layer.
 - Fixed-step kernels still advance time with `ti += dt`, so very long absolute-time runs with small `dt` remain precision-sensitive; evaluating `t0 + step * dt` or related structured-time models is still future work.
 - RNG continuation details are persisted in separate common buffers rather than a clearer per-work-item state object, which will matter again when evaluating Random123.
 - `.design/archived/` is useful for rationale and bug archaeology, but some archived statements about the old wrapper path are now historical only.
@@ -118,6 +121,7 @@ The historical backend-shim, protocol/factory facade, and binding-named compatib
 - `test/core_numerics/test_stochastic.py`: seeded stochastic continuation and Ornstein-Uhlenbeck stationary-moment coverage.
 - `test/core_numerics/test_features_basicall.py`: `basicall` exact-statistics and split-window continuation coverage.
 - `test/test_simulation_contracts.py`: current simulation and observer behavior contracts.
+- There is not yet a dedicated kernel-component test layer between the end-to-end numerical regressions and the `_opencl` support-layer tests.
 - `test/test_problem_rhs_source.py`: RHS source-ingestion and digest coverage.
 - `test/test_opencl_models.py`, `test/test_opencl_source_builder.py`, `test/test_opencl_runtime.py`, `test/test_opencl_buffers.py`, `test/test_opencl_structs.py`: canonical internal OpenCL support-layer tests.
 - `tools/probe_opencl_runtime.py`: distinguishes runtime/compiler failures from clODE kernel failures.

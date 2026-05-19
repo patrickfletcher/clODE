@@ -68,10 +68,14 @@ If you call `features()` repeatedly without advancing `t_span`, you are not aski
 same thing as a single long run. For time-based observers, that can make the accumulated
 statistics inconsistent.
 
-## A practical helper pattern
+## A user-land helper pattern
 
 For the common case where the ensemble shares one attained final time, the following helper
 keeps the next requested window aligned with that attained time:
+
+clODE intentionally leaves this as user code for now. Once ensemble members finish at
+different times, there is no single correct shared-window update for the library to apply
+automatically.
 
 ```python
 import numpy as np
@@ -92,7 +96,8 @@ def advance_window_to_attained_final_time(simulator) -> None:
 ```
 
 If ensemble members finish at different times, the caller has to choose an explicit policy.
-There is no single correct shared `t_span` update in that case.
+There is no single correct shared `t_span` update in that case, so clODE does not yet ship
+a built-in helper for it.
 
 ## Current limitation
 

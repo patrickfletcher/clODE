@@ -9,9 +9,9 @@ Update when: the recommended layout direction changes, a major semantic model la
 - Keep the current top-level semantic packages: `clode.problem`, `clode.observers`, `clode.simulation`, `clode.runtime`, and `clode._opencl`.
 - Keep the flat root barrels for now. They remain useful as collaborator signposts while the canonical package layout settles.
 - Do not start with a bulk kernel-file move.
-- The first-pass `InitialValueProblem`, solver-state, and output-policy cleanup has landed, and the next highest-value semantic cleanup is explicit observer definitions so feature workflows read more clearly as composition over durable semantic objects.
+- The first-pass `InitialValueProblem`, solver-state, observer-definition, stepper-definition, and output-policy cleanup has landed.
 - Keep compile-time build specification separate from runtime state so program-cache keys and rebuild triggers stay explicit rather than leaking through host-side cache invalidation.
-- Treat stepper definitions and richer observer definitions as follow-on internal semantic-layer work that should build on that clearer solver-state contract.
+- Treat narrower simulator orchestration, clearer continuation-state semantics, and any shared kernel-math helper layer as the next internal follow-ons that should build on those landed semantic catalogs.
 - `_opencl` should stay focused on runtime/build/buffer/dispatch concerns and consume those semantic definitions, rather than continuing to define core concepts through strings, registries, and struct builders.
 
 Historical peer-library comparisons and broader layout-option analysis from the earlier, longer version of this note now live in `../archived/reference_cleanup_2026_05_13/semantic_layout_background.md`.
@@ -29,7 +29,7 @@ Historical peer-library comparisons and broader layout-option analysis from the 
 
 #### 1. Simulator classes still carry too much semantic weight
 
-- `Simulator` still owns `set_ensemble()`, `set_repeat_ensemble()`, problem-data shaping, cached readbacks, `t_span`, and public continuation helpers that forward into `_opencl`.
+- `Simulator` still owns `set_ensemble()`, `set_repeat_ensemble()`, problem-data shaping, cached readbacks, `t_span`, and continuation entry points that forward into `_opencl`.
 - `TrajectorySimulator` and `FeatureSimulator` add storage or observer policy, but still inherit the same broad state-owning base object.
 - The current problem layer now has an explicit `InitialValueProblem` that owns RHS semantics, defaults, batched inputs, and remembered result shape, but simulator-side compatibility delegates and caches still carry more semantic weight than they should.
 
@@ -50,7 +50,7 @@ Consequence:
 
 What is missing:
 
-- no first-class Python `SolverState`, `TimeWindow`, or `ContinuationState`
+- no fuller first-class continuation-state model beyond the current first-pass `SolverState`
 - no explicit per-work-item `t0`
 - no clear home for completion or error flags
 - no deliberate semantic boundary between solver state and continuation-specific RNG state
@@ -68,14 +68,14 @@ Consequence:
 
 What is still missing:
 
-- no public continuation-policy helper that matches the landed solver-owned time semantics
+- no settled continuation-state contract for the case where work-items finish at different attained `tf`
 - no stepper-specific public parameter story yet
 - no semantic home for future implicit, IMEX, or controller-rich methods beyond the current internal trait model
 
 Consequence:
 
 - the internal source-assembly and validation path is much easier to follow than before
-- the next semantic pressure has shifted from stepper mapping to continuation ergonomics and later solver extension work
+- the next semantic pressure has shifted from stepper mapping to continuation-state semantics and later solver extension work
 
 #### 4. Observer definition is now clearer, but custom/composable observer semantics are still future work
 
@@ -240,8 +240,8 @@ The useful first move is not “put the `.clh` files next to some new Python fil
 
 1. Keep the landed solver-state and output-policy boundary as the contract for follow-on work.
 2. Treat the landed execution-setting defaults and compatibility resolution path as stable enough to build on.
-3. Add a public continuation-policy helper on top of the landed solver-state and stepper-definition boundaries.
-4. Revisit whether IVP-owned batch helpers are enough or whether a dedicated ensemble type adds real value.
+3. Add a shared kernel-math helper layer and component-test spine so observer and stepper internals are easier to reason about.
+4. Revisit continuation-state semantics and whether IVP-owned batch helpers are enough or whether a dedicated ensemble type adds real value.
 5. Revisit kernel relocation only after those semantic models exist.
 
 ## Guidance for future package moves

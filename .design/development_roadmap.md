@@ -20,13 +20,16 @@ Use `.design/ideas.md` as the short living board. This file is the longer ration
 
 ### Current weaknesses
 
-- Continuation correctness is much better, and the first-pass Python-owned solver-state model, the integration/output split, the observer-definition cleanup, the execution-setting cleanup, and the stepper-definition cleanup are now live all the way into the OpenCL layer. The next structural bottleneck is continuation ergonomics: the solver owns absolute time, but callers still have to express requested-window versus attained-`tf` policy by hand.
+- Continuation correctness is much better, and the first-pass Python-owned solver-state model, the integration/output split, the observer-definition cleanup, the execution-setting cleanup, and the stepper-definition cleanup are now live all the way into the OpenCL layer. The next structural bottlenecks are a missing shared kernel-math/test layer for precision-sensitive internals and, after that, honest continuation-state semantics.
 - A first-pass IVP model now exists, and the curated public problem layer now centers `InitialValueProblem`; lower-level support types and source-preparation helpers are internal support concepts rather than promoted surface area.
 - Simulators still carry some semantic weight through compatibility delegates and cached mirrored problem data even though the core defaults and batch semantics now live on the IVP.
-- The next internal friction point is clearer now: the internal execution model is much more coherent, but repeated-solve continuation still feels lower-level than it should because callers must manage attained-`tf` versus requested-window policy explicitly.
+- The next internal friction point is clearer now: the internal execution model is much more coherent, but repeated-solve continuation still has one real representational limit because a shared requested window cannot encode exact continuation after diverged per-work-item final times.
 - Each work item effectively owns `dt` and attained `tf`, but not an explicit `t0` or completion/error flags. That leaves friction around continuation helpers and windows where work items diverge.
+- The current tests still lack a middle layer between end-to-end numerical regressions and small host-side OpenCL support tests, which makes observer and stepper refactors harder to validate directly.
+- Precision-sensitive kernel math still lives mostly as local code and TODOs rather than one small reusable helper layer, even though both observers and steppers already hint at the same accumulation and time-update concerns.
 - `SolverParams` still mixes integration policy with output-storage policy. That makes chunking, batching, and trajectory streaming harder than they need to be.
-- Stepper, solver-state, and problem concepts are still split across public enums/dataclasses, internal string registries, and kernel include trees rather than clearer Python-owned semantic definitions.
+- `FeatureSimulator` still exposes a large legacy `observer_*` scalar compatibility surface alongside `ObserverParams`, which is workable for now but not a clean long-term semantic boundary.
+- Some public compatibility bundles and kernel-layer entrypoints still straddle clearer Python-owned semantic definitions, especially `SolverParams` and the legacy observer-parameter surface.
 - The runtime is intentionally single-device only. If multi-device execution ever becomes worthwhile, it will need a dedicated API and execution model rather than an extension of the current selectors.
 - There is still no good path for stiff systems or implicit stepping, which limits the package for an important class of dynamical-systems problems.
 
@@ -65,7 +68,7 @@ Expected payoff:
 
 - a clearer semantic unit for what one solve and one batch represent to the user without forcing a new container type prematurely
 - simulator classes that read more cleanly as orchestration objects
-- a cleaner base for later batching, continuation-policy helpers, and solver-state cleanup
+- a cleaner base for later batching, continuation-state cleanup, and solver-state follow-through
 
 API impact:
 
@@ -129,8 +132,8 @@ Status on the current branch:
 What remains for later:
 
 - no device-side per-work-item `t0` or richer completion/error status model yet
-- exact absolute-time continuation still needs caller-managed `t_span` or a later public continuation helper
-- the next leverage point is a public continuation-policy helper rather than reopening the ownership or output-policy work itself
+- exact absolute-time continuation still needs caller-managed `t_span`, and exact shared-window continuation is only representable while the ensemble shares one attained final time
+- the next leverage point is continuation-state semantics and divergence guardrails rather than reopening the ownership or output-policy work itself
 
 ### Landed Priority 0: Python-owned stepper semantics after execution-setting cleanup
 
@@ -142,32 +145,54 @@ Status on the current branch:
 
 What this unlocked:
 
-- continuation helpers and later implicit-stepper groundwork can build on a clearer internal semantic layer first
+- shared kernel-math helpers, clearer observer or stepper extension work, and later continuation or implicit-stepper groundwork can build on a clearer internal semantic layer first
 - source assembly and runtime validation now have one coherent home for stepper semantics instead of split registry logic
 
-### Priority 0: Public continuation-policy helper/API after stepper cleanup
+### Priority 0: Kernel-math helper foundation and component-test spine
 
-The next active cleanup should turn the solver-owned time model into a more explicit, ergonomic public policy.
+The next active cleanup should make observer and stepper internals easier to reason about without changing the public API.
 
 Why this should be next:
 
-- the internal solver-state and stepper-definition boundaries are now stable enough that continuation ergonomics no longer need to sit on shifting internals
-- the current need to hand-roll `set_tspan(get_final_time())` is both easy to misuse and harder to explain than it should be
-- this is a high-value developer and user clarity improvement without forcing a broader public config redesign yet
-
-The lower-level execution model still needs a clearer internal contract, but it no longer has to define the active user-facing PR boundary.
+- the kernels already contain explicit TODOs around compensated summation, FMA choices, and time-accumulation precision, so the need is already visible in the live code
+- the current test stack still has too little direct coverage for precision-sensitive kernel logic between end-to-end numerics and small support-layer tests
+- this is the most generally useful internal-confidence win for the current package, and it directly supports the desired observer and stepper extension work
 
 Key tasks:
 
-- add one explicit continuation-policy helper or small API that distinguishes requested-window continuation from attained-`tf` continuation
-- keep the helper aligned with the current solver-owned time semantics and current shared-`tspan` runtime limitations
-- make the common continuation path more discoverable without hiding the remaining per-work-item `t0` limitations
+- factor one small shared numerical-helper layer for reusable precision-sensitive utilities where it materially improves clarity or robustness
+- add tiny synthetic component tests so observer accumulation and stepper-helper behavior can be validated directly
+- keep kernel specialization and source assembly explicit, and resist bulk file moves or Python-string kernel embedding unless stronger evidence appears
 
-Why after Priority 0:
+Why before the next API-facing work:
+
+- it improves the internal substrate first instead of growing more public surface while core numerical and test boundaries are still too implicit
+- it gives later continuation, observer, and stepper work a clearer and more testable base
+
+### Priority 1: Continuation-state semantics and divergence guardrails after the kernel-math/test foundation
+
+The next active cleanup should make the solver-owned time model honest and explicit before any broader public continuation API is added.
+
+Why this should be next:
+
+- the internal solver-state and stepper-definition boundaries are now stable enough to make the current continuation limit explicit without reopening unrelated ownership work
+- a public helper layered on the current shared-`tspan` model would either have to refuse diverged ensembles or silently encode an arbitrary policy
+- this remains a high-value internal clarity improvement, but it should follow the more general numerical-helper and component-test cleanup first
+
+The lower-level execution model still needs a clearer internal contract, and this is now the right place to sharpen it rather than papering over the limit with a misleading helper.
+
+Key tasks:
+
+- codify that exact shared-window continuation is only valid when the ensemble agrees on one attained `tf`
+- add small internal guardrails or state queries around that representability instead of inventing a broad new public continuation surface
+- keep the current low-level `set_tspan(...)`, `shift_tspan()`, and `get_final_time()` surface intact while making the unsupported divergent-time case more explicit in tests and docs
+
+Why after the kernel-math/test foundation:
 
 - IVP-first batch cleanup clarifies what simulators orchestrate
 - the solver-state layer and observer-definition layer are now clearer internal contracts between `simulation` and `_opencl`
-- execution-setting cleanup and stepper-definition cleanup have now landed, so continuation ergonomics can build on stable internal semantics instead of another moving target
+- execution-setting cleanup and stepper-definition cleanup have now landed, so continuation-state cleanup can build on stable internal semantics instead of another moving target
+- the missing helper/test layer is still the broader confidence bottleneck for internal observer and stepper work
 
 ### Priority 2: Numerical kernel refinements
 
@@ -235,9 +260,9 @@ Packaging note:
 
 ## Recommended Order Of Attack
 
-1. Add a public continuation-policy helper on top of the landed solver-state and stepper-definition boundaries.
-2. Tackle numerical kernel refinements such as fixed-step endpoint handling, `t0 + step * dt`, and interpolation improvements.
-3. Do implicit-solver groundwork.
-4. Revisit broader public config/API redesign only after continuation ergonomics and stepper semantics are stable.
+1. Add kernel-component tests and a small shared kernel-math helper foundation for observer and stepper internals.
+2. Tighten observer and stepper extension boundaries, including the legacy observer-parameter surface and the current source-assembly or specialization boundary.
+3. Return to continuation-state semantics and divergence guardrails once those lower-level numerical and test contracts are easier to validate directly.
+4. Then tackle deeper numerical time-base refinements and implicit-solver groundwork.
 
-Public continuation helpers, richer IVP batch helpers, and broader solver interop should follow once those internal boundaries are stable enough that they are unlikely to be redesigned immediately afterward.
+Any broader public continuation or config cleanup, richer IVP batch helpers, and broader solver interop should follow only once those internal numerical, testing, continuation, and stepper boundaries are stable enough that they are unlikely to be redesigned immediately afterward.

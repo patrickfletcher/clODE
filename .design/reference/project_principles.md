@@ -19,6 +19,7 @@ This note is not a backlog and does not override the root `.design` docs.
 - Keep feature extraction as a first-class workflow, not a side effect of trajectory simulation. Stateful observers and on-device feature or event computation are part of clODE's distinctive value.
 - Prefer exact-solution, contract, and parity-style regressions when changing numerical or semantic behavior.
 - Favor explicit continuation and reproducibility semantics over convenience heuristics that hide the difference between requested time windows and attained final time.
+- Prefer reusable kernel-side numerical helpers and component-level regressions for precision-sensitive observer and stepper logic over duplicated ad hoc arithmetic hidden inside many individual kernels.
 
 ### Workflow And Ecosystem Positioning
 
@@ -59,6 +60,7 @@ This note is not a backlog and does not override the root `.design` docs.
 
 - Prefer Python-owned runtime, source-assembly, and metadata logic when it improves inspectability and maintenance without weakening numerical behavior.
 - Introduce the smallest useful abstraction layer. Avoid growing framework-like indirection before the underlying solver and observer semantics are clear.
+- Before broadening solver families or reorganizing kernel files, add component-level tests and shared helper layers where they reduce ambiguity in the current execution path.
 - Solve correctness and state-model debt before expanding scope into broader solver families, larger API surfaces, or nominal multi-device features.
 - Keep the root `.design/` surface small and authoritative; use reference notes for focused deep dives and cross-cutting rationale.
 
@@ -69,7 +71,8 @@ These are active design questions, not commitments.
 ### State Semantics And Public Ergonomics
 
 - How explicit should solver state, observer state, RNG state, requested `t_span`, and attained final time become internally, and should any of that become public API?
-- Should clODE gain a first-class continuation-policy helper or API so users do not have to hand-roll continuation from attained `tf`?
+- If clODE eventually gains a first-class continuation helper or API, should that wait until per-work-item time ownership is explicit enough that divergent-`tf` ensembles are not misrepresented?
+- How much shared numerical-helper infrastructure should live in `clode/kernels/clODE_utilities.cl` and related includes before more ambitious observer or stepper expansion begins?
 
 ### Solver And Observer Architecture
 

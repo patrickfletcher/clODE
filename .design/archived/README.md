@@ -13,6 +13,7 @@ Update when: a new archive cluster is added or an archive description becomes in
 ## Current Folders
 
 - `backend_migration_history_2026_05_07/`: historical backend-overhaul planning and scope maps from the transition period.
+- `design_surface_refresh_2026_05_19/`: historical closeout notes moved out of the live reference surface during the architecture-audit and design-surface refresh.
 - `pyopencl_cleanup_closeout_2026_05_08/`: closeout notes from the PyOpenCL migration and wrapper cleanup.
 - `pre_backend_readiness_2026_05_05/`: pre-migration bug reproductions and readiness audits.
 - `post_logging_cleanup_2026_05_12/`: logging closeout plus follow-up boundary and layout notes after the logging cleanup.
