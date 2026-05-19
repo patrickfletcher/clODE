@@ -13,21 +13,20 @@ Use `.design/ideas.md` as the short living board. This file is the longer ration
 - The numerical core is still strong: one work-item per trajectory, compile-time specialization, and a clean separation between stepper kernels and observer kernels.
 - The PyOpenCL migration succeeded in the important place: runtime ownership, source assembly, build keys, and program caching now live in Python rather than in a compiled wrapper.
 - `FeatureSimulator` remains a distinctive strength. Stateful observers let the package extract oscillation and event statistics without forcing full trajectory storage.
+- Observer definitions, resolved specs, and observer-state naming now line up across Python, OpenCL metadata, and the active kernels, which makes feature builds and invalidation rules much easier to reason about.
 - The exact-solution and contract tests are much better than they were before the cleanup. The current package has a credible numerical regression spine.
 - Split-window continuation correctness is now grounded by targeted regressions for `basicall` features and seeded stochastic Euler, and the live runtime has standardized on solver-owned absolute time plus persisted stochastic continuation details.
 - The pure-Python packaging path and packaged kernel assets are now aligned with how a modern scientific Python package should ship.
 
 ### Current weaknesses
 
-- Continuation correctness is much better, and the first-pass Python-owned solver-state model plus the integration/output split are now live all the way into the OpenCL layer. The next structural bottleneck is the observer-definition model above that boundary.
+- Continuation correctness is much better, and the first-pass Python-owned solver-state model, the integration/output split, and the observer-definition cleanup are now live all the way into the OpenCL layer. The next structural bottleneck is keeping execution-setting defaults and compatibility resolution predictable across the simulator constructors and the internal settings split.
 - A first-pass IVP model now exists, and the curated public problem layer now centers `InitialValueProblem`; lower-level support types and source-preparation helpers are internal support concepts rather than promoted surface area.
 - Simulators still carry some semantic weight through compatibility delegates and cached mirrored problem data even though the core defaults and batch semantics now live on the IVP.
-- The next internal friction point is clearer now: the public compatibility bundles still sit on top of a fragmented observer-definition model, and feature names, warmup behavior, persistent observer state, and optional event layout are still split across too many internal homes.
+- The next internal friction point is clearer now: `SolverParams`, `_IntegrationSettings`, `_TrajectoryOutputSettings`, and the simulator constructor defaults still duplicate some defaults and sometimes disagree, which makes config choices less predictable than the underlying execution model now deserves.
 - Each work item effectively owns `dt` and attained `tf`, but not an explicit `t0` or completion/error flags. That leaves friction around continuation helpers and windows where work items diverge.
 - `SolverParams` still mixes integration policy with output-storage policy. That makes chunking, batching, and trajectory streaming harder than they need to be.
-- Stepper, observer, solver-state, and problem concepts are still split across public enums/dataclasses, internal string registries, and kernel include trees rather than clearer Python-owned semantic definitions.
-- Observer metadata is now Python-owned, but it is still expressed as a large conditional manifest rather than a cleaner observer-definition model.
-- Optional event storage is still entangled with persistent observer state and build-time sizing, which means the solver-state cleanup needs to preserve a clean boundary for later observer-definition work instead of hard-coding today’s feature-buffer assumptions more deeply.
+- Stepper, solver-state, and problem concepts are still split across public enums/dataclasses, internal string registries, and kernel include trees rather than clearer Python-owned semantic definitions.
 - The runtime is intentionally single-device only. If multi-device execution ever becomes worthwhile, it will need a dedicated API and execution model rather than an extension of the current selectors.
 - There is still no good path for stiff systems or implicit stepping, which limits the package for an important class of dynamical-systems problems.
 
@@ -87,23 +86,41 @@ What this unlocked:
 - observer work can now focus on observer definitions and state/layout boundaries rather than reopening solver/output ownership
 - broader public config redesign can stay deferred until the observer and stepper semantics stop moving
 
-### Priority 0: Observer-definition and metadata cleanup
+### Priority 0: Single source of truth for execution-setting defaults and compatibility resolution
 
-The current observer system works, but it is not yet shaped as a durable internal model.
+The next active cleanup should be narrower than a public config redesign and more concrete than a broad semantics pass: make execution-setting defaults resolve from one place.
 
-This should follow the output and storage split rather than reopening the landed solver-state PR.
+Status on the current branch:
+
+- the internal execution path already splits integration settings from trajectory output/storage policy
+- observer defaults are now canonicalized through `ObserverParams`, which provides the pattern the solver side should follow
+- simulator constructor defaults still drift from `SolverParams` and the internal settings split in live code
 
 Key tasks:
 
-- replace the large observer-name conditionals with explicit Python-owned observer definitions
-- model feature-name generation, persistent state layout, optional event layout, and warmup requirements in one place
-- preserve the current kernels while making the metadata model easier to test and extend
-- keep the current public `ObserverParams` surface as a thin compatibility bundle until the observer and stepper model are stable enough for API discussion
+- define one canonical internal source for default integration settings and trajectory-output settings
+- route initial solver-bundle construction through shared helpers rather than per-class literals
+- make transient, trajectory, and feature simulators resolve scalar arguments and prebuilt `SolverParams` bundles through one policy
+- add contract coverage for constructor defaults and default-resolution behavior
 
-Why this matters:
+Why this should come next:
 
-- observer infrastructure is a real differentiator for clODE
-- future custom observers, event-storage refactors, continuation helpers, and any later public config redesign all benefit from a better observer-definition layer first
+- config choices should mean one thing before stepper traits and mapping are refactored on top of them
+- this is compatibility-safe and much narrower than a broader public config redesign
+- it closes a live source-of-truth gap already visible in defaults such as `dtmax` and `max_store`
+
+### Landed Priority 0: Observer-definition and observer-state cleanup
+
+Status on the current branch:
+
+- explicit Python-owned observer definitions and resolved specs now drive feature names, build defines, layout boundaries, and feature-executor invalidation
+- persistent observer state is now distinct from runtime settings and from optional event-output capacity
+- the active kernels, matched struct lookups, and synthetic host-side names now use observer-state naming consistently
+
+What this unlocked:
+
+- later stepper and config work no longer need to reopen observer layout or build semantics
+- future custom observers and any later observer-specific public API discussion can build on a clearer internal model first
 
 Note on `odedriver.cl`:
 
@@ -122,9 +139,9 @@ What remains for later:
 
 - no device-side per-work-item `t0` or richer completion/error status model yet
 - exact absolute-time continuation still needs caller-managed `t_span` or a later public continuation helper
-- the next leverage point is observer-definition cleanup rather than reopening the ownership or output-policy work itself
+- the next leverage point is execution-setting source-of-truth cleanup rather than reopening the ownership or output-policy work itself
 
-### Priority 1: Python-owned stepper semantics after the observer cleanup
+### Priority 1: Python-owned stepper semantics after execution-setting cleanup
 
 The lower-level execution model still needs a clearer internal contract, but it no longer has to define the active user-facing PR boundary.
 
@@ -132,13 +149,13 @@ Key tasks:
 
 - use that model as the basis for continuation-policy helpers and later batching behavior where per-item windows can diverge
 - introduce a Python-owned stepper-definition layer only after that state contract is clearer
-- keep observer-definition cleanup adjacent but separate; `ObserverData` and optional event storage are their own modeling problem, but the stepper work should wait until those state and storage boundaries stop moving
+- build on the landed observer-definition model and the execution-setting source of truth instead of forcing stepper work to clean up drifting defaults at the same time
 
 Why after Priority 0:
 
 - IVP-first batch cleanup clarifies what simulators orchestrate
-- the solver-state layer can then be staged as an internal contract between `simulation` and `_opencl` instead of being entangled with user-facing IVP semantics
-- observer-definition cleanup should land first so stepper semantics do not have to move twice and so any later public config work is not built on shifting internal boundaries
+- the solver-state layer and observer-definition layer are now clearer internal contracts between `simulation` and `_opencl`
+- execution-setting cleanup should land first so stepper semantics do not have to move twice and so any later public config work is not built on drifting constructor defaults
 
 ### Priority 2: Numerical kernel refinements
 
@@ -206,10 +223,10 @@ Packaging note:
 
 ## Recommended Order Of Attack
 
-1. Clean up observer definitions and separate persistent observer state from optional event storage now that the solver/output split is landed.
-2. Introduce a Python-owned stepper-definition model once the observer boundary stops moving.
+1. Canonicalize execution-setting defaults and compatibility resolution across `SolverParams` and the simulator constructors.
+2. Introduce a Python-owned stepper-definition model once the execution-setting boundary stops moving.
 3. Tackle numerical kernel refinements such as fixed-step endpoint handling, `t0 + step * dt`, and interpolation improvements.
 4. Do implicit-solver groundwork.
-5. Revisit broader public config/API redesign only after the observer and stepper boundaries are stable.
+5. Revisit broader public config/API redesign only after the execution-setting and stepper boundaries are stable.
 
 Public continuation helpers, richer IVP batch helpers, and broader solver interop should follow once those internal boundaries are stable enough that they are unlikely to be redesigned immediately afterward.

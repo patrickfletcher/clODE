@@ -4,19 +4,33 @@ from dataclasses import dataclass
 from enum import Enum
 
 
+_DEFAULT_EVENT_VAR_INDEX = 0
+_DEFAULT_FEATURE_VAR_INDEX = 0
+_DEFAULT_MAX_EVENT_COUNT = 100
+_DEFAULT_MAX_EVENT_TIMESTAMPS = 0
+_DEFAULT_MIN_AMP = 0.0
+_DEFAULT_MIN_IMI = 0.0
+_DEFAULT_NHOOD_RADIUS = 0.05
+_DEFAULT_X_UP_THRESHOLD = 0.3
+_DEFAULT_X_DOWN_THRESHOLD = 0.2
+_DEFAULT_DX_UP_THRESHOLD = 0.0
+_DEFAULT_DX_DOWN_THRESHOLD = 0.0
+_DEFAULT_EPS_DX = 0.0
+
+
 @dataclass(frozen=True, slots=True)
 class _ObserverRuntimeSettings:
-    e_var_ix: int = 0
-    f_var_ix: int = 0
-    max_event_count: int = 100
-    min_amp: float = 0.0
-    min_imi: float = 0.0
-    nhood_radius: float = 0.05
-    x_up_threshold: float = 0.2
-    x_down_threshold: float = 0.2
-    dx_up_threshold: float = 0.0
-    dx_down_threshold: float = 0.0
-    eps_dx: float = 0.0
+    e_var_ix: int = _DEFAULT_EVENT_VAR_INDEX
+    f_var_ix: int = _DEFAULT_FEATURE_VAR_INDEX
+    max_event_count: int = _DEFAULT_MAX_EVENT_COUNT
+    min_amp: float = _DEFAULT_MIN_AMP
+    min_imi: float = _DEFAULT_MIN_IMI
+    nhood_radius: float = _DEFAULT_NHOOD_RADIUS
+    x_up_threshold: float = _DEFAULT_X_UP_THRESHOLD
+    x_down_threshold: float = _DEFAULT_X_DOWN_THRESHOLD
+    dx_up_threshold: float = _DEFAULT_DX_UP_THRESHOLD
+    dx_down_threshold: float = _DEFAULT_DX_DOWN_THRESHOLD
+    eps_dx: float = _DEFAULT_EPS_DX
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "e_var_ix", int(self.e_var_ix))
@@ -34,7 +48,7 @@ class _ObserverRuntimeSettings:
 
 @dataclass(frozen=True, slots=True)
 class _EventOutputSettings:
-    max_event_timestamps: int = 0
+    max_event_timestamps: int = _DEFAULT_MAX_EVENT_TIMESTAMPS
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "max_event_timestamps", int(self.max_event_timestamps))
@@ -70,18 +84,18 @@ class ObserverParams:
         eps_dx: Small derivative tolerance used around threshold crossings.
     """
 
-    e_var_ix: int = 0
-    f_var_ix: int = 0
-    max_event_count: int = 100
-    max_event_timestamps: int = 0
-    min_amp: float = 0.0
-    min_imi: float = 0.0
-    nhood_radius: float = 0.05
-    x_up_threshold: float = 0.2
-    x_down_threshold: float = 0.2
-    dx_up_threshold: float = 0.0
-    dx_down_threshold: float = 0.0
-    eps_dx: float = 0.0
+    e_var_ix: int = _DEFAULT_EVENT_VAR_INDEX
+    f_var_ix: int = _DEFAULT_FEATURE_VAR_INDEX
+    max_event_count: int = _DEFAULT_MAX_EVENT_COUNT
+    max_event_timestamps: int = _DEFAULT_MAX_EVENT_TIMESTAMPS
+    min_amp: float = _DEFAULT_MIN_AMP
+    min_imi: float = _DEFAULT_MIN_IMI
+    nhood_radius: float = _DEFAULT_NHOOD_RADIUS
+    x_up_threshold: float = _DEFAULT_X_UP_THRESHOLD
+    x_down_threshold: float = _DEFAULT_X_DOWN_THRESHOLD
+    dx_up_threshold: float = _DEFAULT_DX_UP_THRESHOLD
+    dx_down_threshold: float = _DEFAULT_DX_DOWN_THRESHOLD
+    eps_dx: float = _DEFAULT_EPS_DX
 
     def __post_init__(self) -> None:
         self.e_var_ix = int(self.e_var_ix)

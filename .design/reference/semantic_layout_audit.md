@@ -75,23 +75,23 @@ Consequence:
 
 - adding or extending steppers currently means touching a public enum, an internal string registry, and kernel assets without one concept-owning definition object
 
-#### 4. Observer definition and observer state are still spread across public catalog, kernel code, and runtime layout
+#### 4. Observer definition is now clearer, but custom/composable observer semantics are still future work
 
 - Public observer names and broad configuration live in `clode/observers/types.py`.
-- Public feature naming lives in `clode/observers/metadata.py`.
-- Runtime-specific persistent observer-data layout lives in `clode/_opencl/observer_metadata.py`.
+- Public feature naming routes through `clode/observers/metadata.py` on top of the observer-definition catalog.
+- Built-in `ObserverDefinition` instances plus `ResolvedObserverSpec` now live in `clode/observers/_definitions.py`.
+- Runtime-specific persistent observer-state layout lives in `clode/_opencl/observer_metadata.py`.
 - Observer behavior lives in `clode/kernels/observers.cl` and the individual `observer_*.clh` files.
 
-What is missing:
+What is still missing:
 
-- no unified `ObserverDefinition` that owns feature schema, warmup requirements, event behavior, and the distinction between persistent state and optional output capacity
-- no clear semantic story for `ObserverData` versus a higher-level persistent observer-state concept
 - no obvious Python-side home for observer functor/event-style logic if the project ever wants more composable or user-definable observers
+- no public custom-observer surface or observer-specific public parameter model yet
 
 Consequence:
 
-- collaborator understanding and extension work still require jumping between public types, metadata helpers, OpenCL dtype builders, and kernel include trees
-- the solver now owns time, but observer-state naming and ownership have not yet caught up to that model
+- the current built-in observer story is much easier to follow than it was before the cleanup
+- the remaining semantic pressure has shifted toward stepper definitions and execution-setting resolution rather than observer naming or layout ownership
 
 #### 5. Core concepts still reach `_opencl` as strings more often than as objects
 
@@ -213,23 +213,19 @@ What this would buy:
 - better source assembly than raw string registries
 - clearer documentation and contributor mental model
 
-### 8. Promote observers from “enum plus params plus kernel special cases” to definitions
+### 8. Build on landed observer definitions rather than reopening observer layout first
 
 Likely shape inside `clode.observers`:
 
 - keep the public enum if useful
-- add a definition object that owns:
-  - feature schema
-  - warmup/two-pass requirement
-  - event semantics
-  - public configuration schema
-- decide whether a higher-level `ObserverState` concept should sit above the current kernel-side `ObserverData` naming
+- keep `ObserverDefinition` and `ResolvedObserverSpec` as the internal semantic layer for built-in observers
+- add a separate authoring story only if custom/composable observers become active work
 - keep runtime-specific state layout in `_opencl`, but derive it from the semantic observer definition where possible
 
 What this would buy:
 
-- easier custom/composable observer work later
-- better separation between persistent observer state and optional event-output capacity
+- preserves the landed observer boundary instead of reopening it for another semantics pass
+- makes later custom/composable observer work incremental rather than another semantic reset
 
 ### 9. Delay kernel relocation until the semantic models exist
 
@@ -240,8 +236,8 @@ The useful first move is not “put the `.clh` files next to some new Python fil
 ## Productive near-term follow-on order
 
 1. Keep the landed solver-state and output-policy boundary as the contract for follow-on work.
-2. Refactor observer definitions around explicit semantic objects and a cleaner split between persistent observer state and optional event-output capacity.
-3. Introduce a Python-owned stepper-definition model once the observer boundary stops moving.
+2. Canonicalize execution-setting defaults and compatibility resolution across `SolverParams` and the simulator constructors.
+3. Introduce a Python-owned stepper-definition model once that execution-setting boundary stops moving.
 4. Revisit whether IVP-owned batch helpers are enough or whether a dedicated ensemble type adds real value.
 5. Revisit kernel relocation only after those semantic models exist.
 

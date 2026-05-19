@@ -20,7 +20,7 @@ __kernel void features(
 	__global uint *preparedWienerValid, //prepared next-step Wiener availability [nPts]
     __global realtype *d_dt,            //final dt values      [nPts]
     __global realtype *tf,              //final time values    [nPts]
-	__global ObserverData *OData,		//Observer data
+	__global ObserverState *observer_states, //persistent observer state
 	__constant struct ObserverParams *opars, //observer runtime settings
 	__global realtype *F)               //features             [nPts*nFeat]
 {
@@ -49,7 +49,7 @@ __kernel void features(
 	rd.randnUselast = RNGspareNormalValid[i] != 0;
 	rd.randnLast = RNGspareNormal[i];
 
-	ObserverData odata = OData[i]; 
+	ObserverState observer_state = observer_states[i];
 
     // generate random numbers if needed
     for (int j = 0; j < N_WIENER; ++j)
@@ -74,28 +74,28 @@ __kernel void features(
         // if (stepflag!=0)
             // break;
 
-		updateObserverData(&ti, xi, dxi, auxi, &odata, opars); 
+		updateObserverState(&ti, xi, dxi, auxi, &observer_state, opars);
 
-		eventOccurred = eventFunction(&ti, xi, dxi, auxi, &odata, opars);
+		eventOccurred = eventFunction(&ti, xi, dxi, auxi, &observer_state, opars);
 		if (eventOccurred)
 		{
 			// record current state into dedicated event buffers (same pattern as trajectory)
 
-			terminalEvent = computeEventFeatures(&ti, xi, dxi, auxi, &odata, opars);
+			terminalEvent = computeEventFeatures(&ti, xi, dxi, auxi, &observer_state, opars);
 			if (terminalEvent)
 				break;
 		}
 	}
 
 	//readout features of interest and write to global F:
-	finalizeFeatures(&ti, xi, dxi, auxi, &odata, opars, F, i, nPts);
+	finalizeFeatures(&ti, xi, dxi, auxi, &observer_state, opars, F, i, nPts);
 
-	//finalize observerdata for possible continuation
+	// Finalize persistent observer state for possible continuation.
 	// TODO: this should advance the time vectors using the final ti, not the tspan[1]
-	finalizeObserverData(&ti, xi, dxi, auxi, &odata, opars, tspan);
+	finalizeObserverState(&ti, xi, dxi, auxi, &observer_state, opars, tspan);
 
-	//store the observerData in global memory
-	OData[i] = odata;
+	// Store the persistent observer state in global memory.
+	observer_states[i] = observer_state;
 
     //write the final solution values to global memory.
 	for (int j = 0; j < N_VAR; ++j)

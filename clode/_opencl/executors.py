@@ -715,7 +715,7 @@ class OpenCLFeatureExecutor(OpenCLTransientExecutor):
             buffers.prepared_wiener_valid,
             buffers.dt,
             buffers.tf,
-            feature_buffers.observer_data,
+            feature_buffers.observer_state,
             feature_buffers.observer_runtime_settings,
             feature_buffers.features,
         )
@@ -758,7 +758,7 @@ class OpenCLFeatureExecutor(OpenCLTransientExecutor):
             feature_buffers,
             self._observer_runtime_settings,
         )
-        self._buffer_manager.clear_observer_data(feature_buffers, buffers.ensemble_size)
+        self._buffer_manager.clear_observer_state(feature_buffers, buffers.ensemble_size)
         kernel = self._program_bundle.kernels["initializeObserver"]
         kernel.set_args(
             buffers.tspan,
@@ -771,7 +771,7 @@ class OpenCLFeatureExecutor(OpenCLTransientExecutor):
             buffers.prepared_wiener,
             buffers.prepared_wiener_valid,
             buffers.dt,
-            feature_buffers.observer_data,
+            feature_buffers.observer_state,
             feature_buffers.observer_runtime_settings,
         )
         self._opencl_binding.enqueue_nd_range_kernel(
@@ -865,13 +865,13 @@ class OpenCLFeatureExecutor(OpenCLTransientExecutor):
             self._feature_buffers = self._buffer_manager.allocate_feature(
                 buffers.ensemble_size,
                 self._feature_metadata.n_features,
-                self._feature_metadata.observer_data_nbytes,
+                self._feature_metadata.observer_state_nbytes,
             )
             self._buffer_manager.upload_observer_runtime_settings(
                 self._feature_buffers,
                 self._observer_runtime_settings,
             )
-            self._buffer_manager.clear_observer_data(
+            self._buffer_manager.clear_observer_state(
                 self._feature_buffers,
                 buffers.ensemble_size,
             )

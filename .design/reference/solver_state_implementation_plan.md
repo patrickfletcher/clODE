@@ -46,12 +46,12 @@ Update when: the solver-state boundary changes materially or this note becomes h
 - a matched device-side solver-state struct
 - separation of integration state from output/storage policy (`max_store`, `nout`, event capacity)
 - a public continuation-policy helper
-- observer-definition cleanup beyond preserving the boundary for later work
+- observer-definition cleanup beyond preserving the boundary for later work, which has now landed separately
 
 ## Handoff to the next PR
 
 - Treat the landed solver-state boundary as stable enough to build on, not as the next thing to reopen.
-- The planned output/storage separation follow-on has now landed; the next structural cleanup is observer-definition work around persistent observer state, optional event-output layout, and clearer runtime/layout boundaries.
+- The planned output/storage and observer-definition follow-ons have now landed; the next structural cleanup is execution-setting source-of-truth work around canonical defaults and compatibility resolution.
 - Keep the current owner split intact in follow-on work:
   - IVP owns next-solve problem data
   - solver state owns execution progress and continuation facts

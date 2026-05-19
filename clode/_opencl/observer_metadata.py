@@ -16,7 +16,7 @@ from .structs import MatchedStruct, match_struct_dtype
 class ObserverMetadata:
     observer_name: str
     feature_names: tuple[str, ...]
-    observer_data_struct: MatchedStruct
+    observer_state_struct: MatchedStruct
     uses_two_pass: bool
 
     @property
@@ -24,8 +24,8 @@ class ObserverMetadata:
         return len(self.feature_names)
 
     @property
-    def observer_data_nbytes(self) -> int:
-        return self.observer_data_struct.dtype.itemsize
+    def observer_state_nbytes(self) -> int:
+        return self.observer_state_struct.dtype.itemsize
 
 
 def get_observer_metadata(
@@ -51,10 +51,10 @@ def get_observer_metadata(
     return ObserverMetadata(
         observer_name=resolved_spec.observer_name,
         feature_names=resolved_spec.feature_names,
-        observer_data_struct=match_struct_dtype(
+        observer_state_struct=match_struct_dtype(
             runtime,
-            resolved_spec.observer_data_struct_name,
-            resolved_spec.observer_data_dtype,
+            resolved_spec.observer_state_struct_name,
+            resolved_spec.observer_state_dtype,
         ),
         uses_two_pass=resolved_spec.uses_two_pass,
     )

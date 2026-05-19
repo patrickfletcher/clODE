@@ -189,6 +189,18 @@ def test_feature_observer_switch_rebuilds_and_runs() -> None:
     ]
 
 
+def test_feature_simulator_constructor_defaults_match_observer_params() -> None:
+    simulator = make_feature_simulator(
+        "stable_linear",
+        stepper=clode.Stepper.rk4,
+        t_span=(0.0, 1.0),
+        dt=FIXED_DT,
+        max_steps=FIXED_MAX_STEPS,
+    )
+
+    assert simulator.get_observer_parameters() == clode.ObserverParams()
+
+
 def test_features_initialize_observer_path_refreshes_results() -> None:
     simulator = make_feature_simulator(
         "stable_linear",

@@ -6,7 +6,7 @@
 #ifdef USE_OBSERVER_LOCAL_MAX
 //events are triggered at local maxima in the variable specified by op.fVarIx
 
-struct ObserverData_localmax
+struct ObserverState_localmax
 {
     realtype tbuffer[3];
     realtype xbuffer[3 * N_VAR]; // just keep fVar? conceptually simplest
@@ -41,10 +41,10 @@ struct ObserverData_localmax
 
 };
 
-typedef struct ObserverData_localmax ObserverData;
+typedef struct ObserverState_localmax ObserverState;
 
-//set initial values to relevant fields in ObserverData
-static inline void initializeObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op) {
+//set initial values to relevant fields in ObserverState
+static inline void initializeObserverState(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverParams *op) {
     od->tbuffer[2] = *ti;
     for (int j = 0; j < N_VAR; ++j) {
         od->xbuffer[j * 3 + 2] = xi[j];
@@ -89,15 +89,15 @@ static inline void initializeObserverData(realtype *ti, realtype xi[], realtype 
 }
 
 //no warmup needed
-static inline void warmupObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op) {
+static inline void warmupObserverState(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverParams *op) {
 }
 
 //process warmup data to compute relevant event detector quantities (e.g. thresholds)
-static inline void initializeEventDetector(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op) {
+static inline void initializeEventDetector(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverParams *op) {
 }
 
 //check buffer of slopes for local max
-static inline bool eventFunction(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op) {
+static inline bool eventFunction(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverParams *op) {
 
     if (od->stepcount < 2)
         return false;
@@ -108,7 +108,7 @@ static inline bool eventFunction(realtype *ti, realtype xi[], realtype dxi[], re
 
 //When an event is detected, computes desired event-based features. returns true if a terminal event was reached
 // - get (t,x) at local max, compute: IMI, tMaxMin, amp
-static inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op) {
+static inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverParams *op) {
     
     //Simple Max of xbuffer
     realtype thisXbuffer[3];
@@ -159,11 +159,11 @@ static inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dx
     return false; //not terminal
 }
 
-//full per-timestep update of observer data. If an event occurred this timestep, event-based observer data is reset. Per-timestep features are computed here.
+//full per-timestep update of observer state. If an event occurred this timestep, event-based observer state is reset. Per-timestep features are computed here.
 // - advance solution/slope buffers
 // - check for any intermediate special points & store their info
 // - reset intermediates upon local max event detection
-static inline void updateObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op) {
+static inline void updateObserverState(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverParams *op) {
     ++od->stepcount;
 
     // advance solution buffer
@@ -240,7 +240,7 @@ static inline void updateObserverData(realtype *ti, realtype xi[], realtype dxi[
 
 
 //Perform and post-integration cleanup and write desired features into the global array F
-static inline void finalizeFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op, __global realtype *F, int i, int nPts) {
+static inline void finalizeFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverParams *op, __global realtype *F, int i, int nPts) {
     int ix = 0;
     F[ix++ * nPts + i] = od->eventcount > 1 ? od->IMI[0] : ZERO;
     F[ix++ * nPts + i] = od->eventcount > 1 ? od->IMI[1] : ZERO;
@@ -270,8 +270,8 @@ static inline void finalizeFeatures(realtype *ti, realtype xi[], realtype dxi[],
     F[ix++ * nPts + i] = od->stepcount;
 }
 
-//Perform and post-integration cleanup of observer data to ensure it is ready for continuation if needed
-static inline void finalizeObserverData(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverData *od, __constant struct ObserverParams *op, __constant realtype *tspan) {
+//Perform and post-integration cleanup of observer state to ensure it is ready for continuation if needed
+static inline void finalizeObserverState(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverParams *op, __constant realtype *tspan) {
 }
 
 #endif //USE_OBSERVER_LOCAL_MAX

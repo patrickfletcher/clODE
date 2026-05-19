@@ -21,7 +21,7 @@ __kernel void odedriver(
     __global realtype *dx,              //stored derivatives
     __global realtype *aux,             //stored aux variables
     __global int *nStored,              //actual number of stored timepoints
-	__global ObserverData *OData,		//Observer data
+	__global ObserverState *OData,		//Observer state
 	__constant struct ObserverParams *opars, //observer parameters
 	__global realtype *F                //features             [nPts*nFeat]
     __global realtype *t_event,  // TODO: treat events like trajectories...
@@ -53,7 +53,7 @@ __kernel void odedriver(
         rd.state[j] = RNGstate[j * nPts + i];
 
     if (sp->useObserver){
-	    ObserverData odata = OData[i]; //private copy of observer data
+	    ObserverState odata = OData[i]; //private copy of observer state
     }
 
     // generate random numbers if needed
@@ -116,7 +116,7 @@ __kernel void odedriver(
                     break;
             }
 
-            updateObserverData(&ti, xi, dxi, auxi, &odata, opars); 
+            updateObserverState(&ti, xi, dxi, auxi, &odata, opars); 
         }
 
         //store every sp.nout'th step after the initial point
@@ -137,10 +137,10 @@ __kernel void odedriver(
         //readout features of interest and write to global F:
         finalizeFeatures(&ti, xi, dxi, auxi, &odata, opars, F, i, nPts);
 
-        //finalize observerdata for possible continuation
-        finalizeObserverData(&ti, xi, dxi, auxi, &odata, opars, tspan);
+        //finalize observer state for possible continuation
+        finalizeObserverState(&ti, xi, dxi, auxi, &odata, opars, tspan);
 
-        //store the observerData in global memory
+        //store the observer state in global memory
         OData[i] = odata;
     }
 

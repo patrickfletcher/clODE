@@ -110,7 +110,7 @@ def test_basic_observer_double_formula_underestimates_matched_struct_size() -> N
     )
 
     matched_dtype, _ = cl_tools.match_dtype_to_c_struct(
-        runtime.device, "ObserverData_basic_double", basic_observer_dtype
+        runtime.device, "ObserverState_basic_double", basic_observer_dtype
     )
 
     assert matched_dtype.itemsize == 64

@@ -2,11 +2,11 @@
 #define OBSERVERS_H_
 
 /* "Observer" measures features of the ODE solution as it is being integrated
- * The observer consists of a data structure and several functions: 
+ * The observer consists of a persistent state structure and several functions:
  * 
- * - initializeObserverData: set up the data structure to sensible values
- * - warmupObserverData: for two-pass event detectors - restricted data collection about trajectory during a first pass ODE solve
- * - updateObserverData: per-timestep update of data structure
+ * - initializeObserverState: set up the observer state to sensible values
+ * - warmupObserverState: for two-pass event detectors - restricted data collection about trajectory during a first pass ODE solve
+ * - updateObserverState: per-timestep update of observer state
  * - initializeEventDetector: set any values needed to do selected type of event detection (possibly using warmup data)
  * - eventFunction: check for an event. Optionally refine location of event within timestep. Compute event-based quantities
  * - computeEventFeatures: when event is detected, compute desired per-event features
@@ -15,7 +15,7 @@
 
 //TODO: expose different observerParams for each observer (provide relevant values only)
 //TODO: support using aux vars as event/feature var in observers.
-//TODO: concept of "solution buffer" or "solver state" data structure could simplify observer coding. Update it in the ode driver, pass to observer functions
+//TODO: concept of "solution buffer" or "solver state" structure could simplify observer coding. Update it in the ode driver, pass to observer functions
 
 #include "realtype.cl"
 

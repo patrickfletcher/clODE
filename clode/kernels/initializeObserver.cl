@@ -17,7 +17,7 @@ __kernel void initializeObserver(
 	__global realtype *preparedWiener,  //prepared next-step Wiener sample [nPts*nWiener]
 	__global uint *preparedWienerValid, //prepared next-step Wiener availability [nPts]
     __global realtype *d_dt,            //final dt values      [nPts]
-	__global ObserverData *OData,		//Observer data
+	__global ObserverState *observer_states, //persistent observer state
 	__constant struct ObserverParams *opars) //observer runtime settings
 {
 	int i = get_global_id(0);
@@ -45,7 +45,7 @@ __kernel void initializeObserver(
 	rd.randnUselast = RNGspareNormalValid[i] != 0;
 	rd.randnLast = RNGspareNormal[i];
 
-	ObserverData odata = OData[i];
+	ObserverState observer_state = observer_states[i];
 
     // generate random numbers if needed
     for (int j = 0; j < N_WIENER; ++j)
@@ -58,7 +58,7 @@ __kernel void initializeObserver(
     //get the slope and aux at initial point
     getRHS(ti, xi, p, dxi, auxi, wi); 
 
-	initializeObserverData(&ti, xi, dxi, auxi, &odata, opars);
+	initializeObserverState(&ti, xi, dxi, auxi, &observer_state, opars);
 
 #ifdef TWO_PASS_EVENT_DETECTOR
 
@@ -72,7 +72,7 @@ __kernel void initializeObserver(
         // if (stepflag!=0)
         //     break;
 
-		warmupObserverData(&ti, xi, dxi, auxi, &odata, opars);
+		warmupObserverState(&ti, xi, dxi, auxi, &observer_state, opars);
 	}
 	//rewind the time and state so initializeEventDetector gets the right values
 	ti = tspan[0];
@@ -82,9 +82,9 @@ __kernel void initializeObserver(
 
 #endif //TWO_PASS_EVENT_DETECTOR
 
-	initializeEventDetector(&ti, xi, dxi, auxi, &odata, opars);
+	initializeEventDetector(&ti, xi, dxi, auxi, &observer_state, opars);
 
-	//update the global ObserverData array
-	OData[i] = odata;
+	// Update the persistent observer state array.
+	observer_states[i] = observer_state;
 
 }

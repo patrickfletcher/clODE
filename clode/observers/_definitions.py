@@ -59,17 +59,17 @@ class ResolvedObserverSpec:
         return self.definition.observer_name
 
     @property
-    def observer_data_dtype(self) -> np.dtype:
+    def observer_state_dtype(self) -> np.dtype:
         return self.layout.dtype
 
     @property
-    def observer_data_nbytes(self) -> int:
-        return self.observer_data_dtype.itemsize
+    def observer_state_nbytes(self) -> int:
+        return self.observer_state_dtype.itemsize
 
     @property
-    def observer_data_struct_name(self) -> str:
+    def observer_state_struct_name(self) -> str:
         return (
-            f"clode_observer_data_{self.observer_name}_{self.precision_name}"
+            f"clode_observer_state_{self.observer_name}_{self.precision_name}"
             f"_v{self.n_var}_a{self.n_aux}_e{self.n_store_events}"
         )
 
@@ -87,7 +87,7 @@ class ResolvedObserverSpec:
 
     @property
     def layout_signature(self) -> tuple[str, int]:
-        return (self.observer_data_struct_name, self.observer_data_nbytes)
+        return (self.observer_state_struct_name, self.observer_state_nbytes)
 
 
 @dataclass(frozen=True, slots=True)

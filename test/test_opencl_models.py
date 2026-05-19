@@ -180,6 +180,6 @@ def test_resolved_observer_spec_splits_persistent_and_event_layout() -> None:
     assert "tMaxList" not in tuple(
         field[0] for field in resolved_spec.layout.persistent_fields
     )
-    assert resolved_spec.observer_data_struct_name == (
-        "clode_observer_data_localmax_float_v2_a1_e2"
+    assert resolved_spec.observer_state_struct_name == (
+        "clode_observer_state_localmax_float_v2_a1_e2"
     )

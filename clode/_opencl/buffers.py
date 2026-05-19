@@ -55,8 +55,8 @@ class TrajectoryBuffers:
 @dataclass(slots=True)
 class FeatureBuffers:
     n_features: int
-    observer_data_nbytes: int
-    observer_data: object
+    observer_state_nbytes: int
+    observer_state: object
     observer_runtime_settings: object
     features: object
 
@@ -201,16 +201,16 @@ class BufferManager:
         self,
         ensemble_size: int,
         n_features: int,
-        observer_data_nbytes: int,
+        observer_state_nbytes: int,
     ) -> FeatureBuffers:
         flags = self._opencl_binding.mem_flags
         real_bytes = self._real_dtype.itemsize
         feature_elements = max(1, ensemble_size * n_features)
-        observer_bytes = max(1, ensemble_size * observer_data_nbytes)
+        observer_bytes = max(1, ensemble_size * observer_state_nbytes)
         return FeatureBuffers(
             n_features=n_features,
-            observer_data_nbytes=observer_data_nbytes,
-            observer_data=self._opencl_binding.Buffer(
+            observer_state_nbytes=observer_state_nbytes,
+            observer_state=self._opencl_binding.Buffer(
                 self._runtime.context,
                 flags.READ_WRITE,
                 size=observer_bytes,
@@ -285,12 +285,12 @@ class BufferManager:
             observer_params.runtime_settings,
         )
 
-    def clear_observer_data(self, buffers: FeatureBuffers, ensemble_size: int) -> None:
+    def clear_observer_state(self, buffers: FeatureBuffers, ensemble_size: int) -> None:
         host = np.zeros(
-            max(1, ensemble_size * buffers.observer_data_nbytes),
+            max(1, ensemble_size * buffers.observer_state_nbytes),
             dtype=np.uint8,
         )
-        self._enqueue_copy(buffers.observer_data, host)
+        self._enqueue_copy(buffers.observer_state, host)
 
     def upload_problem_data(
         self,

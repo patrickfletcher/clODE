@@ -5,7 +5,20 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 import numpy as np
 
 from .._opencl.executors import OpenCLFeatureExecutor
-from ..observers.types import Observer, ObserverParams
+from ..observers.types import (
+	_DEFAULT_DX_DOWN_THRESHOLD,
+	_DEFAULT_DX_UP_THRESHOLD,
+	_DEFAULT_EPS_DX,
+	_DEFAULT_MAX_EVENT_COUNT,
+	_DEFAULT_MAX_EVENT_TIMESTAMPS,
+	_DEFAULT_MIN_AMP,
+	_DEFAULT_MIN_IMI,
+	_DEFAULT_NHOOD_RADIUS,
+	_DEFAULT_X_DOWN_THRESHOLD,
+	_DEFAULT_X_UP_THRESHOLD,
+	Observer,
+	ObserverParams,
+)
 from ..problem.ivp import InitialValueProblem
 from ..problem.python import OpenCLRhsEquation
 from ..runtime import CLDeviceType, CLVendor, _clode_root_dir
@@ -49,16 +62,16 @@ class FeatureSimulator(Simulator):
 		observer: Observer = Observer.basic_all_variables,
 		event_var: str = "",
 		feature_var: str = "",
-		observer_max_event_count: int = 100,
-		observer_max_event_timestamps: int = 0,
-		observer_min_x_amp: float = 0.0,
-		observer_min_imi: float = 0.0,
-		observer_neighbourhood_radius: float = 0.05,
-		observer_x_up_thresh: float = 0.3,
-		observer_x_down_thresh: float = 0.2,
-		observer_dx_up_thresh: float = 0,
-		observer_dx_down_thresh: float = 0,
-		observer_eps_dx: float = 0.0,
+		observer_max_event_count: int = _DEFAULT_MAX_EVENT_COUNT,
+		observer_max_event_timestamps: int = _DEFAULT_MAX_EVENT_TIMESTAMPS,
+		observer_min_x_amp: float = _DEFAULT_MIN_AMP,
+		observer_min_imi: float = _DEFAULT_MIN_IMI,
+		observer_neighbourhood_radius: float = _DEFAULT_NHOOD_RADIUS,
+		observer_x_up_thresh: float = _DEFAULT_X_UP_THRESHOLD,
+		observer_x_down_thresh: float = _DEFAULT_X_DOWN_THRESHOLD,
+		observer_dx_up_thresh: float = _DEFAULT_DX_UP_THRESHOLD,
+		observer_dx_down_thresh: float = _DEFAULT_DX_DOWN_THRESHOLD,
+		observer_eps_dx: float = _DEFAULT_EPS_DX,
 		observer_parameters: Optional[ObserverParams] = None,
 	) -> None:
 		"""Create a feature-extraction simulator.
@@ -109,18 +122,18 @@ class FeatureSimulator(Simulator):
 			self._op = observer_parameters
 		else:
 			self._op = ObserverParams(
-				event_var_idx,
-				feature_var_idx,
-				observer_max_event_count,
-				observer_max_event_timestamps,
-				observer_min_x_amp,
-				observer_min_imi,
-				observer_neighbourhood_radius,
-				observer_x_up_thresh,
-				observer_x_down_thresh,
-				observer_dx_up_thresh,
-				observer_dx_down_thresh,
-				observer_eps_dx,
+				e_var_ix=event_var_idx,
+				f_var_ix=feature_var_idx,
+				max_event_count=observer_max_event_count,
+				max_event_timestamps=observer_max_event_timestamps,
+				min_amp=observer_min_x_amp,
+				min_imi=observer_min_imi,
+				nhood_radius=observer_neighbourhood_radius,
+				x_up_threshold=observer_x_up_thresh,
+				x_down_threshold=observer_x_down_thresh,
+				dx_up_threshold=observer_dx_up_thresh,
+				dx_down_threshold=observer_dx_down_thresh,
+				eps_dx=observer_eps_dx,
 			)
 
 		super().__init__(
