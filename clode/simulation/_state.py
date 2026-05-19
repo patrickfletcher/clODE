@@ -32,6 +32,27 @@ class SolverState:
         )
         self.problem_data_needs_pull = True
 
+    def attained_final_time_window(
+        self,
+        *,
+        atol: float = 1e-12,
+        rtol: float = 0.0,
+    ) -> tuple[float, float]:
+        if self.final_time is None:
+            raise ValueError("Must run a simulation before getting final time")
+
+        final_times = np.asarray(self.final_time, dtype=np.float64).reshape(-1)
+        if final_times.size == 0:
+            raise ValueError("Must run a simulation before getting final time")
+        if not np.allclose(final_times, final_times[0], atol=atol, rtol=rtol):
+            raise ValueError(
+                "Cannot advance to one shared continuation window when ensemble members reached different final times"
+            )
+
+        next_start = float(final_times[0])
+        duration = float(self.t_span[1] - self.t_span[0])
+        return (next_start, next_start + duration)
+
     def mark_problem_data_synced(self) -> None:
         self.problem_data_needs_pull = False
 

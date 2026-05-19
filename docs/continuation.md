@@ -48,8 +48,8 @@ to produce exact absolute-time continuation after a fixed-step run or an early s
 For exact split-window continuation:
 
 1. run `transient()`, `features()`, or `trajectory()`
-2. read the attained end time from `get_final_time()`
-3. set the next requested window from that attained time
+2. call `advance_tspan_to_attained_final_time()` when the ensemble shares one attained final time
+3. otherwise, read `get_final_time()` and choose an explicit next-window policy in user code
 4. run the next window
 
 ## Trajectory continuation
@@ -68,36 +68,24 @@ If you call `features()` repeatedly without advancing `t_span`, you are not aski
 same thing as a single long run. For time-based observers, that can make the accumulated
 statistics inconsistent.
 
-## A user-land helper pattern
+## Built-in exact-continuation helper
 
-For the common case where the ensemble shares one attained final time, the following helper
-keeps the next requested window aligned with that attained time:
-
-clODE intentionally leaves this as user code for now. Once ensemble members finish at
-different times, there is no single correct shared-window update for the library to apply
-automatically.
+For the common case where the ensemble shares one attained final time, use
+`advance_tspan_to_attained_final_time()`:
 
 ```python
-import numpy as np
-
-
-def advance_window_to_attained_final_time(simulator) -> None:
-    start, end = simulator.get_tspan()
-    duration = end - start
-    final_times = np.asarray(simulator.get_final_time(), dtype=np.float64).reshape(-1)
-
-    if not np.allclose(final_times, final_times[0], atol=1e-12, rtol=0.0):
-        raise ValueError(
-            "Shared t_span continuation needs a single agreed final time across the ensemble"
-        )
-
-    next_start = float(final_times[0])
-    simulator.set_tspan((next_start, next_start + duration))
+simulator.transient()
+simulator.advance_tspan_to_attained_final_time()
+simulator.transient()
 ```
 
-If ensemble members finish at different times, the caller has to choose an explicit policy.
-There is no single correct shared `t_span` update in that case, so clODE does not yet ship
-a built-in helper for it.
+This keeps the current requested duration but moves the next window start to the attained
+`tf` from the previous solve. Unlike `shift_tspan()`, it uses the attained final time rather
+than the requested endpoint.
+
+If ensemble members finish at different times, `advance_tspan_to_attained_final_time()`
+raises `ValueError`. In that case the caller still has to choose an explicit policy with
+`get_final_time()` and `set_tspan()` because there is no single correct shared-window update.
 
 ## Current limitation
 

@@ -20,7 +20,7 @@ Use `.design/ideas.md` as the short living board. This file is the longer ration
 
 ### Current weaknesses
 
-- Continuation correctness is much better, and the first-pass Python-owned solver-state model, the integration/output split, the observer-definition cleanup, the execution-setting cleanup, the observer-surface cleanup, and the stepper-definition cleanup are now live all the way into the OpenCL layer. The next structural bottlenecks are honest continuation-state semantics, then broader numerical-helper adoption on top of those landed catalogs.
+- Continuation correctness is much better, and the first-pass Python-owned solver-state model, the integration/output split, the observer-definition cleanup, the execution-setting cleanup, the observer-surface cleanup, and the stepper-definition cleanup are now live all the way into the OpenCL layer. The next structural bottlenecks are broader numerical-helper adoption, deeper component-test follow-through, and later diverged-time solver-state work on top of those landed catalogs.
 - A first-pass IVP model now exists, and the curated public problem layer now centers `InitialValueProblem`; lower-level support types and source-preparation helpers are internal support concepts rather than promoted surface area.
 - Simulators still carry some semantic weight through compatibility delegates and cached mirrored problem data even though the core defaults and batch semantics now live on the IVP.
 - The next internal friction point is clearer now: the internal execution model is much more coherent, but repeated-solve continuation still has one real representational limit because a shared requested window cannot encode exact continuation after diverged per-work-item final times.
@@ -30,6 +30,7 @@ Use `.design/ideas.md` as the short living board. This file is the longer ration
 - `SolverParams` still mixes integration policy with output-storage policy. That makes chunking, batching, and trajectory streaming harder than they need to be.
 - `FeatureSimulator` still exposes a large legacy `observer_*` scalar compatibility surface alongside `ObserverParams`, but those compatibility inputs now resolve through one canonical `ObserverParams` path instead of carrying separate in-place observer semantics.
 - Some public compatibility bundles and kernel-layer entrypoints still straddle clearer Python-owned semantic definitions, especially `SolverParams` and the legacy observer-parameter surface.
+- The common shared-final-time continuation case is now clearer and easier to use, but diverged per-work-item final times still point toward a later per-work-item `t0` or richer solver-state model rather than another shared-window helper.
 - The runtime is intentionally single-device only. If multi-device execution ever becomes worthwhile, it will need a dedicated API and execution model rather than an extension of the current selectors.
 - There is still no good path for stiff systems or implicit stepping, which limits the package for an important class of dynamical-systems problems.
 
@@ -132,8 +133,8 @@ Status on the current branch:
 What remains for later:
 
 - no device-side per-work-item `t0` or richer completion/error status model yet
-- exact absolute-time continuation still needs caller-managed `t_span`, and exact shared-window continuation is only representable while the ensemble shares one attained final time
-- the next leverage point is continuation-state semantics and divergence guardrails rather than reopening the ownership or output-policy work itself
+- exact absolute-time continuation now has a narrow shared-final-time helper, but diverged-time ensembles still need caller-managed policy and would want a richer per-work-item time model
+- the next leverage point is broader numerical-helper adoption and stronger direct component coverage rather than reopening the ownership or output-policy work itself
 
 ### Landed Priority 0: Python-owned stepper semantics after execution-setting cleanup
 
@@ -174,45 +175,37 @@ What this unlocked:
 
 - `ObserverParams` is now a clearer semantic owner even while the public scalar compatibility surface remains for API stability
 - observer-facing rebuild and invalidation behavior is easier to reason about because bundle copying and name resolution no longer live in duplicated simulator-side mutation code
-- the next leverage point is continuation-state semantics and divergence guardrails rather than more observer-surface cleanup in the same shape
+- the next leverage point is broader numerical-helper adoption rather than more observer-surface cleanup in the same shape
 
-### Priority 0: Continuation-state semantics and divergence guardrails
+### Landed Priority 0: Continuation-state semantics and divergence guardrails
 
-The next active cleanup should make the solver-owned time model honest and explicit before any broader public continuation API is added.
+Status on the current branch:
 
-Why this should be next:
+- solver-owned continuation semantics are now spelled out more directly in docs, tests, and the reference notes
+- `Simulator.advance_tspan_to_attained_final_time()` now provides a narrow built-in continuation helper for the representable shared-final-time case
+- contract coverage now distinguishes exact attained-time continuation from `shift_tspan()`'s requested-window semantics and rejects diverged final times at the helper boundary
 
-- the internal solver-state, observer-definition, and stepper-definition boundaries are now stable enough to make the current continuation limit explicit without reopening unrelated ownership work
-- a public helper layered on the current shared-`tspan` model would either have to refuse diverged ensembles or silently encode an arbitrary policy
-- observer cleanup has landed cleanly enough that the lower-level continuation contract is now the highest-value remaining clarity gap
+What this unlocked:
 
-The lower-level execution model still needs a clearer internal contract, and this is now the right place to sharpen it rather than papering over the limit with a misleading helper.
+- the common exact split-window continuation case no longer needs a repeated user-land helper pattern
+- the remaining continuation debt is now narrower: diverged-time ensembles and any later device-side per-work-item `t0` or richer solver-state model
+- the next leverage point is broader numerical-helper adoption and stronger component coverage rather than more shared-window continuation work in the same shape
 
-Key tasks:
-
-- codify that exact shared-window continuation is only valid when the ensemble agrees on one attained `tf`
-- add small internal guardrails or state queries around that representability instead of inventing a broad new public continuation surface
-- keep the current low-level `set_tspan(...)`, `shift_tspan()`, and `get_final_time()` surface intact while making the unsupported divergent-time case more explicit in tests and docs
-
-Why now:
-
-- IVP-first batch cleanup clarifies what simulators orchestrate
-- the solver-state layer and observer-definition layer are now clearer internal contracts between `simulation` and `_opencl`
-- execution-setting cleanup, observer cleanup, and stepper-definition cleanup have now landed, so continuation-state cleanup can build on stable internal semantics instead of another moving target
-
-### Priority 2: Numerical kernel refinements
+### Priority 0: Broader numerical-helper adoption and time-base groundwork
 
 These items are important, but they should follow the state-model work.
 
 Key tasks:
 
-- address fixed-step endpoint drift without violating fixed-step semantics
-- consider more accurate time accumulation helpers such as `TwoSum`, `t0 + step * dt`, or related compensated/structured-time ideas already noted in the kernels
-- improve interpolation and dense-output groundwork for trajectory and observer use cases
+- carry the new helper layer into the remaining observers and any clearly fragile stepper time-base paths where it buys real robustness or clarity
+- extend component and exact-regression coverage where that helper adoption changes a contract worth pinning down directly
+- separate the immediate helper-adoption pass from any larger per-work-item structured-time redesign such as `t0 + step * dt`
 
-Why later:
+Why this should be next:
 
-- these are meaningful numerical improvements, but continuation mismatches are a more immediate correctness issue
+- the continuation contract is now honest enough that the remaining numerical weak spots stand out more clearly
+- the helper foundation and the kernel-component test layer now give this work a concrete substrate instead of scattered TODOs
+- this is a better near-term leverage point than jumping straight into a larger per-work-item time model or implicit-stepper work
 
 ### Priority 2: Solver-extension groundwork for stiff problems
 
@@ -267,8 +260,8 @@ Packaging note:
 
 ## Recommended Order Of Attack
 
-1. Tighten continuation-state semantics and divergence guardrails around the current shared-window model.
-2. Then broaden numerical-helper adoption into the remaining observers and the stepper time-base path while tackling deeper numerical time-base refinements.
+1. Broaden numerical-helper adoption into the remaining observers and the stepper time-base path while extending the direct component coverage that makes those changes cheap to validate.
+2. Then revisit deeper time-base refinements and any per-work-item `t0` follow-through only if the remaining continuation pressure still justifies it.
 3. After that, revisit implicit-solver groundwork and other larger solver extensions.
 4. Finally, return to broader runtime-surface and package cleanup once those internal semantics settle.
 

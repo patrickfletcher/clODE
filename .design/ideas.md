@@ -22,20 +22,20 @@ Format:
 
 ## Core Execution And State Semantics
 
-- [ ] P0 Continuation-state semantics and divergence guardrails: exact shared `t_span` continuation is only valid when the ensemble agrees on attained `tf`; keep helper logic in user code for now and defer a public continuation API until broader legacy-API deprecation planning. refs: `docs/continuation.md`, `clode/simulation/_state.py`, `clode/simulation/base.py`, `test/test_simulation_contracts.py`, `.design/reference/continuation_timebase_note.md`
 - [ ] P2 Device-side per-work-item current time / `t0` if exact continuation after diverged `tf` becomes a real priority. depends: continuation-state semantics and guardrails. refs: `clode/simulation/_state.py`, `clode/_opencl/executors.py`, `clode/_opencl/buffers.py`, `clode/kernels/transient.cl`, `.design/reference/continuation_timebase_note.md`
 - [ ] P1 Batch-generation helpers such as `grid`, random, and quasi-random sampling layered on top of the IVP model and current shape metadata instead of keeping ensemble creation buried in `Simulator`. refs: `clode/simulation/base.py`, `.design/reference/semantic_layout_audit.md`
 - [ ] P2 Execution-model experiments: `per-work-item` vs `per-work-group` vs shared/global solver state. refs: `clode/kernels/odedriver.cl`
 
 ## Observer And Feature Model
 
+- [ ] P2 Add a small set of dynamical-systems-oriented observers or features such as direction-of-crossing or Poincare-section style events once the built-in observer model settles further. refs: `clode/observers/_definitions.py`, `clode/kernels/observers/`, `docs/examples.md`
 - [ ] P2 Observer-specific parameter models/classes instead of one broad `ObserverParams`. depends: explicit observer-definition model. refs: `clode/features.py`, `clode/kernels/observers.cl`
 - [ ] P2 Support aux variables as event/feature variables. depends: explicit observer-definition model. refs: `clode/kernels/observers.cl`
 - [ ] P2 Custom/composable observers from Python-authored definitions. depends: explicit observer-definition model and codegen story. refs: `clode/features.py`, `clode/function_converter.py`
 
 ## Numerical Methods And Kernel Math
 
-- [ ] P1 Broaden shared numerical-helper adoption beyond the initial helper foundation: carry compensated or structured accumulation into the remaining observers and the stepper time-base path where it buys real clarity or robustness. refs: `clode/kernels/clODE_utilities.cl`, `clode/kernels/observers/`, `clode/kernels/steppers/`, `test/kernel_components/test_kernel_math.py`
+- [ ] P0 Broaden shared numerical-helper adoption beyond the initial helper foundation: carry compensated or structured accumulation into the remaining observers and the stepper time-base path where it buys real clarity or robustness. refs: `clode/kernels/clODE_utilities.cl`, `clode/kernels/observers/`, `clode/kernels/steppers/`, `test/kernel_components/test_kernel_math.py`
 - [ ] P1 Better trajectory/output modes: chunking, variable subsets, specified output times, dense output. depends: integration/output separation. refs: `clode/trajectory.py`, `clode/kernels/trajectory.cl`, `.design/reference/chunked_execution_audit.md`
 - [ ] P2 Time-base and interpolation accuracy helpers (`TwoSum`, `t0 + step * dt`, dense interpolants, fixed-step endpoint handling). depends: explicit per-work-item `t0`. refs: `clode/kernels/clODE_utilities.cl`, `clode/kernels/realtype.cl`, `.design/archived/pre_backend_readiness_2026_05_05/fixed_step_endpoint_bug_audit.md`
 - [ ] P2 Better adaptive-step controllers (I/PI/PID). refs: `clode/kernels/steppers.cl`
@@ -71,7 +71,9 @@ Format:
 
 - [ ] P1 Expand kernel-component coverage beyond helper math and the current basic/basicall observer contracts into build-key invalidation, observer storage, and stepper execution contracts. refs: `test/kernel_components/`, `clode/_opencl/source_builder.py`, `.design/reference/testing_audit.md`
 - [ ] P1 Cache/build-key/invalidation coverage around program rebuilds and observer changes. refs: `clode/_opencl/program_cache.py`, `clode/_opencl/source_builder.py`, `clode/features.py`
+- [ ] P1 Test-surface audit for drift, weak success conditions, and unnecessary coverage before more large internal refactors. refs: `test/`, `tools/run_test_bundle.py`, `.design/reference/testing_audit.md`
 - [ ] P2 Package/API hygiene: typing cleanup, stepper-specific parameter subsets, and trajectory output ergonomics once continuation policy and stepper-specific public semantics are clearer. refs: `clode/solver.py`, `clode/features.py`, `clode/trajectory.py`
+- [ ] P2 Examples or docs that show where compensated summation and related single-precision safeguards help in practice. refs: `examples/`, `docs/examples.md`, `docs/performance_notes.md`, `clode/kernels/clODE_utilities.cl`
 - [ ] P1 Runtime-install guidance: reuse upstream PyOpenCL install/runtime guidance where it reduces local duplication and point users to optional runtime packaging where appropriate. refs: `docs/install.md`, `docs/querying_opencl.md`, `.design/reference/public_surfaces_plan.md`, `.design/reference/docs_layout_plan.md`
 - [ ] P2 Public-facing package narrative and publication-readiness: maintain the shared landing page, keep the docs IA iterative (`Getting Started` / `Guides` / narrow `Examples` / `Reference`) while API changes settle, and defer citation metadata plus release-tag hygiene until the scientific, numerical, performance, runtime, and UX surfaces are stronger. refs: `README.md`, `CONTRIBUTING.md`, `docs/index.md`, `docs/examples.md`, `docs/performance_notes.md`, `paper/paper.md`, `.design/reference/project_principles.md`, `.design/reference/joss_audit.md`, `.design/reference/public_surfaces_plan.md`, `.design/reference/docs_layout_plan.md`
 - [ ] P2 Scope audit: what belongs in clODE vs sibling/helper packages. refs: `.design/package_state.md`, `.design/development_roadmap.md`, `.design/reference/project_principles.md`
@@ -79,6 +81,3 @@ Format:
 ## Inbox
 
 Temporary holding area for rough notes. Process this section with the `design-ideas-inbox` skill when routing items into the maintained `.design` framework.
-
-- plan and add some simple observers/features inspired by dynamical systems theory (direction of crossing, Poincare sections, ... ?)
-- demos/examples showing how single-precision tricks like compensated summation actually help in practice, which would be nice in docs too for exposition of clODE's strengths

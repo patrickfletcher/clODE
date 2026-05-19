@@ -17,7 +17,7 @@ Historical debugging detail from the earlier observer-time rebase investigation 
 ## Remaining live design questions
 
 - The solver now has a first-class Python-owned `SolverState` in `clode/simulation/_state.py`, but the runtime still exposes continuation through a shared requested `tspan` plus per-work-item `dt`, attained `tf`, and RNG continuation rather than a full device-side per-work-item state object.
-- A public helper should stay deferred unless it can either prove one shared attained final time or sit on a clearer per-work-item time model. With only a shared requested `tspan`, any built-in divergent-time continuation policy would be an approximation or arbitrary choice.
+- The simulator layer now has a narrow helper for the representable case: `advance_tspan_to_attained_final_time()` proves one shared attained final time before updating the shared requested window. A broader built-in divergent-time continuation policy should still stay deferred because, with only a shared requested `tspan`, any such policy would be an approximation or arbitrary choice.
 - Per-work-item `t0` and explicit completion or error flags would make continuation and diverged-work-item bookkeeping much simpler.
 - Per-work-item `t0` fits the current continuation model semantically, but the live kernels, observer initialization path, and two-pass rewind logic still assume `ti = tspan[0]`, so a real device-side `t0` is a coordinated runtime change rather than just another cache field.
 - The Python-level `SolverState` first pass is now live; a full matched device-side solver-state struct remains optional future follow-through after continuation ergonomics and per-work-item time ownership are clearer.
@@ -30,6 +30,7 @@ Historical debugging detail from the earlier observer-time rebase investigation 
 Public docs should stay usage-focused:
 
 - what continues automatically
+- when `advance_tspan_to_attained_final_time()` is the right tool
 - when to use `get_final_time()`
 - when to concatenate trajectory windows
 - what the current limitations are

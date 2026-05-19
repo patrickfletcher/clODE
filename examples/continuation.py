@@ -30,21 +30,6 @@ def stable_linear(
      derivatives[0] = -a * x
      derivatives[1] = -b * y
 
-
-def advance_window_to_attained_final_time(simulator: clode.Simulator) -> None:
-    start, end = simulator.get_tspan()
-    duration = end - start
-    final_times = np.asarray(simulator.get_final_time(), dtype=np.float64).reshape(-1)
-
-    if not np.allclose(final_times, final_times[0], atol=ATOL, rtol=0.0):
-        raise ValueError(
-            "This helper assumes a single attained final time across the ensemble"
-        )
-
-    next_start = float(final_times[0])
-    simulator.set_tspan((next_start, next_start + duration))
-
-
 def make_trajectory_simulator(t_span: tuple[float, float]) -> clode.TrajectorySimulator:
     return clode.TrajectorySimulator(
         rhs_equation=stable_linear,
@@ -93,7 +78,7 @@ def main() -> None:
 
     full_trajectory = full_trajectory_simulator.trajectory()
     first_window = split_trajectory_simulator.trajectory()
-    advance_window_to_attained_final_time(split_trajectory_simulator)
+    split_trajectory_simulator.advance_tspan_to_attained_final_time()
     second_window = split_trajectory_simulator.trajectory()
 
     stitched_time, stitched_state = concatenate_trajectory_segments(
@@ -119,7 +104,7 @@ def main() -> None:
 
     full_features = full_feature_simulator.features()
     split_feature_simulator.features()
-    advance_window_to_attained_final_time(split_feature_simulator)
+    split_feature_simulator.advance_tspan_to_attained_final_time()
     split_features = split_feature_simulator.features()
 
     assert full_features is not None

@@ -116,6 +116,55 @@ def test_get_tspan_returns_current_device_window() -> None:
     assert simulator.get_tspan() == (1.25, 2.5)
 
 
+def test_advance_tspan_to_attained_final_time_uses_attained_fixed_step_end() -> None:
+    simulator = make_simulator(
+        "stable_linear",
+        stepper=clode.Stepper.rk4,
+        t_span=(0.0, 1.0),
+        dt=0.3,
+        dtmax=0.3,
+        max_steps=FIXED_MAX_STEPS,
+    )
+
+    simulator.transient(update_x0=False, fetch_results=False)
+    attained_final_time = float(simulator.get_final_time().reshape(-1)[0])
+
+    assert attained_final_time == pytest.approx(1.2)
+    assert simulator.advance_tspan_to_attained_final_time() == pytest.approx((1.2, 2.2))
+    assert simulator.get_tspan() == pytest.approx((1.2, 2.2))
+
+
+def test_shift_tspan_keeps_requested_window_semantics_after_fixed_step_run() -> None:
+    simulator = make_simulator(
+        "stable_linear",
+        stepper=clode.Stepper.rk4,
+        t_span=(0.0, 1.0),
+        dt=0.3,
+        dtmax=0.3,
+        max_steps=FIXED_MAX_STEPS,
+    )
+
+    simulator.transient(update_x0=False, fetch_results=False)
+    simulator.shift_tspan()
+
+    assert simulator.get_tspan() == pytest.approx((1.0, 2.0))
+
+
+def test_advance_tspan_to_attained_final_time_rejects_diverged_final_times() -> None:
+    simulator = make_simulator(
+        "stable_linear",
+        stepper=clode.Stepper.rk4,
+        t_span=(0.0, 1.0),
+        dt=FIXED_DT,
+        max_steps=FIXED_MAX_STEPS,
+    )
+    simulator.set_repeat_ensemble(2)
+    simulator._solver_state.final_time = np.array([0.5, 0.75], dtype=np.float64)
+
+    with pytest.raises(ValueError, match="different final times"):
+        simulator.advance_tspan_to_attained_final_time()
+
+
 def test_get_final_state_can_be_fetched_twice() -> None:
     simulator = make_simulator(
         "stable_linear",

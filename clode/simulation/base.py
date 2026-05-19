@@ -411,6 +411,40 @@ class Simulator:
 		self._solver_state.set_requested_window(tuple(self._integrator.get_tspan()))
 		self._invalidate_runtime_caches()
 
+	def advance_tspan_to_attained_final_time(
+		self,
+		*,
+		atol: float = 1e-12,
+		rtol: float = 0.0,
+	) -> tuple[float, float]:
+		"""Advance the requested window so it starts at the attained final time.
+
+		Unlike `shift_tspan()`, this preserves the current requested duration but
+		starts the next window from the attained `tf` returned by the previous
+		solve. This is the exact split-window continuation path when the ensemble
+		shares one final time.
+
+		Args:
+			atol: Absolute tolerance used when checking that the ensemble agrees on
+				one attained final time.
+			rtol: Relative tolerance used when checking that the ensemble agrees on
+				one attained final time.
+
+		Returns:
+			The new requested time window.
+
+		Raises:
+			ValueError: If no solve has been run yet or the ensemble reached
+				different final times.
+		"""
+		self.get_final_time()
+		next_tspan = self._solver_state.attained_final_time_window(
+			atol=atol,
+			rtol=rtol,
+		)
+		self.set_tspan(next_tspan)
+		return next_tspan
+
 	def set_solver_parameters(
 		self,
 		solver_parameters: Optional[SolverParams] = None,

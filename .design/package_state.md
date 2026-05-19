@@ -19,8 +19,9 @@ Update when: canonical module homes, public compatibility surfaces, packaging ru
 - Execution-setting defaults and compatibility resolution now flow through one canonical solver-settings path, and simulators keep internal copies of caller-provided `SolverParams` bundles instead of aliasing them.
 - Built-in stepper definitions, traits, and OpenCL build mapping now resolve through a Python-owned stepper-definition catalog instead of raw registry tables.
 - Observer parameter resolution now flows through one canonical `ObserverParams` path, and simulator and executor boundaries keep internal copies of caller-provided observer bundles instead of aliasing them.
+- The simulator layer now has a narrow `advance_tspan_to_attained_final_time()` helper for exact shared-window continuation when the ensemble agrees on one attained `tf`.
 - A shared kernel-math helper foundation now lives in `clode/kernels/clODE_utilities.cl`, and the initial `test/kernel_components/` layer exercises helper plus direct `basic` and `basicall` observer contracts.
-- The current package still has a few cleanup targets, especially continuation-state semantics for diverged work-item times, broader helper adoption across remaining observers and stepper time-base paths, deeper component-test coverage, and later chunking work on top of the landed IVP, solver-state, output-policy, observer, execution-setting, and stepper-definition boundaries.
+- The current package still has a few cleanup targets, especially diverged-time continuation follow-through around per-work-item `t0` or richer solver-state modeling, broader helper adoption across remaining observers and stepper time-base paths, deeper component-test coverage, and later chunking work on top of the landed IVP, solver-state, output-policy, observer, execution-setting, and stepper-definition boundaries.
 
 ## Session-Start Guidance
 
@@ -93,7 +94,7 @@ The historical backend-shim, protocol/factory facade, and binding-named compatib
 - `FeatureSimulator` uses persistent observer state plus an optional warmup kernel for two-pass observers.
 - The solver now owns the authoritative continuation time base. Observer finalizers no longer rebase time, and exact split-window continuation is defined by continuing from the attained per-item `tf`.
 - A first-pass internal solver-state boundary now lives in `clode/simulation/_state.py`, while `_opencl/executors.py` treats host-side mirrors as transfer caches rather than semantic owners. Current runtime continuation still uses a shared requested `tspan` plus per-item `dt`, attained `tf`, and RNG continuation rather than a full device-side per-work-item state object.
-- Exact absolute-time continuation still requires caller-managed `t_span`. For fixed-step runs, the robust handoff point is the attained `tf` from `get_final_time()`, not the requested endpoint.
+- Exact absolute-time continuation now has a narrow built-in path for the common shared-final-time case via `advance_tspan_to_attained_final_time()`. For fixed-step runs, the robust handoff point is the attained `tf` from `get_final_time()`, not the requested endpoint.
 
 ## Current Constraints And Live Debt
 
@@ -102,7 +103,7 @@ The historical backend-shim, protocol/factory facade, and binding-named compatib
 - Simulators still carry compatibility delegates for batch reshaping and maintain cached problem arrays alongside the IVP; richer batch-generation helpers (`grid`, random, quasi-random) have not yet been added around the IVP model.
 - Solver-related execution state now has a clearer internal home in `clode/simulation/_state.py` and executor transfer caches, and integration policy is now explicitly split from trajectory output/storage policy through internal settings views, OpenCL buffers, and kernel-facing structs. Public `SolverParams` remains a compatibility bundle at the simulator boundary.
 - Common continuation state now has a Python-owned first pass via `SolverState`, but there is still no device-side per-work-item `t0` or richer completion/error status model.
-- Exact shared-window continuation is only representable when the ensemble agrees on one attained `tf`; with diverged per-work-item final times, any next shared `t_span` is an explicit approximation or policy choice rather than one exact continuation update.
+- Exact shared-window continuation is only representable when the ensemble agrees on one attained `tf`; `advance_tspan_to_attained_final_time()` now handles that representable case, while diverged per-work-item final times still require an explicit caller policy rather than one exact shared-window update.
 - `SolverParams` still mixes integration controls with trajectory-storage controls (`max_store`, `nout`) in the public compatibility bundle even though the internal and kernel-facing execution path now treats them separately.
 - `FeatureSimulator` still exposes a broad legacy `observer_*` scalar compatibility surface alongside `ObserverParams`, but those compatibility inputs now resolve through one canonical bundle path and copy caller-provided bundles instead of aliasing them.
 - `Simulator`, `TrajectorySimulator`, and `FeatureSimulator` now resolve scalar solver arguments and prebuilt `SolverParams` bundles through the same canonical helper, but `SolverParams` still mixes integration controls with trajectory-output policy at the public compatibility boundary.
@@ -110,7 +111,7 @@ The historical backend-shim, protocol/factory facade, and binding-named compatib
 - `ObserverParams` now owns the canonical built-in observer defaults, but the legacy constructor alias names in `FeatureSimulator` remain as the compatibility surface.
 - Built-in observer definitions now live in `clode/observers/_definitions.py`, and shared resolved observer specs now drive feature-build defines, build-key selection, and feature-executor invalidation boundaries.
 - Optional event storage still participates in compile-time observer layout and buffer sizing, but runtime observer settings now exclude event timestamp capacity and treat it as explicit output/layout policy instead.
-- `shift_tspan()` still advances the requested window rather than the attained final time, so exact absolute-time continuation remains a caller-managed policy.
+- `shift_tspan()` still advances the requested window rather than the attained final time, so it remains the requested-window continuation tool rather than the exact attained-time path.
 - Shared OpenCL numerical helpers now have a first small home in `clODE_utilities.cl`, and the `basic` and `basicall` observers now use compensated integral accumulation for their time-weighted means. Broader adoption across the remaining observers and stepper time-base paths is still future work.
 - Fixed-step kernels still advance time with `ti += dt`, so very long absolute-time runs with small `dt` remain precision-sensitive; evaluating `t0 + step * dt` or related structured-time models is still future work.
 - RNG continuation details are persisted in separate common buffers rather than a clearer per-work-item state object, which will matter again when evaluating Random123.
