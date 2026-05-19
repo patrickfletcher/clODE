@@ -16,6 +16,7 @@ from ..simulation.params import (
     SolverParams,
     _TrajectoryOutputSettings,
 )
+from ..simulation._stepper_definitions import StepperDefinition
 from .buffers import (
     ArrayLayout,
     BufferManager,
@@ -129,6 +130,10 @@ class OpenCLTransientExecutor:
         self._runtime = runtime
         self._kernel_root = Path(clode_root)
         self._registry = KernelRegistry(self._kernel_root)
+        self._stepper_definition: StepperDefinition = self._registry.get_stepper_definition(
+            stepper
+        )
+        self._stepper = self._stepper_definition.stepper_name
         self._source_builder = SourceBuilder(self._kernel_root, self._registry)
         self._buffer_manager = BufferManager(self._runtime, self._precision)
         self._problem_shape = ProblemShape.from_problem_info(problem_info)
@@ -153,7 +158,7 @@ class OpenCLTransientExecutor:
         source_bundle = self._source_builder.build(
             kernel_kind=KernelKind.TRANSIENT,
             precision=self._precision,
-            stepper_name=self._stepper,
+            stepper_name=self._stepper_definition.stepper_name,
             problem_shape=self._problem_shape,
             rhs=self._rhs_source,
         )
@@ -162,7 +167,7 @@ class OpenCLTransientExecutor:
         )
 
     def get_available_steppers(self) -> list[str]:
-        return list(self._registry._STEPPERS.keys())
+        return list(self._registry.get_available_steppers())
 
     def get_dt(self) -> list[float]:
         if self._buffers is None:
@@ -479,7 +484,7 @@ class OpenCLTrajectoryExecutor(OpenCLTransientExecutor):
         source_bundle = self._source_builder.build(
             kernel_kind=KernelKind.TRAJECTORY,
             precision=self._precision,
-            stepper_name=self._stepper,
+            stepper_name=self._stepper_definition.stepper_name,
             problem_shape=self._problem_shape,
             rhs=self._rhs_source,
         )
@@ -684,7 +689,7 @@ class OpenCLFeatureExecutor(OpenCLTransientExecutor):
         source_bundle = self._source_builder.build(
             kernel_kind=KernelKind.FEATURES,
             precision=self._precision,
-            stepper_name=self._stepper,
+            stepper_name=self._stepper_definition.stepper_name,
             problem_shape=self._problem_shape,
             rhs=self._rhs_source,
             resolved_observer_spec=self._resolved_observer_spec,

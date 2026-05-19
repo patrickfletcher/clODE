@@ -28,6 +28,16 @@ def test_kernel_registry_exposes_current_cpp_defines_and_entrypoints() -> None:
     registry = KernelRegistry(KERNEL_ROOT)
 
     assert registry.get_stepper_define("rk4") == "EXPLICIT_RK4"
+    assert registry.get_stepper_definition("dopri5").is_adaptive is True
+    assert registry.get_stepper_definition("seuler").is_stochastic is True
+    assert registry.get_available_steppers() == (
+        "euler",
+        "heun",
+        "rk4",
+        "bs23",
+        "dopri5",
+        "seuler",
+    )
     assert registry.get_observer_define("basicall") == "USE_OBSERVER_BASIC_ALLVAR"
     assert tuple(path.name for path in registry.get_entrypoint_paths(KernelKind.FEATURES)) == (
         "transient.cl",
@@ -64,6 +74,7 @@ def test_source_builder_matches_transient_source_assembly_and_build_options() ->
 
     assert bundle.build_key.kernel_kind is KernelKind.TRANSIENT
     assert bundle.build_key.rhs_digest == rhs.digest
+    assert bundle.build_key.stepper_define == "EXPLICIT_RK4"
     assert bundle.build_options == (
         "-DCLODE_SINGLE_PRECISION",
         "-DEXPLICIT_RK4",
@@ -109,6 +120,7 @@ def test_source_builder_features_include_observer_options_and_build_key_changes(
     assert "__kernel void features" in first.source_text
     assert "-DUSE_OBSERVER_BASIC_ALLVAR" in first.build_options
     assert "-DN_STORE_EVENTS=7" in first.build_options
+    assert first.build_key.stepper_define == "EXPLICIT_DOPRI5"
     assert first.build_key.observer_define == "USE_OBSERVER_BASIC_ALLVAR"
     assert "-g" in first.build_options
     assert "-cl-opt-disable" in first.build_options

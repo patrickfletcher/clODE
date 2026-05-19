@@ -57,6 +57,7 @@ class BuildKey:
     kernel_kind: KernelKind
     precision: Precision
     stepper_name: str
+    stepper_define: str
     observer_define: str | None
     problem_shape: ProblemShape
     n_store_events: int
@@ -69,6 +70,8 @@ class BuildKey:
             raise ValueError("backend_version must not be empty")
         if not self.stepper_name:
             raise ValueError("stepper_name must not be empty")
+        if not self.stepper_define:
+            raise ValueError("stepper_define must not be empty")
         if self.observer_define == "":
             raise ValueError("observer_define must be None or a non-empty string")
         if self.n_store_events < 0:

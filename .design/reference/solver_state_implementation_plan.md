@@ -51,7 +51,7 @@ Update when: the solver-state boundary changes materially or this note becomes h
 ## Handoff to the next PR
 
 - Treat the landed solver-state boundary as stable enough to build on, not as the next thing to reopen.
-- The planned output/storage, observer-definition, and execution-setting follow-ons have now landed; the next structural cleanup is stepper-definition work around explicit traits and Python-owned build mapping.
+- The planned output/storage, observer-definition, execution-setting, and stepper-definition follow-ons have now landed; the next structural cleanup is a public continuation-policy helper on top of the current solver-owned time model.
 - Keep the current owner split intact in follow-on work:
   - IVP owns next-solve problem data
   - solver state owns execution progress and continuation facts

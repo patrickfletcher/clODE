@@ -3,20 +3,16 @@ from __future__ import annotations
 from pathlib import Path
 
 from ..observers._definitions import get_observer_definition
+from ..simulation._stepper_definitions import (
+    StepperDefinition,
+    get_stepper_definition,
+    get_stepper_names,
+)
 from .errors import UnsupportedObserverError, UnsupportedStepperError
 from .models import KernelKind
 
 
 class KernelRegistry:
-    _STEPPERS = {
-        "euler": "EXPLICIT_EULER",
-        "heun": "EXPLICIT_HEUN",
-        "rk4": "EXPLICIT_RK4",
-        "bs23": "EXPLICIT_BS23",
-        "dopri5": "EXPLICIT_DOPRI5",
-        "seuler": "STOCHASTIC_EULER",
-    }
-
     _ENTRYPOINTS = {
         KernelKind.TRANSIENT: ("transient.cl",),
         KernelKind.TRAJECTORY: ("transient.cl", "trajectory.cl"),
@@ -36,9 +32,17 @@ class KernelRegistry:
     def __init__(self, kernel_root: Path) -> None:
         self._kernel_root = kernel_root
 
+    def get_stepper_definition(self, stepper_name: str) -> StepperDefinition:
+        try:
+            return get_stepper_definition(stepper_name)
+        except ValueError as error:
+            raise UnsupportedStepperError(stepper_name) from error
+
     def get_stepper_define(self, stepper_name: str) -> str:
-        self.validate_stepper(stepper_name)
-        return self._STEPPERS[stepper_name]
+        return self.get_stepper_definition(stepper_name).build_define
+
+    def get_available_steppers(self) -> tuple[str, ...]:
+        return get_stepper_names()
 
     def get_observer_define(self, observer_name: str) -> str:
         return self._resolve_observer_definition(observer_name).build_define
@@ -50,8 +54,7 @@ class KernelRegistry:
         return self._KERNEL_NAMES[kernel_kind]
 
     def validate_stepper(self, stepper_name: str) -> None:
-        if stepper_name not in self._STEPPERS:
-            raise UnsupportedStepperError(stepper_name)
+        self.get_stepper_definition(stepper_name)
 
     def validate_observer(self, observer_name: str | None) -> None:
         if observer_name is None:

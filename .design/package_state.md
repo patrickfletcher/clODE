@@ -17,7 +17,8 @@ Update when: canonical module homes, public compatibility surfaces, packaging ru
 - Lower-level helper types such as `ProblemInfo` and `RhsSource` now live only under `clode.problem._core`; the curated public problem API centers `InitialValueProblem` and the authoring/conversion helpers instead.
 - Built-in observer definitions, resolved observer specs, and observer-state naming are now aligned across the Python host layer, OpenCL metadata, and the active kernels.
 - Execution-setting defaults and compatibility resolution now flow through one canonical solver-settings path, and simulators keep internal copies of caller-provided `SolverParams` bundles instead of aliasing them.
-- The current package still has a few cleanup targets, especially Python-owned stepper semantics and later continuation/chunking work on top of the landed IVP, solver-state, output-policy, observer, and execution-setting boundaries.
+- Built-in stepper definitions, traits, and OpenCL build mapping now resolve through a Python-owned stepper-definition catalog instead of raw registry tables.
+- The current package still has a few cleanup targets, especially public continuation-policy ergonomics and later chunking work on top of the landed IVP, solver-state, output-policy, observer, execution-setting, and stepper-definition boundaries.
 
 ## Session-Start Guidance
 
@@ -54,7 +55,7 @@ Update when: canonical module homes, public compatibility surfaces, packaging ru
 
 - `clode/_opencl/models.py`: build keys, source bundles, problem shape, and precision enums.
 - `clode/_opencl/runtime.py`: explicit single-device context and queue creation plus `RuntimeSelection` normalization into a concrete PyOpenCL runtime.
-- `clode/_opencl/registry.py`: stepper and observer define registry plus entrypoint mapping.
+- `clode/_opencl/registry.py`: entrypoint mapping plus stepper and observer resolution routed through semantic definition catalogs.
 - `clode/_opencl/source_builder.py`: kernel assembly, build options, and kernel-tree digesting.
 - `clode/_opencl/program_cache.py`: runtime-scoped OpenCL program cache.
 - `clode/_opencl/structs.py`: device-matched struct dtypes.
@@ -101,6 +102,7 @@ The historical backend-shim, protocol/factory facade, and binding-named compatib
 - Common continuation state now has a Python-owned first pass via `SolverState`, but there is still no device-side per-work-item `t0` or richer completion/error status model.
 - `SolverParams` still mixes integration controls with trajectory-storage controls (`max_store`, `nout`) in the public compatibility bundle even though the internal and kernel-facing execution path now treats them separately.
 - `Simulator`, `TrajectorySimulator`, and `FeatureSimulator` now resolve scalar solver arguments and prebuilt `SolverParams` bundles through the same canonical helper, but `SolverParams` still mixes integration controls with trajectory-output policy at the public compatibility boundary.
+- Built-in stepper definitions now live in `clode/simulation/_stepper_definitions.py`, and runtime validation plus source-building now consume those definitions instead of raw stepper string tables.
 - `ObserverParams` now owns the canonical built-in observer defaults, but the legacy constructor alias names in `FeatureSimulator` remain as the compatibility surface.
 - Built-in observer definitions now live in `clode/observers/_definitions.py`, and shared resolved observer specs now drive feature-build defines, build-key selection, and feature-executor invalidation boundaries.
 - Optional event storage still participates in compile-time observer layout and buffer sizing, but runtime observer settings now exclude event timestamp capacity and treat it as explicit output/layout policy instead.

@@ -37,7 +37,7 @@ class SourceBuilder:
         debug_build: bool = False,
         resolved_observer_spec: ResolvedObserverSpec | None = None,
     ) -> SourceBundle:
-        self._registry.validate_stepper(stepper_name)
+        stepper_definition = self._registry.get_stepper_definition(stepper_name)
         (
             observer_name,
             observer_define,
@@ -65,7 +65,8 @@ class SourceBuilder:
             backend_version=OPENCL_BACKEND_VERSION,
             kernel_kind=kernel_kind,
             precision=precision,
-            stepper_name=stepper_name,
+            stepper_name=stepper_definition.stepper_name,
+            stepper_define=stepper_definition.build_define,
             observer_define=observer_define,
             problem_shape=problem_shape,
             n_store_events=n_store_events,
@@ -97,7 +98,7 @@ class SourceBuilder:
             "-DCLODE_SINGLE_PRECISION"
             if key.precision is Precision.SINGLE
             else "-DCLODE_DOUBLE_PRECISION",
-            f"-D{self._registry.get_stepper_define(key.stepper_name)}",
+            f"-D{key.stepper_define}",
             f"-DN_PAR={key.problem_shape.n_par}",
             f"-DN_VAR={key.problem_shape.n_var}",
             f"-DN_AUX={key.problem_shape.n_aux}",

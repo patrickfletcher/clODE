@@ -19,6 +19,13 @@ from clode._opencl import (
 from clode.observers._definitions import resolve_observer_spec
 from clode.observers import ObserverParams, get_observer_feature_names, is_two_pass_observer
 from clode.problem._core import ProblemInfo, create_rhs_source
+from clode.simulation._stepper_definitions import (
+    StepperMethodKind,
+    StepperNoiseKind,
+    StepperStepSizeKind,
+    get_stepper_definition,
+    get_stepper_names,
+)
 
 
 def _make_build_key(**overrides: object) -> BuildKey:
@@ -28,6 +35,7 @@ def _make_build_key(**overrides: object) -> BuildKey:
         "kernel_kind": KernelKind.TRANSIENT,
         "precision": Precision.SINGLE,
         "stepper_name": "rk4",
+        "stepper_define": "EXPLICIT_RK4",
         "observer_define": None,
         "problem_shape": ProblemShape(n_var=2, n_par=1, n_aux=1, n_wiener=0),
         "n_store_events": 0,
@@ -150,6 +158,28 @@ def test_observer_catalog_helpers_expose_feature_names_and_two_pass_flags() -> N
     )
     assert is_two_pass_observer("nhood2") is True
     assert is_two_pass_observer("basic") is False
+
+
+def test_stepper_catalog_exposes_traits_and_build_mapping() -> None:
+    rk4 = get_stepper_definition("rk4")
+    dopri5 = get_stepper_definition("dopri5")
+    seuler = get_stepper_definition("seuler")
+
+    assert get_stepper_names() == (
+        "euler",
+        "heun",
+        "rk4",
+        "bs23",
+        "dopri5",
+        "seuler",
+    )
+    assert rk4.build_define == "EXPLICIT_RK4"
+    assert rk4.method_kind is StepperMethodKind.EXPLICIT
+    assert rk4.step_size_kind is StepperStepSizeKind.FIXED
+    assert rk4.noise_kind is StepperNoiseKind.DETERMINISTIC
+    assert rk4.is_adaptive is False
+    assert dopri5.is_adaptive is True
+    assert seuler.is_stochastic is True
 
 
 def test_resolved_observer_spec_splits_persistent_and_event_layout() -> None:

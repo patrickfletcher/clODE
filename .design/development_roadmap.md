@@ -20,10 +20,10 @@ Use `.design/ideas.md` as the short living board. This file is the longer ration
 
 ### Current weaknesses
 
-- Continuation correctness is much better, and the first-pass Python-owned solver-state model, the integration/output split, the observer-definition cleanup, and the execution-setting cleanup are now live all the way into the OpenCL layer. The next structural bottleneck is stepper semantics, which are still split across the public enum, runtime registry tables, and kernel include selection.
+- Continuation correctness is much better, and the first-pass Python-owned solver-state model, the integration/output split, the observer-definition cleanup, the execution-setting cleanup, and the stepper-definition cleanup are now live all the way into the OpenCL layer. The next structural bottleneck is continuation ergonomics: the solver owns absolute time, but callers still have to express requested-window versus attained-`tf` policy by hand.
 - A first-pass IVP model now exists, and the curated public problem layer now centers `InitialValueProblem`; lower-level support types and source-preparation helpers are internal support concepts rather than promoted surface area.
 - Simulators still carry some semantic weight through compatibility delegates and cached mirrored problem data even though the core defaults and batch semantics now live on the IVP.
-- The next internal friction point is clearer now: execution-setting defaults are finally consistent, but stepper traits and build mapping are still scattered across `Stepper`, `_opencl.registry`, and the kernel include tree rather than one Python-owned semantic definition.
+- The next internal friction point is clearer now: the internal execution model is much more coherent, but repeated-solve continuation still feels lower-level than it should because callers must manage attained-`tf` versus requested-window policy explicitly.
 - Each work item effectively owns `dt` and attained `tf`, but not an explicit `t0` or completion/error flags. That leaves friction around continuation helpers and windows where work items diverge.
 - `SolverParams` still mixes integration policy with output-storage policy. That makes chunking, batching, and trajectory streaming harder than they need to be.
 - Stepper, solver-state, and problem concepts are still split across public enums/dataclasses, internal string registries, and kernel include trees rather than clearer Python-owned semantic definitions.
@@ -130,23 +130,44 @@ What remains for later:
 
 - no device-side per-work-item `t0` or richer completion/error status model yet
 - exact absolute-time continuation still needs caller-managed `t_span` or a later public continuation helper
-- the next leverage point is stepper-definition cleanup rather than reopening the ownership or output-policy work itself
+- the next leverage point is a public continuation-policy helper rather than reopening the ownership or output-policy work itself
 
-### Priority 0: Python-owned stepper semantics after execution-setting cleanup
+### Landed Priority 0: Python-owned stepper semantics after execution-setting cleanup
+
+Status on the current branch:
+
+- built-in stepper traits and OpenCL build mapping now resolve through `clode/simulation/_stepper_definitions.py`
+- `_opencl/registry.py`, `_opencl/source_builder.py`, and executor construction now consume the stepper-definition catalog instead of raw string tables
+- build keys now carry the resolved stepper define so program-cache identity tracks the effective kernel specialization more directly
+
+What this unlocked:
+
+- continuation helpers and later implicit-stepper groundwork can build on a clearer internal semantic layer first
+- source assembly and runtime validation now have one coherent home for stepper semantics instead of split registry logic
+
+### Priority 0: Public continuation-policy helper/API after stepper cleanup
+
+The next active cleanup should turn the solver-owned time model into a more explicit, ergonomic public policy.
+
+Why this should be next:
+
+- the internal solver-state and stepper-definition boundaries are now stable enough that continuation ergonomics no longer need to sit on shifting internals
+- the current need to hand-roll `set_tspan(get_final_time())` is both easy to misuse and harder to explain than it should be
+- this is a high-value developer and user clarity improvement without forcing a broader public config redesign yet
 
 The lower-level execution model still needs a clearer internal contract, but it no longer has to define the active user-facing PR boundary.
 
 Key tasks:
 
-- use that model as the basis for continuation-policy helpers and later batching behavior where per-item windows can diverge
-- introduce a Python-owned stepper-definition layer only after that state contract is clearer
-- build on the landed observer-definition model and the execution-setting source of truth instead of forcing stepper work to clean up drifting defaults at the same time
+- add one explicit continuation-policy helper or small API that distinguishes requested-window continuation from attained-`tf` continuation
+- keep the helper aligned with the current solver-owned time semantics and current shared-`tspan` runtime limitations
+- make the common continuation path more discoverable without hiding the remaining per-work-item `t0` limitations
 
 Why after Priority 0:
 
 - IVP-first batch cleanup clarifies what simulators orchestrate
 - the solver-state layer and observer-definition layer are now clearer internal contracts between `simulation` and `_opencl`
-- execution-setting cleanup has now landed, so stepper semantics no longer need to carry default-resolution cleanup at the same time
+- execution-setting cleanup and stepper-definition cleanup have now landed, so continuation ergonomics can build on stable internal semantics instead of another moving target
 
 ### Priority 2: Numerical kernel refinements
 
@@ -214,9 +235,9 @@ Packaging note:
 
 ## Recommended Order Of Attack
 
-1. Introduce a Python-owned stepper-definition model on top of the landed execution-setting boundary.
+1. Add a public continuation-policy helper on top of the landed solver-state and stepper-definition boundaries.
 2. Tackle numerical kernel refinements such as fixed-step endpoint handling, `t0 + step * dt`, and interpolation improvements.
 3. Do implicit-solver groundwork.
-4. Revisit broader public config/API redesign only after the execution-setting and stepper boundaries are stable.
+4. Revisit broader public config/API redesign only after continuation ergonomics and stepper semantics are stable.
 
 Public continuation helpers, richer IVP batch helpers, and broader solver interop should follow once those internal boundaries are stable enough that they are unlikely to be redesigned immediately afterward.

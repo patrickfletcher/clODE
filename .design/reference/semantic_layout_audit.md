@@ -59,21 +59,23 @@ Consequence:
 
 - continuation helpers, per-item divergence, batching, and future RNG or implicit-stepper work still have to reason through scattered fields rather than one durable state contract
 
-#### 3. Stepper semantics are split across multiple layers
+#### 3. Stepper definition is now clearer, but continuation ergonomics still sit above a low-level state model
 
-- Public stepper names live in `clode/simulation/base.py` as the `Stepper` enum.
-- OpenCL build mapping lives in `clode/_opencl/registry.py` as string-to-define tables.
-- Actual algorithm families live in `clode/kernels/steppers.cl` and `clode/kernels/steppers/*.clh`.
+- Public stepper names still live in `clode/simulation/base.py` as the `Stepper` enum.
+- Built-in stepper traits and build mapping now live in `clode/simulation/_stepper_definitions.py`.
+- OpenCL build lookup now routes through that stepper-definition catalog in `clode/_opencl/registry.py` and `clode/_opencl/source_builder.py`.
+- Actual algorithm families still live in `clode/kernels/steppers.cl` and `clode/kernels/steppers/*.clh`.
 
-What is missing:
+What is still missing:
 
-- no Python-side `StepperDefinition` or equivalent concept
-- no explicit traits for fixed vs adaptive, explicit vs implicit, deterministic vs stochastic
-- no semantic home for future implicit, IMEX, or controller-rich methods
+- no public continuation-policy helper that matches the landed solver-owned time semantics
+- no stepper-specific public parameter story yet
+- no semantic home for future implicit, IMEX, or controller-rich methods beyond the current internal trait model
 
 Consequence:
 
-- adding or extending steppers currently means touching a public enum, an internal string registry, and kernel assets without one concept-owning definition object
+- the internal source-assembly and validation path is much easier to follow than before
+- the next semantic pressure has shifted from stepper mapping to continuation ergonomics and later solver extension work
 
 #### 4. Observer definition is now clearer, but custom/composable observer semantics are still future work
 
@@ -93,14 +95,15 @@ Consequence:
 - the current built-in observer story is much easier to follow than it was before the cleanup
 - the remaining semantic pressure has shifted toward stepper definitions and execution-setting resolution rather than observer naming or layout ownership
 
-#### 5. Core concepts still reach `_opencl` as strings more often than as objects
+#### 5. Core concepts still reach `_opencl` as primitives more often than as richer objects
 
-- stepper and observer selection still become raw strings early and are then interpreted by `_opencl/registry.py` and `SourceBuilder`
+- observer selection still becomes a resolved name and define pair before `_opencl` consumes it
 - compile-time feature choices such as event-storage capacity are still carried as primitive values rather than concept-owned configuration objects
 
 Consequence:
 
-- the runtime layer is still doing some concept-definition work that would be clearer on the Python semantic side
+- the runtime layer still does some concept-definition work that would be clearer on the Python semantic side
+- this is now more obvious in continuation and output-policy ergonomics than in stepper build mapping
 
 ### Things that look transitional but should stay for now
 
@@ -237,7 +240,7 @@ The useful first move is not “put the `.clh` files next to some new Python fil
 
 1. Keep the landed solver-state and output-policy boundary as the contract for follow-on work.
 2. Treat the landed execution-setting defaults and compatibility resolution path as stable enough to build on.
-3. Introduce a Python-owned stepper-definition model on top of that stable execution-setting boundary.
+3. Add a public continuation-policy helper on top of the landed solver-state and stepper-definition boundaries.
 4. Revisit whether IVP-owned batch helpers are enough or whether a dedicated ensemble type adds real value.
 5. Revisit kernel relocation only after those semantic models exist.
 
