@@ -20,15 +20,15 @@ Use `.design/ideas.md` as the short living board. This file is the longer ration
 
 ### Current weaknesses
 
-- Continuation correctness is much better, and the first-pass Python-owned solver-state model, the integration/output split, the observer-definition cleanup, the execution-setting cleanup, and the stepper-definition cleanup are now live all the way into the OpenCL layer. The next structural bottlenecks are observer-surface cleanup on top of those landed catalogs, then honest continuation-state semantics.
+- Continuation correctness is much better, and the first-pass Python-owned solver-state model, the integration/output split, the observer-definition cleanup, the execution-setting cleanup, the observer-surface cleanup, and the stepper-definition cleanup are now live all the way into the OpenCL layer. The next structural bottlenecks are honest continuation-state semantics, then broader numerical-helper adoption on top of those landed catalogs.
 - A first-pass IVP model now exists, and the curated public problem layer now centers `InitialValueProblem`; lower-level support types and source-preparation helpers are internal support concepts rather than promoted surface area.
 - Simulators still carry some semantic weight through compatibility delegates and cached mirrored problem data even though the core defaults and batch semantics now live on the IVP.
 - The next internal friction point is clearer now: the internal execution model is much more coherent, but repeated-solve continuation still has one real representational limit because a shared requested window cannot encode exact continuation after diverged per-work-item final times.
 - Each work item effectively owns `dt` and attained `tf`, but not an explicit `t0` or completion/error flags. That leaves friction around continuation helpers and windows where work items diverge.
-- The new `test/kernel_components/` layer is a real improvement, but it is still intentionally small: helper math and the basic-observer path are now directly testable, while broader component coverage still needs follow-through.
+- The new `test/kernel_components/` layer is a real improvement, but it is still intentionally small: helper math plus the `basic` and `basicall` observer paths are now directly testable, while broader component coverage still needs follow-through.
 - Precision-sensitive kernel math now has a first shared helper foundation in `clODE_utilities.cl`, but broader adoption across the remaining observers and the stepper time-base path still needs deliberate follow-through.
 - `SolverParams` still mixes integration policy with output-storage policy. That makes chunking, batching, and trajectory streaming harder than they need to be.
-- `FeatureSimulator` still exposes a large legacy `observer_*` scalar compatibility surface alongside `ObserverParams`, which is workable for now but not a clean long-term semantic boundary.
+- `FeatureSimulator` still exposes a large legacy `observer_*` scalar compatibility surface alongside `ObserverParams`, but those compatibility inputs now resolve through one canonical `ObserverParams` path instead of carrying separate in-place observer semantics.
 - Some public compatibility bundles and kernel-layer entrypoints still straddle clearer Python-owned semantic definitions, especially `SolverParams` and the legacy observer-parameter surface.
 - The runtime is intentionally single-device only. If multi-device execution ever becomes worthwhile, it will need a dedicated API and execution model rather than an extension of the current selectors.
 - There is still no good path for stiff systems or implicit stepping, which limits the package for an important class of dynamical-systems problems.
@@ -154,43 +154,37 @@ Status on the current branch:
 
 - `clode/kernels/clODE_utilities.cl` now has a small reusable compensated-accumulation helper layer rather than only TODOs
 - the `basic` and `basicall` observers now use compensated integral accumulation for their time-weighted means
-- `test/kernel_components/` now exists and is wired into `tools/run_test_bundle.py` for direct helper and basic-observer component checks
+- `test/kernel_components/` now exists and is wired into `tools/run_test_bundle.py` for direct helper plus `basic` and `basicall` observer component checks
 
 What this unlocked:
 
 - observer cleanup can now build on direct component coverage instead of relying only on larger simulator paths
 - future numerical-helper adoption and stepper time-base work now have one concrete shared starting point rather than only design notes
 
-### Priority 0: Observer-system audit and compatibility-surface cleanup
+### Landed Priority 0: Observer-system audit and compatibility-surface cleanup
 
-The next active cleanup should narrow the observer story around the landed `ObserverDefinition` model without breaking the current public API.
+Status on the current branch:
 
-Why this should be next:
+- `FeatureSimulator` now resolves constructor-level and setter-level observer compatibility inputs through one canonical `ObserverParams` path instead of mutating bundles in place
+- simulator and executor boundaries now keep internal copies of caller-provided `ObserverParams` bundles instead of aliasing them
+- unknown `event_var` and `feature_var` names now fail with direct errors instead of surfacing a raw list-index failure
+- `test/kernel_components/` now covers both `basic` and `basicall` observer contracts directly
 
-- the observer-definition catalog is now stable enough that the remaining complexity stands out more clearly as audit-worthy duplication rather than unresolved migration work
-- `FeatureSimulator` still carries a large legacy `observer_*` scalar surface alongside `ObserverParams`, which is workable but not a good long-term UX or maintenance boundary
-- the new helper and component-test layer makes it much cheaper to audit or simplify built-in observers without flying blind
+What this unlocked:
 
-Key tasks:
+- `ObserverParams` is now a clearer semantic owner even while the public scalar compatibility surface remains for API stability
+- observer-facing rebuild and invalidation behavior is easier to reason about because bundle copying and name resolution no longer live in duplicated simulator-side mutation code
+- the next leverage point is continuation-state semantics and divergence guardrails rather than more observer-surface cleanup in the same shape
 
-- audit built-in observer helpers and kernels for semantic duplication or avoidable complexity
-- keep `ObserverParams` as the semantic owner and reduce the amount of observer meaning carried by constructor-level scalar plumbing
-- extend the component-test layer where needed so audited observer behavior stays easy to validate directly
-
-Why before the next continuation or public-surface work:
-
-- it improves one of clODE's most distinctive workflows directly: on-device feature extraction and observer-driven analysis
-- it tightens both internal reasoning and user-facing ergonomics before broader API cleanup or publication-facing repo work
-
-### Priority 1: Continuation-state semantics and divergence guardrails after the observer audit
+### Priority 0: Continuation-state semantics and divergence guardrails
 
 The next active cleanup should make the solver-owned time model honest and explicit before any broader public continuation API is added.
 
 Why this should be next:
 
-- the internal solver-state and stepper-definition boundaries are now stable enough to make the current continuation limit explicit without reopening unrelated ownership work
+- the internal solver-state, observer-definition, and stepper-definition boundaries are now stable enough to make the current continuation limit explicit without reopening unrelated ownership work
 - a public helper layered on the current shared-`tspan` model would either have to refuse diverged ensembles or silently encode an arbitrary policy
-- this remains a high-value internal clarity improvement, but it should follow the observer cleanup that now has better helper and test support
+- observer cleanup has landed cleanly enough that the lower-level continuation contract is now the highest-value remaining clarity gap
 
 The lower-level execution model still needs a clearer internal contract, and this is now the right place to sharpen it rather than papering over the limit with a misleading helper.
 
@@ -200,12 +194,11 @@ Key tasks:
 - add small internal guardrails or state queries around that representability instead of inventing a broad new public continuation surface
 - keep the current low-level `set_tspan(...)`, `shift_tspan()`, and `get_final_time()` surface intact while making the unsupported divergent-time case more explicit in tests and docs
 
-Why after the observer audit:
+Why now:
 
 - IVP-first batch cleanup clarifies what simulators orchestrate
 - the solver-state layer and observer-definition layer are now clearer internal contracts between `simulation` and `_opencl`
-- execution-setting cleanup and stepper-definition cleanup have now landed, so continuation-state cleanup can build on stable internal semantics instead of another moving target
-- observer cleanup is now the more immediate leverage point for both internal reasoning and user-facing workflows
+- execution-setting cleanup, observer cleanup, and stepper-definition cleanup have now landed, so continuation-state cleanup can build on stable internal semantics instead of another moving target
 
 ### Priority 2: Numerical kernel refinements
 
@@ -274,9 +267,9 @@ Packaging note:
 
 ## Recommended Order Of Attack
 
-1. Tighten observer extension boundaries and the legacy observer-parameter surface now that the helper and component-test foundation is in place.
-2. Return to continuation-state semantics and divergence guardrails once the observer surface is easier to reason about.
-3. Then broaden numerical-helper adoption into the remaining observers and the stepper time-base path while tackling deeper numerical time-base refinements.
-4. After that, revisit implicit-solver groundwork and other larger solver extensions.
+1. Tighten continuation-state semantics and divergence guardrails around the current shared-window model.
+2. Then broaden numerical-helper adoption into the remaining observers and the stepper time-base path while tackling deeper numerical time-base refinements.
+3. After that, revisit implicit-solver groundwork and other larger solver extensions.
+4. Finally, return to broader runtime-surface and package cleanup once those internal semantics settle.
 
 Any broader public continuation or config cleanup, richer IVP batch helpers, broader solver interop, and citation or release-facing packaging work should follow only once those internal numerical, testing, continuation, and observer or stepper boundaries are stable enough that they are unlikely to be redesigned immediately afterward.

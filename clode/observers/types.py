@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from enum import Enum
 
@@ -132,6 +133,105 @@ class ObserverParams:
         return _EventOutputSettings(
             max_event_timestamps=self.max_event_timestamps,
         )
+
+
+def _copy_observer_params(observer_params: ObserverParams) -> ObserverParams:
+    return ObserverParams(
+        e_var_ix=observer_params.e_var_ix,
+        f_var_ix=observer_params.f_var_ix,
+        max_event_count=observer_params.max_event_count,
+        max_event_timestamps=observer_params.max_event_timestamps,
+        min_amp=observer_params.min_amp,
+        min_imi=observer_params.min_imi,
+        nhood_radius=observer_params.nhood_radius,
+        x_up_threshold=observer_params.x_up_threshold,
+        x_down_threshold=observer_params.x_down_threshold,
+        dx_up_threshold=observer_params.dx_up_threshold,
+        dx_down_threshold=observer_params.dx_down_threshold,
+        eps_dx=observer_params.eps_dx,
+    )
+
+
+def _resolve_observer_params(
+    variable_names: Sequence[str],
+    *,
+    observer_params: ObserverParams | None = None,
+    base_params: ObserverParams | None = None,
+    event_var: str | None = None,
+    feature_var: str | None = None,
+    max_event_count: int | None = None,
+    max_event_timestamps: int | None = None,
+    min_amp: float | None = None,
+    min_imi: float | None = None,
+    nhood_radius: float | None = None,
+    x_up_threshold: float | None = None,
+    x_down_threshold: float | None = None,
+    dx_up_threshold: float | None = None,
+    dx_down_threshold: float | None = None,
+    eps_dx: float | None = None,
+) -> ObserverParams:
+    if observer_params is not None:
+        return _copy_observer_params(observer_params)
+
+    current = ObserverParams() if base_params is None else _copy_observer_params(base_params)
+    return ObserverParams(
+        e_var_ix=_resolve_variable_index(
+            variable_names,
+            event_var,
+            default_index=current.e_var_ix,
+            parameter_name="event_var",
+        ),
+        f_var_ix=_resolve_variable_index(
+            variable_names,
+            feature_var,
+            default_index=current.f_var_ix,
+            parameter_name="feature_var",
+        ),
+        max_event_count=current.max_event_count if max_event_count is None else max_event_count,
+        max_event_timestamps=(
+            current.max_event_timestamps
+            if max_event_timestamps is None
+            else max_event_timestamps
+        ),
+        min_amp=current.min_amp if min_amp is None else min_amp,
+        min_imi=current.min_imi if min_imi is None else min_imi,
+        nhood_radius=current.nhood_radius if nhood_radius is None else nhood_radius,
+        x_up_threshold=(
+            current.x_up_threshold if x_up_threshold is None else x_up_threshold
+        ),
+        x_down_threshold=(
+            current.x_down_threshold if x_down_threshold is None else x_down_threshold
+        ),
+        dx_up_threshold=(
+            current.dx_up_threshold if dx_up_threshold is None else dx_up_threshold
+        ),
+        dx_down_threshold=(
+            current.dx_down_threshold
+            if dx_down_threshold is None
+            else dx_down_threshold
+        ),
+        eps_dx=current.eps_dx if eps_dx is None else eps_dx,
+    )
+
+
+def _resolve_variable_index(
+    variable_names: Sequence[str],
+    variable_name: str | None,
+    *,
+    default_index: int,
+    parameter_name: str,
+) -> int:
+    if variable_name in (None, ""):
+        return default_index
+
+    names = tuple(variable_names)
+    try:
+        return names.index(variable_name)
+    except ValueError as error:
+        available_names = ", ".join(names) if names else "<none>"
+        raise ValueError(
+            f"Unknown {parameter_name} '{variable_name}'. Expected one of: {available_names}"
+        ) from error
 
 
 __all__ = ["Observer", "ObserverParams"]

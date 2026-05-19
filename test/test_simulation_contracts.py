@@ -283,6 +283,126 @@ def test_feature_simulator_constructor_defaults_match_observer_params() -> None:
     assert simulator.get_observer_parameters() == clode.ObserverParams()
 
 
+def test_feature_simulator_copies_observer_parameter_bundles() -> None:
+    initial = clode.ObserverParams(
+        e_var_ix=1,
+        f_var_ix=0,
+        max_event_count=12,
+        max_event_timestamps=3,
+        min_amp=0.25,
+    )
+    replacement = clode.ObserverParams(
+        e_var_ix=0,
+        f_var_ix=1,
+        max_event_count=7,
+        max_event_timestamps=1,
+        min_amp=0.5,
+    )
+
+    simulator = clode.FeatureSimulator(
+        src_file=model_path("stable_linear_aux.cl"),
+        variables=STABLE_LINEAR_VARIABLES.copy(),
+        parameters=STABLE_LINEAR_PARAMETERS.copy(),
+        aux=STABLE_LINEAR_AUX.copy(),
+        num_noise=0,
+        observer=clode.Observer.basic,
+        observer_parameters=initial,
+        stepper=clode.Stepper.rk4,
+        dt=FIXED_DT,
+        dtmax=FIXED_DT,
+        t_span=(0.0, 1.0),
+        max_steps=FIXED_MAX_STEPS,
+        single_precision=True,
+        **device_kwargs_for_tests(),
+    )
+
+    initial.min_amp = 99.0
+    initial.max_event_timestamps = 99
+
+    assert simulator.get_observer_parameters() == clode.ObserverParams(
+        e_var_ix=1,
+        f_var_ix=0,
+        max_event_count=12,
+        max_event_timestamps=3,
+        min_amp=0.25,
+    )
+
+    simulator.set_observer_parameters(op=replacement)
+    replacement.f_var_ix = 0
+    replacement.max_event_count = 99
+
+    assert simulator.get_observer_parameters() == clode.ObserverParams(
+        e_var_ix=0,
+        f_var_ix=1,
+        max_event_count=7,
+        max_event_timestamps=1,
+        min_amp=0.5,
+    )
+
+
+def test_feature_simulator_resolves_scalar_observer_args_from_variable_names() -> None:
+    simulator = clode.FeatureSimulator(
+        src_file=model_path("stable_linear_aux.cl"),
+        variables=STABLE_LINEAR_VARIABLES.copy(),
+        parameters=STABLE_LINEAR_PARAMETERS.copy(),
+        aux=STABLE_LINEAR_AUX.copy(),
+        num_noise=0,
+        observer=clode.Observer.threshold_2,
+        event_var="y",
+        feature_var="x",
+        observer_max_event_count=7,
+        observer_max_event_timestamps=4,
+        observer_min_x_amp=0.125,
+        observer_min_imi=0.25,
+        observer_neighbourhood_radius=0.5,
+        observer_x_up_thresh=0.6,
+        observer_x_down_thresh=0.4,
+        observer_dx_up_thresh=0.2,
+        observer_dx_down_thresh=0.1,
+        observer_eps_dx=0.05,
+        stepper=clode.Stepper.rk4,
+        dt=FIXED_DT,
+        dtmax=FIXED_DT,
+        t_span=(0.0, 1.0),
+        max_steps=FIXED_MAX_STEPS,
+        single_precision=True,
+        **device_kwargs_for_tests(),
+    )
+
+    assert simulator.get_observer_parameters() == clode.ObserverParams(
+        e_var_ix=1,
+        f_var_ix=0,
+        max_event_count=7,
+        max_event_timestamps=4,
+        min_amp=0.125,
+        min_imi=0.25,
+        nhood_radius=0.5,
+        x_up_threshold=0.6,
+        x_down_threshold=0.4,
+        dx_up_threshold=0.2,
+        dx_down_threshold=0.1,
+        eps_dx=0.05,
+    )
+
+
+def test_feature_simulator_rejects_unknown_observer_variable_names() -> None:
+    with pytest.raises(ValueError, match="Unknown event_var 'z'"):
+        clode.FeatureSimulator(
+            src_file=model_path("stable_linear.cl"),
+            variables=STABLE_LINEAR_VARIABLES.copy(),
+            parameters=STABLE_LINEAR_PARAMETERS.copy(),
+            observer=clode.Observer.basic,
+            event_var="z",
+            stepper=clode.Stepper.rk4,
+            dt=FIXED_DT,
+            dtmax=FIXED_DT,
+            t_span=(0.0, 1.0),
+            max_steps=FIXED_MAX_STEPS,
+            single_precision=True,
+            **device_kwargs_for_tests(),
+        )
+
+
 def test_features_initialize_observer_path_refreshes_results() -> None:
     simulator = make_feature_simulator(
         "stable_linear",
@@ -369,4 +489,17 @@ def test_feature_non_layout_observer_change_preserves_program_and_buffers() -> N
 
     assert second is not None
     assert second.get_feature_names()[0] == "max y"
+
+
+def test_feature_observer_parameter_update_rejects_unknown_variable_names() -> None:
+    simulator = make_feature_simulator(
+        "stable_linear_aux",
+        stepper=clode.Stepper.rk4,
+        t_span=(0.0, 1.0),
+        dt=FIXED_DT,
+        max_steps=FIXED_MAX_STEPS,
+    )
+
+    with pytest.raises(ValueError, match="Unknown feature_var 'z'"):
+        simulator.set_observer_parameters(feature_var="z")
 

@@ -2,14 +2,14 @@
 
 ## Bottom line
 
-The current bundle and marker taxonomy is a good base. The new `test/kernel_components/` layer now provides the missing middle layer between full end-to-end simulator tests and the small host-side `_opencl` support tests, but its current coverage is intentionally narrow and still needs expansion.
+The current bundle and marker taxonomy is a good base. The new `test/kernel_components/` layer now provides the missing middle layer between full end-to-end simulator tests and the small host-side `_opencl` support tests, but its current coverage is still intentionally narrow even after adding direct `basic` and `basicall` observer contracts.
 
 ## What is already working well
 
 - `tools/run_test_bundle.py` already gives the suite a useful domain taxonomy: `smoke`, `frontend`, `runtime_api`, `numerics`, `kernel_components`, and `opencl_internal`.
 - `test/conftest.py` centrally injects markers by file and path, which keeps selection logic out of individual test modules.
 - `test/core_numerics/` already has the right shape for authoritative numerical regressions: small models, exact references, and reusable helpers.
-- `test/kernel_components/` now directly covers helper-kernel behavior and a basic-observer contract without going through the full simulator stack.
+- `test/kernel_components/` now directly covers helper-kernel behavior plus `basic` and `basicall` observer contracts without going through the full simulator stack.
 - CI already separates a broad cross-platform smoke matrix from a narrower OpenCL-backed release gate.
 
 ## Current weaknesses
@@ -75,7 +75,7 @@ Rule of thumb:
 
 ## Concrete next steps
 
-1. Expand `test/kernel_components/` beyond helper math and the `basic` observer path.
+1. Expand `test/kernel_components/` beyond helper math and the current `basic` and `basicall` observer paths.
 2. Move future build-key, observer-storage, and source-assembly checks there instead of burying them inside larger end-to-end tests.
 3. Add a non-gating performance bundle with explicit hardware assumptions.
 4. Keep `tools/run_test_bundle.py` authoritative even if the physical file layout changes slowly.

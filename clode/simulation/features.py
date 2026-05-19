@@ -18,6 +18,8 @@ from ..observers.types import (
 	_DEFAULT_X_UP_THRESHOLD,
 	Observer,
 	ObserverParams,
+	_copy_observer_params,
+	_resolve_observer_params,
 )
 from ..problem.ivp import InitialValueProblem
 from ..problem.python import OpenCLRhsEquation
@@ -115,30 +117,22 @@ class FeatureSimulator(Simulator):
 			ivp.variable_names if ivp is not None else list((variables or {}).keys())
 		)
 
-		event_var_idx = (
-			problem_variable_names.index(event_var) if event_var != "" else 0
+		self._op = _resolve_observer_params(
+			problem_variable_names,
+			observer_params=observer_parameters,
+			event_var=event_var or None,
+			feature_var=feature_var or None,
+			max_event_count=observer_max_event_count,
+			max_event_timestamps=observer_max_event_timestamps,
+			min_amp=observer_min_x_amp,
+			min_imi=observer_min_imi,
+			nhood_radius=observer_neighbourhood_radius,
+			x_up_threshold=observer_x_up_thresh,
+			x_down_threshold=observer_x_down_thresh,
+			dx_up_threshold=observer_dx_up_thresh,
+			dx_down_threshold=observer_dx_down_thresh,
+			eps_dx=observer_eps_dx,
 		)
-		feature_var_idx = (
-			problem_variable_names.index(feature_var) if feature_var != "" else 0
-		)
-
-		if observer_parameters is not None:
-			self._op = observer_parameters
-		else:
-			self._op = ObserverParams(
-				e_var_ix=event_var_idx,
-				f_var_ix=feature_var_idx,
-				max_event_count=observer_max_event_count,
-				max_event_timestamps=observer_max_event_timestamps,
-				min_amp=observer_min_x_amp,
-				min_imi=observer_min_imi,
-				nhood_radius=observer_neighbourhood_radius,
-				x_up_threshold=observer_x_up_thresh,
-				x_down_threshold=observer_x_down_thresh,
-				dx_up_threshold=observer_dx_up_thresh,
-				dx_down_threshold=observer_dx_down_thresh,
-				eps_dx=observer_eps_dx,
-			)
 
 		super().__init__(
 			variables=variables,
@@ -234,33 +228,23 @@ class FeatureSimulator(Simulator):
 		"""
 		current_max_event_timestamps = self._op.event_output_settings.max_event_timestamps
 
-		if op is not None:
-			self._op = op
-		else:
-			if event_var is not None:
-				self._op.e_var_ix = self.variable_names.index(event_var)
-			if feature_var is not None:
-				self._op.f_var_ix = self.variable_names.index(feature_var)
-			if max_event_count is not None:
-				self._op.max_event_count = max_event_count
-			if max_event_timestamps is not None:
-				self._op.max_event_timestamps = max_event_timestamps
-			if min_amp is not None:
-				self._op.min_amp = min_amp
-			if min_imi is not None:
-				self._op.min_imi = min_imi
-			if nhood_radius is not None:
-				self._op.nhood_radius = nhood_radius
-			if x_up_threshold is not None:
-				self._op.x_up_threshold = x_up_threshold
-			if x_down_threshold is not None:
-				self._op.x_down_threshold = x_down_threshold
-			if dx_up_threshold is not None:
-				self._op.dx_up_threshold = dx_up_threshold
-			if dx_down_threshold is not None:
-				self._op.dx_down_threshold = dx_down_threshold
-			if eps_dx is not None:
-				self._op.eps_dx = eps_dx
+		self._op = _resolve_observer_params(
+			self.variable_names,
+			observer_params=op,
+			base_params=self._op,
+			event_var=event_var,
+			feature_var=feature_var,
+			max_event_count=max_event_count,
+			max_event_timestamps=max_event_timestamps,
+			min_amp=min_amp,
+			min_imi=min_imi,
+			nhood_radius=nhood_radius,
+			x_up_threshold=x_up_threshold,
+			x_down_threshold=x_down_threshold,
+			dx_up_threshold=dx_up_threshold,
+			dx_down_threshold=dx_down_threshold,
+			eps_dx=eps_dx,
+		)
 
 		if self._op.event_output_settings.max_event_timestamps != current_max_event_timestamps:
 			self._cl_program_is_valid = False
@@ -270,7 +254,7 @@ class FeatureSimulator(Simulator):
 
 	def get_observer_parameters(self) -> ObserverParams:
 		"""Return the current observer-parameter bundle from the backend."""
-		return self._integrator.get_observer_params()
+		return _copy_observer_params(self._integrator.get_observer_params())
 
 	def get_feature_names(self) -> List[str]:
 		"""Get the list of feature names for the current observer."""

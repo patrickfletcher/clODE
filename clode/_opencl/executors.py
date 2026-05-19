@@ -10,6 +10,7 @@ from ..observers._definitions import ResolvedObserverSpec, resolve_observer_spec
 from ..observers.types import (
     ObserverParams,
     _EventOutputSettings,
+    _copy_observer_params,
 )
 from ..problem._core import ProblemInfo, RhsSource
 from ..simulation.params import (
@@ -656,31 +657,14 @@ class OpenCLFeatureExecutor(OpenCLTransientExecutor):
             clode_root,
         )
         self._observer_name = observer
-        self._observer_params = self._copy_observer_params(observer_params)
-        self._observer_runtime_settings = observer_params.runtime_settings
-        self._event_output_settings = observer_params.event_output_settings
+        self._observer_params = _copy_observer_params(observer_params)
+        self._observer_runtime_settings = self._observer_params.runtime_settings
+        self._event_output_settings = self._observer_params.event_output_settings
         self._resolved_observer_spec = self._resolve_observer_spec()
         self._feature_metadata = self._resolve_feature_metadata()
         self._feature_buffers: FeatureBuffers | None = None
         self._feature_cache = _FeatureTransferCache()
         self._observer_initialized = False
-
-    @staticmethod
-    def _copy_observer_params(observer_params: ObserverParams) -> ObserverParams:
-        return ObserverParams(
-            observer_params.e_var_ix,
-            observer_params.f_var_ix,
-            observer_params.max_event_count,
-            observer_params.max_event_timestamps,
-            observer_params.min_amp,
-            observer_params.min_imi,
-            observer_params.nhood_radius,
-            observer_params.x_up_threshold,
-            observer_params.x_down_threshold,
-            observer_params.dx_up_threshold,
-            observer_params.dx_down_threshold,
-            observer_params.eps_dx,
-        )
 
     def build_cl(self) -> None:
         if self._precision is Precision.DOUBLE:
@@ -752,7 +736,7 @@ class OpenCLFeatureExecutor(OpenCLTransientExecutor):
         return self._feature_metadata.n_features
 
     def get_observer_params(self) -> ObserverParams:
-        return self._copy_observer_params(self._observer_params)
+        return _copy_observer_params(self._observer_params)
 
     def initialize_observer(self) -> None:
         if self._program_bundle is None:
@@ -806,7 +790,7 @@ class OpenCLFeatureExecutor(OpenCLTransientExecutor):
         previous_spec = self._resolved_observer_spec
         previous_runtime_settings = self._observer_runtime_settings
         previous_metadata = self._feature_metadata
-        self._observer_params = self._copy_observer_params(observer_params)
+        self._observer_params = _copy_observer_params(observer_params)
         self._observer_runtime_settings = self._observer_params.runtime_settings
         self._event_output_settings = _EventOutputSettings(
             self._observer_params.max_event_timestamps

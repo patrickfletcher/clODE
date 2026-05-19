@@ -22,15 +22,13 @@ Format:
 
 ## Core Execution And State Semantics
 
-- [ ] P1 Continuation-state semantics and divergence guardrails: exact shared `t_span` continuation is only valid when the ensemble agrees on attained `tf`; keep helper logic in user code for now and defer a public continuation API until broader legacy-API deprecation planning. refs: `docs/continuation.md`, `clode/simulation/_state.py`, `clode/simulation/base.py`, `test/test_simulation_contracts.py`, `.design/reference/continuation_timebase_note.md`
+- [ ] P0 Continuation-state semantics and divergence guardrails: exact shared `t_span` continuation is only valid when the ensemble agrees on attained `tf`; keep helper logic in user code for now and defer a public continuation API until broader legacy-API deprecation planning. refs: `docs/continuation.md`, `clode/simulation/_state.py`, `clode/simulation/base.py`, `test/test_simulation_contracts.py`, `.design/reference/continuation_timebase_note.md`
 - [ ] P2 Device-side per-work-item current time / `t0` if exact continuation after diverged `tf` becomes a real priority. depends: continuation-state semantics and guardrails. refs: `clode/simulation/_state.py`, `clode/_opencl/executors.py`, `clode/_opencl/buffers.py`, `clode/kernels/transient.cl`, `.design/reference/continuation_timebase_note.md`
 - [ ] P1 Batch-generation helpers such as `grid`, random, and quasi-random sampling layered on top of the IVP model and current shape metadata instead of keeping ensemble creation buried in `Simulator`. refs: `clode/simulation/base.py`, `.design/reference/semantic_layout_audit.md`
 - [ ] P2 Execution-model experiments: `per-work-item` vs `per-work-group` vs shared/global solver state. refs: `clode/kernels/odedriver.cl`
 
 ## Observer And Feature Model
 
-- [ ] P0 Observer-system audit: decide which built-in observer helpers and kernels are semantically necessary, keep `ObserverDefinition` as the extension boundary for built-ins, and avoid preserving legacy complexity without a clear use case. refs: `clode/observers/_definitions.py`, `clode/simulation/features.py`, `clode/kernels/observers.cl`, `test/test_opencl_models.py`, `test/kernel_components/test_kernel_math.py`
-- [ ] P2 FeatureSimulator observer-parameter surface cleanup: keep `ObserverParams` as the semantic owner and trim the oversized legacy `observer_*` compatibility surface only after the internal observer audit settles. depends: observer-system audit. refs: `clode/simulation/features.py`, `clode/observers/types.py`
 - [ ] P2 Observer-specific parameter models/classes instead of one broad `ObserverParams`. depends: explicit observer-definition model. refs: `clode/features.py`, `clode/kernels/observers.cl`
 - [ ] P2 Support aux variables as event/feature variables. depends: explicit observer-definition model. refs: `clode/kernels/observers.cl`
 - [ ] P2 Custom/composable observers from Python-authored definitions. depends: explicit observer-definition model and codegen story. refs: `clode/features.py`, `clode/function_converter.py`
@@ -71,7 +69,7 @@ Format:
 
 ## Testing, Diagnostics, And Scope
 
-- [ ] P1 Expand kernel-component coverage beyond helper math and the basic-observer path into build-key invalidation, observer storage, and stepper execution contracts. refs: `test/kernel_components/`, `clode/_opencl/source_builder.py`, `.design/reference/testing_audit.md`
+- [ ] P1 Expand kernel-component coverage beyond helper math and the current basic/basicall observer contracts into build-key invalidation, observer storage, and stepper execution contracts. refs: `test/kernel_components/`, `clode/_opencl/source_builder.py`, `.design/reference/testing_audit.md`
 - [ ] P1 Cache/build-key/invalidation coverage around program rebuilds and observer changes. refs: `clode/_opencl/program_cache.py`, `clode/_opencl/source_builder.py`, `clode/features.py`
 - [ ] P2 Package/API hygiene: typing cleanup, stepper-specific parameter subsets, and trajectory output ergonomics once continuation policy and stepper-specific public semantics are clearer. refs: `clode/solver.py`, `clode/features.py`, `clode/trajectory.py`
 - [ ] P1 Runtime-install guidance: reuse upstream PyOpenCL install/runtime guidance where it reduces local duplication and point users to optional runtime packaging where appropriate. refs: `docs/install.md`, `docs/querying_opencl.md`, `.design/reference/public_surfaces_plan.md`, `.design/reference/docs_layout_plan.md`
