@@ -158,8 +158,14 @@ static inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dx
     //simplest: time and state of trajectory point that landed in the neighborhood.
     realtype tThisEvent = *ti;
 
-    //alts: linearly interp to get tThisEvent using thisNormXDiff/lastNormXDiff; use norm values as x, since we know the interp value of that
-    //realtype tThisEvent = linearInterp(od->lastNormXdiff, od->thisNormXdiff, od->tbuffer[2], *ti, op->nHoodRadius);
+    //alt: inverse-linear interpolation of the neighborhood radius crossing:
+    //realtype tThisEvent = linearInterpTimeOfValue(
+    //    od->tbuffer[2],
+    //    *ti,
+    //    od->lastNormXdiff,
+    //    od->thisNormXdiff,
+    //    op->nHoodRadius
+    //);
 
     if (od->eventcount > 1) { 
         od->nMaxima[0] = fmax((realtype)od->thisNMaxima, od->nMaxima[0]); //cast to realtype (for mean)

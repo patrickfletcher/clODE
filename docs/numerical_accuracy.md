@@ -180,6 +180,8 @@ On an upward threshold crossing of a coarsely sampled sine wave:
 
 This is enough evidence to justify an explicit threshold-crossing helper in the shared kernel math layer. It also shows a useful distinction: inverse-linear interpolation is the low-risk option when you only want a better timestamp, while slope-aware Hermite interpolation is an attractive prototype when the crossing is smooth and monotone but still needs stronger robustness checks before broad use in noisy event detectors.
 
+That caveat is real rather than theoretical. On ripple-heavy traces, one coarse timestep can contain multiple threshold crossings, which makes any single-crossing interpolation model ambiguous. That is why inverse-linear interpolation is the conservative first live candidate and slope-aware Hermite interpolation remains prototype-only for now.
+
 ## Local-Extremum Localization from a Three-Sample Buffer
 
 The current `local_max` observer localizes extrema by picking the sampled maximum from its three-sample buffer. The example script also includes a prototype based on that same geometry.

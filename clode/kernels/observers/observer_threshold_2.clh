@@ -193,16 +193,24 @@ static inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dx
     //simplest: time and state of trajectory point that crossed the threshold.
     tThisEvent=*ti;
 
-    //alt: interp to get more accurate tThisEvent within the last time step: xi-1, xi, ti-1, ti; get t @ x=xUp
-    // realtype thisXbuffer[N_VAR];
-    // thisXbuffer[0] = od->xbuffer[op->fVarIx * 3 + 1];
-    // thisXbuffer[1] = od->xbuffer[op->fVarIx * 3 + 2];
-    // thisXbuffer[2] = xi[op->fVarIx];
-    // realtype thisTbuffer[3];
-    // thisTbuffer[0] = od->tbuffer[1];
-    // thisTbuffer[1] = od->tbuffer[2];
-    // thisTbuffer[2] = *ti;
-    // tThisEvent = linearInterpArray(thisXbuffer, thisTbuffer, od->xUp);
+    //alt: inverse-linear interpolation gives a conservative first timestamp upgrade:
+    // tThisEvent = linearInterpTimeOfValue(
+    //     od->tbuffer[2],
+    //     *ti,
+    //     od->xbuffer[op->eVarIx * 3 + 2],
+    //     xi[op->eVarIx],
+    //     od->xUp
+    // );
+    // prototype-only alternative for smooth monotone crossings:
+    // tThisEvent = cubicHermiteInterpTimeOfValue(
+    //     od->tbuffer[2],
+    //     *ti,
+    //     od->xbuffer[op->eVarIx * 3 + 2],
+    //     xi[op->eVarIx],
+    //     od->dxbuffer[op->eVarIx * 3 + 2],
+    //     dxi[op->eVarIx],
+    //     od->xUp
+    // );
 
     if (od->eventcount > 1) {
         int nPeriods = od->eventcount - 1;
@@ -331,8 +339,14 @@ static inline void updateObserverState(realtype *ti, realtype xi[], realtype dxi
                 //simplest: time and state of trajectory point that landed in the neighborhood.
                 od->tThisDown=*ti;
 
-                //alts: linearly interp to get more accurate tThisEvent within the last time step: xi-1, xi, ti-1, ti; get t @ x=xUp
-                // od->tThisDown = linearInterp(od->xbuffer[2], xi[op->fVarIx], od->tbuffer[2], *ti, od->xDown);
+                //alt: inverse-linear interpolation for the downward threshold crossing:
+                // od->tThisDown = linearInterpTimeOfValue(
+                //     od->tbuffer[2],
+                //     *ti,
+                //     od->xbuffer[op->eVarIx * 3 + 2],
+                //     xi[op->eVarIx],
+                //     od->xDown
+                // );
                 od->inUpstate = 0;
                 
                 if (od->eventcount > 0 && od->eventcount <= N_STORE_EVENTS)

@@ -8,6 +8,7 @@ Update when: the demonstration scripts change, helper adoption broadens, or the 
 
 - `runningMeanTime(...)` and the compensated integral path are algebraically related but not numerically equivalent in float32.
 - The current public demonstration baseline is `examples/single_precision_accuracy.py`, which compares a naive incremental mean against compensated integral accumulation and compares direct time addition against Kahan-style and structured time updates.
+- The public example stays NumPy-based on purpose so the formulas are easy to inspect and rerun; the actual OpenCL helper prototypes are pinned separately in `test/kernel_components/test_kernel_math.py`.
 - The current stepper issue is representational, not stylistic. `ti += dt` and `ti = ti + dt` both perform the same float32 addition against the current absolute time.
 - All current stepper families still derive the next absolute time from one float32 absolute-time value plus one float32 step size, so they remain vulnerable once `dt` becomes small relative to `ulp(t)`.
 - Kahan-style or structured time updates improve long-horizon endpoint accuracy and reduce drift, but they do not manufacture representable intermediate times once `dt < ulp(t)`.
@@ -19,6 +20,7 @@ Update when: the demonstration scripts change, helper adoption broadens, or the 
 - The current OpenCL path should be treated as standard round-to-nearest-even arithmetic unless a future experiment proves otherwise. Stochastic rounding may reduce bias in some low-precision accumulations, but it does not remove float32 representability limits and would complicate reproducibility.
 - The current public examples now show three observer-safeguard cases that are actually live today: `min_amp` suppressing tiny oscillations, `threshold_2` Schmitt-trigger-style hysteresis suppressing ripple-driven chatter, and `dx_up_threshold` suppressing noisy shallow crossings in a slope-gated case.
 - The current public example also shows that threshold-crossing timestamps have a clear alternative hierarchy on smooth coarse crossings: sampled endpoint times are crude, inverse-linear interpolation is already much better, and slope-aware Hermite interpolation can be dramatically more accurate when the crossing is monotone.
+- A follow-up ripple-heavy crossing check shows why Hermite should stay prototype-only for now: when a coarse timestep contains multiple threshold crossings, the interpolation target is ambiguous and inverse-linear interpolation can be more robust than a higher-order single-crossing model.
 - The current public example also includes a three-sample local-extremum prototype showing that quadratic-vertex fitting on the existing buffer geometry can materially outperform sample-argmax localization on coarse data.
 - `clode/kernels/clODE_utilities.cl` now includes tested prototypes for Kahan-style time accumulation, fixed-step counter time reconstruction, inverse-linear threshold timestamps, slope-aware Hermite threshold timestamps, and bounded three-sample max/min helpers, but the live steppers and observers have not adopted all of them yet.
 - `min_imi` and `eps_dx` are still exposed on `ObserverParams`, but they are not yet wired into the current built-in observer kernels strongly enough to recommend as primary safeguards in public docs.
@@ -45,6 +47,7 @@ Avoid public wording that implies notation cleanup alone mitigates the time-base
 - Use the same richer time representation, or a solver-owned relative elapsed channel derived from it, for observer elapsed-time bookkeeping so time-weighted means do not depend on subtracting two large float32 absolute times.
 - Treat broader compensated-mean rollout and richer time-base work as one coherent bookkeeping problem rather than as isolated helper swaps.
 - Investigate selective adoption of the new shared three-sample local-extremum helper and threshold-timestamp interpolation utilities before changing each observer independently.
+- None of the current helper candidates needs a general nonlinear system solver. The Hermite threshold prototype only uses a scalar Newton iteration on a cubic. Any future helper that depends on solving a coupled nonlinear system should be deferred with the later implicit-method work.
 
 ## Follow-on questions
 

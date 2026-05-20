@@ -191,38 +191,38 @@ What this unlocked:
 - the remaining continuation debt is now narrower: diverged-time ensembles and any later device-side per-work-item `t0` or richer solver-state model
 - the next leverage point is broader numerical-helper adoption and stronger component coverage rather than more shared-window continuation work in the same shape
 
-### Priority 0: Empirical single-precision numerics demonstrations and guidance
+### Landed Priority 0: Empirical single-precision numerics demonstrations and guidance
 
-Before another broad helper-adoption pass, the package should show the float32 failure modes and mitigation tradeoffs explicitly.
+This groundwork is now in place.
+
+Landed results:
+
+- the repository now has a public NumPy-based accuracy example plus direct OpenCL component tests for the helper prototypes
+- the docs now explain late-update loss, feature-window origin failure, fixed-step versus adaptive time tradeoffs, threshold interpolation tradeoffs, and local-extremum tradeoffs without overstating what is live
+- the helper layer now has a concrete prototype surface instead of TODO-only numerics notes
+
+What this unlocked:
+
+- the package can now move to a narrow live-helper adoption pass with evidence instead of intuition
+- the remaining time-base and observer questions are clearer because the public/docs surface and the helper-test surface now agree on what the prototypes actually buy
+
+### Priority 0: Selective adoption of evidence-backed time-base and observer helpers
+
+The next implementation pass should adopt only the helpers that now have a clear benefit and a clean integration path.
 
 Key tasks:
 
-- add reproducible examples that compare `runningMeanTime(...)` against compensated integral accumulation on long-window float32 workloads
-- add reproducible examples that compare direct time accumulation against compensated or structured time updates and show where those strategies still fail to resolve sub-`ulp(t)` steps
-- document the relevant float32 theory clearly enough that future mitigation work is grounded in representability limits rather than code-style differences
-
-Why this should be next:
-
-- the current helper layer is real, but broader rollout should be scientifically motivated rather than cargo-culted
-- the current time-base issue is easy to describe incorrectly if the docs focus on notation instead of representability
-- public examples and docs here improve the package's scientific value even before more kernel changes land
-
-### Priority 0: Broader numerical-helper adoption and time-base groundwork
-
-These items are important, but they should follow the state-model work.
-
-Key tasks:
-
-- carry the new helper layer into the remaining observers and any clearly fragile stepper time-base paths where it buys real robustness or clarity
-- extend component and exact-regression coverage where that helper adoption changes a contract worth pinning down directly
-- separate the immediate helper-adoption pass from any larger per-work-item structured-time redesign such as `t0 + step * dt`
-- keep the helper-adoption pass downstream of the empirical demonstrations so each new mitigation has a concrete justification
+- adopt inverse-linear threshold timestamps where the live observer already has a clean two-sample bracket
+- adopt the shared bounded three-sample max/min helpers where the live observer already uses the same three-sample geometry
+- move the fixed-step solver path from repeated float32 absolute-time addition to counter-reconstructed time, using a wider internal step index where that can be done without reopening the public compatibility surface
+- extend component and focused simulator coverage where that live helper adoption changes a real contract
+- keep the helper-adoption pass separate from the larger adaptive dual-time redesign
 
 Why this should be next:
 
 - the continuation contract is now honest enough that the remaining numerical weak spots stand out more clearly
-- the helper foundation and the kernel-component test layer now give this work a concrete substrate instead of scattered TODOs, but the public empirical guidance should land first
-- this is a better near-term leverage point than jumping straight into a larger per-work-item time model or implicit-stepper work
+- the helper foundation and the kernel-component test layer now give this work a concrete substrate instead of scattered TODOs
+- this is a better near-term leverage point than jumping straight into a larger adaptive-time redesign, a per-work-item `t0` model, or implicit-stepper work
 
 ### Priority 2: Solver-extension groundwork for stiff problems
 
@@ -277,9 +277,9 @@ Packaging note:
 
 ## Recommended Order Of Attack
 
-1. Broaden numerical-helper adoption into the remaining observers and the stepper time-base path while extending the direct component coverage that makes those changes cheap to validate.
-2. Then revisit deeper time-base refinements and any per-work-item `t0` follow-through only if the remaining continuation pressure still justifies it.
-3. After that, revisit implicit-solver groundwork and other larger solver extensions.
+1. Adopt the conservative live helpers first: inverse-linear threshold timestamps, bounded three-sample extrema, and fixed-step counter time where the current structure supports them cleanly.
+2. Then revisit the adaptive-time companion work: a dual-realtype compensated time base plus relative elapsed bookkeeping where the fixed-step shortcut does not apply.
+3. After that, revisit deeper time-base refinements, any per-work-item `t0` follow-through, and later implicit-solver groundwork.
 4. Finally, return to broader runtime-surface and package cleanup once those internal semantics settle.
 
 Any broader public continuation or config cleanup, richer IVP batch helpers, broader solver interop, and citation or release-facing packaging work should follow only once those internal numerical, testing, continuation, and observer or stepper boundaries are stable enough that they are unlikely to be redesigned immediately afterward.

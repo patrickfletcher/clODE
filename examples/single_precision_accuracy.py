@@ -4,6 +4,10 @@ from dataclasses import dataclass
 
 import numpy as np
 
+# This public example mirrors the kernel formulas in NumPy so the tradeoffs are
+# easy to inspect and rerun outside OpenCL debugging. The actual OpenCL helper
+# prototypes are pinned separately in test/kernel_components/test_kernel_math.py.
+
 try:
     import matplotlib.pyplot as plt
 except ImportError:  # pragma: no cover - plotting is optional for the example

@@ -119,8 +119,8 @@ static inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dx
     realtype tThisMax = od->tbuffer[ix];
     realtype xThisMax = thisXbuffer[ix];
 
-    //Quadratic interpolation for improved accuracy.. broken?
-    //quadraticInterpVertex(od->tbuffer, od->xbuffer, &tThisMax, &xThisMax);
+    //Conservative helper-upgrade path:
+    // localMaximumFromThreeSamples(od->tbuffer, thisXbuffer, &tThisMax, &xThisMax);
 
 
     ++od->eventcount;

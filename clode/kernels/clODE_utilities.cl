@@ -180,6 +180,7 @@ static inline realtype meanFromCompensatedIntegral(
 
 // Kahan-style time accumulation prototype for adaptive steppers and relative
 // elapsed-time bookkeeping. The caller keeps both parts of the time pair.
+// Reference: https://en.wikipedia.org/wiki/Kahan_summation_algorithm
 static inline void compensatedTimeAdd(realtype *timeValue, realtype *timeCorrection, realtype dt) {
 	if (dt == ZERO)
 		return;
@@ -307,6 +308,7 @@ static inline realtype cubicHermiteDerivativeUnitInterval(
 // Prototype only: use endpoint values and slopes to refine a threshold-crossing
 // time inside one timestep. Falls back to linear inversion if Newton leaves the
 // unit interval or the cubic derivative becomes too small.
+// Reference: https://en.wikipedia.org/wiki/Cubic_Hermite_spline
 static inline realtype cubicHermiteInterpTimeOfValue(
 	realtype t0,
 	realtype t1,

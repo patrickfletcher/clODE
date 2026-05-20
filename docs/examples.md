@@ -6,7 +6,7 @@ The scripts in the `examples/` directory are the fastest way to see complete clO
 
 - [dump_opencl_info.py](https://github.com/patrickfletcher/clODE/blob/main/examples/dump_opencl_info.py): print the OpenCL platforms and devices visible to clODE.
 - [dump_device_performance.py](https://github.com/patrickfletcher/clODE/blob/main/examples/dump_device_performance.py): compare transient-solver throughput across visible devices with a Lorenz benchmark.
-- [single_precision_accuracy.py](https://github.com/patrickfletcher/clODE/blob/main/examples/single_precision_accuracy.py): reproduce the float32 mean-accumulation and time-accumulation failure modes discussed in the numerical-accuracy docs and compare candidate mitigations.
+- [single_precision_accuracy.py](https://github.com/patrickfletcher/clODE/blob/main/examples/single_precision_accuracy.py): reproduce the float32 mean, time, threshold-timestamp, and local-extremum tradeoffs discussed in the numerical-accuracy docs with an inspectable NumPy mirror of the kernel formulas.
 
 ## Core simulation workflows
 
