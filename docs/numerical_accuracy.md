@@ -121,7 +121,7 @@ The same script also pushes the zero-origin case to 30,000,000 steps.
 
 So `t = t0 + step * dt` is a bounded-error float32 strategy, not a complete fix for absolute-time representability.
 
-For fixed-step steppers, this is still the cleanest current prototype direction: keep an integer step counter, preferably wider than 32 bits when the runtime surface allows it, and reconstruct absolute time from `t0 + step * dt` instead of from repeated float32 addition. Adaptive steppers do not have that shortcut because `dt` changes from step to step, so their stronger prototype direction is a dual-float compensated time pair rather than another single-float absolute-time variant.
+For fixed-step steppers, this is now the live current strategy: keep a 64-bit integer step counter and reconstruct absolute time from `t0 + step * dt` instead of from repeated float32 addition. Adaptive steppers do not have that shortcut because `dt` changes from step to step, so their stronger prototype direction is still a dual-float compensated time pair rather than another single-float absolute-time variant.
 
 ## How To Run The Demonstration
 
@@ -199,7 +199,7 @@ That does not change current package behavior by itself, but it does show why lo
 - For autonomous feature extraction, prefer windows that start near `t = 0` when possible; large absolute times can break float32 elapsed-time differences even when the numerator is accumulated carefully.
 - For non-autonomous systems where absolute time matters, prefer double precision today or shorter windows that keep `t` near the scale you need.
 - The stepper time-base issue is a representability problem, not a notation problem.
-- For fixed-step steppers, a step-counter time base is the cleanest single-precision alternative to repeated addition, but it is still a float32 strategy and therefore still quantized by float32 spacing.
+- For fixed-step steppers, the live step-counter time base is the cleanest single-precision alternative to repeated addition, but it is still a float32 strategy and therefore still quantized by float32 spacing.
 - For adaptive steppers, a stronger fix needs a dual-float compensated time representation or double precision because there is no fixed-step counter shortcut.
 - For `threshold_2`, use a real hysteresis gap when crossings chatter, and consider derivative thresholds when noisy shallow crossings still slip through.
 - Treat current threshold timestamps as sampled times; when coarse timestamp accuracy matters, inverse-linear interpolation is the first alternative worth evaluating.

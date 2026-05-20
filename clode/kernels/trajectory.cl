@@ -78,21 +78,21 @@ __kernel void trajectory(
         aux[storeix * nPts * N_AUX + j * nPts + i] = auxi[j];
     
 	//time-stepping loop
-    unsigned int step = 0;
+    ulong step = 0;
     int stepflag = 0;
     while (
         ti < tspan[1]
-        && step < settings->max_steps
+        && step < (ulong)settings->max_steps
         && storeix < output_settings->max_store
     )
     {
 		++step;
-        stepflag = stepper(&ti, xi, dxi, p, settings, &dt, tspan, auxi, wi, &rd);
+        stepflag = stepper(&ti, xi, dxi, p, settings, &dt, tspan, auxi, wi, &rd, step);
         // if (stepflag!=0)
         //     break;
 
         //store every output_settings.nout'th step after the initial point
-        if (step % output_settings->nout == 0)
+        if (step % (ulong)output_settings->nout == 0)
         {
             ++storeix;
             t[storeix * nPts + i] = ti;

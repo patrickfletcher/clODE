@@ -2,15 +2,17 @@
 
 //Explicit (Forward) Euler
 #define FIXED_STEPSIZE_EXPLICIT
-static inline void do_step(realtype *ti, realtype xi[], realtype k1[], const realtype pars[], const realtype dt, realtype aux[], const realtype wi[])
+static inline void do_step(realtype xi[], realtype k1[], const realtype pars[], const realtype dt, const realtype tStart, const realtype tMid, const realtype tEnd, realtype aux[], const realtype wi[])
 {    
+    (void)tStart;
+    (void)tMid;
+    (void)tEnd;
+
     //k1 passed in
     
     //update to new ti, xi, k1: xi = fma(dt, k1[k], xi[k]);
     for (int k = 0; k < N_VAR; k++)
         xi[k] += dt * k1[k];
-
-    *ti += dt;
 
     // new slope in the stepper function to get the new random variable
     // getRHS(*ti, xi, pars, k1, aux, wi);

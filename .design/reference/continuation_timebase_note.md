@@ -23,8 +23,8 @@ Historical debugging detail from the earlier observer-time rebase investigation 
 - The Python-level `SolverState` first pass is now live; a full matched device-side solver-state struct remains optional future follow-through after continuation ergonomics and per-work-item time ownership are clearer.
 - Stochastic continuation details are now preserved, but they may want a clearer per-work-item RNG-state home if Random123 or related RNG work becomes active.
 - If the package wants repeated solve calls to continue exact absolute time after diverged per-item final times, it likely needs a per-work-item current-time or `t0` model rather than another shared-window helper.
-- Long-time time-base work remains separate future work; the current stepper family still derives new times from the current float32 absolute time plus `dt`, so very long runs at small `dt` remain precision-sensitive regardless of whether the code uses `+=` or an explicit temporary.
-- The next narrow implementation slice should keep that split explicit: fixed-step counter reconstruction is the conservative first live upgrade, while adaptive-step time still wants a later dual-realtype compensated representation rather than another single-float variant.
+- Long-time time-base work remains separate future work; the live fixed-step path now reconstructs absolute time from `t0 + step * dt`, while the adaptive-step path still derives new times from the current float32 absolute time plus `dt`, so very long adaptive runs at small `dt` remain precision-sensitive.
+- The current narrow implementation slice now keeps that split explicit: fixed-step counter reconstruction is live, while adaptive-step time still wants a later dual-realtype compensated representation rather than another single-float variant.
 - None of the current time/interpolation helper candidates requires the general nonlinear system solve machinery that later implicit methods will need; those larger dependencies should remain deferred with the implicit-stepper work itself.
 
 ## Current public-docs boundary

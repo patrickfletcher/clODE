@@ -39,6 +39,7 @@ def test_internal_config_structs_use_device_matched_struct_dtypes() -> None:
     assert trajectory_output.dtype.itemsize == 8
     assert observer_runtime_double.dtype.itemsize == 80
     assert "double dt;" in integration_double.c_declaration
+    assert "ulong max_steps;" in integration_double.c_declaration
     assert "uint max_store;" in trajectory_output.c_declaration
     assert "uint eVarIx;" in observer_runtime_double.c_declaration
 
@@ -50,7 +51,7 @@ def test_pack_helpers_preserve_internal_config_values() -> None:
         dtmax=0.5,
         abstol=1e-6,
         reltol=1e-3,
-        max_steps=123,
+        max_steps=(1 << 40) + 123,
         max_store=456,
         nout=7,
     )
@@ -85,7 +86,7 @@ def test_pack_helpers_preserve_internal_config_values() -> None:
     )
 
     assert float(packed_integration["dt"]) == pytest.approx(0.125)
-    assert int(packed_integration["max_steps"]) == 123
+    assert int(packed_integration["max_steps"]) == (1 << 40) + 123
     assert int(packed_trajectory_output["max_store"]) == 456
     assert int(packed_trajectory_output["nout"]) == 7
     assert int(packed_observer_runtime["eVarIx"]) == 1

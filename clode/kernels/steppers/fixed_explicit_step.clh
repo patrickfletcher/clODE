@@ -5,13 +5,25 @@
 // realtype tNew = *ti + dt;
 // realtype newDt = tNew - *ti; //use the effective part of dt
 
-//Wrapper to handle step-size adaptation.  note: wi should be zeros
+// Wrapper for fixed-step explicit steppers. The loop owns the integer step
+// count; this wrapper reconstructs absolute time from t0 + step * dt so the
+// kernels do not depend on repeated float32 time addition.
 static inline int stepper(realtype *ti, realtype xi[], realtype k1[], const realtype pars[], 
 __constant struct IntegrationSettings *settings, realtype *dt, __constant realtype *tspan, 
-realtype aux[], realtype wi[], __private struct rngData *rd)
+realtype aux[], realtype wi[], __private struct rngData *rd, const ulong stepCount)
 {
-    // xi and ti are updated inside do_step. 
-    do_step(ti, xi, k1, pars, *dt, aux, wi);
+    realtype stepStartTime = fixedStepTimeFromCounter(tspan[0], stepCount - (ulong)1, *dt);
+    realtype stepMidTime = fixedStepTimeFromRealIndex(
+        tspan[0],
+        ((realtype)stepCount) - RCONST(0.5),
+        *dt
+    );
+    realtype stepEndTime = fixedStepTimeFromCounter(tspan[0], stepCount, *dt);
+
+    // The concrete fixed-step method only updates state; this wrapper owns the
+    // reconstructed absolute time values.
+    do_step(xi, k1, pars, *dt, stepStartTime, stepMidTime, stepEndTime, aux, wi);
+    *ti = stepEndTime;
 
     // naive time update - this is the one consistent with what's in each stepper...
     // *ti += *dt;

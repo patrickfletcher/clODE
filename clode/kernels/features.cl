@@ -63,14 +63,14 @@ __kernel void features(
     getRHS(ti, xi, p, dxi, auxi, wi); 
 
 	//time-stepping loop
-    unsigned int step = 0;
+    ulong step = 0;
     int stepflag = 0;
 	bool eventOccurred;
 	bool terminalEvent;
-	while (ti < tspan[1] && step < settings->max_steps)
+	while (ti < tspan[1] && step < (ulong)settings->max_steps)
 	{
 		++step;
-        stepflag = stepper(&ti, xi, dxi, p, settings, &dt, tspan, auxi, wi, &rd);
+        stepflag = stepper(&ti, xi, dxi, p, settings, &dt, tspan, auxi, wi, &rd, step);
         // if (stepflag!=0)
             // break;
 

@@ -8,8 +8,9 @@
 //Wrapper to handle step-size adaptation.  note: wi should be zeros
 static inline int stepper(realtype *ti, realtype xi[], realtype k1[], const realtype pars[], 
 __constant struct IntegrationSettings *settings, realtype *dt, __constant realtype *tspan, 
-realtype aux[], realtype wi[], __private struct rngData *rd)
+realtype aux[], realtype wi[], __private struct rngData *rd, const ulong stepCount)
 {
+    (void)stepCount;
     realtype tNew, normErr, relErr, err[N_VAR], newxi[N_VAR], newk1[N_VAR];
 
     realtype newDt = *dt;

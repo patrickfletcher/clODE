@@ -11,7 +11,7 @@ struct IntegrationSettings
 	realtype dtmax;
 	realtype abstol;
 	realtype reltol;
-	unsigned int max_steps;
+	ulong max_steps;
 };
 
 struct TrajectoryOutputSettings

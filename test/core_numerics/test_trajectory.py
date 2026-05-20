@@ -18,7 +18,7 @@ from test.core_numerics.reference import (
 
 FIXED_DT = 0.05
 FIXED_MAX_STEPS = 64
-FIXED_ATOL = 1e-5
+FIXED_ATOL = 1e-6
 ADAPTIVE_ATOL = 1e-5
 
 

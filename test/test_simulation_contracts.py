@@ -17,7 +17,7 @@ from test.core_numerics.helpers import (
     make_trajectory_simulator,
     model_path,
 )
-from test.core_numerics.reference import fixed_step_step_count
+from test.core_numerics.reference import fixed_step_step_count, fixed_step_time_grid
 
 
 FIXED_DT = 0.05
@@ -128,10 +128,11 @@ def test_advance_tspan_to_attained_final_time_uses_attained_fixed_step_end() -> 
 
     simulator.transient(update_x0=False, fetch_results=False)
     attained_final_time = float(simulator.get_final_time().reshape(-1)[0])
+    expected_attained = float(fixed_step_time_grid(0.0, 1.0, 0.3)[-1])
 
-    assert attained_final_time == pytest.approx(1.2)
-    assert simulator.advance_tspan_to_attained_final_time() == pytest.approx((1.2, 2.2))
-    assert simulator.get_tspan() == pytest.approx((1.2, 2.2))
+    assert attained_final_time == expected_attained
+    assert simulator.advance_tspan_to_attained_final_time() == (expected_attained, expected_attained + 1.0)
+    assert simulator.get_tspan() == (expected_attained, expected_attained + 1.0)
 
 
 def test_shift_tspan_keeps_requested_window_semantics_after_fixed_step_run() -> None:

@@ -52,13 +52,16 @@ def stable_linear_aux(
 
 
 def fixed_step_time_grid(start: float, end: float, dt: float) -> np.ndarray:
-    current = np.float32(start)
+    start32 = np.float32(start)
+    current = start32
     final = np.float32(end)
     step = np.float32(dt)
     times = [float(current)]
+    step_count = 0
 
     while current < final:
-        current = np.float32(current + step)
+        step_count += 1
+        current = np.float32(start32 + np.float32(step_count) * step)
         times.append(float(current))
 
     return np.asarray(times, dtype=np.float64)

@@ -201,6 +201,12 @@ static inline realtype fixedStepTimeFromCounter(realtype t0, ulong stepCount, re
 	return t0 + ((realtype)stepCount) * dt;
 }
 
+// Fixed-step stage helper: reconstruct an intermediate stage time directly
+// from the origin instead of averaging already-quantized endpoints.
+static inline realtype fixedStepTimeFromRealIndex(realtype t0, realtype stepIndex, realtype dt) {
+	return t0 + stepIndex * dt;
+}
+
 // TODO: evaluate incremental versions (below) vs running sum (two-sum) then a single division at the end. Need to do so for variance already anyway
 
 //Compute a running mean of a function at possibly non-uniform sample points

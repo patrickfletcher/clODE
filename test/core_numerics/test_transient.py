@@ -9,7 +9,7 @@ from test.core_numerics.reference import stable_linear_state
 
 FIXED_DT = 0.05
 FIXED_MAX_STEPS = 64
-RK4_ATOL = 1e-5
+RK4_ATOL = 1e-6
 DOPRI_ATOL = 2e-6
 
 
@@ -51,6 +51,24 @@ def test_dormand_prince_stable_linear_matches_exact_final_state() -> None:
 
     assert final_time == pytest.approx(1.0, abs=5e-6)
     np.testing.assert_allclose(actual, expected, atol=DOPRI_ATOL, rtol=0.0)
+
+
+def test_rk4_large_origin_fixed_step_reports_counter_reconstructed_final_time() -> None:
+    simulator = make_simulator(
+        "stable_linear",
+        stepper=clode.Stepper.rk4,
+        t_span=(1_000_000.0, 1_000_100.0),
+        dt=0.01,
+        dtmax=0.01,
+        max_steps=20_000,
+    )
+
+    simulator.transient(update_x0=False, fetch_results=False)
+
+    final_time = float(simulator.get_final_time()[0])
+
+    assert final_time > 1_000_050.0
+    assert final_time == pytest.approx(float(np.float32(1_000_100.0)), abs=0.0)
 
 
 def test_rk4_stable_linear_ensemble_matches_exact_final_state() -> None:
@@ -162,6 +180,6 @@ def test_deterministic_transient_continuation_matches_single_run(
     np.testing.assert_allclose(
         split.get_final_time(),
         full.get_final_time(),
-        atol=1e-6,
+        atol=0.0,
         rtol=0.0,
     )

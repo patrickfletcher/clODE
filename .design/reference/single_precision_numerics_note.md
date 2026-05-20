@@ -10,11 +10,11 @@ Update when: the demonstration scripts change, helper adoption broadens, or the 
 - The current public demonstration baseline is `examples/single_precision_accuracy.py`, which compares a naive incremental mean against compensated integral accumulation and compares direct time addition against Kahan-style and structured time updates.
 - The public example stays NumPy-based on purpose so the formulas are easy to inspect and rerun; the actual OpenCL helper prototypes are pinned separately in `test/kernel_components/test_kernel_math.py`.
 - The current stepper issue is representational, not stylistic. `ti += dt` and `ti = ti + dt` both perform the same float32 addition against the current absolute time.
-- All current stepper families still derive the next absolute time from one float32 absolute-time value plus one float32 step size, so they remain vulnerable once `dt` becomes small relative to `ulp(t)`.
+- The live fixed-step path now reconstructs absolute time from `t0 + step * dt` with a step counter, while the adaptive steppers still derive the next absolute time from one float32 absolute-time value plus one float32 step size.
 - Kahan-style or structured time updates improve long-horizon endpoint accuracy and reduce drift, but they do not manufacture representable intermediate times once `dt < ulp(t)`.
 - Reconstructing time as `t = step * dt` or `t = t0 + step * dt` in float32 avoids repeated-add drift, but it is still subject to float32 spacing and, if the step counter is cast to float32, it loses unit-step exactness beyond `2^24`.
-- A 32-bit step counter gives a separate overflow budget long before float32 time overflow becomes relevant for many practical `dt` values.
-- The new helper-layer prototypes split the time problem more cleanly: fixed-step kernels can use `t0 + step * dt` from a wide step counter, while adaptive kernels need a two-float compensated time pair because there is no fixed-step counter shortcut.
+- The live fixed-step path now uses a 64-bit step counter, so loop-budget overflow is much less constraining than float32 time spacing for practical workloads.
+- The new helper-layer prototypes split the time problem more cleanly: fixed-step kernels can use `t0 + step * dt` from a 64-bit step counter, while adaptive kernels need a two-float compensated time pair because there is no fixed-step counter shortcut.
 - The compensated integral helper used by `basic` and `basicall` has a clear empirical justification from the public example cases; broader observer adoption should be justified the same way rather than assumed.
 - Large-origin elapsed-time differences are a separate live failure mode for feature extraction: if the mean denominator is formed as `ti - t_start` in float32, the subtraction can be badly biased or collapse to zero even when the numerator is accumulated carefully.
 - The current OpenCL path should be treated as standard round-to-nearest-even arithmetic unless a future experiment proves otherwise. Stochastic rounding may reduce bias in some low-precision accumulations, but it does not remove float32 representability limits and would complicate reproducibility.
@@ -22,7 +22,7 @@ Update when: the demonstration scripts change, helper adoption broadens, or the 
 - The current public example also shows that threshold-crossing timestamps have a clear alternative hierarchy on smooth coarse crossings: sampled endpoint times are crude, inverse-linear interpolation is already much better, and slope-aware Hermite interpolation can be dramatically more accurate when the crossing is monotone.
 - A follow-up ripple-heavy crossing check shows why Hermite should stay prototype-only for now: when a coarse timestep contains multiple threshold crossings, the interpolation target is ambiguous and inverse-linear interpolation can be more robust than a higher-order single-crossing model.
 - The current public example also includes a three-sample local-extremum prototype showing that quadratic-vertex fitting on the existing buffer geometry can materially outperform sample-argmax localization on coarse data.
-- `clode/kernels/clODE_utilities.cl` now includes tested prototypes for Kahan-style time accumulation, fixed-step counter time reconstruction, inverse-linear threshold timestamps, slope-aware Hermite threshold timestamps, and bounded three-sample max/min helpers, but the live steppers and observers have not adopted all of them yet.
+- `clode/kernels/clODE_utilities.cl` now includes tested prototypes for Kahan-style time accumulation, fixed-step counter time reconstruction, inverse-linear threshold timestamps, slope-aware Hermite threshold timestamps, and bounded three-sample max/min helpers. The live fixed-step steppers now use the counter-reconstructed time path, but the remaining helper adoptions are still selective and incomplete.
 - `min_imi` and `eps_dx` are still exposed on `ObserverParams`, but they are not yet wired into the current built-in observer kernels strongly enough to recommend as primary safeguards in public docs.
 
 ## Public-docs boundary
@@ -43,7 +43,7 @@ Avoid public wording that implies notation cleanup alone mitigates the time-base
 ## Preferred implementation direction
 
 - For future single-precision GPU paths, prefer a solver-owned dual-realtype compensated time representation by default rather than another single-float absolute-time variant.
-- For fixed-step steppers, prefer a wide step counter plus `t0 + step * dt` reconstruction over repeated float32 absolute-time addition when the runtime surface can support it cleanly.
+- For fixed-step steppers, keep using a wide step counter plus `t0 + step * dt` reconstruction instead of repeated float32 absolute-time addition.
 - Use the same richer time representation, or a solver-owned relative elapsed channel derived from it, for observer elapsed-time bookkeeping so time-weighted means do not depend on subtracting two large float32 absolute times.
 - Treat broader compensated-mean rollout and richer time-base work as one coherent bookkeeping problem rather than as isolated helper swaps.
 - Investigate selective adoption of the new shared three-sample local-extremum helper and threshold-timestamp interpolation utilities before changing each observer independently.
@@ -54,7 +54,7 @@ Avoid public wording that implies notation cleanup alone mitigates the time-base
 - Which remaining observers actually benefit enough from compensated integral accumulation to justify the extra state fields?
 - For non-autonomous problems, what is the lightest implementation that preserves the preferred direction above: dual-realtype solver time everywhere, a dual-realtype plus relative-elapsed split, or some narrower per-work-item `t0` plus relative-time model?
 - Which of those options is worth carrying into the live kernels before any broader public API redesign?
-- If a structured-time path uses a step counter, should the device-side counter remain 32-bit, move to 64-bit, or split coarse and fine counters to avoid overflow?
+- Beyond the current live 64-bit fixed-step counter path, is any more elaborate coarse/fine counter scheme actually worth the complexity?
 - For threshold-based observers, is inverse-linear interpolation the right default first step, and where would a Hermite-style slope-aware helper remain robust enough to justify its extra complexity?
 - Is there any practical OpenCL path to experiment with stochastic rounding while preserving clODE's reproducibility expectations, or should rounding-mode work stay out of scope?
 - Which live kernels need more scrutiny for cancellation, threshold jitter near zero, or divisions by tiny ranges beyond the current mean and time demos?

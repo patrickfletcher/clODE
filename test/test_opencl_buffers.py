@@ -79,7 +79,7 @@ def test_buffer_manager_packs_runtime_settings_with_current_struct_layout() -> N
         dtmax=0.5,
         abstol=1e-6,
         reltol=1e-3,
-        max_steps=123,
+        max_steps=(1 << 40) + 123,
         max_store=456,
         nout=7,
     )
@@ -99,9 +99,9 @@ def test_buffer_manager_packs_runtime_settings_with_current_struct_layout() -> N
     )
 
     assert packed_integration.dtype.fields is not None
-    assert packed_integration.dtype.itemsize == 20
+    assert packed_integration.dtype.itemsize == 24
     assert float(packed_integration["dt"]) == pytest.approx(0.125)
-    assert int(packed_integration["max_steps"]) == 123
+    assert int(packed_integration["max_steps"]) == (1 << 40) + 123
     assert packed_output.dtype.fields is not None
     assert packed_output.dtype.itemsize == 8
     assert int(packed_output["max_store"]) == 456

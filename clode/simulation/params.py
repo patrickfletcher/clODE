@@ -3,6 +3,18 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 
+_MAX_UINT64 = (1 << 64) - 1
+
+
+def _coerce_max_steps(value: int) -> int:
+    max_steps = int(value)
+    if max_steps < 0:
+        raise ValueError("max_steps must be non-negative")
+    if max_steps > _MAX_UINT64:
+        raise OverflowError("max_steps exceeds uint64 range")
+    return max_steps
+
+
 @dataclass(frozen=True, slots=True)
 class _TrajectoryOutputSettings:
     max_store: int = 1_000_000
@@ -26,7 +38,7 @@ class _IntegrationSettings:
         object.__setattr__(self, "dtmax", float(self.dtmax))
         object.__setattr__(self, "abstol", float(self.abstol))
         object.__setattr__(self, "reltol", float(self.reltol))
-        object.__setattr__(self, "max_steps", int(self.max_steps))
+        object.__setattr__(self, "max_steps", _coerce_max_steps(self.max_steps))
 
     def to_solver_params(
         self, output_settings: _TrajectoryOutputSettings
@@ -73,7 +85,7 @@ class SolverParams:
         self.dtmax = float(self.dtmax)
         self.abstol = float(self.abstol)
         self.reltol = float(self.reltol)
-        self.max_steps = int(self.max_steps)
+        self.max_steps = _coerce_max_steps(self.max_steps)
         self.max_store = int(self.max_store)
         self.nout = int(self.nout)
 

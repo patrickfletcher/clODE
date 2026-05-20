@@ -366,11 +366,16 @@ def test_time_prototypes_reduce_large_origin_failure_and_zero_origin_drift() -> 
             out[5] = zero_kahan;
             out[6] = zero_kahan_correction;
             out[7] = fixedStepTimeFromCounter(ZERO, (ulong)200000, dt);
+
+            realtype step3 = fixedStepTimeFromCounter(RCONST(1000000.0), (ulong)3, dt);
+            realtype step4 = fixedStepTimeFromCounter(RCONST(1000000.0), (ulong)4, dt);
+            out[8] = step3 + RCONST(0.5) * (step4 - step3);
+            out[9] = fixedStepTimeFromRealIndex(RCONST(1000000.0), RCONST(3.5), dt);
         }
         """,
     )
 
-    out = np.empty(8, dtype=np.float32)
+    out = np.empty(10, dtype=np.float32)
     out_buffer = pyopencl.Buffer(runtime.context, pyopencl.mem_flags.WRITE_ONLY, out.nbytes)
 
     program.compare_time_prototypes(runtime.queue, (1,), None, out_buffer)
@@ -382,6 +387,9 @@ def test_time_prototypes_reduce_large_origin_failure_and_zero_origin_drift() -> 
     assert abs(float(out[4]) - 2000.0) > 1.0
     assert out[5] == pytest.approx(np.float32(2000.0))
     assert out[7] == pytest.approx(np.float32(2000.0))
+    assert out[8] == pytest.approx(np.float32(1000000.0))
+    assert out[9] == pytest.approx(np.float32(1000000.0625))
+    assert out[9] > out[8]
 
 
 def test_threshold_crossing_interpolation_helpers_improve_timestamp_accuracy() -> None:

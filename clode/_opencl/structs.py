@@ -30,7 +30,7 @@ def _integration_settings_base_dtype(precision: Precision) -> np.dtype:
             ("dtmax", real_dtype),
             ("abstol", real_dtype),
             ("reltol", real_dtype),
-            ("max_steps", np.uint32),
+            ("max_steps", np.uint64),
         ],
         align=True,
     )
