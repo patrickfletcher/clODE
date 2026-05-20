@@ -20,8 +20,8 @@ Update when: canonical module homes, public compatibility surfaces, packaging ru
 - Built-in stepper definitions, traits, and OpenCL build mapping now resolve through a Python-owned stepper-definition catalog instead of raw registry tables.
 - Observer parameter resolution now flows through one canonical `ObserverParams` path, and simulator and executor boundaries keep internal copies of caller-provided observer bundles instead of aliasing them.
 - The simulator layer now has a narrow `advance_tspan_to_attained_final_time()` helper for exact shared-window continuation when the ensemble agrees on one attained `tf`.
-- A shared kernel-math helper foundation now lives in `clode/kernels/clODE_utilities.cl`, and the initial `test/kernel_components/` layer exercises helper plus direct `basic` and `basicall` observer contracts.
-- The current package still has a few cleanup targets, especially diverged-time continuation follow-through around per-work-item `t0` or richer solver-state modeling, broader helper adoption across remaining observers and stepper time-base paths, deeper component-test coverage, and later chunking work on top of the landed IVP, solver-state, output-policy, observer, execution-setting, and stepper-definition boundaries.
+- A shared kernel-math helper foundation now lives in `clode/kernels/clODE_utilities.cl`; it now includes tested prototypes for Kahan-style time pairs, fixed-step counter time reconstruction, threshold-crossing interpolation, and bounded three-sample extremum helpers in addition to the landed compensated-integral helpers.
+- The current package still has a few cleanup targets, especially diverged-time continuation follow-through around per-work-item `t0` or richer solver-state modeling, selective helper adoption across remaining observers and stepper time-base paths, deeper component-test coverage, and later chunking work on top of the landed IVP, solver-state, output-policy, observer, execution-setting, and stepper-definition boundaries.
 
 ## Session-Start Guidance
 
@@ -112,8 +112,9 @@ The historical backend-shim, protocol/factory facade, and binding-named compatib
 - Built-in observer definitions now live in `clode/observers/_definitions.py`, and shared resolved observer specs now drive feature-build defines, build-key selection, and feature-executor invalidation boundaries.
 - Optional event storage still participates in compile-time observer layout and buffer sizing, but runtime observer settings now exclude event timestamp capacity and treat it as explicit output/layout policy instead.
 - `shift_tspan()` still advances the requested window rather than the attained final time, so it remains the requested-window continuation tool rather than the exact attained-time path.
-- Shared OpenCL numerical helpers now have a first small home in `clODE_utilities.cl`, and the `basic` and `basicall` observers now use compensated integral accumulation for their time-weighted means. Broader adoption across the remaining observers and stepper time-base paths is still future work.
-- Fixed-step kernels still advance time with `ti += dt`, so very long absolute-time runs with small `dt` remain precision-sensitive; evaluating `t0 + step * dt` or related structured-time models is still future work.
+- Shared OpenCL numerical helpers now have a first small home in `clODE_utilities.cl`, and the `basic` and `basicall` observers now use compensated integral accumulation for their time-weighted means. Broader adoption across the remaining observers should stay evidence-driven rather than assuming every path benefits equally.
+- The current stepper family still forms the next absolute time from the current float32 time plus `dt`, regardless of whether a given kernel spells that as `*ti += dt` or `t_new = *ti + dt`. Very long absolute-time runs with small `dt` therefore remain precision-sensitive, and richer time representations are still future work.
+- The repo now has a dedicated public float32 demonstration path in `examples/single_precision_accuracy.py` plus `docs/numerical_accuracy.md`, but broader mitigation rollout beyond `basic` and `basicall` is still intentionally deferred until those demonstrations guide the choices.
 - RNG continuation details are persisted in separate common buffers rather than a clearer per-work-item state object, which will matter again when evaluating Random123.
 - `.design/archived/` is useful for rationale and bug archaeology, but some archived statements about the old wrapper path are now historical only.
 
@@ -125,7 +126,7 @@ The historical backend-shim, protocol/factory facade, and binding-named compatib
 - `test/core_numerics/test_stochastic.py`: seeded stochastic continuation and Ornstein-Uhlenbeck stationary-moment coverage.
 - `test/core_numerics/test_features_basicall.py`: `basicall` exact-statistics and split-window continuation coverage.
 - `test/test_simulation_contracts.py`: current simulation and observer behavior contracts.
-- The dedicated kernel-component layer now exists, but its current coverage is still intentionally narrow even after adding direct `basic` and `basicall` observer contracts.
+- The dedicated kernel-component layer now exists, and it now covers helper math, large-origin elapsed-time prototypes, fixed-step versus compensated time prototypes, threshold-crossing interpolation helpers, and three-sample extremum helpers in addition to direct `basic` and `basicall` observer contracts.
 - `test/test_problem_rhs_source.py`: RHS source-ingestion and digest coverage.
 - `test/test_opencl_models.py`, `test/test_opencl_source_builder.py`, `test/test_opencl_runtime.py`, `test/test_opencl_buffers.py`, `test/test_opencl_structs.py`: canonical internal OpenCL support-layer tests.
 - `tools/probe_opencl_runtime.py`: distinguishes runtime/compiler failures from clODE kernel failures.

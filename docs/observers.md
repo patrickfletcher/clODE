@@ -47,6 +47,16 @@ integrator.set_observer_parameters(
 
 Changing `max_event_timestamps` changes observer storage requirements and may trigger a rebuild of the OpenCL program.
 
+Not every observer field affects every built-in observer. For the current built-in set, the most directly useful numerical safeguards are:
+
+- `min_amp` for suppressing oscillation/event measurements below a chosen amplitude floor
+- separated `x_up_threshold` and `x_down_threshold` values in `threshold_2` to add Schmitt-trigger-style hysteresis and reduce chatter near a boundary
+- `dx_up_threshold` and `dx_down_threshold` in `threshold_2` when noisy shallow crossings need an additional slope gate
+
+See [numerical_accuracy.md](numerical_accuracy.md) for empirical examples and practical tuning guidance.
+
+Current threshold and local-extremum timestamps come from sampled buffer points in the live kernels. See [numerical_accuracy.md](numerical_accuracy.md) for measured interpolation tradeoffs on coarse crossings and three-sample extrema.
+
 ## Reading observer output
 
 ```python

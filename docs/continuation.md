@@ -64,6 +64,10 @@ Repeated `features()` calls continue the observer state by default. Exact contin
 time-based feature accumulators and event timestamps therefore requires the next requested
 window to start from the previous attained final time.
 
+For autonomous systems, prefer feature windows whose local origin stays near `t = 0` when
+absolute time is not part of the model. Large absolute times make float32 elapsed-time
+differences less reliable even when the trajectory state itself continues correctly.
+
 If you call `features()` repeatedly without advancing `t_span`, you are not asking for the
 same thing as a single long run. For time-based observers, that can make the accumulated
 statistics inconsistent.
@@ -89,15 +93,18 @@ raises `ValueError`. In that case the caller still has to choose an explicit pol
 
 ## Current limitation
 
-clODE still advances fixed-step time with `ti += dt` inside the kernels. That means very long
-absolute-time runs with very small `dt` eventually hit floating-point resolution limits. Once
-`dt` is smaller than the spacing between adjacent representable values near `ti`, time updates
-lose significance and the simulation can break down.
+clODE still advances time by repeated float32 addition against the current absolute time inside the
+kernels. Whether the code is written as `ti += dt` or `ti = ti + dt` does not change the numerical
+issue: once `dt` is smaller than the spacing between adjacent representable values near `ti`, time
+updates lose significance and the simulation can break down.
 
 Implications:
 
 - for autonomous systems, splitting a long run into shorter windows can delay the problem
 - for non-autonomous systems, this remains a real numerical limitation
+
+For a reproducible float32 demonstration of this behavior, plus comparisons against compensated and
+structured time updates, see [numerical_accuracy.md](numerical_accuracy.md).
 
 ## Runnable example
 

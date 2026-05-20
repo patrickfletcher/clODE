@@ -13,6 +13,7 @@ Read the root `.design` docs first. This directory is not default reading.
 - `solver_state_implementation_plan.md`: landed first-pass solver-state closeout and handoff note, including the current internal boundary and what was intentionally deferred.
 - `chunked_execution_audit.md`: time-chunking and ensemble-batching audit, including current capabilities, future API direction, and how the landed output/storage split now enables the next chunking/batching work.
 - `continuation_timebase_note.md`: current solver-owned time-base semantics, attained-`tf` continuation guidance, and the remaining solver-state questions.
+- `single_precision_numerics_note.md`: float32 error-accumulation theory, the current empirical demo strategy, and guardrails for future mitigation work.
 - `testing_audit.md`: test taxonomy and the kernel-component testing strategy.
 - `pyopencl_leverage_audit.md`: PyOpenCL features and runtime helpers worth using more aggressively.
 - `docs_layout_plan.md`: docs information architecture, example-execution policy, and API reference cleanup path.

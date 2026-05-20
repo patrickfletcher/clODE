@@ -6,7 +6,7 @@ Update when: the active target changes, the scope narrows or broadens, or the ac
 
 ## Title
 
-Broader numerical-helper adoption and time-base groundwork
+Empirical single-precision numerics demonstrations and guidance
 
 ## Assumed Repo State
 
@@ -18,27 +18,34 @@ Broader numerical-helper adoption and time-base groundwork
 - `clode/kernels/clODE_utilities.cl` now carries a small shared compensated-accumulation helper layer.
 - The `basic` and `basicall` observers now use compensated integral accumulation for their time-weighted means.
 - `test/kernel_components/` now provides direct OpenCL component coverage for helper math plus `basic` and `basicall` observer contracts.
+- The current stepper family still derives the next absolute time from the current float32 time plus `dt`, regardless of whether individual kernels use `+=` or an explicit temporary.
 - Public `SolverParams`, `ObserverParams`, and the public `Stepper` enum remain thin compatibility surfaces; broader public config redesign is still intentionally deferred.
 
 ## Why this should be next
 
-The shared helper layer is now real rather than aspirational, but most of the observer and stepper paths still do not use it. That leaves numerical robustness improvements half-landed and the current component-test layer underused.
+The shared helper layer is now real rather than aspirational, but broader rollout should be evidence-driven. The package still lacks public, reproducible demonstrations that show when compensated mean accumulation materially beats the old `runningMeanTime(...)` path and what candidate time-update strategies do or do not fix.
 
-This is the right next PR because it builds directly on the kernel-helper and continuation groundwork that just landed. It improves single-precision resilience and internal numerical consistency without opening a larger per-work-item time-base redesign too early.
+This is the right next PR because it turns those mitigation ideas into something scientifically inspectable before another broad kernel pass. It improves the package's explanatory value, sharpens later observer and stepper choices, and reduces the risk of overclaiming what the current time-base work actually solves.
 
 ## Scope
 
-- broaden shared compensated or structured helper usage into remaining observer and stepper-time paths where it clearly improves robustness or readability
-- add or extend direct component tests where helper adoption changes a contract that is easier to validate below the full simulator stack
+- add reproducible examples that compare `runningMeanTime(...)` against compensated integral accumulation on float32 workloads that expose late-contribution loss
+- add reproducible examples that compare direct time accumulation against compensated or structured time updates and show the limits imposed by float32 spacing, including the limits of reconstructing time from a step counter and the separate large-origin elapsed-time issue for feature windows
+- add reproducible observer-safeguard examples for oscillation-oriented workflows, especially amplitude floors, Schmitt-trigger-style threshold hysteresis, and derivative thresholds where they are demonstrably useful
+- add reproducible threshold-crossing timestamp comparisons for sampled, inverse-linear, and slope-aware interpolation options
+- add a small local-extremum prototype that tests whether the current three-sample buffer geometry supports a meaningfully better interpolation helper
+- add narrow kernel-side helper prototypes and component tests for fixed-step counter time, compensated time pairs, threshold interpolation, and bounded three-sample extrema without broad live-kernel rollout in this PR
+- add or extend public docs so the relevant float32 theory, current mitigations, and remaining limitations are easy to inspect
 - keep the public API stable in this PR
 - keep public packaging hygiene, citation metadata, and release-tag cleanup intentionally out of scope
 
 ## Likely Internal Shape
 
-- extend `clode/kernels/clODE_utilities.cl` only where the helper layer actually reduces duplicated or fragile kernel logic
-- apply those helpers to the remaining observer kernels and any stepper time-base code that still obviously benefits
-- extend `test/kernel_components/` and exact-regression coverage only where the helper-adoption pass reveals a contract worth pinning down directly
-- leave broader per-work-item `t0` or full structured-time redesign to a later, more explicit PR if it still looks necessary afterward
+- add a focused example script under `examples/` that reproduces the mean and time accumulation issues with float32 arithmetic using the same formulas clODE uses in-kernel
+- add a public docs page that explains `ulp(t)`, late-update loss in running means, feature-window origin pitfalls, threshold/local-extremum timestamp tradeoffs, and the current mitigation tradeoffs without overstating them
+- add direct OpenCL component tests that pin the new helper prototypes before any later observer or stepper adoption pass
+- update the design notes so the later helper-adoption pass is explicitly downstream of this evidence-gathering work
+- leave broader per-work-item `t0`, dual-realtype time-base implementation, full structured-time redesign, and any broad kernel-helper rollout to later explicit PRs
 
 ## Design Constraints
 
@@ -47,11 +54,17 @@ This is the right next PR because it builds directly on the kernel-helper and co
 - preserve the landed solver-state, continuation-helper, output-policy, observer-state, observer-parameter, execution-setting, and stepper-definition boundaries
 - keep fetched outputs and transfer caches as derived data, not semantic owners
 - keep kernel specialization explicit and inspectable rather than hiding it behind a larger meta-build framework
+- do not claim that `ti = ti + dt` is a mitigation distinct from `ti += dt`; both are the same float32 addition issue
+- do not claim that compensated or structured time updates fully solve sub-`ulp(t)` absolute-time resolution in float32
+- public docs should recommend starting autonomous feature windows near `t = 0` when that does not change model semantics
+- public docs should distinguish current sampled observer timestamps from candidate interpolation helpers instead of implying those helpers are already live everywhere
+- public docs should compare current package features to relevant algorithmic alternatives, not narrate the package's development history
 - leave citation metadata, release-tag alignment, and similar repo-surface packaging hygiene for later
 
 ## Non-goals
 
 - no constructor signature removals or compatibility-breaking renames
+- no broad helper rollout across all remaining observers in the same PR
 - no implicit or IMEX solver implementation in the same PR
 - no chunked trajectory streaming or ensemble batching in the same PR
 - no multi-device work
@@ -60,25 +73,29 @@ This is the right next PR because it builds directly on the kernel-helper and co
 
 ## Suggested Implementation Slices
 
-1. Identify the remaining observer and stepper paths that still duplicate numerically delicate accumulation or time-base logic.
-2. Apply the shared helper layer only where it materially clarifies the kernel code or improves robustness.
-3. Extend direct component or exact-regression coverage where the changed kernel contract needs tighter pinning.
-4. Record the deferred follow-ons explicitly: deeper structured-time work, per-work-item `t0`, adaptive-controller work, and later repo-surface packaging hygiene.
+1. Build a reproducible float32 demonstration for time-weighted means that compares the old recurrence against compensated integral accumulation.
+2. Build a reproducible float32 demonstration for time accumulation that compares direct addition against compensated or structured updates, including `step * dt` / `t0 + step * dt` variants.
+3. Build a reproducible threshold/local-extremum interpolation comparison and mirror the same ideas in direct OpenCL helper tests.
+4. Explain the relevant float32 theory and the observed tradeoffs in public docs.
+5. Record the deferred follow-ons explicitly: broader helper adoption, deeper structured-time work, step-counter width and overflow budgets, threshold/local-extremum helper adoption, rounding-mode questions, per-work-item `t0`, adaptive-controller work, and later repo-surface packaging hygiene.
 
 ## Code-Facing Checklist
 
-- `clode/kernels/clODE_utilities.cl`: keep the helper layer small, reusable, and numerically explicit
-- relevant kernels under `clode/kernels/observers/` and `clode/kernels/steppers/`: adopt the helper layer only where it buys real value
-- `test/kernel_components/`: extend direct contracts where helper adoption exposes a better component seam
-- `test/core_numerics/`: keep exact-regression coverage honest when helper adoption changes a numerical path
-- `.design/reference/testing_audit.md` and `.design/reference/continuation_timebase_note.md`: keep the active rationale aligned with the lived implementation
+- `examples/single_precision_accuracy.py`: keep the demonstrations small, reproducible, and tied to the exact float32 formulas under discussion
+- `docs/numerical_accuracy.md`: explain where the current mitigations help and where float32 representability still wins
+- `test/kernel_components/test_kernel_math.py`: pin helper-layer prototypes directly before broad observer or stepper adoption
+- `docs/examples.md`, `docs/performance_notes.md`, and `docs/continuation.md`: keep the public links and limitation wording aligned
+- `.design/reference/single_precision_numerics_note.md` and `.design/reference/continuation_timebase_note.md`: keep the active rationale aligned with the lived implementation
 
 ## Acceptance Criteria
 
-- the remaining observer or stepper paths that obviously benefit now use the shared helper layer instead of duplicated numerically delicate logic
-- direct component or exact-regression coverage grows where the helper-adoption pass changes a contract that should stay easy to validate
-- the `.design` docs continue to defer deeper structured-time redesign, broader continuation-policy work, and packaging cleanup until the numerical and state-model surface settles further
+- the repository includes at least one reproducible mean-accumulation demonstration, one reproducible time-accumulation demonstration, one reproducible large-origin elapsed-time demonstration for feature windows, one reproducible threshold-timestamp interpolation demonstration, and one reproducible observer-safeguard demonstration that exercise the current float32 formulas or observer logic directly
+- the public docs explain why compensated integral accumulation helps where a naive incremental mean can fail, and they explain why the stepper time-base issue is about float32 representability rather than notation and why large absolute feature-window origins are risky in float32
+- the helper layer includes direct component-tested prototypes for fixed-step counter time, compensated time pairs, threshold interpolation, and three-sample extremum recovery, but the PR still avoids claiming broad live-kernel adoption where that work has not happened yet
+- the public docs and design notes clearly state what compensated or structured time updates do and do not fix
+- the public docs compare current package behavior to relevant algorithmic alternatives without slipping into maintainer-history framing
+- the `.design` docs continue to defer broader helper rollout, deeper structured-time redesign, broader continuation-policy work, and packaging cleanup until the empirical guidance is in place and the numerical/state-model surface settles further
 
 ## Follow-on If This Lands Cleanly
 
-The next high-value follow-ons should be a targeted test-surface audit, then deeper time-base work such as structured-time updates or per-work-item `t0` only if the remaining continuation pressure still justifies it. Broader config cleanup and packaging-facing work should still wait until those internal boundaries stop moving.
+If this lands cleanly, the next high-value follow-on should be a narrower helper-adoption PR that uses these demonstrations and helper tests to justify where compensated accumulation or time-base changes belong. The preferred single-precision direction after that is fixed-step counter reconstruction where it applies, a solver-owned dual-realtype compensated time base plus relative elapsed-time bookkeeping where it does not, inverse-linear threshold timestamps as the conservative first observer upgrade, and bounded three-sample extremum helpers where the observer contracts benefit clearly.

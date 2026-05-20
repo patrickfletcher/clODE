@@ -22,8 +22,13 @@ from clode._opencl.observer_metadata import (
     _observer_data_base_dtype,
     _observer_data_struct_name,
 )
+'''  current BUG:
+Traceback (most recent call last):
+  File "/home/runner/work/clODE/clODE/tools/probe_opencl_runtime.py", line 21, in <module>
+    from clode._opencl.observer_metadata import (
+ImportError: cannot import name '_observer_data_base_dtype' from 'clode._opencl.observer_metadata' (/home/runner/work/clODE/clODE/clode/_opencl/observer_metadata.py)
 from clode.problem._core import ProblemInfo
-
+'''
 ENV_VARS = (
     "CLODE_TEST_PLATFORM_ID",
     "CLODE_TEST_DEVICE_ID",

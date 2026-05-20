@@ -37,6 +37,16 @@ Common options include:
 - `max_event_timestamps`: how many event timestamps to retain
 - `min_amp`, `min_imi`, `nhood_radius`, `x_up_threshold`, `x_down_threshold`, `dx_up_threshold`, `dx_down_threshold`, `eps_dx`
 
+The most directly useful current safeguards for oscillation-oriented observers are:
+
+- `min_amp` to suppress event measurement below a chosen amplitude floor
+- separate `x_up_threshold` and `x_down_threshold` values in `threshold_2` to add Schmitt-trigger-style hysteresis and reduce chatter
+- `dx_up_threshold` and `dx_down_threshold` in `threshold_2` when noisy shallow crossings need an additional slope gate
+
+Not every field is active in every built-in observer, so treat observer parameters as mode-specific rather than assuming every knob has the same effect everywhere.
+
+Current threshold and local-extremum timestamps come from sampled buffer points in the live kernels. See [numerical_accuracy.md](numerical_accuracy.md) for measured interpolation tradeoffs on coarse crossings and three-sample extrema.
+
 Example:
 
 ```python
@@ -69,8 +79,14 @@ For exact absolute-time continuation, advance the next requested window from
 fixed-step methods, time-based feature accumulators, event timestamps, and non-autonomous
 systems.
 
+For autonomous systems, prefer feature windows whose local `t_span` starts near `0` when
+absolute time is not part of the model. Large absolute times make float32 elapsed-time
+differences and timestamps less reliable even when the state trajectory itself is well behaved.
+
 See `continuation.md` for the full continuation model and `examples/continuation.py` for a
 runnable comparison between one long feature run and split-window continuation.
+
+For empirical float32 demonstrations of amplitude floors, threshold hysteresis, derivative thresholds, compensated means, elapsed-time origins, and time accumulation limits, see [numerical_accuracy.md](numerical_accuracy.md).
 
 ## Current customization status
 

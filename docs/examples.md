@@ -6,6 +6,7 @@ The scripts in the `examples/` directory are the fastest way to see complete clO
 
 - [dump_opencl_info.py](https://github.com/patrickfletcher/clODE/blob/main/examples/dump_opencl_info.py): print the OpenCL platforms and devices visible to clODE.
 - [dump_device_performance.py](https://github.com/patrickfletcher/clODE/blob/main/examples/dump_device_performance.py): compare transient-solver throughput across visible devices with a Lorenz benchmark.
+- [single_precision_accuracy.py](https://github.com/patrickfletcher/clODE/blob/main/examples/single_precision_accuracy.py): reproduce the float32 mean-accumulation and time-accumulation failure modes discussed in the numerical-accuracy docs and compare candidate mitigations.
 
 ## Core simulation workflows
 
@@ -21,4 +22,4 @@ The scripts in the `examples/` directory are the fastest way to see complete clO
 - [visualize_events_localmax.py](https://github.com/patrickfletcher/clODE/blob/main/examples/visualize_events_localmax.py): visualize the `local_max` observer.
 - [visualize_events_nhood2.py](https://github.com/patrickfletcher/clODE/blob/main/examples/visualize_events_nhood2.py): visualize the `neighbourhood_2` observer.
 
-For the underlying APIs and concepts, see [getting_started.md](getting_started.md), [feature_extraction.md](feature_extraction.md), [trajectory_simulation.md](trajectory_simulation.md), and [specifying_odes.md](specifying_odes.md). For reproducibility guidance around timings and device comparisons, see [performance_notes.md](performance_notes.md).
+For the underlying APIs and concepts, see [getting_started.md](getting_started.md), [feature_extraction.md](feature_extraction.md), [trajectory_simulation.md](trajectory_simulation.md), and [specifying_odes.md](specifying_odes.md). For float32 accuracy guidance, see [numerical_accuracy.md](numerical_accuracy.md). For reproducibility guidance around timings and device comparisons, see [performance_notes.md](performance_notes.md).

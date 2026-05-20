@@ -23,7 +23,7 @@ Historical debugging detail from the earlier observer-time rebase investigation 
 - The Python-level `SolverState` first pass is now live; a full matched device-side solver-state struct remains optional future follow-through after continuation ergonomics and per-work-item time ownership are clearer.
 - Stochastic continuation details are now preserved, but they may want a clearer per-work-item RNG-state home if Random123 or related RNG work becomes active.
 - If the package wants repeated solve calls to continue exact absolute time after diverged per-item final times, it likely needs a per-work-item current-time or `t0` model rather than another shared-window helper.
-- Long-time fixed-step accumulation remains separate future work; fixed-step kernels still use `ti += dt`, so very long runs at small `dt` remain precision-sensitive.
+- Long-time time-base work remains separate future work; the current stepper family still derives new times from the current float32 absolute time plus `dt`, so very long runs at small `dt` remain precision-sensitive regardless of whether the code uses `+=` or an explicit temporary.
 
 ## Current public-docs boundary
 
@@ -34,3 +34,4 @@ Public docs should stay usage-focused:
 - when to use `get_final_time()`
 - when to concatenate trajectory windows
 - what the current limitations are
+- what time compensation or structured time does and does not fix in float32

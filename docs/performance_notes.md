@@ -2,6 +2,8 @@
 
 clODE is designed for large ensembles of independent ODE solves and for workflows where feature extraction can stay on the device instead of storing full trajectories. This page is intentionally conservative: it documents what can be reproduced from the repository today without turning incomplete benchmark work into headline claims.
 
+This page is about throughput. For reproducible demonstrations of single-precision numerical error accumulation and the current mitigation tradeoffs, see [numerical_accuracy.md](numerical_accuracy.md).
+
 ## Current status
 
 - Formal cross-package benchmark claims are still in progress.
@@ -12,6 +14,7 @@ clODE is designed for large ensembles of independent ODE solves and for workflow
 
 - `examples/dump_opencl_info.py`: record the OpenCL platforms and devices visible to clODE before running any comparison.
 - `examples/dump_device_performance.py`: run a Lorenz-system transient benchmark across visible devices using single-precision RK4 and report min, median, and max times across repeated runs.
+- `examples/single_precision_accuracy.py`: reproduce the float32 mean-accumulation and time-accumulation demonstrations discussed in the numerical-accuracy docs.
 
 When publishing or sharing a result, record the exact script, any local edits, and the commit you ran.
 

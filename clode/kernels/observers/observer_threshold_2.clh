@@ -178,7 +178,7 @@ static inline bool eventFunction(realtype *ti, realtype xi[], realtype dxi[], re
     if (od->inUpstate)
         return false;
 
-    //event is marked by upward threshold crossing
+    //event is marked by upward threshold crossing #TODO - user-specified direction option?
     return (xi[op->eVarIx] > od->xUp && dxi[op->eVarIx] > od->dxUp);
     
 }
@@ -190,7 +190,7 @@ static inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dx
     ++od->eventcount;
     od->inUpstate = 1;
 
-    //simplest: time and state of trajectory point that landed in the neighborhood.
+    //simplest: time and state of trajectory point that crossed the threshold.
     tThisEvent=*ti;
 
     //alt: interp to get more accurate tThisEvent within the last time step: xi-1, xi, ti-1, ti; get t @ x=xUp

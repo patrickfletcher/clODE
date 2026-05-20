@@ -1,3 +1,4 @@
+import math
 from pathlib import Path
 
 import numpy as np
@@ -263,3 +264,284 @@ def test_basicall_observer_component_kernel_reports_expected_feature_layout() ->
         dtype=np.float32,
     )
     np.testing.assert_allclose(features, expected, rtol=1e-6, atol=1e-6)
+
+
+def test_relative_elapsed_mean_prototype_survives_large_origin_bias() -> None:
+    runtime = OpenCLRuntime.create(**_explicit_runtime_kwargs())
+    program = _build_program(
+        runtime,
+        """
+        #include \"clODE_utilities.cl\"
+
+        __kernel void compare_elapsed_strategies(
+            __global const realtype *values,
+            __global realtype *out,
+            const uint n_values
+        ) {
+            const realtype t0 = RCONST(10000.0);
+            const realtype dt = RCONST(0.01);
+            realtype ti = t0;
+            realtype t_start = t0;
+            realtype integral = ZERO;
+            realtype integral_correction = ZERO;
+            realtype elapsed = ZERO;
+            realtype elapsed_correction = ZERO;
+
+            for (uint idx = 0; idx < n_values; ++idx) {
+                ti += dt;
+                compensatedIntegrateConstant(&integral, &integral_correction, dt, values[idx]);
+                compensatedTimeAdd(&elapsed, &elapsed_correction, dt);
+            }
+
+            out[0] = meanFromCompensatedIntegral(integral, integral_correction, ti - t_start);
+            out[1] = meanFromCompensatedIntegral(
+                integral,
+                integral_correction,
+                compensatedTimeValue(elapsed, elapsed_correction)
+            );
+            out[2] = ti - t_start;
+            out[3] = compensatedTimeValue(elapsed, elapsed_correction);
+        }
+        """,
+    )
+
+    values = np.ones(10_000, dtype=np.float32)
+    values[5_000:] += np.float32(1.0e-4)
+    expected = float(values.mean(dtype=np.float64))
+    out = np.empty(4, dtype=np.float32)
+
+    values_buffer = pyopencl.Buffer(
+        runtime.context,
+        pyopencl.mem_flags.READ_ONLY | pyopencl.mem_flags.COPY_HOST_PTR,
+        hostbuf=values,
+    )
+    out_buffer = pyopencl.Buffer(runtime.context, pyopencl.mem_flags.WRITE_ONLY, out.nbytes)
+
+    program.compare_elapsed_strategies(
+        runtime.queue,
+        (1,),
+        None,
+        values_buffer,
+        out_buffer,
+        np.uint32(len(values)),
+    )
+    pyopencl.enqueue_copy(runtime.queue, out, out_buffer).wait()
+
+    assert out[0] > np.float32(1.02)
+    assert out[1] == pytest.approx(expected, abs=2e-6)
+    assert out[2] == pytest.approx(np.float32(97.65625))
+    assert out[3] == pytest.approx(np.float32(100.0))
+
+
+def test_time_prototypes_reduce_large_origin_failure_and_zero_origin_drift() -> None:
+    runtime = OpenCLRuntime.create(**_explicit_runtime_kwargs())
+    program = _build_program(
+        runtime,
+        """
+        #include \"clODE_utilities.cl\"
+
+        __kernel void compare_time_prototypes(__global realtype *out) {
+            const realtype dt = RCONST(0.01);
+
+            realtype large_direct = RCONST(1000000.0);
+            realtype large_kahan = RCONST(1000000.0);
+            realtype large_kahan_correction = ZERO;
+            for (uint step = 0; step < 10000; ++step) {
+                large_direct += dt;
+                compensatedTimeAdd(&large_kahan, &large_kahan_correction, dt);
+            }
+            out[0] = large_direct;
+            out[1] = large_kahan;
+            out[2] = large_kahan_correction;
+            out[3] = fixedStepTimeFromCounter(RCONST(1000000.0), (ulong)10000, dt);
+
+            realtype zero_direct = ZERO;
+            realtype zero_kahan = ZERO;
+            realtype zero_kahan_correction = ZERO;
+            for (uint step = 0; step < 200000; ++step) {
+                zero_direct += dt;
+                compensatedTimeAdd(&zero_kahan, &zero_kahan_correction, dt);
+            }
+            out[4] = zero_direct;
+            out[5] = zero_kahan;
+            out[6] = zero_kahan_correction;
+            out[7] = fixedStepTimeFromCounter(ZERO, (ulong)200000, dt);
+        }
+        """,
+    )
+
+    out = np.empty(8, dtype=np.float32)
+    out_buffer = pyopencl.Buffer(runtime.context, pyopencl.mem_flags.WRITE_ONLY, out.nbytes)
+
+    program.compare_time_prototypes(runtime.queue, (1,), None, out_buffer)
+    pyopencl.enqueue_copy(runtime.queue, out, out_buffer).wait()
+
+    assert out[0] == pytest.approx(np.float32(1.0e6))
+    assert out[1] == pytest.approx(np.float32(1000100.0))
+    assert out[3] == pytest.approx(np.float32(1000100.0))
+    assert abs(float(out[4]) - 2000.0) > 1.0
+    assert out[5] == pytest.approx(np.float32(2000.0))
+    assert out[7] == pytest.approx(np.float32(2000.0))
+
+
+def test_threshold_crossing_interpolation_helpers_improve_timestamp_accuracy() -> None:
+    runtime = OpenCLRuntime.create(**_explicit_runtime_kwargs())
+    program = _build_program(
+        runtime,
+        """
+        #include \"clODE_utilities.cl\"
+
+        __kernel void interpolate_threshold_crossing(
+            __global const realtype *samples,
+            __global realtype *out
+        ) {
+            realtype t0 = samples[0];
+            realtype t1 = samples[1];
+            realtype x0 = samples[2];
+            realtype x1 = samples[3];
+            realtype dx0 = samples[4];
+            realtype dx1 = samples[5];
+            realtype threshold = samples[6];
+
+            out[0] = t1;
+            out[1] = linearInterpTimeOfValue(t0, t1, x0, x1, threshold);
+            out[2] = cubicHermiteInterpTimeOfValue(t0, t1, x0, x1, dx0, dx1, threshold);
+        }
+        """,
+    )
+
+    dt = 0.2
+    offset = 0.03
+    threshold = 0.5
+    sample_times = np.arange(0.0, 8.0 * math.pi, dt, dtype=np.float64) + offset
+    x = np.sin(sample_times)
+    dx = np.cos(sample_times)
+    crossing_index = next(
+        index
+        for index in range(1, len(sample_times))
+        if x[index - 1] <= threshold < x[index]
+    )
+    true_time = math.asin(threshold)
+    samples = np.array(
+        [
+            sample_times[crossing_index - 1],
+            sample_times[crossing_index],
+            x[crossing_index - 1],
+            x[crossing_index],
+            dx[crossing_index - 1],
+            dx[crossing_index],
+            threshold,
+        ],
+        dtype=np.float32,
+    )
+    out = np.empty(3, dtype=np.float32)
+
+    samples_buffer = pyopencl.Buffer(
+        runtime.context,
+        pyopencl.mem_flags.READ_ONLY | pyopencl.mem_flags.COPY_HOST_PTR,
+        hostbuf=samples,
+    )
+    out_buffer = pyopencl.Buffer(runtime.context, pyopencl.mem_flags.WRITE_ONLY, out.nbytes)
+
+    program.interpolate_threshold_crossing(runtime.queue, (1,), None, samples_buffer, out_buffer)
+    pyopencl.enqueue_copy(runtime.queue, out, out_buffer).wait()
+
+    sample_error = abs(float(out[0]) - true_time)
+    linear_error = abs(float(out[1]) - true_time)
+    hermite_error = abs(float(out[2]) - true_time)
+
+    assert linear_error < sample_error / 10.0
+    assert hermite_error < linear_error / 100.0
+
+
+def test_three_sample_extremum_helpers_improve_over_sample_pick() -> None:
+    runtime = OpenCLRuntime.create(**_explicit_runtime_kwargs())
+    program = _build_program(
+        runtime,
+        """
+        #include \"clODE_utilities.cl\"
+
+        __kernel void recover_local_extrema(
+            __global const realtype *max_t,
+            __global const realtype *max_x,
+            __global const realtype *min_t,
+            __global const realtype *min_x,
+            __global realtype *out
+        ) {
+            realtype max_time_buffer[3] = {max_t[0], max_t[1], max_t[2]};
+            realtype max_value_buffer[3] = {max_x[0], max_x[1], max_x[2]};
+            realtype min_time_buffer[3] = {min_t[0], min_t[1], min_t[2]};
+            realtype min_value_buffer[3] = {min_x[0], min_x[1], min_x[2]};
+
+            int max_index = array_argmax(max_value_buffer, 3);
+            int min_index = array_argmin(min_value_buffer, 3);
+
+            out[0] = max_time_buffer[max_index];
+            out[1] = max_value_buffer[max_index];
+            localMaximumFromThreeSamples(max_time_buffer, max_value_buffer, &out[2], &out[3]);
+
+            out[4] = min_time_buffer[min_index];
+            out[5] = min_value_buffer[min_index];
+            localMinimumFromThreeSamples(min_time_buffer, min_value_buffer, &out[6], &out[7]);
+        }
+        """,
+    )
+
+    dt = 0.2
+    offset = 0.03
+    sample_times = np.arange(0.0, 12.0 * math.pi, dt, dtype=np.float64) + offset
+    x = np.sin(sample_times)
+    dx = np.cos(sample_times)
+
+    max_index = next(index for index in range(2, len(sample_times)) if dx[index - 1] > 0.0 and dx[index] < 0.0)
+    min_index = next(index for index in range(2, len(sample_times)) if dx[index - 1] < 0.0 and dx[index] > 0.0)
+
+    max_t = sample_times[max_index - 2 : max_index + 1].astype(np.float32)
+    max_x = x[max_index - 2 : max_index + 1].astype(np.float32)
+    min_t = sample_times[min_index - 2 : min_index + 1].astype(np.float32)
+    min_x = x[min_index - 2 : min_index + 1].astype(np.float32)
+    out = np.empty(8, dtype=np.float32)
+
+    max_t_buffer = pyopencl.Buffer(
+        runtime.context,
+        pyopencl.mem_flags.READ_ONLY | pyopencl.mem_flags.COPY_HOST_PTR,
+        hostbuf=max_t,
+    )
+    max_x_buffer = pyopencl.Buffer(
+        runtime.context,
+        pyopencl.mem_flags.READ_ONLY | pyopencl.mem_flags.COPY_HOST_PTR,
+        hostbuf=max_x,
+    )
+    min_t_buffer = pyopencl.Buffer(
+        runtime.context,
+        pyopencl.mem_flags.READ_ONLY | pyopencl.mem_flags.COPY_HOST_PTR,
+        hostbuf=min_t,
+    )
+    min_x_buffer = pyopencl.Buffer(
+        runtime.context,
+        pyopencl.mem_flags.READ_ONLY | pyopencl.mem_flags.COPY_HOST_PTR,
+        hostbuf=min_x,
+    )
+    out_buffer = pyopencl.Buffer(runtime.context, pyopencl.mem_flags.WRITE_ONLY, out.nbytes)
+
+    program.recover_local_extrema(
+        runtime.queue,
+        (1,),
+        None,
+        max_t_buffer,
+        max_x_buffer,
+        min_t_buffer,
+        min_x_buffer,
+        out_buffer,
+    )
+    pyopencl.enqueue_copy(runtime.queue, out, out_buffer).wait()
+
+    max_sample_error = abs(float(out[0]) - math.pi / 2.0)
+    max_helper_error = abs(float(out[2]) - math.pi / 2.0)
+    min_sample_error = abs(float(out[4]) - 3.0 * math.pi / 2.0)
+    min_helper_error = abs(float(out[6]) - 3.0 * math.pi / 2.0)
+
+    assert max_helper_error < max_sample_error / 50.0
+    assert min_helper_error < min_sample_error / 50.0
+    assert abs(float(out[3]) - 1.0) < abs(float(out[1]) - 1.0)
+    assert abs(float(out[7]) + 1.0) < abs(float(out[5]) + 1.0)

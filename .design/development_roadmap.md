@@ -26,7 +26,7 @@ Use `.design/ideas.md` as the short living board. This file is the longer ration
 - The next internal friction point is clearer now: the internal execution model is much more coherent, but repeated-solve continuation still has one real representational limit because a shared requested window cannot encode exact continuation after diverged per-work-item final times.
 - Each work item effectively owns `dt` and attained `tf`, but not an explicit `t0` or completion/error flags. That leaves friction around continuation helpers and windows where work items diverge.
 - The new `test/kernel_components/` layer is a real improvement, but it is still intentionally small: helper math plus the `basic` and `basicall` observer paths are now directly testable, while broader component coverage still needs follow-through.
-- Precision-sensitive kernel math now has a first shared helper foundation in `clODE_utilities.cl`, but broader adoption across the remaining observers and the stepper time-base path still needs deliberate follow-through.
+- Precision-sensitive kernel math now has a first shared helper foundation in `clODE_utilities.cl`, but broader adoption across the remaining observers and the stepper time-base path still needs deliberate follow-through and better public empirical justification.
 - `SolverParams` still mixes integration policy with output-storage policy. That makes chunking, batching, and trajectory streaming harder than they need to be.
 - `FeatureSimulator` still exposes a large legacy `observer_*` scalar compatibility surface alongside `ObserverParams`, but those compatibility inputs now resolve through one canonical `ObserverParams` path instead of carrying separate in-place observer semantics.
 - Some public compatibility bundles and kernel-layer entrypoints still straddle clearer Python-owned semantic definitions, especially `SolverParams` and the legacy observer-parameter surface.
@@ -191,6 +191,22 @@ What this unlocked:
 - the remaining continuation debt is now narrower: diverged-time ensembles and any later device-side per-work-item `t0` or richer solver-state model
 - the next leverage point is broader numerical-helper adoption and stronger component coverage rather than more shared-window continuation work in the same shape
 
+### Priority 0: Empirical single-precision numerics demonstrations and guidance
+
+Before another broad helper-adoption pass, the package should show the float32 failure modes and mitigation tradeoffs explicitly.
+
+Key tasks:
+
+- add reproducible examples that compare `runningMeanTime(...)` against compensated integral accumulation on long-window float32 workloads
+- add reproducible examples that compare direct time accumulation against compensated or structured time updates and show where those strategies still fail to resolve sub-`ulp(t)` steps
+- document the relevant float32 theory clearly enough that future mitigation work is grounded in representability limits rather than code-style differences
+
+Why this should be next:
+
+- the current helper layer is real, but broader rollout should be scientifically motivated rather than cargo-culted
+- the current time-base issue is easy to describe incorrectly if the docs focus on notation instead of representability
+- public examples and docs here improve the package's scientific value even before more kernel changes land
+
 ### Priority 0: Broader numerical-helper adoption and time-base groundwork
 
 These items are important, but they should follow the state-model work.
@@ -200,11 +216,12 @@ Key tasks:
 - carry the new helper layer into the remaining observers and any clearly fragile stepper time-base paths where it buys real robustness or clarity
 - extend component and exact-regression coverage where that helper adoption changes a contract worth pinning down directly
 - separate the immediate helper-adoption pass from any larger per-work-item structured-time redesign such as `t0 + step * dt`
+- keep the helper-adoption pass downstream of the empirical demonstrations so each new mitigation has a concrete justification
 
 Why this should be next:
 
 - the continuation contract is now honest enough that the remaining numerical weak spots stand out more clearly
-- the helper foundation and the kernel-component test layer now give this work a concrete substrate instead of scattered TODOs
+- the helper foundation and the kernel-component test layer now give this work a concrete substrate instead of scattered TODOs, but the public empirical guidance should land first
 - this is a better near-term leverage point than jumping straight into a larger per-work-item time model or implicit-stepper work
 
 ### Priority 2: Solver-extension groundwork for stiff problems

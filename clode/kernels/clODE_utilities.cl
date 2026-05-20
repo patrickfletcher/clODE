@@ -178,6 +178,28 @@ static inline realtype meanFromCompensatedIntegral(
 	return compensatedSumValue(integral, correction) / total_delta;
 }
 
+// Kahan-style time accumulation prototype for adaptive steppers and relative
+// elapsed-time bookkeeping. The caller keeps both parts of the time pair.
+static inline void compensatedTimeAdd(realtype *timeValue, realtype *timeCorrection, realtype dt) {
+	if (dt == ZERO)
+		return;
+	realtype y = dt - *timeCorrection;
+	realtype total = *timeValue + y;
+	*timeCorrection = (total - *timeValue) - y;
+	*timeValue = total;
+}
+
+static inline realtype compensatedTimeValue(realtype timeValue, realtype timeCorrection) {
+	return timeValue + timeCorrection;
+}
+
+// Fixed-step prototype: reconstruct absolute time from the step counter rather
+// than by repeated addition. A 64-bit counter improves overflow headroom, but
+// the returned realtype still obeys float32/float64 spacing limits.
+static inline realtype fixedStepTimeFromCounter(realtype t0, ulong stepCount, realtype dt) {
+	return t0 + ((realtype)stepCount) * dt;
+}
+
 // TODO: evaluate incremental versions (below) vs running sum (two-sum) then a single division at the end. Need to do so for variance already anyway
 
 //Compute a running mean of a function at possibly non-uniform sample points
@@ -220,6 +242,13 @@ static inline realtype linearInterp(realtype t0, realtype t1, realtype y0, realt
 	return yi;
 }
 
+// Estimate the time at which y reaches yi between two samples.
+static inline realtype linearInterpTimeOfValue(realtype t0, realtype t1, realtype y0, realtype y1, realtype yi) {
+	if (t1 == t0 || y1 == y0)
+		return t1;
+	return t0 + (yi - y0) * (t1 - t0) / (y1 - y0);
+}
+
 //estimate yi at specified ti, using linear interpolation between the first or second pair of values, given three values 
 // - the solution buffer in clode keeps t/y values of the most recent 3 time steps
 static inline realtype linearInterpArray(realtype t[], realtype y[], realtype ti) {
@@ -245,6 +274,69 @@ static inline realtype quadraticInterp(realtype t[], realtype y[], realtype ti) 
 	return yi;
 }
 
+static inline realtype cubicHermiteValueUnitInterval(
+	realtype u,
+	realtype y0,
+	realtype y1,
+	realtype dy0,
+	realtype dy1,
+	realtype dt
+) {
+	realtype h00 = RCONST(2.0) * u * u * u - RCONST(3.0) * u * u + ONE;
+	realtype h10 = u * u * u - RCONST(2.0) * u * u + u;
+	realtype h01 = -RCONST(2.0) * u * u * u + RCONST(3.0) * u * u;
+	realtype h11 = u * u * u - u * u;
+	return h00 * y0 + h10 * dt * dy0 + h01 * y1 + h11 * dt * dy1;
+}
+
+static inline realtype cubicHermiteDerivativeUnitInterval(
+	realtype u,
+	realtype y0,
+	realtype y1,
+	realtype dy0,
+	realtype dy1,
+	realtype dt
+) {
+	realtype dh00 = RCONST(6.0) * u * u - RCONST(6.0) * u;
+	realtype dh10 = RCONST(3.0) * u * u - RCONST(4.0) * u + ONE;
+	realtype dh01 = -RCONST(6.0) * u * u + RCONST(6.0) * u;
+	realtype dh11 = RCONST(3.0) * u * u - RCONST(2.0) * u;
+	return dh00 * y0 + dh10 * dt * dy0 + dh01 * y1 + dh11 * dt * dy1;
+}
+
+// Prototype only: use endpoint values and slopes to refine a threshold-crossing
+// time inside one timestep. Falls back to linear inversion if Newton leaves the
+// unit interval or the cubic derivative becomes too small.
+static inline realtype cubicHermiteInterpTimeOfValue(
+	realtype t0,
+	realtype t1,
+	realtype y0,
+	realtype y1,
+	realtype dy0,
+	realtype dy1,
+	realtype yi
+) {
+	if (t1 == t0 || y1 == y0)
+		return t1;
+
+	realtype dt = t1 - t0;
+	realtype linearGuess = linearInterpTimeOfValue(t0, t1, y0, y1, yi);
+	realtype u = clamp((linearGuess - t0) / dt, ZERO, ONE);
+
+	for (int iter = 0; iter < 4; ++iter) {
+		realtype value = cubicHermiteValueUnitInterval(u, y0, y1, dy0, dy1, dt);
+		realtype deriv = cubicHermiteDerivativeUnitInterval(u, y0, y1, dy0, dy1, dt);
+		if (fabs(deriv) <= UNIT_ROUNDOFF)
+			return linearGuess;
+		realtype candidate = u - (value - yi) / deriv;
+		if (candidate <= ZERO || candidate >= ONE)
+			return linearGuess;
+		u = candidate;
+	}
+
+	return t0 + u * dt;
+}
+
 //compute vertex of a quadratic interpolant of three values
 // - store result in tv, yv
 static inline void quadraticInterpVertex(realtype t[], realtype y[], realtype *tv, realtype *yv) {
@@ -256,6 +348,55 @@ static inline void quadraticInterpVertex(realtype t[], realtype y[], realtype *t
 
 	*tv = -(b1 - b2 * (t[0] + t[1])) / (RCONST(2.0) * b2);
 	*yv = b0 + b1 * (*tv - t[0]) + b2 * (*tv - t[0]) * (*tv - t[1]);
+}
+
+static inline bool quadraticInterpVertexBounded(realtype t[], realtype y[], realtype *tv, realtype *yv) {
+	realtype dt10 = t[1] - t[0];
+	realtype dt20 = t[2] - t[0];
+	realtype dt21 = t[2] - t[1];
+	if (dt10 == ZERO || dt20 == ZERO || dt21 == ZERO)
+		return false;
+
+	realtype b0 = y[0];
+	realtype b1 = (y[1] - b0) / dt10;
+	realtype b2 = (y[2] - b0 - b1 * dt20) / (dt20 * dt21);
+	if (fabs(b2) <= UNIT_ROUNDOFF)
+		return false;
+
+	realtype candidateT = -(b1 - b2 * (t[0] + t[1])) / (RCONST(2.0) * b2);
+	if (candidateT < t[0] || candidateT > t[2])
+		return false;
+
+	realtype candidateY = b0 + b1 * (candidateT - t[0]) + b2 * (candidateT - t[0]) * (candidateT - t[1]);
+	*tv = candidateT;
+	*yv = candidateY;
+	return true;
+}
+
+static inline void localMaximumFromThreeSamples(realtype t[], realtype y[], realtype *tMax, realtype *yMax) {
+	int index = array_argmax(y, 3);
+	*tMax = t[index];
+	*yMax = y[index];
+
+	realtype candidateT;
+	realtype candidateY;
+	if (quadraticInterpVertexBounded(t, y, &candidateT, &candidateY) && candidateY >= *yMax) {
+		*tMax = candidateT;
+		*yMax = candidateY;
+	}
+}
+
+static inline void localMinimumFromThreeSamples(realtype t[], realtype y[], realtype *tMin, realtype *yMin) {
+	int index = array_argmin(y, 3);
+	*tMin = t[index];
+	*yMin = y[index];
+
+	realtype candidateT;
+	realtype candidateY;
+	if (quadraticInterpVertexBounded(t, y, &candidateT, &candidateY) && candidateY <= *yMin) {
+		*tMin = candidateT;
+		*yMin = candidateY;
+	}
 }
 
 //~ static inline realtype cubicInterp(realtype t[], realtype y[], realtype dy[], realtype ti) {

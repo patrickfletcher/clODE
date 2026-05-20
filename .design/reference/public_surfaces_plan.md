@@ -13,6 +13,7 @@
 - Describe supported inputs in user terms: Python RHS functions, OpenCL source files, and XPP models.
 - Keep performance claims concrete and workload-shaped rather than absolute.
 - Do not mention legacy wrappers, removed middle layers, or internal rewrites in public-facing copy.
+- Do not narrate public features through development-history framing such as `old vs current`, `previously`, or `after the refactor`; describe the current package behavior and compare it to alternative algorithms only when that comparison helps users understand the current feature.
 - Keep history, migration rationale, and internal boundaries inside `.design/` and other maintainer-only notes.
 
 ## Recommended Surface Ownership

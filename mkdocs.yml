@@ -17,6 +17,7 @@ nav:
     - 'install.md'
     - 'getting_started.md'
   - Examples: 'examples.md'
+  - Numerical Accuracy: 'numerical_accuracy.md'
   - Performance Notes: 'performance_notes.md'
   - Functionality:
     - Feature Extraction: 'feature_extraction.md'
