@@ -21,7 +21,7 @@ Update when: canonical module homes, public compatibility surfaces, packaging ru
 - Observer parameter resolution now flows through one canonical `ObserverParams` path, and simulator and executor boundaries keep internal copies of caller-provided observer bundles instead of aliasing them.
 - The simulator layer now has a narrow `advance_tspan_to_attained_final_time()` helper for exact shared-window continuation when the ensemble agrees on one attained `tf`.
 - A shared kernel-math helper foundation now lives in `clode/kernels/clODE_utilities.cl`; it now includes tested prototypes for Kahan-style time pairs, fixed-step counter time reconstruction, threshold-crossing interpolation, and bounded three-sample extremum helpers in addition to the landed compensated-integral helpers.
-- The current package still has a few cleanup targets, especially diverged-time continuation follow-through around per-work-item `t0` or richer solver-state modeling, selective helper adoption across remaining observers and stepper time-base paths, deeper component-test coverage, and later chunking work on top of the landed IVP, solver-state, output-policy, observer, execution-setting, and stepper-definition boundaries.
+- The current package still has a few cleanup targets, especially adaptive-time follow-through around richer solver-owned time state, diverged-time continuation modeling, selective helper adoption across the remaining observers, deeper component and invalidation coverage, and later chunking work on top of the landed IVP, solver-state, output-policy, observer, execution-setting, and stepper-definition boundaries.
 
 ## Session-Start Guidance
 
@@ -114,7 +114,7 @@ The historical backend-shim, protocol/factory facade, and binding-named compatib
 - `shift_tspan()` still advances the requested window rather than the attained final time, so it remains the requested-window continuation tool rather than the exact attained-time path.
 - Shared OpenCL numerical helpers now have a first small home in `clODE_utilities.cl`, and the `basic` and `basicall` observers now use compensated integral accumulation for their time-weighted means. Broader adoption across the remaining observers should stay evidence-driven rather than assuming every path benefits equally.
 - Fixed-step live steppers now reconstruct absolute time from `t0 + step * dt` with a local 64-bit step counter instead of relying solely on repeated float32 absolute-time addition. Adaptive steppers still form the next absolute time from the current float32 time plus `dt`, so very long absolute-time runs remain precision-sensitive and richer adaptive-time representations are still future work.
-- The repo now has a dedicated public float32 demonstration path in `examples/single_precision_accuracy.py` plus `docs/numerical_accuracy.md`, but broader mitigation rollout beyond `basic` and `basicall` is still intentionally deferred until those demonstrations guide the choices.
+- The repo now has a dedicated public float32 demonstration path in `examples/single_precision_accuracy.py` plus `docs/numerical_accuracy.md`; the conservative live mitigation slice now includes fixed-step counter time, `threshold_2` upward timestamp refinement, and `local_max` three-sample extremum refinement, while broader adaptive-time work and wider observer rollout are still intentionally deferred until the evidence guides them.
 - RNG continuation details are persisted in separate common buffers rather than a clearer per-work-item state object, which will matter again when evaluating Random123.
 - `.design/archived/` is useful for rationale and bug archaeology, but some archived statements about the old wrapper path are now historical only.
 
@@ -122,7 +122,7 @@ The historical backend-shim, protocol/factory facade, and binding-named compatib
 
 - `tools/run_test_bundle.py`: authoritative bundle map.
 - `test/core_numerics/`: exact-solution and kernel-level regression backbone.
-- `test/kernel_components/`: tiny synthetic OpenCL component tests for helper math plus direct `basic` and `basicall` observer contracts.
+- `test/kernel_components/`: tiny synthetic OpenCL component tests for helper math plus direct `basic`, `basicall`, `threshold_2`, and `local_max` observer contracts.
 - `test/core_numerics/test_stochastic.py`: seeded stochastic continuation and Ornstein-Uhlenbeck stationary-moment coverage.
 - `test/core_numerics/test_features_basicall.py`: `basicall` exact-statistics and split-window continuation coverage.
 - `test/test_simulation_contracts.py`: current simulation and observer behavior contracts.

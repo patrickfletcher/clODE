@@ -277,8 +277,8 @@ Packaging note:
 
 ## Recommended Order Of Attack
 
-1. Adopt the conservative live helpers first: inverse-linear threshold timestamps, bounded three-sample extrema, and fixed-step counter time where the current structure supports them cleanly.
-2. Then revisit the adaptive-time companion work: a dual-realtype compensated time base plus relative elapsed bookkeeping where the fixed-step shortcut does not apply.
+1. The conservative live helper slice is now landed: inverse-linear upward threshold timestamps, bounded three-sample extrema, and fixed-step counter time where the current structure supports them cleanly.
+2. Next, revisit the adaptive-time companion work: a dual-realtype compensated time base plus relative elapsed bookkeeping where the fixed-step shortcut does not apply.
 3. After that, revisit deeper time-base refinements, any per-work-item `t0` follow-through, and later implicit-solver groundwork.
 4. Finally, return to broader runtime-surface and package cleanup once those internal semantics settle.
 

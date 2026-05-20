@@ -110,17 +110,17 @@ static inline bool eventFunction(realtype *ti, realtype xi[], realtype dxi[], re
 // - get (t,x) at local max, compute: IMI, tMaxMin, amp
 static inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverParams *op) {
     
-    //Simple Max of xbuffer
+    // Refine the buffered extremum with the shared bounded quadratic helper.
+    realtype thisTbuffer[3];
     realtype thisXbuffer[3];
-    for (int j = 0; j < 3; ++j)
-     	thisXbuffer[j] = od->xbuffer[op->fVarIx * 3 + j];
+    for (int j = 0; j < 3; ++j) {
+	 	thisTbuffer[j] = od->tbuffer[j];
+	 	thisXbuffer[j] = od->xbuffer[op->fVarIx * 3 + j];
+    }
 
-    int ix = array_argmax(thisXbuffer, 3);
-    realtype tThisMax = od->tbuffer[ix];
-    realtype xThisMax = thisXbuffer[ix];
-
-    //Conservative helper-upgrade path:
-    // localMaximumFromThreeSamples(od->tbuffer, thisXbuffer, &tThisMax, &xThisMax);
+    realtype tThisMax;
+    realtype xThisMax;
+    localMaximumFromThreeSamples(thisTbuffer, thisXbuffer, &tThisMax, &xThisMax);
 
 
     ++od->eventcount;
@@ -223,12 +223,13 @@ static inline void updateObserverState(realtype *ti, realtype xi[], realtype dxi
 
     //local min check
     if (od->dxbuffer[op->fVarIx * 3 + 1] < 0.0 && od->dxbuffer[op->fVarIx * 3 + 2] > 0.0) {
+        realtype thisTbuffer[3];
         realtype thisXbuffer[3];
-        for (int j = 0; j < 3; ++j)
+        for (int j = 0; j < 3; ++j) {
+            thisTbuffer[j] = od->tbuffer[j];
             thisXbuffer[j] = od->xbuffer[op->fVarIx * 3 + j];
-        int ix = array_argmin(thisXbuffer, 3);
-        od->tLastMin = od->tbuffer[ix];
-        od->xLastMin = thisXbuffer[ix];
+        }
+        localMinimumFromThreeSamples(thisTbuffer, thisXbuffer, &od->tLastMin, &od->xLastMin);
 
         if (od->eventcount > 0 && od->eventcount <= N_STORE_EVENTS) {
             od->tMinList[od->eventcount-1] = od->tLastMin;

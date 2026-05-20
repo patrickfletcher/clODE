@@ -28,4 +28,4 @@ clODE is a Python package for large-scale simulation of ordinary differential eq
 - [API reference](api_reference.md) documents the public Python API.
 - [Logging and diagnostics](logging_levels.md) covers runtime logging and PyOpenCL diagnostics.
 
-The documentation stays focused on the current Python package and public workflows. Maintainer-only migration notes and design history remain in `.design/`.
+The documentation stays focused on the current Python package and public workflows.

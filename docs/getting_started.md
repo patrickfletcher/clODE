@@ -138,6 +138,6 @@ Each `TrajectoryOutput` exposes:
 - a mapping from variable or parameter names to scalars or one-dimensional arrays
 - a full two-dimensional NumPy array with shape `(ensemble_size, num_variables)` or `(ensemble_size, num_parameters)`
 
-Internally, clODE flattens problem data in column-major order before sending it to OpenCL buffers. That layout is part of the backend implementation and normally does not need to be handled directly in user code.
+clODE accepts these arrays directly, so most workflows do not need to think about storage details beyond the shapes above.
 
 For more on RHS definitions, XPP conversion, auxiliary variables, and stochastic terms, see [specifying_odes.md](specifying_odes.md) and [api_reference.md](api_reference.md).

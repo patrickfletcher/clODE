@@ -174,13 +174,15 @@ max_dvdt = output.F["max dv/dt"]
 
 up_v = min_v + x_up_thresh * range_v
 down_v = min_v + x_down_thresh * range_v if x_down_thresh>0 else up_v
-up_dvdt = dx_up_thresh * max_dvdt if dx_up_thresh>0 else 0
-down_dvdt = dx_down_thresh * min_dvdt if dx_down_thresh>0 else min_dvdt
+up_dvdt = dx_up_thresh * max_dvdt if dx_up_thresh>0 else None
+down_dvdt = dx_down_thresh * min_dvdt if dx_down_thresh>0 else None
 
 plt.axvline(x=up_v, color="red", linestyle="--")
-plt.axhline(y=up_dvdt, color="orange", linestyle="--")
+if up_dvdt is not None:
+    plt.axhline(y=up_dvdt, color="orange", linestyle="--")
 
 plt.axvline(x=down_v, color="blue", linestyle="--")
-plt.axhline(y=down_dvdt, color="green", linestyle="--")
+if down_dvdt is not None:
+    plt.axhline(y=down_dvdt, color="green", linestyle="--")
 
 plt.show()

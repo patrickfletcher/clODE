@@ -45,7 +45,7 @@ The most directly useful current safeguards for oscillation-oriented observers a
 
 Not every field is active in every built-in observer, so treat observer parameters as mode-specific rather than assuming every knob has the same effect everywhere.
 
-Current threshold and local-extremum timestamps come from sampled buffer points in the live kernels. See [numerical_accuracy.md](numerical_accuracy.md) for measured interpolation tradeoffs on coarse crossings and three-sample extrema.
+`threshold_2` stores up/down transition times with inverse-linear interpolation of the active threshold boundary. When a `dx` threshold is zero, that slope gate is ignored; when it is nonzero, the stored transition time is the later of the active `x` and `dx` boundary crossings within the step. `local_max` stores extrema using bounded three-sample quadratic refinement. See [numerical_accuracy.md](numerical_accuracy.md) for empirical tradeoffs and comparisons with alternative interpolation choices.
 
 Example:
 
@@ -88,6 +88,6 @@ runnable comparison between one long feature run and split-window continuation.
 
 For empirical float32 demonstrations of amplitude floors, threshold hysteresis, derivative thresholds, compensated means, elapsed-time origins, and time accumulation limits, see [numerical_accuracy.md](numerical_accuracy.md).
 
-## Current customization status
+## Custom observers
 
-The built-in observers are stable and supported. Authoring completely custom observers is still an internal workflow tied to the OpenCL observer kernels and Python-side observer metadata. That is an active design area for the post-migration cleanup, but it is not yet a polished public extension API.
+The built-in observers are stable and supported. Custom observer authoring is not part of the public API.

@@ -17,18 +17,10 @@ import pyopencl as cl
 import pyopencl._cl as cl_module
 import pyopencl.tools as cl_tools
 
-from clode._opencl.models import Precision, ProblemShape
-from clode._opencl.observer_metadata import (
-    _observer_data_base_dtype,
-    _observer_data_struct_name,
-)
-'''  current BUG:
-Traceback (most recent call last):
-  File "/home/runner/work/clODE/clODE/tools/probe_opencl_runtime.py", line 21, in <module>
-    from clode._opencl.observer_metadata import (
-ImportError: cannot import name '_observer_data_base_dtype' from 'clode._opencl.observer_metadata' (/home/runner/work/clODE/clODE/clode/_opencl/observer_metadata.py)
+from clode.observers import ObserverParams
+from clode.observers._definitions import resolve_observer_spec
 from clode.problem._core import ProblemInfo
-'''
+
 ENV_VARS = (
     "CLODE_TEST_PLATFORM_ID",
     "CLODE_TEST_DEVICE_ID",
@@ -208,19 +200,15 @@ def _probe_clode_localmax_struct(
         aux=[],
         num_noise=0,
     )
-    shape = ProblemShape.from_problem_info(problem_info)
-    base_dtype = _observer_data_base_dtype(
+    resolved_spec = resolve_observer_spec(
+        problem_info,
         "localmax",
-        shape,
-        Precision.DOUBLE,
-        max_event_timestamps,
+        ObserverParams(max_event_timestamps=max_event_timestamps),
+        real_dtype=np.float64,
+        n_store_events=max_event_timestamps,
     )
-    struct_name = _observer_data_struct_name(
-        "localmax",
-        shape,
-        Precision.DOUBLE,
-        max_event_timestamps,
-    )
+    base_dtype = resolved_spec.observer_state_dtype
+    struct_name = resolved_spec.observer_state_struct_name
     matched_dtype, _c_decl = cl_tools.match_dtype_to_c_struct(
         device,
         struct_name,

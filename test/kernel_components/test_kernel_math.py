@@ -266,6 +266,511 @@ def test_basicall_observer_component_kernel_reports_expected_feature_layout() ->
     np.testing.assert_allclose(features, expected, rtol=1e-6, atol=1e-6)
 
 
+def test_threshold_2_observer_kernel_uses_inverse_linear_threshold_timestamps() -> None:
+    runtime = OpenCLRuntime.create(**_explicit_runtime_kwargs())
+    program = _build_program(
+        runtime,
+        """
+        #include \"clODE_utilities.cl\"
+        #include \"observers.cl\"
+
+        __constant struct ObserverParams TEST_PARAMS = {
+            0,
+            0,
+            4,
+            ZERO,
+            ZERO,
+            ZERO,
+            ZERO,
+            ZERO,
+            ZERO,
+            ZERO,
+            ZERO
+        };
+
+        __kernel void run_threshold_observer(
+            __global const realtype *times,
+            __global const realtype *x_values,
+            __global const realtype *dx_values,
+            __global realtype *out,
+            const uint n_values
+        ) {
+            realtype ti = times[0];
+            realtype xi[1] = {x_values[0]};
+            realtype dxi[1] = {dx_values[0]};
+            realtype auxi[1] = {ZERO};
+            ObserverState observer_state;
+
+            initializeObserverState(&ti, xi, dxi, auxi, &observer_state, &TEST_PARAMS);
+            observer_state.xGlobalMax = ONE;
+            observer_state.xGlobalMin = -ONE;
+            observer_state.xUp = RCONST(0.5);
+            observer_state.xDown = -RCONST(0.5);
+            observer_state.dxUp = ZERO;
+            observer_state.dxDown = ZERO;
+            observer_state.inUpstate = 0;
+
+            for (uint idx = 1; idx < n_values; ++idx) {
+                ti = times[idx];
+                xi[0] = x_values[idx];
+                dxi[0] = dx_values[idx];
+                updateObserverState(&ti, xi, dxi, auxi, &observer_state, &TEST_PARAMS);
+                if (eventFunction(&ti, xi, dxi, auxi, &observer_state, &TEST_PARAMS)) {
+                    computeEventFeatures(&ti, xi, dxi, auxi, &observer_state, &TEST_PARAMS);
+                }
+            }
+
+            out[0] = observer_state.tUpTransition[0];
+            out[1] = observer_state.tDownTransition[0];
+            out[2] = observer_state.tUpTransition[1];
+            out[3] = observer_state.tDownTransition[1];
+        }
+        """,
+        extra_options=("-DUSE_OBSERVER_THRESHOLD_2", "-DN_VAR=1", "-DN_AUX=0", "-DN_STORE_EVENTS=4"),
+    )
+
+    dt = 0.2
+    sample_times = np.arange(0.0, 4.0 * math.pi + dt, dt, dtype=np.float64)
+    x_values = np.sin(sample_times).astype(np.float32)
+    dx_values = np.cos(sample_times).astype(np.float32)
+    out = np.empty(4, dtype=np.float32)
+
+    time_buffer = pyopencl.Buffer(
+        runtime.context,
+        pyopencl.mem_flags.READ_ONLY | pyopencl.mem_flags.COPY_HOST_PTR,
+        hostbuf=sample_times.astype(np.float32),
+    )
+    x_buffer = pyopencl.Buffer(
+        runtime.context,
+        pyopencl.mem_flags.READ_ONLY | pyopencl.mem_flags.COPY_HOST_PTR,
+        hostbuf=x_values,
+    )
+    dx_buffer = pyopencl.Buffer(
+        runtime.context,
+        pyopencl.mem_flags.READ_ONLY | pyopencl.mem_flags.COPY_HOST_PTR,
+        hostbuf=dx_values,
+    )
+    out_buffer = pyopencl.Buffer(runtime.context, pyopencl.mem_flags.WRITE_ONLY, out.nbytes)
+
+    program.run_threshold_observer(
+        runtime.queue,
+        (1,),
+        None,
+        time_buffer,
+        x_buffer,
+        dx_buffer,
+        out_buffer,
+        np.uint32(len(sample_times)),
+    )
+    pyopencl.enqueue_copy(runtime.queue, out, out_buffer).wait()
+
+    np.testing.assert_allclose(
+        out,
+        np.array([math.pi / 6.0, 7.0 * math.pi / 6.0, 13.0 * math.pi / 6.0, 19.0 * math.pi / 6.0], dtype=np.float32),
+        atol=2e-2,
+        rtol=0.0,
+    )
+
+
+def test_threshold_2_observer_kernel_ignores_dx_when_dx_thresholds_zero() -> None:
+    runtime = OpenCLRuntime.create(**_explicit_runtime_kwargs())
+    program = _build_program(
+        runtime,
+        """
+        #include \"clODE_utilities.cl\"
+        #include \"observers.cl\"
+
+        __constant struct ObserverParams TEST_PARAMS = {
+            0,
+            0,
+            4,
+            ZERO,
+            ZERO,
+            ZERO,
+            ZERO,
+            ZERO,
+            ZERO,
+            ZERO,
+            ZERO
+        };
+
+        __kernel void run_threshold_observer_ignore_dx(
+            __global const realtype *times,
+            __global const realtype *x_values,
+            __global const realtype *dx_values,
+            __global realtype *out,
+            const uint n_values
+        ) {
+            realtype ti = times[0];
+            realtype xi[1] = {x_values[0]};
+            realtype dxi[1] = {dx_values[0]};
+            realtype auxi[1] = {ZERO};
+            ObserverState observer_state;
+
+            initializeObserverState(&ti, xi, dxi, auxi, &observer_state, &TEST_PARAMS);
+            observer_state.xGlobalMax = ONE;
+            observer_state.xGlobalMin = -ONE;
+            observer_state.xUp = RCONST(0.5);
+            observer_state.xDown = -RCONST(0.5);
+            observer_state.dxUp = RCONST(0.25);
+            observer_state.dxDown = -RCONST(0.25);
+            observer_state.inUpstate = 0;
+
+            for (uint idx = 1; idx < n_values; ++idx) {
+                ti = times[idx];
+                xi[0] = x_values[idx];
+                dxi[0] = dx_values[idx];
+                updateObserverState(&ti, xi, dxi, auxi, &observer_state, &TEST_PARAMS);
+                if (eventFunction(&ti, xi, dxi, auxi, &observer_state, &TEST_PARAMS)) {
+                    computeEventFeatures(&ti, xi, dxi, auxi, &observer_state, &TEST_PARAMS);
+                }
+            }
+
+            out[0] = observer_state.tUpTransition[0];
+            out[1] = observer_state.tDownTransition[0];
+            out[2] = observer_state.eventcount;
+        }
+        """,
+        extra_options=("-DUSE_OBSERVER_THRESHOLD_2", "-DN_VAR=1", "-DN_AUX=0", "-DN_STORE_EVENTS=4"),
+    )
+
+    sample_times = np.array([0.0, 1.0, 2.0, 3.0, 4.0], dtype=np.float32)
+    x_values = np.array([-1.0, 0.0, 1.0, 0.0, -1.0], dtype=np.float32)
+    dx_values = np.array([-1.0, -1.0, -1.0, 1.0, 1.0], dtype=np.float32)
+    out = np.empty(3, dtype=np.float32)
+
+    time_buffer = pyopencl.Buffer(
+        runtime.context,
+        pyopencl.mem_flags.READ_ONLY | pyopencl.mem_flags.COPY_HOST_PTR,
+        hostbuf=sample_times,
+    )
+    x_buffer = pyopencl.Buffer(
+        runtime.context,
+        pyopencl.mem_flags.READ_ONLY | pyopencl.mem_flags.COPY_HOST_PTR,
+        hostbuf=x_values,
+    )
+    dx_buffer = pyopencl.Buffer(
+        runtime.context,
+        pyopencl.mem_flags.READ_ONLY | pyopencl.mem_flags.COPY_HOST_PTR,
+        hostbuf=dx_values,
+    )
+    out_buffer = pyopencl.Buffer(runtime.context, pyopencl.mem_flags.WRITE_ONLY, out.nbytes)
+
+    program.run_threshold_observer_ignore_dx(
+        runtime.queue,
+        (1,),
+        None,
+        time_buffer,
+        x_buffer,
+        dx_buffer,
+        out_buffer,
+        np.uint32(len(sample_times)),
+    )
+    pyopencl.enqueue_copy(runtime.queue, out, out_buffer).wait()
+
+    np.testing.assert_allclose(out[:2], np.array([1.5, 3.5], dtype=np.float32), atol=1e-6, rtol=0.0)
+    assert out[2] == 1.0
+
+
+@pytest.mark.parametrize(
+    ("name", "rising", "x0", "x1", "dx0", "dx1", "x_threshold", "dx_threshold", "expected"),
+    [
+        ("rising_x_first", True, 0.0, 1.0, 0.0, 1.0, 0.25, 0.75, 0.75),
+        ("rising_dx_first", True, 0.0, 1.0, 0.0, 1.0, 0.75, 0.25, 0.75),
+        ("falling_x_first", False, 0.0, -1.0, 0.0, -1.0, -0.25, -0.75, 0.75),
+        ("falling_dx_first", False, 0.0, -1.0, 0.0, -1.0, -0.75, -0.25, 0.75),
+    ],
+)
+def test_threshold_transition_time_returns_later_active_boundary(
+    name: str,
+    rising: bool,
+    x0: float,
+    x1: float,
+    dx0: float,
+    dx1: float,
+    x_threshold: float,
+    dx_threshold: float,
+    expected: float,
+) -> None:
+    runtime = OpenCLRuntime.create(**_explicit_runtime_kwargs())
+    program = _build_program(
+        runtime,
+        """
+        #include \"clODE_utilities.cl\"
+        #include \"observers.cl\"
+
+        __kernel void evaluate_transition_time(
+            const uint use_dx,
+            const uint rising,
+            const realtype t0,
+            const realtype t1,
+            const realtype x0,
+            const realtype x1,
+            const realtype dx0,
+            const realtype dx1,
+            const realtype x_threshold,
+            const realtype dx_threshold,
+            __global realtype *out
+        ) {
+            out[0] = thresholdTransitionTime(
+                use_dx != 0,
+                rising != 0,
+                t0,
+                t1,
+                x0,
+                x1,
+                dx0,
+                dx1,
+                x_threshold,
+                dx_threshold
+            );
+        }
+        """,
+        extra_options=("-DUSE_OBSERVER_THRESHOLD_2", "-DN_VAR=1", "-DN_AUX=0", "-DN_STORE_EVENTS=4"),
+    )
+
+    out = np.empty(1, dtype=np.float32)
+    out_buffer = pyopencl.Buffer(runtime.context, pyopencl.mem_flags.WRITE_ONLY, out.nbytes)
+
+    program.evaluate_transition_time(
+        runtime.queue,
+        (1,),
+        None,
+        np.uint32(1),
+        np.uint32(1 if rising else 0),
+        np.float32(0.0),
+        np.float32(1.0),
+        np.float32(x0),
+        np.float32(x1),
+        np.float32(dx0),
+        np.float32(dx1),
+        np.float32(x_threshold),
+        np.float32(dx_threshold),
+        out_buffer,
+    )
+    pyopencl.enqueue_copy(runtime.queue, out, out_buffer).wait()
+
+    assert out[0] == pytest.approx(expected, abs=1e-6), name
+
+
+@pytest.mark.parametrize(
+    ("name", "x_values", "dx_values", "expected_up", "expected_down"),
+    [
+        (
+            "x_first_dx_later",
+            np.array([-1.0, 0.6, 1.0, -0.6, -1.0], dtype=np.float32),
+            np.array([-1.0, 0.0, 0.5, 0.0, -0.5], dtype=np.float32),
+            1.5,
+            3.5,
+        ),
+        (
+            "dx_first_x_later",
+            np.array([-1.0, 0.0, 0.6, 0.0, -0.6], dtype=np.float32),
+            np.array([-1.0, 0.5, 1.0, -0.5, -1.0], dtype=np.float32),
+            1.0 + 0.5 / 0.6,
+            3.0 + 0.5 / 0.6,
+        ),
+    ],
+)
+def test_threshold_2_state_machine_waits_for_second_active_gate(
+    name: str,
+    x_values: np.ndarray,
+    dx_values: np.ndarray,
+    expected_up: float,
+    expected_down: float,
+) -> None:
+    runtime = OpenCLRuntime.create(**_explicit_runtime_kwargs())
+    program = _build_program(
+        runtime,
+        """
+        #include \"clODE_utilities.cl\"
+        #include \"observers.cl\"
+
+        __constant struct ObserverParams TEST_PARAMS = {
+            0,
+            0,
+            4,
+            ZERO,
+            ZERO,
+            ZERO,
+            RCONST(0.75),
+            RCONST(0.25),
+            RCONST(0.25),
+            RCONST(0.25)
+        };
+
+        __kernel void run_threshold_observer_waits_for_second_gate(
+            __global const realtype *times,
+            __global const realtype *x_values,
+            __global const realtype *dx_values,
+            __global realtype *out,
+            const uint n_values
+        ) {
+            realtype ti = times[0];
+            realtype xi[1] = {x_values[0]};
+            realtype dxi[1] = {dx_values[0]};
+            realtype auxi[1] = {ZERO};
+            ObserverState observer_state;
+
+            initializeObserverState(&ti, xi, dxi, auxi, &observer_state, &TEST_PARAMS);
+            observer_state.xGlobalMax = ONE;
+            observer_state.xGlobalMin = -ONE;
+            observer_state.dxGlobalMax = ONE;
+            observer_state.dxGlobalMin = -ONE;
+            initializeEventDetector(&ti, xi, dxi, auxi, &observer_state, &TEST_PARAMS);
+
+            for (uint idx = 1; idx < n_values; ++idx) {
+                ti = times[idx];
+                xi[0] = x_values[idx];
+                dxi[0] = dx_values[idx];
+                updateObserverState(&ti, xi, dxi, auxi, &observer_state, &TEST_PARAMS);
+                if (eventFunction(&ti, xi, dxi, auxi, &observer_state, &TEST_PARAMS)) {
+                    computeEventFeatures(&ti, xi, dxi, auxi, &observer_state, &TEST_PARAMS);
+                }
+            }
+
+            out[0] = observer_state.tUpTransition[0];
+            out[1] = observer_state.tDownTransition[0];
+            out[2] = observer_state.eventcount;
+        }
+        """,
+        extra_options=("-DUSE_OBSERVER_THRESHOLD_2", "-DN_VAR=1", "-DN_AUX=0", "-DN_STORE_EVENTS=4"),
+    )
+
+    sample_times = np.array([0.0, 1.0, 2.0, 3.0, 4.0], dtype=np.float32)
+    out = np.empty(3, dtype=np.float32)
+
+    time_buffer = pyopencl.Buffer(
+        runtime.context,
+        pyopencl.mem_flags.READ_ONLY | pyopencl.mem_flags.COPY_HOST_PTR,
+        hostbuf=sample_times,
+    )
+    x_buffer = pyopencl.Buffer(
+        runtime.context,
+        pyopencl.mem_flags.READ_ONLY | pyopencl.mem_flags.COPY_HOST_PTR,
+        hostbuf=x_values,
+    )
+    dx_buffer = pyopencl.Buffer(
+        runtime.context,
+        pyopencl.mem_flags.READ_ONLY | pyopencl.mem_flags.COPY_HOST_PTR,
+        hostbuf=dx_values,
+    )
+    out_buffer = pyopencl.Buffer(runtime.context, pyopencl.mem_flags.WRITE_ONLY, out.nbytes)
+
+    program.run_threshold_observer_waits_for_second_gate(
+        runtime.queue,
+        (1,),
+        None,
+        time_buffer,
+        x_buffer,
+        dx_buffer,
+        out_buffer,
+        np.uint32(len(sample_times)),
+    )
+    pyopencl.enqueue_copy(runtime.queue, out, out_buffer).wait()
+
+    np.testing.assert_allclose(out[:2], np.array([expected_up, expected_down], dtype=np.float32), atol=1e-6, rtol=0.0)
+    assert out[2] == pytest.approx(1.0), name
+
+
+def test_local_max_observer_kernel_uses_three_sample_extremum_helpers() -> None:
+    runtime = OpenCLRuntime.create(**_explicit_runtime_kwargs())
+    program = _build_program(
+        runtime,
+        """
+        #include \"clODE_utilities.cl\"
+        #include \"observers.cl\"
+
+        __constant struct ObserverParams TEST_PARAMS = {
+            0,
+            0,
+            4,
+            ZERO,
+            ZERO,
+            ZERO,
+            ZERO,
+            ZERO,
+            ZERO,
+            ZERO,
+            ZERO
+        };
+
+        __kernel void run_localmax_observer(
+            __global const realtype *times,
+            __global const realtype *x_values,
+            __global const realtype *dx_values,
+            __global realtype *out,
+            const uint n_values
+        ) {
+            realtype ti = times[0];
+            realtype xi[1] = {x_values[0]};
+            realtype dxi[1] = {dx_values[0]};
+            realtype auxi[1] = {ZERO};
+            ObserverState observer_state;
+
+            initializeObserverState(&ti, xi, dxi, auxi, &observer_state, &TEST_PARAMS);
+            for (uint idx = 1; idx < n_values; ++idx) {
+                ti = times[idx];
+                xi[0] = x_values[idx];
+                dxi[0] = dx_values[idx];
+                updateObserverState(&ti, xi, dxi, auxi, &observer_state, &TEST_PARAMS);
+                if (eventFunction(&ti, xi, dxi, auxi, &observer_state, &TEST_PARAMS)) {
+                    computeEventFeatures(&ti, xi, dxi, auxi, &observer_state, &TEST_PARAMS);
+                }
+            }
+
+            out[0] = observer_state.tMaxList[0];
+            out[1] = observer_state.tMinList[0];
+            out[2] = observer_state.tMaxList[1];
+            out[3] = observer_state.tMinList[1];
+        }
+        """,
+        extra_options=("-DUSE_OBSERVER_LOCAL_MAX", "-DN_VAR=1", "-DN_AUX=0", "-DN_STORE_EVENTS=4"),
+    )
+
+    dt = 0.2
+    sample_times = np.arange(0.0, 4.0 * math.pi + dt, dt, dtype=np.float64)
+    x_values = np.sin(sample_times).astype(np.float32)
+    dx_values = np.cos(sample_times).astype(np.float32)
+    out = np.empty(4, dtype=np.float32)
+
+    time_buffer = pyopencl.Buffer(
+        runtime.context,
+        pyopencl.mem_flags.READ_ONLY | pyopencl.mem_flags.COPY_HOST_PTR,
+        hostbuf=sample_times.astype(np.float32),
+    )
+    x_buffer = pyopencl.Buffer(
+        runtime.context,
+        pyopencl.mem_flags.READ_ONLY | pyopencl.mem_flags.COPY_HOST_PTR,
+        hostbuf=x_values,
+    )
+    dx_buffer = pyopencl.Buffer(
+        runtime.context,
+        pyopencl.mem_flags.READ_ONLY | pyopencl.mem_flags.COPY_HOST_PTR,
+        hostbuf=dx_values,
+    )
+    out_buffer = pyopencl.Buffer(runtime.context, pyopencl.mem_flags.WRITE_ONLY, out.nbytes)
+
+    program.run_localmax_observer(
+        runtime.queue,
+        (1,),
+        None,
+        time_buffer,
+        x_buffer,
+        dx_buffer,
+        out_buffer,
+        np.uint32(len(sample_times)),
+    )
+    pyopencl.enqueue_copy(runtime.queue, out, out_buffer).wait()
+
+    np.testing.assert_allclose(
+        out,
+        np.array([math.pi / 2.0, 3.0 * math.pi / 2.0, 5.0 * math.pi / 2.0, 7.0 * math.pi / 2.0], dtype=np.float32),
+        atol=2e-2,
+        rtol=0.0,
+    )
+
+
 def test_relative_elapsed_mean_prototype_survives_large_origin_bias() -> None:
     runtime = OpenCLRuntime.create(**_explicit_runtime_kwargs())
     program = _build_program(

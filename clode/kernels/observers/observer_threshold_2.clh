@@ -157,11 +157,14 @@ static inline void initializeEventDetector(realtype *ti, realtype xi[], realtype
 		od->xDown = od->xUp;
 
     //threshold for dx
-    od->dxUp =  op->dxUpThresh * od->dxGlobalMax;
-	if(op->dxDownThresh>ZERO)
+    if(op->dxUpThresh>ZERO)
+        od->dxUp = op->dxUpThresh * od->dxGlobalMax;
+    else
+        od->dxUp = ZERO;
+    if(op->dxDownThresh>ZERO)
         od->dxDown = op->dxDownThresh * od->dxGlobalMin;
-	else
-		od->dxDown = od->dxGlobalMin;
+    else
+        od->dxDown = ZERO;
 
 	//determine if we are up or down.
 	od->inUpstate = xi[op->eVarIx] > od->xUp ? 1 : 0;
@@ -169,6 +172,8 @@ static inline void initializeEventDetector(realtype *ti, realtype xi[], realtype
 
 //per-timestep check for an event.  Option: refine event (t,x,dx,aux) within the timestep with interpolation
 static inline bool eventFunction(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverParams *op) {
+    bool useDxUp = op->dxUpThresh > ZERO;
+
     if (od->stepcount < 2)
         return false;
 
@@ -179,36 +184,63 @@ static inline bool eventFunction(realtype *ti, realtype xi[], realtype dxi[], re
         return false;
 
     //event is marked by upward threshold crossing #TODO - user-specified direction option?
-    return (xi[op->eVarIx] > od->xUp && dxi[op->eVarIx] > od->dxUp);
+    return (xi[op->eVarIx] > od->xUp && (!useDxUp || dxi[op->eVarIx] > od->dxUp));
     
+}
+
+static inline realtype thresholdTransitionTime(
+    const bool useDx,
+    const bool rising,
+    const realtype t0,
+    const realtype t1,
+    const realtype x0,
+    const realtype x1,
+    const realtype dx0,
+    const realtype dx1,
+    const realtype xThreshold,
+    const realtype dxThreshold
+) {
+    bool crossedX = rising ? (x0 <= xThreshold && x1 > xThreshold) : (x0 >= xThreshold && x1 < xThreshold);
+    realtype tX = crossedX ? linearInterpTimeOfValue(t0, t1, x0, x1, xThreshold) : t1;
+
+    if (!useDx)
+        return tX;
+
+    bool crossedDx = rising ? (dx0 <= dxThreshold && dx1 > dxThreshold) : (dx0 >= dxThreshold && dx1 < dxThreshold);
+    realtype tDx = crossedDx ? linearInterpTimeOfValue(t0, t1, dx0, dx1, dxThreshold) : t1;
+
+    return crossedX && crossedDx ? fmax(tX, tDx) : (crossedX ? tX : (crossedDx ? tDx : t1));
 }
 
 //When an event is detected, computes desired event-based features. returns true if a terminal event was reached
 static inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverParams *op) {
     realtype tThisEvent;
+    bool useDxUp = op->dxUpThresh > ZERO;
 
     ++od->eventcount;
     od->inUpstate = 1;
 
-    //simplest: time and state of trajectory point that crossed the threshold.
-    tThisEvent=*ti;
+    tThisEvent = thresholdTransitionTime(
+        useDxUp,
+        true,
+        od->tbuffer[1],
+        od->tbuffer[2],
+        od->xbuffer[op->eVarIx * 3 + 1],
+        od->xbuffer[op->eVarIx * 3 + 2],
+        od->dxbuffer[op->eVarIx * 3 + 1],
+        od->dxbuffer[op->eVarIx * 3 + 2],
+        od->xUp,
+        od->dxUp
+    );
 
-    //alt: inverse-linear interpolation gives a conservative first timestamp upgrade:
-    // tThisEvent = linearInterpTimeOfValue(
-    //     od->tbuffer[2],
-    //     *ti,
-    //     od->xbuffer[op->eVarIx * 3 + 2],
-    //     xi[op->eVarIx],
-    //     od->xUp
-    // );
     // prototype-only alternative for smooth monotone crossings:
     // tThisEvent = cubicHermiteInterpTimeOfValue(
+    //     od->tbuffer[1],
     //     od->tbuffer[2],
-    //     *ti,
+    //     od->xbuffer[op->eVarIx * 3 + 1],
     //     od->xbuffer[op->eVarIx * 3 + 2],
-    //     xi[op->eVarIx],
+    //     od->dxbuffer[op->eVarIx * 3 + 1],
     //     od->dxbuffer[op->eVarIx * 3 + 2],
-    //     dxi[op->eVarIx],
     //     od->xUp
     // );
 
@@ -300,13 +332,15 @@ static inline void updateObserverState(realtype *ti, realtype xi[], realtype dxi
         
         //local max check in fVarIx
         if (od->dxbuffer[op->fVarIx * 3 + 1] > 0.0 && od->dxbuffer[op->fVarIx * 3 + 2] < 0.0) {
-            int ix;
-            realtype thisXbuffer[N_VAR];
+            realtype thisTbuffer[3];
+            realtype thisXbuffer[3];
             realtype xThisMax;
-            for (int j = 0; j < 3; ++j)
+            for (int j = 0; j < 3; ++j) {
+		thisTbuffer[j] = od->tbuffer[j];
             	thisXbuffer[j] = od->xbuffer[op->fVarIx * 3 + j];
-            maxOfArray(thisXbuffer, 3, &xThisMax, &ix);
-            realtype tThisMax = od->tbuffer[ix];
+            }
+            realtype tThisMax;
+            localMaximumFromThreeSamples(thisTbuffer, thisXbuffer, &tThisMax, &xThisMax);
 
             od->thisNMaxima++;
             od->tLastMax = tThisMax;
@@ -325,28 +359,32 @@ static inline void updateObserverState(realtype *ti, realtype xi[], realtype dxi
 
         //local min check in fVarIx - one between each max - simply overwrite tLastMin, xLastMin
         if (od->dxbuffer[op->fVarIx * 3 + 1] < 0.0 && od->dxbuffer[op->fVarIx * 3 + 2] > 0.0) {
-            int ix;
-            realtype thisXbuffer[N_VAR];
-            for (int j = 0; j < 3; ++j)
+            realtype thisTbuffer[3];
+            realtype thisXbuffer[3];
+            for (int j = 0; j < 3; ++j) {
+		        thisTbuffer[j] = od->tbuffer[j];
             	thisXbuffer[j] = od->xbuffer[op->fVarIx * 3 + j];
-            minOfArray(thisXbuffer, 3, &od->xLastMin, &ix);
-            od->tLastMin = od->tbuffer[ix]; //actually not used...
+            }
+            localMinimumFromThreeSamples(thisTbuffer, thisXbuffer, &od->tLastMin, &od->xLastMin); //actually not used...
         }
 
         if (od->inUpstate) {
-            //Check for downward threshold crossing
-            if (xi[op->eVarIx] <= od->xDown && dxi[op->eVarIx] >= od->dxDown) {
-                //simplest: time and state of trajectory point that landed in the neighborhood.
-                od->tThisDown=*ti;
+            bool useDxDown = op->dxDownThresh > ZERO;
 
-                //alt: inverse-linear interpolation for the downward threshold crossing:
-                // od->tThisDown = linearInterpTimeOfValue(
-                //     od->tbuffer[2],
-                //     *ti,
-                //     od->xbuffer[op->eVarIx * 3 + 2],
-                //     xi[op->eVarIx],
-                //     od->xDown
-                // );
+            //Check for downward threshold crossing
+            if (xi[op->eVarIx] < od->xDown && (!useDxDown || dxi[op->eVarIx] < od->dxDown)) {
+                od->tThisDown = thresholdTransitionTime(
+                    useDxDown,
+                    false,
+                    od->tbuffer[1],
+                    od->tbuffer[2],
+                    od->xbuffer[op->eVarIx * 3 + 1],
+                    od->xbuffer[op->eVarIx * 3 + 2],
+                    od->dxbuffer[op->eVarIx * 3 + 1],
+                    od->dxbuffer[op->eVarIx * 3 + 2],
+                    od->xDown,
+                    od->dxDown
+                );
                 od->inUpstate = 0;
                 
                 if (od->eventcount > 0 && od->eventcount <= N_STORE_EVENTS)

@@ -55,7 +55,7 @@ Not every observer field affects every built-in observer. For the current built-
 
 See [numerical_accuracy.md](numerical_accuracy.md) for empirical examples and practical tuning guidance.
 
-Current threshold and local-extremum timestamps come from sampled buffer points in the live kernels. See [numerical_accuracy.md](numerical_accuracy.md) for measured interpolation tradeoffs on coarse crossings and three-sample extrema.
+`threshold_2` stores up/down transition times with inverse-linear interpolation of the active threshold boundary. When a `dx` threshold is zero, that slope gate is ignored; when it is nonzero, the stored transition time is the later of the active `x` and `dx` boundary crossings within the step. `local_max` stores extrema using bounded three-sample quadratic refinement. See [numerical_accuracy.md](numerical_accuracy.md) for empirical tradeoffs and comparisons with alternative interpolation choices.
 
 ## Reading observer output
 
@@ -68,6 +68,6 @@ print(observer_output.get_event_data("up", type="time"))
 
 The available names depend on the selected observer.
 
-## Current extension status
+## Custom observers
 
-Built-in observers are supported and tested. User-authored custom observers are not yet a polished public API; today they still depend on internal OpenCL observer kernels and Python-side metadata definitions.
+Built-in observers are supported and tested. Custom observer authoring is not part of the public API.

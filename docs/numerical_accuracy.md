@@ -121,7 +121,7 @@ The same script also pushes the zero-origin case to 30,000,000 steps.
 
 So `t = t0 + step * dt` is a bounded-error float32 strategy, not a complete fix for absolute-time representability.
 
-For fixed-step steppers, this is now the live current strategy: keep a 64-bit integer step counter and reconstruct absolute time from `t0 + step * dt` instead of from repeated float32 addition. Adaptive steppers do not have that shortcut because `dt` changes from step to step, so their stronger prototype direction is still a dual-float compensated time pair rather than another single-float absolute-time variant.
+For fixed-step steppers, clODE keeps a 64-bit integer step counter and reconstructs absolute time from `t0 + step * dt` instead of from repeated float32 addition. Adaptive steppers do not have that shortcut because `dt` changes from step to step, so long adaptive runs remain more sensitive to single-precision absolute-time limits.
 
 ## How To Run The Demonstration
 
@@ -162,14 +162,14 @@ On a composite waveform where value thresholds alone still overcount crossings:
 - a `threshold_2`-style count with `dx_up = 0` reports 100 up-events
 - adding `dx_up = 0.9` reduces that to 20 up-events
 
-Derivative thresholds are therefore a real current safeguard for some noisy traces, especially when value hysteresis alone is not selective enough. They are still signal-dependent, so validate them on representative data before launching a large sweep.
+Derivative thresholds can be useful for noisy traces, especially when value hysteresis alone is not selective enough. They are still signal-dependent, so validate them on representative data before launching a large sweep.
 
 ## Threshold-Crossing Timestamp Alternatives
 
-The current `threshold_2` kernel records transition times at the sampled endpoint of the crossing step. The example script compares that current sample-time choice against two interpolation alternatives on a coarse smooth crossing:
+The example script compares three threshold-timestamp choices on a coarse smooth crossing:
 
 - sampled crossing time
-- inverse-linear interpolation between the two bracketing samples
+- inverse-linear interpolation between the two bracketing samples, which is the method `threshold_2` uses for stored threshold transitions
 - cubic Hermite interpolation using the same endpoint values and endpoint slopes
 
 On an upward threshold crossing of a coarsely sampled sine wave:
@@ -178,20 +178,20 @@ On an upward threshold crossing of a coarsely sampled sine wave:
 - inverse-linear interpolation reduces that to about `1.97e-3`
 - slope-aware Hermite interpolation reduces it further to about `1.33e-6`
 
-This is enough evidence to justify an explicit threshold-crossing helper in the shared kernel math layer. It also shows a useful distinction: inverse-linear interpolation is the low-risk option when you only want a better timestamp, while slope-aware Hermite interpolation is an attractive prototype when the crossing is smooth and monotone but still needs stronger robustness checks before broad use in noisy event detectors.
+These results show why inverse-linear interpolation is a practical choice for stored threshold transitions. When the corresponding `dx` threshold is zero, the slope gate is ignored; when it is nonzero, the stored transition time is the later active boundary between the `x` and `dx` gates. They also show that slope-aware Hermite interpolation can be more accurate on smooth monotone crossings.
 
-That caveat is real rather than theoretical. On ripple-heavy traces, one coarse timestep can contain multiple threshold crossings, which makes any single-crossing interpolation model ambiguous. That is why inverse-linear interpolation is the conservative first live candidate and slope-aware Hermite interpolation remains prototype-only for now.
+That caveat is real rather than theoretical. On ripple-heavy traces, one coarse timestep can contain multiple threshold crossings, which makes any single-crossing interpolation model ambiguous. In those cases, smaller `dt` or double precision is the safer choice.
 
 ## Local-Extremum Localization from a Three-Sample Buffer
 
-The current `local_max` observer localizes extrema by picking the sampled maximum from its three-sample buffer. The example script also includes a prototype based on that same geometry.
+The example script compares direct sampled maxima against the bounded three-sample quadratic refinement used by `local_max`.
 
 On a coarsely sampled sine wave:
 
 - taking the buffered sample maximum directly gives a mean peak-time error of about `5.15e-2` and a mean peak-value error of about `1.78e-3`
 - fitting a quadratic vertex on the same three samples reduces the mean peak-time error to about `3.57e-4` and the mean peak-value error to about `2.66e-5`
 
-That does not change current package behavior by itself, but it does show why local-extremum detection remains a live accuracy hotspot. If peak timing matters today, the safe user-side choices are a smaller `dt` or double precision.
+This comparison shows why `local_max` uses bounded three-sample refinement, but local-extremum detection is still an accuracy hotspot. If peak timing matters strongly, the safe user-side choices are still a smaller `dt` or double precision.
 
 ## User Recommendations
 
@@ -199,12 +199,12 @@ That does not change current package behavior by itself, but it does show why lo
 - For autonomous feature extraction, prefer windows that start near `t = 0` when possible; large absolute times can break float32 elapsed-time differences even when the numerator is accumulated carefully.
 - For non-autonomous systems where absolute time matters, prefer double precision today or shorter windows that keep `t` near the scale you need.
 - The stepper time-base issue is a representability problem, not a notation problem.
-- For fixed-step steppers, the live step-counter time base is the cleanest single-precision alternative to repeated addition, but it is still a float32 strategy and therefore still quantized by float32 spacing.
-- For adaptive steppers, a stronger fix needs a dual-float compensated time representation or double precision because there is no fixed-step counter shortcut.
+- For fixed-step steppers, clODE uses a step-counter time base instead of repeated float32 addition, but the result is still quantized by float32 spacing.
+- For adaptive steppers, prefer double precision or shorter windows when absolute-time fidelity matters strongly because there is no fixed-step counter shortcut.
 - For `threshold_2`, use a real hysteresis gap when crossings chatter, and consider derivative thresholds when noisy shallow crossings still slip through.
-- Treat current threshold timestamps as sampled times; when coarse timestamp accuracy matters, inverse-linear interpolation is the first alternative worth evaluating.
+- `threshold_2` stores threshold-transition times with inverse-linear interpolation; the example script also compares that choice with Hermite interpolation on smooth monotone crossings.
 - Set `min_amp` above the numerical or measurement floor you want to ignore and below the smallest oscillation you still care about.
-- For `local_max`, use a smaller `dt` or double precision when accurate peak timing matters.
+- `local_max` uses bounded three-sample quadratic refinement, but a smaller `dt` or double precision is still the safer choice when peak timing matters strongly.
 - Validate event-sensitive settings on one representative trajectory before launching a large ensemble sweep.
 
 For the runnable script inventory, see [examples.md](examples.md). For throughput-oriented timing notes, see [performance_notes.md](performance_notes.md).
