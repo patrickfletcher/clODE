@@ -376,6 +376,7 @@ def _basic_layout(
     real_dtype: np.dtype,
     n_store_events: int,
 ) -> ResolvedObserverLayout:
+    del problem_info
     del n_store_events
     return ResolvedObserverLayout(
         persistent_fields=(
@@ -386,8 +387,8 @@ def _basic_layout(
             _real_field("xTrajectoryIntegralCorrection", real_dtype),
             _real_field("dxTrajectoryMax", real_dtype),
             _real_field("dxTrajectoryMin", real_dtype),
-            _real_field("t_last", real_dtype),
-            _real_field("t_start", real_dtype),
+            _real_field("elapsed_total", real_dtype),
+            _real_field("elapsed_total_correction", real_dtype),
             _uint_field("stepcount"),
         )
     )
@@ -417,8 +418,8 @@ def _basicall_layout(
             _real_field(
                 "auxTrajectoryIntegralCorrection", real_dtype, problem_info.num_aux
             ),
-            _real_field("t_last", real_dtype),
-            _real_field("t_start", real_dtype),
+            _real_field("elapsed_total", real_dtype),
+            _real_field("elapsed_total_correction", real_dtype),
             _uint_field("stepcount"),
         )
     )
@@ -429,19 +430,10 @@ def _localmax_layout(
     real_dtype: np.dtype,
     n_store_events: int,
 ) -> ResolvedObserverLayout:
-    event_output_fields: list[LayoutField] = []
-    if n_store_events > 0:
-        event_output_fields.extend(
-            [
-                _real_field("tMaxList", real_dtype, n_store_events),
-                _real_field("xMaxList", real_dtype, n_store_events),
-                _real_field("tMinList", real_dtype, n_store_events),
-                _real_field("xMinList", real_dtype, n_store_events),
-            ]
-        )
     return ResolvedObserverLayout(
         persistent_fields=(
             _real_field("tbuffer", real_dtype, 3),
+            _real_field("elapsedbuffer", real_dtype, 3),
             _real_field("xbuffer", real_dtype, 3 * problem_info.num_var),
             _real_field("dxbuffer", real_dtype, 3 * problem_info.num_var),
             _real_field("xTrajectoryMax", real_dtype, problem_info.num_var),
@@ -454,14 +446,20 @@ def _localmax_layout(
             _real_field("auxTrajectoryMean", real_dtype, problem_info.num_aux),
             _real_field("IMI", real_dtype, 3),
             _real_field("amp", real_dtype, 3),
-            _real_field("t_start", real_dtype),
+            _real_field("elapsedTotal", real_dtype),
             _real_field("tLastMax", real_dtype),
+            _real_field("elapsedLastMax", real_dtype),
             _real_field("tLastMin", real_dtype),
             _real_field("xLastMin", real_dtype),
             _uint_field("eventcount"),
             _uint_field("stepcount"),
         ),
-        event_output_fields=tuple(event_output_fields),
+        event_output_fields=(
+            _real_field("tMaxList", real_dtype, n_store_events),
+            _real_field("xMaxList", real_dtype, n_store_events),
+            _real_field("tMinList", real_dtype, n_store_events),
+            _real_field("xMinList", real_dtype, n_store_events),
+        ),
     )
 
 
@@ -474,6 +472,7 @@ def _nhood1_layout(
     return ResolvedObserverLayout(
         persistent_fields=(
             _real_field("tbuffer", real_dtype, 3),
+            _real_field("elapsedbuffer", real_dtype, 3),
             _real_field("xbuffer", real_dtype, 3 * problem_info.num_var),
             _real_field("dxbuffer", real_dtype, 3 * problem_info.num_var),
             _real_field("x0", real_dtype, problem_info.num_var),
@@ -488,8 +487,9 @@ def _nhood1_layout(
             _real_field("nMaxima", real_dtype, 3),
             _real_field("period", real_dtype, 3),
             _real_field("stepDt", real_dtype, 3),
-            _real_field("t_start", real_dtype),
+            _real_field("elapsedTotal", real_dtype),
             _real_field("tLastEvent", real_dtype),
+            _real_field("elapsedLastEvent", real_dtype),
             _real_field("thisNormXdiff", real_dtype),
             _real_field("lastNormXdiff", real_dtype),
             _uint_field("thisNMaxima"),
@@ -506,11 +506,6 @@ def _nhood2_layout(
     real_dtype: np.dtype,
     n_store_events: int,
 ) -> ResolvedObserverLayout:
-    event_output_fields: tuple[LayoutField, ...] = ()
-    if n_store_events > 0:
-        event_output_fields = (
-            _real_field("tExitNhood", real_dtype, n_store_events),
-        )
     return ResolvedObserverLayout(
         persistent_fields=(
             _real_field("tbuffer", real_dtype, 3),
@@ -526,11 +521,13 @@ def _nhood2_layout(
             _real_field("auxTrajectoryMax", real_dtype, problem_info.num_aux),
             _real_field("auxTrajectoryMin", real_dtype, problem_info.num_aux),
             _real_field("auxTrajectoryMean", real_dtype, problem_info.num_aux),
+            _real_field("tExitNhood", real_dtype, n_store_events),
             _real_field("nMaxima", real_dtype, 3),
             _real_field("period", real_dtype, 3),
             _real_field("stepDt", real_dtype, 3),
-            _real_field("t_start", real_dtype),
+            _real_field("elapsedTotal", real_dtype),
             _real_field("tLastEvent", real_dtype),
+            _real_field("elapsedLastEvent", real_dtype),
             _real_field("xThreshold", real_dtype),
             _uint_field("thisNMaxima"),
             _uint_field("foundX0"),
@@ -538,7 +535,6 @@ def _nhood2_layout(
             _uint_field("eventcount"),
             _uint_field("stepcount"),
         ),
-        event_output_fields=event_output_fields,
     )
 
 
@@ -547,17 +543,10 @@ def _thresh2_layout(
     real_dtype: np.dtype,
     n_store_events: int,
 ) -> ResolvedObserverLayout:
-    event_output_fields: list[LayoutField] = []
-    if n_store_events > 0:
-        event_output_fields.extend(
-            [
-                _real_field("tUpTransition", real_dtype, n_store_events),
-                _real_field("tDownTransition", real_dtype, n_store_events),
-            ]
-        )
     return ResolvedObserverLayout(
         persistent_fields=(
             _real_field("tbuffer", real_dtype, 3),
+            _real_field("elapsedbuffer", real_dtype, 3),
             _real_field("xbuffer", real_dtype, 3 * problem_info.num_var),
             _real_field("dxbuffer", real_dtype, 3 * problem_info.num_var),
             _real_field("xTrajectoryMax", real_dtype, problem_info.num_var),
@@ -568,6 +557,8 @@ def _thresh2_layout(
             _real_field("auxTrajectoryMax", real_dtype, problem_info.num_aux),
             _real_field("auxTrajectoryMin", real_dtype, problem_info.num_aux),
             _real_field("auxTrajectoryMean", real_dtype, problem_info.num_aux),
+            _real_field("tUpTransition", real_dtype, n_store_events),
+            _real_field("tDownTransition", real_dtype, n_store_events),
             _real_field("nMaxima", real_dtype, 3),
             _real_field("period", real_dtype, 3),
             _real_field("upDuration", real_dtype, 3),
@@ -585,9 +576,11 @@ def _thresh2_layout(
             _real_field("xDown", real_dtype),
             _real_field("dxUp", real_dtype),
             _real_field("dxDown", real_dtype),
-            _real_field("t_start", real_dtype),
+            _real_field("elapsedTotal", real_dtype),
             _real_field("tLastEvent", real_dtype),
+            _real_field("elapsedLastEvent", real_dtype),
             _real_field("tThisDown", real_dtype),
+            _real_field("elapsedThisDown", real_dtype),
             _real_field("tLastMax", real_dtype),
             _real_field("tLastMin", real_dtype),
             _real_field("xLastMin", real_dtype),
@@ -596,7 +589,6 @@ def _thresh2_layout(
             _uint_field("eventcount"),
             _uint_field("inUpstate"),
         ),
-        event_output_fields=tuple(event_output_fields),
     )
 
 

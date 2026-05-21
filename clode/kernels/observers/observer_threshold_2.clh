@@ -6,6 +6,7 @@
 
 struct ObserverState_thresh2 {
     realtype tbuffer[3];
+    realtype elapsedbuffer[3];
     realtype xbuffer[3 * N_VAR];
     realtype dxbuffer[3 * N_VAR];
 
@@ -45,9 +46,11 @@ struct ObserverState_thresh2 {
     realtype dxUp;
     realtype dxDown;
 
-    realtype t_start;
+    realtype elapsedTotal;
     realtype tLastEvent;
+    realtype elapsedLastEvent;
     realtype tThisDown;
+    realtype elapsedThisDown;
 
     realtype tLastMax; //compare to tThis
     realtype tLastMin;
@@ -64,6 +67,7 @@ typedef struct ObserverState_thresh2 ObserverState;
 //set initial values to relevant fields in ObserverState
 static inline void initializeObserverState(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverParams *op) {
     od->tbuffer[2] = *ti;
+    od->elapsedbuffer[2] = ZERO;
     for (int j = 0; j < N_VAR; ++j) {
         od->xbuffer[j * 3 + 2] = xi[j];
         od->dxbuffer[j * 3 + 2] = dxi[j];
@@ -124,9 +128,11 @@ static inline void initializeObserverState(realtype *ti, realtype xi[], realtype
     od->dxUp = ZERO;
     od->dxDown = ZERO;
     
-    od->t_start = *ti;
+    od->elapsedTotal = ZERO;
     od->tLastEvent = ZERO;
+    od->elapsedLastEvent = ZERO;
     od->tThisDown = ZERO;
+    od->elapsedThisDown = ZERO;
     od->tLastMax = ZERO;
     od->tLastMin = ZERO;
     od->xLastMin = BIG_REAL; 
@@ -215,6 +221,7 @@ static inline realtype thresholdTransitionTime(
 //When an event is detected, computes desired event-based features. returns true if a terminal event was reached
 static inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverParams *op) {
     realtype tThisEvent;
+    realtype elapsedThisEvent;
     bool useDxUp = op->dxUpThresh > ZERO;
 
     ++od->eventcount;
@@ -225,6 +232,18 @@ static inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dx
         true,
         od->tbuffer[1],
         od->tbuffer[2],
+        od->xbuffer[op->eVarIx * 3 + 1],
+        od->xbuffer[op->eVarIx * 3 + 2],
+        od->dxbuffer[op->eVarIx * 3 + 1],
+        od->dxbuffer[op->eVarIx * 3 + 2],
+        od->xUp,
+        od->dxUp
+    );
+    elapsedThisEvent = thresholdTransitionTime(
+        useDxUp,
+        true,
+        od->elapsedbuffer[1],
+        od->elapsedbuffer[2],
         od->xbuffer[op->eVarIx * 3 + 1],
         od->xbuffer[op->eVarIx * 3 + 2],
         od->dxbuffer[op->eVarIx * 3 + 1],
@@ -250,17 +269,17 @@ static inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dx
         od->nMaxima[1] = fmin((realtype)od->thisNMaxima, od->nMaxima[1]);
         runningMean(&od->nMaxima[2], (realtype)od->thisNMaxima, nPeriods);
 
-        realtype thisPeriod = tThisEvent - od->tLastEvent;
+        realtype thisPeriod = elapsedThisEvent - od->elapsedLastEvent;
         od->period[0] = fmax(thisPeriod, od->period[0]);
         od->period[1] = fmin(thisPeriod, od->period[1]);
         runningMean(&od->period[2], thisPeriod, nPeriods);
         
-        realtype thisUpDuration = od->tThisDown - od->tLastEvent;
+        realtype thisUpDuration = od->elapsedThisDown - od->elapsedLastEvent;
         od->upDuration[0] = fmax(thisUpDuration, od->upDuration[0]);
         od->upDuration[1] = fmin(thisUpDuration, od->upDuration[1]);
         runningMean(&od->upDuration[2], thisUpDuration, nPeriods);
         
-        realtype thisDownDuration = tThisEvent - od->tThisDown;
+        realtype thisDownDuration = elapsedThisEvent - od->elapsedThisDown;
         od->downDuration[0] = fmax(thisDownDuration, od->downDuration[0]);
         od->downDuration[1] = fmin(thisDownDuration, od->downDuration[1]);
         runningMean(&od->downDuration[2], thisDownDuration, nPeriods);
@@ -280,6 +299,7 @@ static inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dx
     	od->tUpTransition[od->eventcount-1] = tThisEvent;
 
     od->tLastEvent = tThisEvent;
+    od->elapsedLastEvent = elapsedThisEvent;
     od->thisNMaxima = 0;
 
     if (od->eventcount == op->maxEventCount)
@@ -289,13 +309,17 @@ static inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dx
 }
 
 //full per-timestep update of observer state. If an event occurred this timestep, event-based observer state is reset. Per-timestep features are computed here.
-static inline void updateObserverState(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverParams *op) {
+static inline void updateObserverState(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], const realtype stepDt, ObserverState *od, __constant struct ObserverParams *op) {
     ++od->stepcount;
+    od->elapsedTotal += stepDt;
 
     // advance solution buffer
     od->tbuffer[0] = od->tbuffer[1];
     od->tbuffer[1] = od->tbuffer[2];
     od->tbuffer[2] = *ti;
+    od->elapsedbuffer[0] = od->elapsedbuffer[1];
+    od->elapsedbuffer[1] = od->elapsedbuffer[2];
+    od->elapsedbuffer[2] = od->elapsedTotal;
 
     for (int j = 0; j < N_VAR; ++j) {
         od->xbuffer[j * 3 + 0] = od->xbuffer[j * 3 + 1];
@@ -306,26 +330,22 @@ static inline void updateObserverState(realtype *ti, realtype xi[], realtype dxi
         od->dxbuffer[j * 3 + 2] = dxi[j];
     }
 
-    // dt is available in the calling ode-driver. 
-    realtype dt = od->tbuffer[2]-od->tbuffer[1];
-    realtype elapsedTime = *ti - od->t_start;
-
-    od->stepDt[0] = fmax(dt, od->stepDt[0]);
-    od->stepDt[1] = fmin(dt, od->stepDt[1]);
-    runningMean(&od->stepDt[2], dt, od->stepcount);
+    od->stepDt[0] = fmax(stepDt, od->stepDt[0]);
+    od->stepDt[1] = fmin(stepDt, od->stepDt[1]);
+    runningMean(&od->stepDt[2], stepDt, od->stepcount);
 
     //global extent of all vars, var slopes, and aux vars
     for (int j = 0; j < N_VAR; ++j) {
         od->xTrajectoryMax[j] = fmax(xi[j], od->xTrajectoryMax[j]);
         od->xTrajectoryMin[j] = fmin(xi[j], od->xTrajectoryMin[j]);
-        od->xTrajectoryMean[j] = runningMeanTime(od->xTrajectoryMean[j], xi[j], dt, elapsedTime);
+        od->xTrajectoryMean[j] = runningMeanTime(od->xTrajectoryMean[j], xi[j], stepDt, od->elapsedTotal);
         od->dxTrajectoryMax[j] = fmax(dxi[j], od->dxTrajectoryMax[j]);
         od->dxTrajectoryMin[j] = fmin(dxi[j], od->dxTrajectoryMin[j]);
     }
     for (int j = 0; j < N_AUX; ++j) {
         od->auxTrajectoryMax[j] = fmax(auxi[j], od->auxTrajectoryMax[j]);
         od->auxTrajectoryMin[j] = fmin(auxi[j], od->auxTrajectoryMin[j]);
-        od->auxTrajectoryMean[j] = runningMeanTime(od->auxTrajectoryMean[j], auxi[j], dt, elapsedTime);
+        od->auxTrajectoryMean[j] = runningMeanTime(od->auxTrajectoryMean[j], auxi[j], stepDt, od->elapsedTotal);
     }
 
     if (od->stepcount > 1) {
@@ -385,6 +405,18 @@ static inline void updateObserverState(realtype *ti, realtype xi[], realtype dxi
                     od->xDown,
                     od->dxDown
                 );
+                od->elapsedThisDown = thresholdTransitionTime(
+                    useDxDown,
+                    false,
+                    od->elapsedbuffer[1],
+                    od->elapsedbuffer[2],
+                    od->xbuffer[op->eVarIx * 3 + 1],
+                    od->xbuffer[op->eVarIx * 3 + 2],
+                    od->dxbuffer[op->eVarIx * 3 + 1],
+                    od->dxbuffer[op->eVarIx * 3 + 2],
+                    od->xDown,
+                    od->dxDown
+                );
                 od->inUpstate = 0;
                 
                 if (od->eventcount > 0 && od->eventcount <= N_STORE_EVENTS)
@@ -395,9 +427,9 @@ static inline void updateObserverState(realtype *ti, realtype xi[], realtype dxi
         }
         else {
             // Compute running mean of the down state
-			realtype elapsedDownTime = (*ti - od->tThisDown);
+			realtype elapsedDownTime = od->elapsedTotal - od->elapsedThisDown;
 			if (elapsedDownTime > 0.0)
-                od->fVarDownstateMean = runningMeanTime(od->fVarDownstateMean, xi[op->fVarIx], dt, elapsedDownTime);
+                od->fVarDownstateMean = runningMeanTime(od->fVarDownstateMean, xi[op->fVarIx], stepDt, elapsedDownTime);
 		}
     }
 }

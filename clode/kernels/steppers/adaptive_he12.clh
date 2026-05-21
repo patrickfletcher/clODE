@@ -6,10 +6,27 @@
 #define ADAPTIVE_STEP_MAX_SHRINK RCONST(0.5)
 #define ADAPTIVE_STEP_MAX_GROW RCONST(5.0)
 
-static inline realtype do_step(realtype *ti, realtype xi[], realtype k1[], const realtype pars[], const realtype dt, realtype aux[], realtype err[], const realtype wi[])
+static inline realtype do_step(
+    const realtype tOrigin,
+    realtype *elapsed,
+    realtype *elapsedCorrection,
+    realtype *ti,
+    realtype xi[],
+    realtype k1[],
+    const realtype pars[],
+    const realtype dt,
+    realtype aux[],
+    realtype err[],
+    const realtype wi[]
+)
 {
-    realtype tNew = *ti + dt;
-    realtype newDt = tNew - *ti; //use the effective part of dt
+    realtype newDt = dt;
+    realtype tNew = compensatedTimeFromOriginAfterStep(
+        tOrigin,
+        *elapsed,
+        *elapsedCorrection,
+        newDt
+    );
     realtype xtmp[N_VAR], k2[N_VAR];
 
     //compute k1
@@ -35,7 +52,8 @@ static inline realtype do_step(realtype *ti, realtype xi[], realtype k1[], const
     getRHS(tNew, xi, pars, k2, aux, wi); //redo k2 at actual new point - alt, don't do FSAL.
     for (int k = 0; k < N_VAR; k++) 
         k1[k] = k2[k];
-        
-    *ti = tNew;
+
+    compensatedTimeAdd(elapsed, elapsedCorrection, newDt);
+    *ti = compensatedTimeFromOrigin(tOrigin, *elapsed, *elapsedCorrection);
     return newDt;
 }

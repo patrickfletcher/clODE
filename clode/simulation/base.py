@@ -141,19 +141,13 @@ class Simulator:
 		self._pi = self._ivp.problem_info
 		self._stepper = stepper
 		self._single_precision = single_precision
-		self._runtime_selection = RuntimeSelection(
-			device_type=device_type,
-			vendor=vendor,
-			platform_id=platform_id,
-			device_id=device_id,
-		)
-
 		self._runtime = initialize_runtime(
 			device_type,
 			vendor,
 			platform_id,
 			device_id,
 		)
+		self._runtime_selection = self._runtime.runtime_selection
 
 		self._create_integrator()
 		self._build_cl_program()
@@ -582,6 +576,26 @@ class Simulator:
 					self._solver_state.final_time, dtype=np.float64, copy=True
 				)
 		return self._solver_state.final_time
+
+	@property
+	def platform_id(self) -> int:
+		"""The concrete OpenCL platform index selected for this simulator."""
+		return self._runtime.platform_id
+
+	@property
+	def device_id(self) -> int:
+		"""The concrete OpenCL device index selected for this simulator."""
+		return self._runtime.device_id
+
+	@property
+	def runtime_selection(self) -> RuntimeSelection:
+		"""The concrete runtime selection bound to this simulator instance."""
+		return self._runtime_selection
+
+	@property
+	def runtime_description(self) -> str:
+		"""Human-readable description of the selected OpenCL runtime."""
+		return self._runtime.describe()
 
 	def get_max_memory_alloc_size(self, deviceID: int = 0) -> int:
 		"""Get the device maximum memory allocation size."""

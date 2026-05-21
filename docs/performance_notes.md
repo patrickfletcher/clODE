@@ -40,6 +40,8 @@ Without this context, comparisons are usually not meaningful.
 - Warm up the target device before timing repeated runs.
 - Compare like with like: same model, same precision, same stepper, same output mode.
 - Treat transient-only, feature-extraction, and full-trajectory workloads as different performance regimes.
+- Treat observer mode and `max_event_timestamps` as part of the workload definition. Heavy observers such as `threshold_2` and `local_max` retain more per-instance state than `basic` or `basic_all_variables`, and retained event timestamps scale linearly with `max_event_timestamps`.
+- If you only need summary features, keep event timestamp retention small and prefer the lightest observer that answers the question.
 - Prefer median timing across repeated runs over a single best-case measurement.
 - Record whether the runtime is CPU-backed, GPU-backed, or PoCL-backed.
 

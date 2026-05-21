@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from typing import List
+import time
 
 import clode
 from clode import exp
@@ -46,6 +47,7 @@ def get_rhs(t: float,
 
 variables = {"v": -50.0, "n": 0.01, "c": 0.12}
 parameters = {"gca": 1200.0, "gkca": 750.0, "kpmca": 0.1}
+runtime_kwargs = {"device_type": clode.CLDeviceType.DEVICE_TYPE_GPU}
 
 # set up the solver
 t_span=(0.0, 30000.0)
@@ -68,7 +70,9 @@ integrator = clode.FeatureSimulator(
     observer_min_x_amp=1.0,
     observer_min_imi=0.0,
     observer_max_event_count=50,
+    **runtime_kwargs,
 )
+print(f"Using {integrator.runtime_description}")
 
 # set up the ensemble of systems
 nx = 256
@@ -83,8 +87,13 @@ ensemble_parameters_names = list(ensemble_parameters.keys())
 
 integrator.set_ensemble(parameters=ensemble_parameters)
 
+t_start = time.perf_counter()
+
 integrator.transient()
 integrator.features()
+
+t_end = time.perf_counter()
+print(f"Simulation time: {t_end - t_start:.2f} seconds")
 
 features = integrator.get_observer_results()
 
@@ -124,6 +133,8 @@ integrator_traj = clode.TrajectorySimulator(
     reltol = 1e-5,
     max_steps = max_steps,
     max_store = max_steps,
+    platform_id=integrator.platform_id,
+    device_id=integrator.device_id,
 )
 
 traj_parameters = {"gca":points[:, 0], "kpmca": points[:, 1]}

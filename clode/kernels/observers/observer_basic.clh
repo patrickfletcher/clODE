@@ -14,8 +14,8 @@ struct ObserverState_basic
     realtype xTrajectoryIntegralCorrection;
     realtype dxTrajectoryMax;
     realtype dxTrajectoryMin;
-    realtype t_last;
-    realtype t_start;
+    realtype elapsed_total;
+    realtype elapsed_total_correction;
     unsigned int stepcount;
 };
 typedef struct ObserverState_basic ObserverState;
@@ -28,8 +28,8 @@ static inline void initializeObserverState(realtype *ti, realtype xi[], realtype
     od->xTrajectoryIntegralCorrection = ZERO;
     od->dxTrajectoryMax = -BIG_REAL;
     od->dxTrajectoryMin = BIG_REAL;
-    od->t_last = *ti;
-    od->t_start = *ti;
+    od->elapsed_total = ZERO;
+    od->elapsed_total_correction = ZERO;
     od->stepcount = 0;
 }
 //nothing to do - One pass detector
@@ -51,23 +51,30 @@ static inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dx
 }
 
 //all features are per-timestep (eventOccurred unused)
-static inline void updateObserverState(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverParams *op) {
+static inline void updateObserverState(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], const realtype stepDt, ObserverState *od, __constant struct ObserverParams *op) {
     ++od->stepcount;
-    realtype dt = *ti - od->t_last;
-    od->t_last = *ti;
-    realtype elapsedTime = *ti - od->t_start;
+    compensatedIntegrateConstant(
+        &od->elapsed_total,
+        &od->elapsed_total_correction,
+        stepDt,
+        ONE
+    );
+    realtype elapsedTotal = compensatedSumValue(
+        od->elapsed_total,
+        od->elapsed_total_correction
+    );
     od->xTrajectoryMax = fmax(xi[op->fVarIx], od->xTrajectoryMax);
     od->xTrajectoryMin = fmin(xi[op->fVarIx], od->xTrajectoryMin);
     compensatedIntegrateConstant(
         &od->xTrajectoryIntegral,
         &od->xTrajectoryIntegralCorrection,
-        dt,
+        stepDt,
         xi[op->fVarIx]
     );
     od->xTrajectoryMean = meanFromCompensatedIntegral(
         od->xTrajectoryIntegral,
         od->xTrajectoryIntegralCorrection,
-        elapsedTime
+        elapsedTotal
     );
     od->dxTrajectoryMax = fmax(dxi[op->fVarIx], od->dxTrajectoryMax);
     od->dxTrajectoryMin = fmin(dxi[op->fVarIx], od->dxTrajectoryMin);

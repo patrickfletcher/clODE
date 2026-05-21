@@ -65,8 +65,8 @@ time-based feature accumulators and event timestamps therefore requires the next
 window to start from the previous attained final time.
 
 For autonomous systems, prefer feature windows whose local origin stays near `t = 0` when
-absolute time is not part of the model. Large absolute times make float32 elapsed-time
-differences less reliable even when the trajectory state itself continues correctly.
+absolute time is not part of the model. Large absolute times still coarsen stored float32
+absolute timestamps even when the elapsed-time statistics stay accurate.
 
 If you call `features()` repeatedly without advancing `t_span`, you are not asking for the
 same thing as a single long run. For time-based observers, that can make the accumulated
@@ -91,17 +91,21 @@ If ensemble members finish at different times, `advance_tspan_to_attained_final_
 raises `ValueError`. In that case the caller still has to choose an explicit policy with
 `get_final_time()` and `set_tspan()` because there is no single correct shared-window update.
 
-## Current limitation
+## Current float32 limitation
 
-clODE still advances time by repeated float32 addition against the current absolute time inside the
-kernels. Whether the code is written as `ti += dt` or `ti = ti + dt` does not change the numerical
-issue: once `dt` is smaller than the spacing between adjacent representable values near `ti`, time
-updates lose significance and the simulation can break down.
+clODE no longer relies on one naive float32 absolute-time update path for every stepper. Fixed-step
+methods reconstruct time from `t0 + step * dt`, and adaptive methods keep a compensated
+solve-relative elapsed pair and reconstruct absolute times from `t0 + elapsed`.
+
+Those choices materially improve endpoint accuracy, elapsed-time bookkeeping, and split-window
+continuation behavior, but they do not change float32 spacing itself. At large absolute times,
+stored absolute timestamps are still quantized in `ulp(t)`-sized jumps, and once `dt < ulp(t)` no
+single float32 timestamp can resolve every intermediate step.
 
 Implications:
 
-- for autonomous systems, splitting a long run into shorter windows can delay the problem
-- for non-autonomous systems, this remains a real numerical limitation
+- for autonomous systems, shorter windows or local origins near zero still give cleaner float32 timestamps
+- for non-autonomous systems or workflows that need fine absolute-time resolution, double precision remains the safer choice
 
 For a reproducible float32 demonstration of this behavior, plus comparisons against compensated and
 structured time updates, see [numerical_accuracy.md](numerical_accuracy.md).

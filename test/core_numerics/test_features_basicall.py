@@ -198,6 +198,46 @@ def test_dormand_prince_basicall_hopf_cycle_statistics_match_exact_values() -> N
     np.testing.assert_allclose(output.get_var_mean("r2"), 1.0, atol=ADAPTIVE_ATOL, rtol=0.0)
 
 
+def test_dormand_prince_basicall_large_origin_matches_zero_origin_statistics() -> None:
+    duration = 4.0 * hopf_cycle_period()
+    kwargs = dict(
+        model_name="hopf_normal_form",
+        stepper=clode.Stepper.dormand_prince,
+        dt=0.05,
+        dtmax=0.1,
+        abstol=1e-7,
+        reltol=1e-6,
+        max_steps=4096,
+        single_precision=True,
+    )
+
+    zero_origin = make_feature_simulator(
+        t_span=(0.0, duration),
+        **kwargs,
+    ).features()
+    large_origin_simulator = make_feature_simulator(
+        t_span=(10000.0, 10000.0 + duration),
+        **kwargs,
+    )
+    large_origin = large_origin_simulator.features()
+
+    assert zero_origin is not None
+    assert large_origin is not None
+
+    np.testing.assert_allclose(
+        _feature_matrix(large_origin),
+        _feature_matrix(zero_origin),
+        atol=3e-4,
+        rtol=0.0,
+    )
+    np.testing.assert_allclose(
+        large_origin_simulator.get_final_time(),
+        [10000.0 + duration],
+        atol=3e-4,
+        rtol=0.0,
+    )
+
+
 def test_rk4_basicall_continuation_matches_single_run() -> None:
     full = make_feature_simulator(
         "stable_linear_aux",

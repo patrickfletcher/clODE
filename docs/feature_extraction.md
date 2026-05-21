@@ -45,6 +45,8 @@ The most directly useful current safeguards for oscillation-oriented observers a
 
 Not every field is active in every built-in observer, so treat observer parameters as mode-specific rather than assuming every knob has the same effect everywhere.
 
+Observer state also stays on the device for the duration of the solve, so its footprint depends on the observer mode, the model size, and `max_event_timestamps`. If you only need counts or summary statistics, keep `max_event_timestamps` as small as practical and prefer the lightest observer that answers the question.
+
 `threshold_2` stores up/down transition times with inverse-linear interpolation of the active threshold boundary. When a `dx` threshold is zero, that slope gate is ignored; when it is nonzero, the stored transition time is the later of the active `x` and `dx` boundary crossings within the step. `local_max` stores extrema using bounded three-sample quadratic refinement. See [numerical_accuracy.md](numerical_accuracy.md) for empirical tradeoffs and comparisons with alternative interpolation choices.
 
 Example:
@@ -80,8 +82,9 @@ fixed-step methods, time-based feature accumulators, event timestamps, and non-a
 systems.
 
 For autonomous systems, prefer feature windows whose local `t_span` starts near `0` when
-absolute time is not part of the model. Large absolute times make float32 elapsed-time
-differences and timestamps less reliable even when the state trajectory itself is well behaved.
+absolute time is not part of the model. Large absolute times still coarsen stored float32
+absolute timestamps even though the live observers keep elapsed-time statistics separate from
+those large absolute values.
 
 See `continuation.md` for the full continuation model and `examples/continuation.py` for a
 runnable comparison between one long feature run and split-window continuation.

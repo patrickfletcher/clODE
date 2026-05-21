@@ -8,10 +8,24 @@
 // Wrapper for fixed-step explicit steppers. The loop owns the integer step
 // count; this wrapper reconstructs absolute time from t0 + step * dt so the
 // kernels do not depend on repeated float32 time addition.
-static inline int stepper(realtype *ti, realtype xi[], realtype k1[], const realtype pars[], 
-__constant struct IntegrationSettings *settings, realtype *dt, __constant realtype *tspan, 
-realtype aux[], realtype wi[], __private struct rngData *rd, const ulong stepCount)
+static inline int stepper(
+    realtype *ti,
+    realtype *solveElapsed,
+    realtype *solveElapsedCorrection,
+    realtype xi[],
+    realtype k1[],
+    const realtype pars[],
+    __constant struct IntegrationSettings *settings,
+    realtype *dt,
+    __constant realtype *tspan,
+    realtype aux[],
+    realtype wi[],
+    __private struct rngData *rd,
+    realtype *acceptedStepDt,
+    const ulong stepCount
+)
 {
+    (void)settings;
     realtype stepStartTime = fixedStepTimeFromCounter(tspan[0], stepCount - (ulong)1, *dt);
     realtype stepMidTime = fixedStepTimeFromRealIndex(
         tspan[0],
@@ -24,6 +38,9 @@ realtype aux[], realtype wi[], __private struct rngData *rd, const ulong stepCou
     // reconstructed absolute time values.
     do_step(xi, k1, pars, *dt, stepStartTime, stepMidTime, stepEndTime, aux, wi);
     *ti = stepEndTime;
+    *solveElapsed = fixedStepTimeFromCounter(ZERO, stepCount, *dt);
+    *solveElapsedCorrection = ZERO;
+    *acceptedStepDt = *dt;
 
     // naive time update - this is the one consistent with what's in each stepper...
     // *ti += *dt;

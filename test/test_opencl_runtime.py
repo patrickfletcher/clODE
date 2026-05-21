@@ -5,12 +5,16 @@ from pathlib import Path
 import subprocess
 import sys
 import textwrap
+from types import SimpleNamespace
 
 import pytest
+
+import clode
 
 pyopencl = pytest.importorskip("pyopencl")
 
 from clode._opencl import BuildError, KernelKind, OpenCLRuntime, Precision, ProblemShape, SourceBuilder
+from clode._opencl.runtime import _selection_sort_key
 from clode.runtime.selection import RuntimeSelection
 from clode.problem._core import load_rhs_source
 from clode.runtime import _clode_root_dir
@@ -38,6 +42,14 @@ def _transient_source_bundle():
     )
 
 
+def _fake_platform(name: str, vendor: str) -> SimpleNamespace:
+    return SimpleNamespace(name=name, vendor=vendor)
+
+
+def _fake_device(device_type: int, *, vendor: str, name: str) -> SimpleNamespace:
+    return SimpleNamespace(type=device_type, vendor=vendor, name=name)
+
+
 def test_opencl_runtime_selects_explicit_device_and_reports_capabilities() -> None:
     runtime = OpenCLRuntime.create(**_explicit_runtime_kwargs())
 
@@ -45,6 +57,71 @@ def test_opencl_runtime_selects_explicit_device_and_reports_capabilities() -> No
     assert runtime.device_id == _explicit_runtime_kwargs()["device_id"]
     assert runtime.get_max_memory_alloc_size() > 0
     assert "OpenCL" in runtime.get_device_cl_version()
+
+
+def test_opencl_runtime_default_selection_prefers_gpu_when_available() -> None:
+    platforms = pyopencl.get_platforms()
+    has_gpu = any(
+        int(device.type) & int(clode.CLDeviceType.DEVICE_TYPE_GPU)
+        for platform in platforms
+        for device in platform.get_devices()
+    )
+    if not has_gpu:
+        pytest.skip("No GPU runtime is visible in this environment")
+
+    runtime = OpenCLRuntime.create()
+
+    assert int(runtime.device.type) & int(clode.CLDeviceType.DEVICE_TYPE_GPU)
+
+
+def test_selection_sort_key_prefers_gpu_over_cpu() -> None:
+    gpu_key = _selection_sort_key(
+        1,
+        0,
+        _fake_platform("NVIDIA CUDA", "NVIDIA Corporation"),
+        _fake_device(
+            int(clode.CLDeviceType.DEVICE_TYPE_GPU),
+            vendor="NVIDIA Corporation",
+            name="NVIDIA GeForce RTX 5080",
+        ),
+    )
+    cpu_key = _selection_sort_key(
+        0,
+        0,
+        _fake_platform("Portable Computing Language", "The pocl project"),
+        _fake_device(
+            int(clode.CLDeviceType.DEVICE_TYPE_CPU),
+            vendor="The pocl project",
+            name="pthread-cpu",
+        ),
+    )
+
+    assert gpu_key < cpu_key
+
+
+def test_selection_sort_key_prefers_non_pocl_cpu_over_pocl_cpu() -> None:
+    regular_cpu_key = _selection_sort_key(
+        0,
+        0,
+        _fake_platform("Intel(R) OpenCL", "Intel(R) Corporation"),
+        _fake_device(
+            int(clode.CLDeviceType.DEVICE_TYPE_CPU),
+            vendor="Intel(R) Corporation",
+            name="Intel(R) Xeon",
+        ),
+    )
+    pocl_cpu_key = _selection_sort_key(
+        1,
+        0,
+        _fake_platform("Portable Computing Language", "The pocl project"),
+        _fake_device(
+            int(clode.CLDeviceType.DEVICE_TYPE_CPU),
+            vendor="The pocl project",
+            name="pthread-cpu",
+        ),
+    )
+
+    assert regular_cpu_key < pocl_cpu_key
 
 
 def test_opencl_runtime_from_selection_accepts_explicit_device_id() -> None:
@@ -59,6 +136,27 @@ def test_opencl_runtime_from_selection_accepts_explicit_device_id() -> None:
 
     assert runtime.platform_id == _explicit_runtime_kwargs()["platform_id"]
     assert runtime.device_id == _explicit_runtime_kwargs()["device_id"]
+
+
+def test_simulator_exposes_concrete_selected_runtime() -> None:
+    simulator = clode.TrajectorySimulator(
+        src_file="test/van_der_pol_oscillator.cl",
+        variables={"x": 0.0, "y": 1.0},
+        parameters={"mu": 1.0},
+        stepper=clode.Stepper.rk4,
+        t_span=(0.0, 10.0),
+        **_explicit_runtime_kwargs(),
+    )
+
+    assert simulator.platform_id == _explicit_runtime_kwargs()["platform_id"]
+    assert simulator.device_id == _explicit_runtime_kwargs()["device_id"]
+    assert simulator.runtime_selection == RuntimeSelection(
+        device_type=None,
+        vendor=None,
+        platform_id=_explicit_runtime_kwargs()["platform_id"],
+        device_id=_explicit_runtime_kwargs()["device_id"],
+    )
+    assert "platform_id=" in simulator.runtime_description
 
 
 def test_opencl_runtime_from_selection_requires_explicit_device_id() -> None:

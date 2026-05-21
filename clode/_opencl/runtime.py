@@ -64,6 +64,78 @@ def _matches_vendor(device: Any, vendor: CLVendor | None) -> bool:
     return any(token in vendor_text for token in vendor_map.get(int(vendor), ()))
 
 
+def _device_priority(device: Any) -> int:
+    device_type_value = int(getattr(device, "type", 0))
+    if device_type_value & int(CLDeviceType.DEVICE_TYPE_GPU):
+        return 0
+    if device_type_value & int(CLDeviceType.DEVICE_TYPE_ACCELERATOR):
+        return 1
+    if device_type_value & int(CLDeviceType.DEVICE_TYPE_DEFAULT):
+        return 2
+    if device_type_value & int(CLDeviceType.DEVICE_TYPE_CPU):
+        return 3
+    if device_type_value & int(CLDeviceType.DEVICE_TYPE_CUSTOM):
+        return 4
+    return 5
+
+
+def _is_pocl_runtime(platform: Any, device: Any) -> bool:
+    haystack = " ".join(
+        str(value).lower()
+        for value in (
+            getattr(platform, "name", ""),
+            getattr(platform, "vendor", ""),
+            getattr(device, "name", ""),
+            getattr(device, "vendor", ""),
+        )
+    )
+    return "portable computing language" in haystack or "pocl" in haystack
+
+
+def _selection_sort_key(
+    platform_id: int,
+    device_id: int,
+    platform: Any,
+    device: Any,
+) -> tuple[int, int, int, int]:
+    return (
+        _device_priority(device),
+        1 if _is_pocl_runtime(platform, device) else 0,
+        platform_id,
+        device_id,
+    )
+
+
+def _select_matching_device(
+    platforms: list[Any],
+    device_type: CLDeviceType | None,
+    vendor: CLVendor | None,
+) -> tuple[object, object, int, int]:
+    candidates: list[tuple[int, int, object, object]] = []
+
+    for selected_platform_id, platform in enumerate(platforms):
+        for selected_device_id, device in enumerate(platform.get_devices()):
+            if not _matches_device_type(device, device_type):
+                continue
+            if not _matches_vendor(device, vendor):
+                continue
+            candidates.append((selected_platform_id, selected_device_id, platform, device))
+
+    if not candidates:
+        raise ValueError("No matching OpenCL device found")
+
+    selected_platform_id, selected_device_id, platform, device = min(
+        candidates,
+        key=lambda candidate: _selection_sort_key(
+            candidate[0],
+            candidate[1],
+            candidate[2],
+            candidate[3],
+        ),
+    )
+    return platform, device, selected_platform_id, selected_device_id
+
+
 @dataclass(slots=True)
 class OpenCLRuntime:
     context: object
@@ -120,20 +192,17 @@ class OpenCLRuntime:
         if device_id is not None:
             raise ValueError("Must specify platform_id when specifying device_id")
 
-        for selected_platform_id, platform in enumerate(platforms):
-            for selected_device_id, device in enumerate(platform.get_devices()):
-                if not _matches_device_type(device, device_type):
-                    continue
-                if not _matches_vendor(device, vendor):
-                    continue
-                return cls._from_selected_device(
-                    platform,
-                    device,
-                    selected_platform_id,
-                    selected_device_id,
-                )
-
-        raise ValueError("No matching OpenCL device found")
+        platform, device, selected_platform_id, selected_device_id = _select_matching_device(
+            platforms,
+            device_type,
+            vendor,
+        )
+        return cls._from_selected_device(
+            platform,
+            device,
+            selected_platform_id,
+            selected_device_id,
+        )
 
     @classmethod
     def from_selection(

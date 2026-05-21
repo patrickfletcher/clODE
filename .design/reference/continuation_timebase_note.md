@@ -13,6 +13,7 @@ Historical debugging detail from the earlier observer-time rebase investigation 
 - `_opencl/buffers.py` and `_opencl/executors.py` now persist RNG state, the Box-Muller spare normal, and the prepared next-step Wiener sample across `shift_x0()` plus `set_tspan()` continuation, while clearing the prepared Wiener state on explicit `x0` or problem or solver resets.
 - Exact absolute-time continuation still requires caller-managed `t_span`. For fixed-step runs, the robust handoff point is the attained `tf` returned by `get_final_time()`, not the requested endpoint.
 - Exact shared-window continuation is only representable when the ensemble agrees on one attained final time. Once work-items diverge in `tf`, there is no single correct next shared `t_span` update.
+- The live adaptive kernels now keep solve-local compensated elapsed time and observer-relative elapsed bookkeeping internally, but that state is reconstructed from the requested `tspan[0]` on each solve rather than being exposed as a new persisted host-visible current-time buffer.
 
 ## Remaining live design questions
 
@@ -23,8 +24,8 @@ Historical debugging detail from the earlier observer-time rebase investigation 
 - The Python-level `SolverState` first pass is now live; a full matched device-side solver-state struct remains optional future follow-through after continuation ergonomics and per-work-item time ownership are clearer.
 - Stochastic continuation details are now preserved, but they may want a clearer per-work-item RNG-state home if Random123 or related RNG work becomes active.
 - If the package wants repeated solve calls to continue exact absolute time after diverged per-item final times, it likely needs a per-work-item current-time or `t0` model rather than another shared-window helper.
-- Long-time time-base work remains separate future work; the live fixed-step path now reconstructs absolute time from `t0 + step * dt`, while the adaptive-step path still derives new times from the current float32 absolute time plus `dt`, so very long adaptive runs at small `dt` remain precision-sensitive.
-- The current narrow implementation slice now keeps that split explicit: fixed-step counter reconstruction is live, while adaptive-step time still wants a later dual-realtype compensated representation rather than another single-float variant.
+- Long-time time-base work remains separate future work; the live fixed-step path reconstructs absolute time from `t0 + step * dt`, while the live adaptive path reconstructs time from `tspan[0]` plus a compensated solve-relative elapsed pair. Very long runs at small `dt` are still limited by float32 absolute-time spacing when an output must be stored as one absolute timestamp.
+- The current narrow implementation slice now keeps that split explicit: fixed-step counter reconstruction and adaptive solve-relative compensated time are both live, while a persisted per-work-item current-time or `t0` model remains deferred until exact diverged-time continuation becomes a stronger requirement.
 - None of the current time/interpolation helper candidates requires the general nonlinear system solve machinery that later implicit methods will need; those larger dependencies should remain deferred with the implicit-stepper work itself.
 
 ## Current public-docs boundary

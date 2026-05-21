@@ -6,21 +6,44 @@
 #define EXPON RCONST(1.0)/(LOCAL_ERROR_ORDER+RCONST(1.0))  //controls error per unit step (err/dt~tol) -> global error proportional to tol (tolerance proportional) 
 
 //Wrapper to handle step-size adaptation.  note: wi should be zeros
-static inline int stepper(realtype *ti, realtype xi[], realtype k1[], const realtype pars[], 
-__constant struct IntegrationSettings *settings, realtype *dt, __constant realtype *tspan, 
-realtype aux[], realtype wi[], __private struct rngData *rd, const ulong stepCount)
+static inline int stepper(
+    realtype *ti,
+    realtype *solveElapsed,
+    realtype *solveElapsedCorrection,
+    realtype xi[],
+    realtype k1[],
+    const realtype pars[],
+    __constant struct IntegrationSettings *settings,
+    realtype *dt,
+    __constant realtype *tspan,
+    realtype aux[],
+    realtype wi[],
+    __private struct rngData *rd,
+    realtype *acceptedStepDt,
+    const ulong stepCount
+)
 {
     (void)stepCount;
-    realtype tNew, normErr, relErr, err[N_VAR], newxi[N_VAR], newk1[N_VAR];
+    (void)rd;
+    realtype tNew, normErr, err[N_VAR], newxi[N_VAR], newk1[N_VAR];
 
     realtype newDt = *dt;
     realtype threshold = settings->abstol / settings->reltol;
-    realtype hmin = RCONST(16.0) * fabs(fabs(nextafter(*ti, RCONST(1.1)*tspan[1])) - *ti); //matches Matlab: hmin=16*eps(t)
+    realtype currentTime = compensatedTimeFromOrigin(
+        tspan[0],
+        *solveElapsed,
+        *solveElapsedCorrection
+    );
+    realtype hmin = RCONST(16.0) * fabs(fabs(nextafter(currentTime, RCONST(1.1)*tspan[1])) - currentTime); //matches Matlab: hmin=16*eps(t)
+    realtype solveDuration = tspan[1] - tspan[0];
 
     bool noFailedSteps = true;
+    *acceptedStepDt = ZERO;
     while (true)
     {
-        tNew = *ti;
+        realtype trialElapsed = *solveElapsed;
+        realtype trialElapsedCorrection = *solveElapsedCorrection;
+        tNew = currentTime;
         for (int j = 0; j < N_VAR; j++)
         {
             newxi[j] = xi[j];
@@ -28,7 +51,19 @@ realtype aux[], realtype wi[], __private struct rngData *rd, const ulong stepCou
         }
 
         newDt = clamp(newDt, hmin, settings->dtmax); //limiters
-        newDt = do_step(&tNew, newxi, newk1, pars, newDt, aux, err, wi); //returns purified dt: roundoff reduces accuracy of ti+dt, so use the portion of dt that had an effect...
+        realtype attemptedDt = do_step(
+            tspan[0],
+            &trialElapsed,
+            &trialElapsedCorrection,
+            &tNew,
+            newxi,
+            newk1,
+            pars,
+            newDt,
+            aux,
+            err,
+            wi
+        );
 
         //Error estimation - elementwise
         for (int j = 0; j < N_VAR; j++)
@@ -39,7 +74,7 @@ realtype aux[], realtype wi[], __private struct rngData *rd, const ulong stepCou
         //shrink dt if too much error
         if (normErr > settings->reltol)
         {
-            if (newDt <= hmin)
+            if (attemptedDt <= hmin)
             {
                 *dt = hmin;
                 return -1;
@@ -49,15 +84,19 @@ realtype aux[], realtype wi[], __private struct rngData *rd, const ulong stepCou
             if (noFailedSteps)
             { //first failure: shrink proportional to error
                 noFailedSteps = false;
-                newDt *= fmax(ADAPTIVE_STEP_MAX_SHRINK, SAFETY_FACTOR*pow(settings->reltol / normErr, EXPON)); 
+                newDt = attemptedDt * fmax(ADAPTIVE_STEP_MAX_SHRINK, SAFETY_FACTOR*pow(settings->reltol / normErr, EXPON)); 
             }
             else
             { //repeated failed step: cut stepsize in half
-                newDt *= RCONST(0.5) ; 
+                newDt = attemptedDt * RCONST(0.5);
             }
         }
         else
         {
+            *solveElapsed = trialElapsed;
+            *solveElapsedCorrection = trialElapsedCorrection;
+            *acceptedStepDt = attemptedDt;
+            currentTime = tNew;
             break;
         }
     }
@@ -66,12 +105,14 @@ realtype aux[], realtype wi[], __private struct rngData *rd, const ulong stepCou
     if (noFailedSteps)
         newDt *= fmin(ADAPTIVE_STEP_MAX_GROW,  SAFETY_FACTOR*pow(settings->reltol / normErr, EXPON)); //matches matlab (double precision)
 
-    newDt = fmin(newDt, tspan[1] - tNew); //hit the final time exactly
+    realtype currentElapsed = compensatedTimeValue(*solveElapsed, *solveElapsedCorrection);
+    realtype remaining = fmax(ZERO, solveDuration - currentElapsed);
+    newDt = fmin(newDt, remaining); //hit the final time exactly
     newDt = clamp(newDt, hmin, settings->dtmax); //limiters
 
     //update the solution and dt
     *dt = newDt; //new step size to attempt on next step
-    *ti = tNew;
+    *ti = currentTime;
     for (int j = 0; j < N_VAR; j++)
     {
         xi[j] = newxi[j];

@@ -78,10 +78,11 @@ integrator = clode.FeatureSimulator(
     observer_min_imi=0.0,
     observer_max_event_count=50,
 )
+print(f"Using {integrator.runtime_description}")
 
 # set up the ensemble of systems
-nx = 256
-ny = 256
+nx = 96
+ny = 96
 nPts = nx * ny
 gca = np.linspace(550.0, 1050.0, nx)
 kpmca = np.linspace(0.095, 0.155, ny)
@@ -133,6 +134,8 @@ integrator_traj = clode.TrajectorySimulator(
     reltol = 1e-5,
     max_steps = max_steps,
     max_store = max_steps,
+    platform_id=integrator.platform_id,
+    device_id=integrator.device_id,
 )
 
 traj_parameters = {"gca":points[:, 0], "kpmca": points[:, 1]}

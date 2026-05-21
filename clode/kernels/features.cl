@@ -27,7 +27,7 @@ __kernel void features(
 	int i = get_global_id(0);
 	int nPts = get_global_size(0);
 
-	realtype ti, dt;
+	realtype ti, dt, solveElapsed, solveElapsedCorrection, acceptedStepDt;
     realtype p[N_PAR], xi[N_VAR], dxi[N_VAR];
     realtype auxi[N_AUX>0?N_AUX:1];
     realtype wi[N_WIENER>0?N_WIENER:1];
@@ -36,6 +36,9 @@ __kernel void features(
 	//get private copy of ODE parameters, initial data, and compute slope at initial state
 	ti = tspan[0];
     dt = d_dt[i];
+	solveElapsed = ZERO;
+	solveElapsedCorrection = ZERO;
+	realtype solveDuration = tspan[1] - tspan[0];
 
 	for (int j = 0; j < N_PAR; ++j)
 		p[j] = pars[j * nPts + i];
@@ -67,14 +70,32 @@ __kernel void features(
     int stepflag = 0;
 	bool eventOccurred;
 	bool terminalEvent;
-	while (ti < tspan[1] && step < (ulong)settings->max_steps)
+	while (
+		compensatedTimeValue(solveElapsed, solveElapsedCorrection) < solveDuration
+		&& step < settings->max_steps
+	)
 	{
 		++step;
-        stepflag = stepper(&ti, xi, dxi, p, settings, &dt, tspan, auxi, wi, &rd, step);
+		stepflag = stepper(
+			&ti,
+			&solveElapsed,
+			&solveElapsedCorrection,
+			xi,
+			dxi,
+			p,
+			settings,
+			&dt,
+			tspan,
+			auxi,
+			wi,
+			&rd,
+			&acceptedStepDt,
+			step
+		);
         // if (stepflag!=0)
             // break;
 
-		updateObserverState(&ti, xi, dxi, auxi, &observer_state, opars);
+		updateObserverState(&ti, xi, dxi, auxi, acceptedStepDt, &observer_state, opars);
 
 		eventOccurred = eventFunction(&ti, xi, dxi, auxi, &observer_state, opars);
 		if (eventOccurred)

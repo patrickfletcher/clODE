@@ -1,8 +1,13 @@
+from pathlib import Path
+
 import numpy as np
+import pyopencl
 import pyopencl.tools as cl_tools
 import pytest
 
 pytest.importorskip("pyopencl")
+
+import clode
 
 from clode._opencl import (
     OpenCLRuntime,
@@ -14,9 +19,13 @@ from clode._opencl import (
     pack_observer_runtime_settings,
     pack_trajectory_output_settings,
 )
+from clode.runtime import _clode_root_dir
 from clode.observers import ObserverParams
 from clode.simulation import SolverParams
 from test.core_numerics.helpers import TEST_DEVICE_ID, TEST_PLATFORM_ID
+
+
+KERNEL_ROOT = Path(_clode_root_dir)
 
 
 def _explicit_runtime_kwargs() -> dict[str, int]:
@@ -24,6 +33,17 @@ def _explicit_runtime_kwargs() -> dict[str, int]:
         "platform_id": 0 if TEST_PLATFORM_ID is None else TEST_PLATFORM_ID,
         "device_id": 0 if TEST_DEVICE_ID is None else TEST_DEVICE_ID,
     }
+
+
+def _build_program(
+    runtime: OpenCLRuntime,
+    source: str,
+    *,
+    extra_options: tuple[str, ...] = (),
+):
+    return pyopencl.Program(runtime.context, source).build(
+        options=["-DCLODE_SINGLE_PRECISION", f"-I{KERNEL_ROOT}", *extra_options]
+    )
 
 
 def test_internal_config_structs_use_device_matched_struct_dtypes() -> None:
@@ -118,3 +138,69 @@ def test_basic_observer_double_formula_underestimates_matched_struct_size() -> N
 
     assert matched_dtype.itemsize == 80
     assert matched_dtype.itemsize > 9 * np.dtype(np.float64).itemsize + np.dtype(np.uint32).itemsize
+
+
+@pytest.mark.parametrize(
+    ("observer", "observer_kwargs", "extra_options"),
+    [
+        (
+            clode.Observer.basic_all_variables,
+            {},
+            ("-DUSE_OBSERVER_BASIC_ALLVAR", "-DN_VAR=2", "-DN_AUX=0", "-DN_STORE_EVENTS=0"),
+        ),
+        (
+            clode.Observer.local_max,
+            {"observer_max_event_timestamps": 4},
+            ("-DUSE_OBSERVER_LOCAL_MAX", "-DN_VAR=2", "-DN_AUX=0", "-DN_STORE_EVENTS=4"),
+        ),
+        (
+            clode.Observer.neighbourhood_1,
+            {},
+            ("-DUSE_OBSERVER_NEIGHBORHOOD_1", "-DN_VAR=2", "-DN_AUX=0", "-DN_STORE_EVENTS=0"),
+        ),
+        (
+            clode.Observer.neighbourhood_2,
+            {"observer_max_event_timestamps": 4},
+            ("-DUSE_OBSERVER_NEIGHBORHOOD_2", "-DN_VAR=2", "-DN_AUX=0", "-DN_STORE_EVENTS=4"),
+        ),
+        (
+            clode.Observer.threshold_2,
+            {"observer_max_event_count": 50, "observer_max_event_timestamps": 50},
+            ("-DUSE_OBSERVER_THRESHOLD_2", "-DN_VAR=2", "-DN_AUX=0", "-DN_STORE_EVENTS=50"),
+        ),
+    ],
+)
+def test_observer_metadata_struct_size_matches_kernel_struct(
+    observer, observer_kwargs, extra_options
+) -> None:
+    runtime = OpenCLRuntime.create(**_explicit_runtime_kwargs())
+    simulator = clode.FeatureSimulator(
+        src_file="test/van_der_pol_oscillator.cl",
+        variables={"x": 0.0, "y": 1.0},
+        parameters={"mu": 1.0},
+        observer=observer,
+        stepper=clode.Stepper.rk4,
+        t_span=(0.0, 10.0),
+        **observer_kwargs,
+        **_explicit_runtime_kwargs(),
+    )
+
+    program = _build_program(
+        runtime,
+        """
+        #include \"clODE_utilities.cl\"
+        #include \"observers.cl\"
+
+        __kernel void observer_state_size(__global ulong *out) {
+            out[0] = (ulong)sizeof(ObserverState);
+        }
+        """,
+        extra_options=extra_options,
+    )
+
+    out = np.empty(1, dtype=np.uint64)
+    out_buffer = pyopencl.Buffer(runtime.context, pyopencl.mem_flags.WRITE_ONLY, out.nbytes)
+    program.observer_state_size(runtime.queue, (1,), None, out_buffer)
+    pyopencl.enqueue_copy(runtime.queue, out, out_buffer).wait()
+
+    assert int(out[0]) == simulator._integrator._feature_metadata.observer_state_nbytes

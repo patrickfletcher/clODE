@@ -9,6 +9,7 @@
 struct ObserverState_localmax
 {
     realtype tbuffer[3];
+    realtype elapsedbuffer[3];
     realtype xbuffer[3 * N_VAR]; // just keep fVar? conceptually simplest
     realtype dxbuffer[3 * N_VAR];
 
@@ -21,23 +22,24 @@ struct ObserverState_localmax
     realtype auxTrajectoryMax[N_AUX];
     realtype auxTrajectoryMin[N_AUX];
     realtype auxTrajectoryMean[N_AUX];
-
-    realtype tMaxList[N_STORE_EVENTS];
-    realtype xMaxList[N_STORE_EVENTS];
-    realtype tMinList[N_STORE_EVENTS];
-    realtype xMinList[N_STORE_EVENTS];
     
     realtype IMI[3]; //max/min/mean
     realtype amp[3]; //max/min/mean
 
-    realtype t_start;
+    realtype elapsedTotal;
     realtype tLastMax;
+    realtype elapsedLastMax;
     //realtype xLastMax;
     realtype tLastMin;
     realtype xLastMin;
 
     unsigned int eventcount;
     unsigned int stepcount;
+
+    realtype tMaxList[N_STORE_EVENTS];
+    realtype xMaxList[N_STORE_EVENTS];
+    realtype tMinList[N_STORE_EVENTS];
+    realtype xMinList[N_STORE_EVENTS];
 
 };
 
@@ -46,6 +48,7 @@ typedef struct ObserverState_localmax ObserverState;
 //set initial values to relevant fields in ObserverState
 static inline void initializeObserverState(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverParams *op) {
     od->tbuffer[2] = *ti;
+    od->elapsedbuffer[2] = ZERO;
     for (int j = 0; j < N_VAR; ++j) {
         od->xbuffer[j * 3 + 2] = xi[j];
         od->dxbuffer[j * 3 + 2] = dxi[j];
@@ -79,8 +82,9 @@ static inline void initializeObserverState(realtype *ti, realtype xi[], realtype
     od->amp[1] = BIG_REAL;
     od->amp[2] = ZERO;
 
-    od->t_start = *ti;
+    od->elapsedTotal = ZERO;
     od->tLastMax = ZERO;
+    od->elapsedLastMax = ZERO;
     od->tLastMin = ZERO;
     od->xLastMin = BIG_REAL;
 
@@ -112,15 +116,19 @@ static inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dx
     
     // Refine the buffered extremum with the shared bounded quadratic helper.
     realtype thisTbuffer[3];
+    realtype thisElapsedBuffer[3];
     realtype thisXbuffer[3];
     for (int j = 0; j < 3; ++j) {
 	 	thisTbuffer[j] = od->tbuffer[j];
+	 	thisElapsedBuffer[j] = od->elapsedbuffer[j];
 	 	thisXbuffer[j] = od->xbuffer[op->fVarIx * 3 + j];
     }
 
     realtype tThisMax;
+    realtype elapsedThisMax;
     realtype xThisMax;
     localMaximumFromThreeSamples(thisTbuffer, thisXbuffer, &tThisMax, &xThisMax);
+    localMaximumFromThreeSamples(thisElapsedBuffer, thisXbuffer, &elapsedThisMax, &xThisMax);
 
 
     ++od->eventcount;
@@ -128,7 +136,7 @@ static inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dx
     if (od->eventcount > 1) { //implies tLastMax, tLastMin and xLastMin are set
 
         //max/min/mean IMI
-        realtype thisIMI = tThisMax - od->tLastMax;
+        realtype thisIMI = elapsedThisMax - od->elapsedLastMax;
         //if(thisIMI > op->minIMI) {
         od->IMI[0] = fmax(thisIMI, od->IMI[0]);
         od->IMI[1] = fmin(thisIMI, od->IMI[1]);
@@ -146,6 +154,7 @@ static inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dx
 
     //update stored "last" values
     od->tLastMax = tThisMax;
+    od->elapsedLastMax = elapsedThisMax;
     // od->xLastMax = xThisMax;
 
 	if (od->eventcount <= N_STORE_EVENTS){
@@ -163,13 +172,17 @@ static inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dx
 // - advance solution/slope buffers
 // - check for any intermediate special points & store their info
 // - reset intermediates upon local max event detection
-static inline void updateObserverState(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverParams *op) {
+static inline void updateObserverState(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], const realtype stepDt, ObserverState *od, __constant struct ObserverParams *op) {
     ++od->stepcount;
+    od->elapsedTotal += stepDt;
 
     // advance solution buffer
     od->tbuffer[0] = od->tbuffer[1];
     od->tbuffer[1] = od->tbuffer[2];
     od->tbuffer[2] = *ti;
+    od->elapsedbuffer[0] = od->elapsedbuffer[1];
+    od->elapsedbuffer[1] = od->elapsedbuffer[2];
+    od->elapsedbuffer[2] = od->elapsedTotal;
 
     for (int j = 0; j < N_VAR; ++j) {
         od->xbuffer[j * 3 + 0] = od->xbuffer[j * 3 + 1];
@@ -180,22 +193,18 @@ static inline void updateObserverState(realtype *ti, realtype xi[], realtype dxi
         od->dxbuffer[j * 3 + 2] = dxi[j];
     }
 
-    // dt is available in the calling ode-driver. 
-    realtype dt = od->tbuffer[2]-od->tbuffer[1];
-    realtype elapsedTime = *ti - od->t_start;
-
     //global extent of all vars, var slopes, and aux vars
     for (int j = 0; j < N_VAR; ++j) {
         od->xTrajectoryMax[j] = fmax(xi[j], od->xTrajectoryMax[j]);
         od->xTrajectoryMin[j] = fmin(xi[j], od->xTrajectoryMin[j]);
-        od->xTrajectoryMean[j] = runningMeanTime(od->xTrajectoryMean[j], xi[j], dt, elapsedTime);
+        od->xTrajectoryMean[j] = runningMeanTime(od->xTrajectoryMean[j], xi[j], stepDt, od->elapsedTotal);
         od->dxTrajectoryMax[j] = fmax(dxi[j], od->dxTrajectoryMax[j]);
         od->dxTrajectoryMin[j] = fmin(dxi[j], od->dxTrajectoryMin[j]);
     }
     for (int j = 0; j < N_AUX; ++j) {
         od->auxTrajectoryMax[j] = fmax(auxi[j], od->auxTrajectoryMax[j]);
         od->auxTrajectoryMin[j] = fmin(auxi[j], od->auxTrajectoryMin[j]);
-        od->auxTrajectoryMean[j] = runningMeanTime(od->auxTrajectoryMean[j], auxi[j], dt, elapsedTime);
+        od->auxTrajectoryMean[j] = runningMeanTime(od->auxTrajectoryMean[j], auxi[j], stepDt, od->elapsedTotal);
     }
 
     // if (od->stepcount < 2)

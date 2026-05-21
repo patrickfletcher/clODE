@@ -194,6 +194,32 @@ static inline realtype compensatedTimeValue(realtype timeValue, realtype timeCor
 	return timeValue + timeCorrection;
 }
 
+static inline realtype compensatedTimeValueAfterStep(
+	realtype timeValue,
+	realtype timeCorrection,
+	realtype dt
+) {
+	compensatedTimeAdd(&timeValue, &timeCorrection, dt);
+	return compensatedTimeValue(timeValue, timeCorrection);
+}
+
+static inline realtype compensatedTimeFromOrigin(
+	realtype origin,
+	realtype elapsed,
+	realtype elapsedCorrection
+) {
+	return origin + compensatedTimeValue(elapsed, elapsedCorrection);
+}
+
+static inline realtype compensatedTimeFromOriginAfterStep(
+	realtype origin,
+	realtype elapsed,
+	realtype elapsedCorrection,
+	realtype dt
+) {
+	return origin + compensatedTimeValueAfterStep(elapsed, elapsedCorrection, dt);
+}
+
 // Fixed-step prototype: reconstruct absolute time from the step counter rather
 // than by repeated addition. A 64-bit counter improves overflow headroom, but
 // the returned realtype still obeys float32/float64 spacing limits.

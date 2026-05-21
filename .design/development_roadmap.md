@@ -20,14 +20,14 @@ Use `.design/ideas.md` as the short living board. This file is the longer ration
 
 ### Current weaknesses
 
-- Continuation correctness is much better, and the first-pass Python-owned solver-state model, the integration/output split, the observer-definition cleanup, the execution-setting cleanup, the observer-surface cleanup, and the stepper-definition cleanup are now live all the way into the OpenCL layer. The next structural bottlenecks are broader numerical-helper adoption, deeper component-test follow-through, and later diverged-time solver-state work on top of those landed catalogs.
+- Continuation correctness is much better, and the first-pass Python-owned solver-state model, the integration/output split, the observer-definition cleanup, the execution-setting cleanup, the observer-surface cleanup, the stepper-definition cleanup, and the adaptive-time elapsed-bookkeeping hardening are now live all the way into the OpenCL layer. The next structural bottlenecks are stronger numerical-validation evidence, selective observer-state and private-memory follow-through in the heavier feature kernels, and later diverged-time solver-state work on top of those landed catalogs.
 - A first-pass IVP model now exists, and the curated public problem layer now centers `InitialValueProblem`; lower-level support types and source-preparation helpers are internal support concepts rather than promoted surface area.
 - Simulators still carry some semantic weight through compatibility delegates and cached mirrored problem data even though the core defaults and batch semantics now live on the IVP.
 - The next internal friction point is clearer now: the internal execution model is much more coherent, but repeated-solve continuation still has one real representational limit because a shared requested window cannot encode exact continuation after diverged per-work-item final times.
 - Each work item effectively owns `dt` and attained `tf`, but not an explicit `t0` or completion/error flags. That leaves friction around continuation helpers and windows where work items diverge.
 - The new `test/kernel_components/` layer is a real improvement, but it is still intentionally small: helper math plus direct `basic`, `basicall`, `threshold_2`, and `local_max` observer contracts are now testable, while broader component coverage still needs follow-through.
 - The exact-solution regression spine is stronger than before, but solver-validation coverage is still partly ad hoc: `test/core_numerics/` has small exact-reference models, while dedicated nonlinear exact-solution coverage and explicit global-error or convergence-rate checks are not yet organized as one slim maintained suite.
-- Precision-sensitive kernel math now has a first shared helper foundation in `clODE_utilities.cl`, but broader adoption across the remaining observers and the stepper time-base path still needs deliberate follow-through and better public empirical justification.
+- Precision-sensitive kernel math now has live fixed-step counter time, adaptive compensated elapsed time, and relative elapsed bookkeeping in the affected observers, but the validation bundle and any broader remaining helper adoption still need deliberate follow-through and better public empirical justification.
 - `SolverParams` still mixes integration policy with output-storage policy. That makes chunking, batching, and trajectory streaming harder than they need to be.
 - `FeatureSimulator` still exposes a large legacy `observer_*` scalar compatibility surface alongside `ObserverParams`, but those compatibility inputs now resolve through one canonical `ObserverParams` path instead of carrying separate in-place observer semantics.
 - Some public compatibility bundles and kernel-layer entrypoints still straddle clearer Python-owned semantic definitions, especially `SolverParams` and the legacy observer-parameter surface.
@@ -39,38 +39,29 @@ Use `.design/ideas.md` as the short living board. This file is the longer ration
 
 The next planning pass should stay centered on one product story: fast large-ensemble workflows where users mainly want final states or on-device features, and where single-precision robustness is part of the value rather than a later cleanup. That points to a short sequence of grouped PRs rather than many independent P1 lines.
 
-### 1. Adaptive-time single-precision hardening
-
-Keep the current active target in `.design/next_pr.md`: move adaptive-time bookkeeping off one float32 absolute time plus `dt`, limit observer follow-on changes to elapsed-time-sensitive paths, and land the focused docs and coverage needed to support the claim.
-
-Why first:
-
-- it closes the largest remaining numerics gap in the current feature-first and final-state workflows
-- it keeps the package narrative aligned with evidence-backed single-precision mitigation instead of broad claims
-
-### 2. Execution-state and invalidation hardening
-
-Group the next Python-side cleanup into one PR family: solver-state or solution-buffer abstraction shared by steppers and observers, explicit build-spec versus runtime-state rebuild policy, and the direct component coverage needed to keep those rules stable.
-
-Why second:
-
-- it is the highest-leverage host-side change for future numerics work
-- it reduces reasoning overhead around rebuilds, buffer layout changes, observer changes, and continuation state
-
-### 3. Numerical validation and evidence bundle
+### 1. Numerical validation and evidence bundle
 
 Keep the next validation pass narrow and purposeful: a slim exact-solution solver-validation suite, alignment of precision-sensitive reference helpers with the live solver semantics, and public examples or docs that show where the adopted single-precision safeguards matter in practice.
 
-Why third:
+Why first:
 
 - it strengthens the proof layer without turning into a broad test-suite rewrite
 - it supports the package's numerical claims with curated evidence rather than anecdotal demos
 
-### 4. Large-ensemble execution ergonomics
+### 2. Observer-state and register-pressure audit
 
-After the numerics and execution contracts are clearer, group the large-ensemble ergonomics work around IVP-side batch-generation helpers and device-capacity ensemble batching. Keep broader trajectory chunking, dense output, and output-surface expansion as later follow-ons unless they directly strengthen the final-state or feature-first workflows.
+After the proof layer is tighter, audit the heavier feature kernels with throughput in mind: per-work-item observer state, retained event storage, and avoidable private scratch should all be measured and trimmed selectively. Keep low-risk tidy-ups separate from any deeper observer-time architecture redesign.
 
-Why fourth:
+Why second:
+
+- it responds directly to the main remaining performance risk in large feature sweeps without guessing at a redesign first
+- it lets benchmarks decide whether deeper observer-time changes belong in a later design pass or should stay as backlog ideas
+
+### 3. Large-ensemble execution ergonomics
+
+After the validation bundle and observer-footprint audit are clearer, group the large-ensemble ergonomics work around IVP-side batch-generation helpers and device-capacity ensemble batching. Keep broader trajectory chunking, dense output, and output-surface expansion as later follow-ons unless they directly strengthen the final-state or feature-first workflows.
+
+Why third:
 
 - it aligns performance work with the package's main workflow niche
 - it avoids spending the next planning cycle on broader trajectory breadth before the final-state and feature paths are fully hardened
@@ -323,8 +314,8 @@ Packaging note:
 ## Recommended Order Of Attack
 
 1. The conservative live helper slice is now landed: inverse-linear upward threshold timestamps, bounded three-sample extrema, and fixed-step counter time where the current structure supports them cleanly.
-2. Next, revisit the adaptive-time companion work: a dual-realtype compensated time base plus relative elapsed bookkeeping where the fixed-step shortcut does not apply.
-3. After that, revisit deeper time-base refinements, any per-work-item `t0` follow-through, and later implicit-solver groundwork.
-4. Finally, return to broader runtime-surface and package cleanup once those internal semantics settle.
+2. The adaptive-time companion work is now landed as well: compensated solve-relative adaptive time plus relative elapsed bookkeeping where the fixed-step shortcut does not apply.
+3. Next, tighten the proof layer with a numerical validation and evidence bundle that keeps the public docs aligned with the live helper and continuation behavior.
+4. After that, run a selective observer-state and register-pressure audit before revisiting broader large-ensemble ergonomics, deeper time-base refinements, any per-work-item `t0` follow-through, and later implicit-solver groundwork.
 
 Any broader public continuation or config cleanup, richer IVP batch helpers, broader solver interop, and citation or release-facing packaging work should follow only once those internal numerical, testing, continuation, and observer or stepper boundaries are stable enough that they are unlikely to be redesigned immediately afterward.

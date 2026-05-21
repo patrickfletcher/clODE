@@ -24,10 +24,27 @@
 #define E4 RCONST(-1.0)/RCONST(8.0)
 
 //this is ode23 in matlab
-static inline realtype do_step(realtype *ti, realtype xi[], realtype k1[], const realtype pars[], const realtype dt, realtype aux[], realtype err[], const realtype wi[])
+static inline realtype do_step(
+    const realtype tOrigin,
+    realtype *elapsed,
+    realtype *elapsedCorrection,
+    realtype *ti,
+    realtype xi[],
+    realtype k1[],
+    const realtype pars[],
+    const realtype dt,
+    realtype aux[],
+    realtype err[],
+    const realtype wi[]
+)
 {
-    realtype tNew = *ti + dt;
-    realtype newDt = tNew - *ti; //use the effective part of dt
+    realtype newDt = dt;
+    realtype tNew = compensatedTimeFromOriginAfterStep(
+        tOrigin,
+        *elapsed,
+        *elapsedCorrection,
+        newDt
+    );
     realtype xtmp[N_VAR], k2[N_VAR], k3[N_VAR], k4[N_VAR];
 
     //expects k1 to be precomputed (FSAL)
@@ -35,12 +52,36 @@ static inline realtype do_step(realtype *ti, realtype xi[], realtype k1[], const
     //compute k2: xtmp[k]=xi[k]+h2*k1[k]; xtmp[k] = fma(h2, k1[k], xi[k]);
     for (int k = 0; k < N_VAR; k++)
         xtmp[k]=xi[k] + newDt * RCONST(0.5) * k1[k];
-    getRHS(*ti + newDt * RCONST(0.5), xtmp, pars, k2, aux, wi);
+    getRHS(
+        compensatedTimeFromOriginAfterStep(
+            tOrigin,
+            *elapsed,
+            *elapsedCorrection,
+            newDt * RCONST(0.5)
+        ),
+        xtmp,
+        pars,
+        k2,
+        aux,
+        wi
+    );
 
     //compute k3: xtmp[k]=xi[k]+h3*k2[k]; xtmp[k] = fma(h3, k2[k], xi[k]);
     for (int k = 0; k < N_VAR; k++)
         xtmp[k]=xi[k] + newDt * RCONST(0.75) * k2[k]; 
-    getRHS(*ti + newDt * RCONST(0.75), xtmp, pars, k3, aux, wi);
+    getRHS(
+        compensatedTimeFromOriginAfterStep(
+            tOrigin,
+            *elapsed,
+            *elapsedCorrection,
+            newDt * RCONST(0.75)
+        ),
+        xtmp,
+        pars,
+        k3,
+        aux,
+        wi
+    );
 
     //update xi
     for (int k = 0; k < N_VAR; k++)
@@ -58,6 +99,7 @@ static inline realtype do_step(realtype *ti, realtype xi[], realtype k1[], const
         k1[k] = k4[k]; //first same as last (FSAL) property
     }
 
-    *ti = tNew;
+    compensatedTimeAdd(elapsed, elapsedCorrection, newDt);
+    *ti = compensatedTimeFromOrigin(tOrigin, *elapsed, *elapsedCorrection);
     return newDt;
 }

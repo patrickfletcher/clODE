@@ -8,6 +8,7 @@ Most users do not need to call `initialize_runtime(...)` directly. The common pa
 ## Automatic selection
 
 If you do not pass any runtime-selection arguments, clODE chooses a default device automatically.
+When more than one matching runtime is visible, clODE prefers GPUs first, then accelerators, then other devices, and treats PoCL-style CPU backends as lower priority fallbacks.
 
 ```python
 import clode
@@ -97,5 +98,26 @@ simulator.print_devices()
 ```
 
 Like `clode.print_opencl()`, this is an explicit report helper and does not depend on the current logging configuration.
+
+To inspect the concrete device that a simulator actually bound to, use its selected platform and device IDs or its runtime description:
+
+```python
+print(simulator.runtime_description)
+print(simulator.platform_id, simulator.device_id)
+```
+
+Those properties are useful when you want a follow-on simulator to reuse the same concrete runtime:
+
+```python
+trajectory_simulator = clode.TrajectorySimulator(
+    src_file="test/van_der_pol_oscillator.cl",
+    variables={"x": 0.0, "y": 1.0},
+    parameters={"mu": 1.0},
+    stepper=clode.Stepper.dormand_prince,
+    t_span=(0.0, 1000.0),
+    platform_id=simulator.platform_id,
+    device_id=simulator.device_id,
+)
+```
 
 Platform ordering can differ from `clinfo -l`. clODE reports the PyOpenCL-visible ordering, so choose platform and device IDs from `clode.query_opencl()` or `clode.print_opencl()` rather than assuming the `clinfo` order matches.

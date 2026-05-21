@@ -55,10 +55,27 @@
 #define E6 RCONST(22.0)/RCONST(525.0)
 #define E7 RCONST(-1.0)/RCONST(40.0)
 
-static inline realtype do_step(realtype *ti, realtype xi[], realtype k1[], const realtype pars[], const realtype dt, realtype aux[], realtype err[], const realtype wi[])
+static inline realtype do_step(
+    const realtype tOrigin,
+    realtype *elapsed,
+    realtype *elapsedCorrection,
+    realtype *ti,
+    realtype xi[],
+    realtype k1[],
+    const realtype pars[],
+    const realtype dt,
+    realtype aux[],
+    realtype err[],
+    const realtype wi[]
+)
 {
-    realtype tNew = *ti + dt;
-    realtype newDt = tNew - *ti; //use the effective part of dt
+    realtype newDt = dt;
+    realtype tNew = compensatedTimeFromOriginAfterStep(
+        tOrigin,
+        *elapsed,
+        *elapsedCorrection,
+        newDt
+    );
     realtype xtmp[N_VAR], k2[N_VAR], k3[N_VAR], k4[N_VAR], k5[N_VAR], k6[N_VAR], k7[N_VAR];
     //matlab: k <-> f, x <-> y, 
 
@@ -67,27 +84,75 @@ static inline realtype do_step(realtype *ti, realtype xi[], realtype k1[], const
     //compute k2
     for (int k = 0; k < N_VAR; k++)
         xtmp[k] = xi[k] + newDt * (B21 * k1[k]);
-    getRHS(*ti + A2 * newDt, xtmp, pars, k2, aux, wi);
+    getRHS(
+        compensatedTimeFromOriginAfterStep(
+            tOrigin,
+            *elapsed,
+            *elapsedCorrection,
+            A2 * newDt
+        ),
+        xtmp,
+        pars,
+        k2,
+        aux,
+        wi
+    );
 
     //compute k3
     for (int k = 0; k < N_VAR; k++)
         xtmp[k] = xi[k] + newDt * (B31 * k1[k] + B32 * k2[k]);
-    getRHS(*ti + A3 * newDt, xtmp, pars, k3, aux, wi);
+    getRHS(
+        compensatedTimeFromOriginAfterStep(
+            tOrigin,
+            *elapsed,
+            *elapsedCorrection,
+            A3 * newDt
+        ),
+        xtmp,
+        pars,
+        k3,
+        aux,
+        wi
+    );
 
     //compute k4
     for (int k = 0; k < N_VAR; k++)
         xtmp[k] = xi[k] + newDt * (B41 * k1[k] + B42 * k2[k] + B43 * k3[k]);
-    getRHS(*ti + A4 * newDt, xtmp, pars, k4, aux, wi);
+    getRHS(
+        compensatedTimeFromOriginAfterStep(
+            tOrigin,
+            *elapsed,
+            *elapsedCorrection,
+            A4 * newDt
+        ),
+        xtmp,
+        pars,
+        k4,
+        aux,
+        wi
+    );
 
     //compute k5
     for (int k = 0; k < N_VAR; k++)
         xtmp[k] = xi[k] + newDt * (B51 * k1[k] + B52 * k2[k] + B53 * k3[k] + B54 * k4[k]);
-    getRHS(*ti + A5 * newDt, xtmp, pars, k5, aux, wi);
+    getRHS(
+        compensatedTimeFromOriginAfterStep(
+            tOrigin,
+            *elapsed,
+            *elapsedCorrection,
+            A5 * newDt
+        ),
+        xtmp,
+        pars,
+        k5,
+        aux,
+        wi
+    );
 
     //compute k6
     for (int k = 0; k < N_VAR; k++)
         xtmp[k] = xi[k] + newDt * (B61 * k1[k] + B62 * k2[k] + B63 * k3[k] + B64 * k4[k] + B65 * k5[k]);
-    getRHS(*ti + newDt, xtmp, pars, k6, aux, wi);
+    getRHS(tNew, xtmp, pars, k6, aux, wi);
 
     //update xi
     for (int k = 0; k < N_VAR; k++)
@@ -105,7 +170,8 @@ static inline realtype do_step(realtype *ti, realtype xi[], realtype k1[], const
         k1[k] = k7[k];                                                                                 //first same as last (FSAL) property
     }
 
-    *ti=tNew;
+    compensatedTimeAdd(elapsed, elapsedCorrection, newDt);
+    *ti = compensatedTimeFromOrigin(tOrigin, *elapsed, *elapsedCorrection);
     return newDt;
 
 }

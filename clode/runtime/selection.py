@@ -173,10 +173,36 @@ class OpenCLResource:
         self._platform_id = self._opencl_runtime.platform_id
         self._device_id = self._opencl_runtime.device_id
 
+    @property
+    def platform_id(self) -> int:
+        if self._platform_id is None:
+            raise RuntimeError("OpenCL runtime has not selected a platform yet")
+        return self._platform_id
+
+    @property
+    def device_id(self) -> int:
+        if self._device_id is None:
+            raise RuntimeError("OpenCL runtime has not selected a device yet")
+        return self._device_id
+
+    @property
+    def runtime_selection(self) -> RuntimeSelection:
+        return RuntimeSelection(
+            device_type=None,
+            vendor=None,
+            platform_id=self.platform_id,
+            device_id=self.device_id,
+        )
+
+    def describe(self) -> str:
+        if self._opencl_runtime is None:
+            raise RuntimeError("OpenCL runtime is not initialized")
+        return self._opencl_runtime.describe()
+
     def _ensure_selected_opencl_device(self, device_id: int) -> None:
         if self._opencl_runtime is None:
             return
-        selected_device_id = 0 if self._device_id is None else self._device_id
+        selected_device_id = self.device_id
         if device_id not in {0, selected_device_id}:
             raise ValueError(
                 "OpenCL runtime resource is bound to a single selected device"
