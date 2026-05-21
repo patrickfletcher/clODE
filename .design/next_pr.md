@@ -27,6 +27,8 @@ Adaptive-time compensated time base and observer elapsed-time follow-on
 
 The conservative live-helper slice is now landed. The largest remaining numerics risk with clear evidence is the adaptive-time path: long absolute-time runs and large-origin feature windows still depend on one float32 absolute-time value and on subtracting large float32 timestamps in observer bookkeeping.
 
+This keeps the package aligned with the main product story: fast large-ensemble workflows where users mostly want final states or on-device features, and where single-precision robustness needs to be demonstrably better rather than assumed.
+
 This is the right next PR because it attacks the remaining root cause instead of broadening helper adoption opportunistically. A solver-owned compensated adaptive-time path plus observer-facing relative elapsed bookkeeping should improve real behavior where the fixed-step counter shortcut does not apply, while keeping the public API stable and leaving implicit-method work for later.
 
 ## Scope
@@ -98,4 +100,10 @@ This is the right next PR because it attacks the remaining root cause instead of
 
 ## Follow-on If This Lands Cleanly
 
-If this lands cleanly, the next high-value follow-on should stay selective: broader observer-helper rollout only where the evidence remains strong, then the remaining solver-state and continuation-policy work such as richer diverged-time continuation or a fuller per-work-item state model. Any helper that would need general nonlinear system solve machinery should still wait for the later implicit-method work.
+If this lands cleanly, the next grouped follow-ons should stay selective and ordered:
+
+1. execution-state and invalidation hardening: solver-state or solution-buffer abstraction, explicit rebuild-policy boundaries, and direct build-key or component coverage
+2. numerical validation and evidence: a slim exact-solution suite plus public demonstrations of where the adopted precision safeguards matter
+3. large-ensemble ergonomics: IVP-side batch-generation helpers and device-capacity ensemble batching before broader trajectory-output expansion
+
+Keep broader observer-helper rollout, source-assembly reshaping, broader PyOpenCL helper leverage, and any helper that would need general nonlinear system solve machinery deferred until those grouped follow-ons settle.

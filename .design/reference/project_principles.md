@@ -17,6 +17,7 @@ This note is not a backlog and does not override the root `.design` docs.
 - Preserve numerical behavior and correctness before simplifying internals or broadening scope.
 - Treat the current OpenCL ensemble execution model as core to the package: one work-item advances one ODE instance, builds are specialized by precision, stepper, observer, and problem shape, and Python-side array layout remains Fortran-order unless there is an explicit design decision to change it.
 - Keep feature extraction as a first-class workflow, not a side effect of trajectory simulation. Stateful observers and on-device feature or event computation are part of clODE's distinctive value.
+- Treat robust single-precision mitigation as part of the product value for long-window and large-origin ensemble workflows, and widen mitigation scope only when the empirical evidence stays clear.
 - Prefer exact-solution, contract, and parity-style regressions when changing numerical or semantic behavior.
 - Favor explicit continuation and reproducibility semantics over convenience heuristics that hide the difference between requested time windows and attained final time.
 - Prefer reusable kernel-side numerical helpers and component-level regressions for precision-sensitive observer and stepper logic over duplicated ad hoc arithmetic hidden inside many individual kernels.
@@ -24,6 +25,7 @@ This note is not a backlog and does not override the root `.design` docs.
 ### Workflow And Ecosystem Positioning
 
 - Optimize for large ensembles, parameter sweeps, repeated stochastic realizations, and online feature extraction from Python.
+- Center the public narrative on large-ensemble workflows where the desired output is a final state or an on-device feature or event summary; full trajectory output stays supported, but it is not the defining center of the package.
 - Support multiple model-ingestion paths when they serve the same core workflow: typed Python RHS functions, OpenCL source files, and XPP models.
 - Keep the package narrative workflow-shaped rather than trying to present clODE as the broadest general-purpose ODE ecosystem.
 - Position clODE as a pragmatic niche between CPU-first general-purpose integrators, broader Julia solver ecosystems, XPPAUT-style model-authoring workflows, and ML-oriented differentiable ODE stacks.

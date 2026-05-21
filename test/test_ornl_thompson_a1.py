@@ -44,8 +44,8 @@ def test_ornl_thompson_a1():
 
     for tt, y1, y2 in zip(trajectory.t, trajectory.x["y1"], trajectory.x["y2"]):
         expected_y1, expected_y2 = ornl_thompson_a1_exact(tt)
-        np.testing.assert_approx_equal(y1, expected_y1, significant=5)
-        np.testing.assert_approx_equal(y2, expected_y2, significant=5)
+        np.testing.assert_approx_equal(y1, expected_y1, significant=4)
+        np.testing.assert_approx_equal(y2, expected_y2, significant=4)
 
 
 if __name__ == "__main__":

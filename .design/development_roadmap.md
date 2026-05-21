@@ -25,7 +25,8 @@ Use `.design/ideas.md` as the short living board. This file is the longer ration
 - Simulators still carry some semantic weight through compatibility delegates and cached mirrored problem data even though the core defaults and batch semantics now live on the IVP.
 - The next internal friction point is clearer now: the internal execution model is much more coherent, but repeated-solve continuation still has one real representational limit because a shared requested window cannot encode exact continuation after diverged per-work-item final times.
 - Each work item effectively owns `dt` and attained `tf`, but not an explicit `t0` or completion/error flags. That leaves friction around continuation helpers and windows where work items diverge.
-- The new `test/kernel_components/` layer is a real improvement, but it is still intentionally small: helper math plus the `basic` and `basicall` observer paths are now directly testable, while broader component coverage still needs follow-through.
+- The new `test/kernel_components/` layer is a real improvement, but it is still intentionally small: helper math plus direct `basic`, `basicall`, `threshold_2`, and `local_max` observer contracts are now testable, while broader component coverage still needs follow-through.
+- The exact-solution regression spine is stronger than before, but solver-validation coverage is still partly ad hoc: `test/core_numerics/` has small exact-reference models, while dedicated nonlinear exact-solution coverage and explicit global-error or convergence-rate checks are not yet organized as one slim maintained suite.
 - Precision-sensitive kernel math now has a first shared helper foundation in `clODE_utilities.cl`, but broader adoption across the remaining observers and the stepper time-base path still needs deliberate follow-through and better public empirical justification.
 - `SolverParams` still mixes integration policy with output-storage policy. That makes chunking, batching, and trajectory streaming harder than they need to be.
 - `FeatureSimulator` still exposes a large legacy `observer_*` scalar compatibility surface alongside `ObserverParams`, but those compatibility inputs now resolve through one canonical `ObserverParams` path instead of carrying separate in-place observer semantics.
@@ -33,6 +34,50 @@ Use `.design/ideas.md` as the short living board. This file is the longer ration
 - The common shared-final-time continuation case is now clearer and easier to use, but diverged per-work-item final times still point toward a later per-work-item `t0` or richer solver-state model rather than another shared-window helper.
 - The runtime is intentionally single-device only. If multi-device execution ever becomes worthwhile, it will need a dedicated API and execution model rather than an extension of the current selectors.
 - There is still no good path for stiff systems or implicit stepping, which limits the package for an important class of dynamical-systems problems.
+
+## Recommended Near-Term Sequence
+
+The next planning pass should stay centered on one product story: fast large-ensemble workflows where users mainly want final states or on-device features, and where single-precision robustness is part of the value rather than a later cleanup. That points to a short sequence of grouped PRs rather than many independent P1 lines.
+
+### 1. Adaptive-time single-precision hardening
+
+Keep the current active target in `.design/next_pr.md`: move adaptive-time bookkeeping off one float32 absolute time plus `dt`, limit observer follow-on changes to elapsed-time-sensitive paths, and land the focused docs and coverage needed to support the claim.
+
+Why first:
+
+- it closes the largest remaining numerics gap in the current feature-first and final-state workflows
+- it keeps the package narrative aligned with evidence-backed single-precision mitigation instead of broad claims
+
+### 2. Execution-state and invalidation hardening
+
+Group the next Python-side cleanup into one PR family: solver-state or solution-buffer abstraction shared by steppers and observers, explicit build-spec versus runtime-state rebuild policy, and the direct component coverage needed to keep those rules stable.
+
+Why second:
+
+- it is the highest-leverage host-side change for future numerics work
+- it reduces reasoning overhead around rebuilds, buffer layout changes, observer changes, and continuation state
+
+### 3. Numerical validation and evidence bundle
+
+Keep the next validation pass narrow and purposeful: a slim exact-solution solver-validation suite, alignment of precision-sensitive reference helpers with the live solver semantics, and public examples or docs that show where the adopted single-precision safeguards matter in practice.
+
+Why third:
+
+- it strengthens the proof layer without turning into a broad test-suite rewrite
+- it supports the package's numerical claims with curated evidence rather than anecdotal demos
+
+### 4. Large-ensemble execution ergonomics
+
+After the numerics and execution contracts are clearer, group the large-ensemble ergonomics work around IVP-side batch-generation helpers and device-capacity ensemble batching. Keep broader trajectory chunking, dense output, and output-surface expansion as later follow-ons unless they directly strengthen the final-state or feature-first workflows.
+
+Why fourth:
+
+- it aligns performance work with the package's main workflow niche
+- it avoids spending the next planning cycle on broader trajectory breadth before the final-state and feature paths are fully hardened
+
+### Later and lower leverage
+
+Keep source-assembly reshaping, broader PyOpenCL-helper adoption, compatibility-barrel cleanup, richer observer-surface expansion, and implicit-method work behind the four grouped passes above unless a concrete bug or benchmark result pulls one of them forward.
 
 ## Prioritized Workstreams
 
@@ -155,7 +200,7 @@ Status on the current branch:
 
 - `clode/kernels/clODE_utilities.cl` now has a small reusable compensated-accumulation helper layer rather than only TODOs
 - the `basic` and `basicall` observers now use compensated integral accumulation for their time-weighted means
-- `test/kernel_components/` now exists and is wired into `tools/run_test_bundle.py` for direct helper plus `basic` and `basicall` observer component checks
+- `test/kernel_components/` now exists and is wired into `tools/run_test_bundle.py` for direct helper plus `basic`, `basicall`, `threshold_2`, and `local_max` observer component checks
 
 What this unlocked:
 
@@ -169,7 +214,7 @@ Status on the current branch:
 - `FeatureSimulator` now resolves constructor-level and setter-level observer compatibility inputs through one canonical `ObserverParams` path instead of mutating bundles in place
 - simulator and executor boundaries now keep internal copies of caller-provided `ObserverParams` bundles instead of aliasing them
 - unknown `event_var` and `feature_var` names now fail with direct errors instead of surfacing a raw list-index failure
-- `test/kernel_components/` now covers both `basic` and `basicall` observer contracts directly
+- `test/kernel_components/` now covers `basic`, `basicall`, `threshold_2`, and `local_max` observer contracts directly
 
 What this unlocked:
 

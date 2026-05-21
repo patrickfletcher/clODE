@@ -2,20 +2,22 @@
 
 ## Bottom line
 
-The current bundle and marker taxonomy is a good base. The new `test/kernel_components/` layer now provides the missing middle layer between full end-to-end simulator tests and the small host-side `_opencl` support tests, but its current coverage is still intentionally narrow even after adding direct `basic` and `basicall` observer contracts.
+The current bundle and marker taxonomy is a good base. The new `test/kernel_components/` layer now provides the missing middle layer between full end-to-end simulator tests and the small host-side `_opencl` support tests, but its current coverage is still intentionally narrow even after adding direct `basic`, `basicall`, `threshold_2`, and `local_max` observer contracts.
 
 ## What is already working well
 
 - `tools/run_test_bundle.py` already gives the suite a useful domain taxonomy: `smoke`, `frontend`, `runtime_api`, `numerics`, `kernel_components`, and `opencl_internal`.
 - `test/conftest.py` centrally injects markers by file and path, which keeps selection logic out of individual test modules.
 - `test/core_numerics/` already has the right shape for authoritative numerical regressions: small models, exact references, and reusable helpers.
-- `test/kernel_components/` now directly covers helper-kernel behavior plus `basic` and `basicall` observer contracts without going through the full simulator stack.
+- `test/kernel_components/` now directly covers helper-kernel behavior plus `basic`, `basicall`, `threshold_2`, and `local_max` observer contracts without going through the full simulator stack.
 - CI already separates a broad cross-platform smoke matrix from a narrower OpenCL-backed release gate.
 
 ## Current weaknesses
 
 - The physical layout is still transitional, so the intent of each file is not always obvious from its location.
 - Too much OpenCL-specific correctness signal still arrives through full simulator paths instead of smaller component tests; the new component layer is still only a first slice.
+- The numerical regression surface still mixes a small exact-reference backbone in `test/core_numerics/` with standalone exact-solution tests such as `test/test_ornl_thompson_a1.py`; it does not yet behave like a slim curated solver-validation suite with explicit global-error and convergence expectations.
+- Some fixed-step numerical reference helpers still need alignment with the current counter-reconstructed time semantics, so fixed-step numerics checks are not yet as uniform as the live solver behavior.
 - There is no clearly separated performance layer yet.
 - Device and platform coverage is still mostly controlled by environment selection instead of a richer parametrization story.
 
@@ -75,10 +77,11 @@ Rule of thumb:
 
 ## Concrete next steps
 
-1. Expand `test/kernel_components/` beyond helper math and the current `basic` and `basicall` observer paths.
-2. Move future build-key, observer-storage, and source-assembly checks there instead of burying them inside larger end-to-end tests.
-3. Add a non-gating performance bundle with explicit hardware assumptions.
-4. Keep `tools/run_test_bundle.py` authoritative even if the physical file layout changes slowly.
+1. Add a slim exact-solution solver-validation slice with explicit global-error and convergence-rate checks for a few realistic problems, then keep broader work-precision demos outside the release gate.
+2. Expand `test/kernel_components/` beyond helper math and the currently covered observer contracts.
+3. Move future build-key, observer-storage, and source-assembly checks there instead of burying them inside larger end-to-end tests.
+4. Add a non-gating performance bundle with explicit hardware assumptions.
+5. Keep `tools/run_test_bundle.py` authoritative even if the physical file layout changes slowly.
 
 ## Recommendation
 
