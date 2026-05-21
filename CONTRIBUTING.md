@@ -71,6 +71,14 @@ Keep the public-facing surfaces distinct:
 
 When a change affects user workflows, examples, or project positioning, update the relevant public surface in the same pass. Keep public wording centered on the current Python package and supported workflows; do not add historical implementation archaeology to user-facing pages. Because `README.md` also serves as the package index long description, keep it concise and prefer absolute URLs over repo-relative links.
 
+## Maintainer planning docs
+
+The repo-local planning surface lives under `.design/`.
+
+- Start with `.design/README.md` and stop at the smallest read set that fits the task.
+- Keep the root `.design/` docs small and authoritative; move deep dives to `.design/reference/`, history to `.design/archived/`, and scratch work to `.design/tmp/`.
+- If a change affects package layout, the active implementation target, or the meaning of a reference note, update the smallest authoritative `.design` doc in the same pass.
+
 ## Pull requests
 
 - Include tests when behavior changes or regressions are fixed.

@@ -1,5 +1,9 @@
 # JOSS Audit
 
+Purpose: assess whether the current public package story is strong enough for JOSS and identify the missing evidence or repo-surface work.
+Read when: editing `paper/paper.md`, planning citation metadata, or deciding whether public claims are mature enough for publication-facing wording.
+Update when: the paper story, public evidence base, citation state, or release/presentation polish changes materially.
+
 ## Bottom line
 
 clODE looks plausibly publishable in JOSS, but not yet as a strong submission in its current public presentation. The codebase now has enough substance, age, license, docs, tests, and CI to be in scope. The main weakness is not whether this is research software. The weakness is whether the public story is current, differentiated, and well evidenced.

@@ -28,6 +28,8 @@ Update when: the `.design` framework or audit rules change.
 ### Reference-note hygiene
 
 - Does a note under `.design/reference/` still provide current decision support?
+- Does the note carry clear `Purpose:`, `Read when:`, and `Update when:` lines?
+- Does the opening screen prioritize current decision support over completed checklist history or closeout archaeology?
 - Has a reference note effectively become active delivery scope and therefore need a summary in a live root doc?
 - Has a reference note gone stale enough that it should be updated, split, or archived?
 
@@ -45,6 +47,7 @@ Update when: the `.design` framework or audit rules change.
 - Merge obvious duplicate backlog items.
 - Remove or rewrite a blocker when a live doc or the current code clearly shows it is resolved.
 - Fix moved paths, stale references, and outdated cross-links.
+- Add missing header-contract lines to a current long-lived reference note when its scope and purpose are already clear from the note.
 - Mark obviously completed housekeeping items as done or remove them if they were temporary cleanup notes.
 - Tighten wording that conflicts with current live docs when the correction is factual rather than strategic.
 

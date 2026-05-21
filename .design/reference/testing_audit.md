@@ -1,5 +1,9 @@
 # Testing Audit
 
+Purpose: define the current test taxonomy, evidence strategy, and the role of component tests in the regression surface.
+Read when: reorganizing tests, deciding where a new regression belongs, or planning broader correctness or validation coverage.
+Update when: the bundle taxonomy, component-test strategy, or release-gate philosophy changes.
+
 ## Bottom line
 
 The current bundle and marker taxonomy is a good base. The new `test/kernel_components/` layer now provides the missing middle layer between full end-to-end simulator tests and the small host-side `_opencl` support tests, but its current coverage is still intentionally narrow even after adding direct `basic`, `basicall`, `threshold_2`, and `local_max` observer contracts.

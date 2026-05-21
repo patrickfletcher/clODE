@@ -29,6 +29,7 @@ Format:
 ## Observer And Feature Model
 
 - [ ] P2 Add a small set of dynamical-systems-oriented observers or features such as direction-of-crossing or Poincare-section style events once the built-in observer model settles further. refs: `clode/observers/_definitions.py`, `clode/kernels/observers/`, `docs/examples.md`
+- [ ] P2 Improve neighborhood-observer exit timestamps with inverse interpolation across bracketing `thisXdiff` samples if a lean state layout can support it cleanly. depends: observer-state and register-pressure audit. refs: `clode/kernels/observers/observer_neighborhood_1.clh`, `clode/kernels/observers/observer_neighborhood_2.clh`, `.design/reference/single_precision_numerics_note.md`
 - [ ] P2 Observer-specific parameter models/classes instead of one broad `ObserverParams`. depends: explicit observer-definition model. refs: `clode/features.py`, `clode/kernels/observers.cl`
 - [ ] P2 Support aux variables as event/feature variables. depends: explicit observer-definition model. refs: `clode/kernels/observers.cl`
 - [ ] P2 Custom/composable observers from Python-authored definitions. depends: explicit observer-definition model and codegen story. refs: `clode/features.py`, `clode/function_converter.py`
@@ -87,4 +88,4 @@ Format:
 
 Temporary holding area for rough notes. Process this section with the `design-ideas-inbox` skill when routing items into the maintained `.design` framework.
 
-- event time interpolation in nhood observers. The intention I had originally for this was to use inverse interpolation on the two thisXdiff values that straddle the exit of the neighborhood to get a more accurate event time. This wasn't obvious in the layout of code or comments, because the event time "tThisEvent" is set in the computeEventFeatures function, while the thisXdiff values were not stored sufficiently...
+- Inbox currently empty.

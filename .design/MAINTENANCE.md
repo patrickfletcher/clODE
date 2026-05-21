@@ -9,6 +9,15 @@ Purpose: keep maintainer docs fast to scan, current, and worth reading for both 
 - Separate live docs, deep dives, history, and scratch work.
 - Favor updates over proliferation.
 
+## Token-Efficient Defaults
+
+- The root `.design/` surface should answer common contributor questions without forcing `reference/` for ordinary work.
+- Keep each root doc's first screen high-signal: current facts, current target, or current backlog only.
+- One durable fact should have one authoritative home. Link instead of copying paragraphs.
+- Move lookup tables, historical closeouts, and long comparative analysis out of root docs.
+- If a section mainly explains landed history, archive it or compress it into one sentence.
+- Prefer a short summary plus a pointer over repeating the same context across `package_state.md`, `next_pr.md`, `ideas.md`, and `development_roadmap.md`.
+
 ## Directory Contract
 
 - Root `.design/`: live, high-signal docs assistants should consider first.
@@ -19,10 +28,10 @@ Purpose: keep maintainer docs fast to scan, current, and worth reading for both 
 ## Live File Contracts
 
 - `README.md`: routing only. Keep it short and explicit about where to stop reading.
-- `package_state.md`: factual current-state map. No speculative backlog.
+- `package_state.md`: factual current-state map and contributor routing. No speculative backlog.
 - `next_pr.md`: one active implementation target with a narrow scope and explicit acceptance criteria.
 - `ideas.md`: terse backlog. Keep items to one line when possible.
-- `development_roadmap.md`: medium-lived rationale and ordering, not a task tracker.
+- `development_roadmap.md`: medium-lived rationale and ordering, not a task tracker or closeout log.
 - `reference/README.md`: index of deep dives with clear "read when" guidance.
 
 ## Inbox Processing
@@ -51,14 +60,12 @@ If the note is narrow and temporary, use `.design/tmp/` instead.
 
 ## Writing Rules
 
-- Start new long-lived docs with three short lines:
-  - `Purpose:`
-  - `Read when:`
-  - `Update when:`
+- Start new long-lived docs with three short lines: `Purpose:`, `Read when:`, and `Update when:`.
 - Keep openings short; front-load decisions, constraints, and status.
 - Prefer bullets and short sections over long prose.
 - Avoid restating package facts already covered in `package_state.md`.
 - Avoid restating backlog or roadmap context already covered in `ideas.md` or `development_roadmap.md`.
+- Keep root docs task-oriented: current fact, active plan, or sequencing rationale.
 - Link to the smallest useful supporting doc, not a broad file dump.
 - Mark historical statements explicitly before moving them to `.design/archived/`.
 
@@ -92,4 +99,4 @@ If the note is narrow and temporary, use `.design/tmp/` instead.
 - Are moved docs discoverable from `README.md` or `reference/README.md`?
 - Are broken links or stale file paths fixed in the same pass?
 - Did you clean up `.design/tmp/` if you used it?
-- If assistant workflow changed, did you update `.github/instructions/copilot.instructions.md`?
+- If assistant workflow changed, did you update the relevant `.github/instructions/*.instructions.md` file?

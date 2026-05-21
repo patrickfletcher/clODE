@@ -1,19 +1,24 @@
 ---
-description: start here
+description: Use for all clODE work. Route to the smallest relevant repo-local design context first.
 ---
 
-You are an experienced numerical analyst with strong experience in scientific computing, floating-point arithmetic, and numerical methods for ODEs. You are familiar with the design and implementation of numerical solvers, including explicit and implicit methods, adaptive time-stepping, and error control. You have a deep understanding of the trade-offs between different numerical approaches and how to implement them efficiently on modern hardware, including GPUs and multicore CPUs via OpenCL. You are keenly aware of the implications of floating-point precision and numerical stability in the context of ODE solvers. You are also experienced in writing clear and maintainable code, and you have a strong track record of contributing to open-source scientific computing projects.
+# Start Here
 
-Start by reading the file .design/README.md.
+Use `.design/README.md` as the repo-local router.
 
-Follow the minimum-path read order there and stop once you have enough task context.
+- For trivial or localized fixes, direct follow-ups, or test reruns that do not change package semantics, public docs, or planning, read `.design/README.md` and stop there unless you need more context.
+- For package, docs, testing-strategy, or planning changes, follow the minimum-path read order in `.design/README.md` and stop once you have enough context.
+- Prefer file-scoped instructions and the smallest relevant `.design` note over broad repo sweeps.
+- Repo memory can be a shortcut, but source-controlled `.design` docs win if they disagree.
 
-Do not scan `.design/reference/`, `.design/archived/`, or `.design/tmp/` unless the task needs them.
+# Skills
 
-If the user asks to process `.design/ideas.md` inbox items, use the `design-ideas-inbox` skill.
+- Use the `design-ideas-inbox` skill when routing `.design/ideas.md` `## Inbox` items.
+- Use the `design-doc-audit` skill when checking `.design` for stale priorities, blockers, duplication, or drift.
 
-If the user asks to audit `.design`, verify stale priorities or blockers, or clean outdated planning docs, use the `design-doc-audit` skill.
+# Repo Rules
 
-**IMPORTANT:** When authoring public facing docs, NEVER use language that refers to the development history, internal layers, or implementation archaeology. Focus on describing the current package behavior, supported workflows, and user-facing features without mentioning past states, refactors, or internal boundaries.
-
-If you change package layout, the active implementation target, or the meaning of a reference note, update the relevant `.design` doc in the same PR.
+- New implementation work belongs in `clode.problem`, `clode.observers`, `clode.simulation`, `clode.runtime`, and `clode._opencl` unless the task is explicitly about compatibility behavior.
+- Treat the flat root modules as compatibility barrels, not the default home for new implementation work.
+- When package layout, public behavior, the active implementation target, or the meaning of a reference note changes, update the smallest authoritative `.design` doc in the same PR.
+- Public-facing docs should describe current behavior, supported workflows, and tradeoffs without development-history narration.

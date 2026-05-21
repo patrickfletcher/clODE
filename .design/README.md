@@ -1,16 +1,22 @@
 # .design Context Guide
 
-## Default Read Path
+Use this file as a router, not as background reading. Load the smallest relevant set and stop.
 
-Stop as soon as you have enough context for the task.
+## Stop Rules
 
-1. `.design/package_state.md` for the live package map, code ownership, and current constraints.
-2. `.design/next_pr.md` for the current narrow implementation target.
-3. `.design/ideas.md` only if you need dependencies, adjacent work, or follow-on ideas.
-4. `.design/development_roadmap.md` only if you need broader sequencing or architectural rationale.
-5. `.design/reference/README.md` only for task-specific deep dives.
-6. `.design/archived/README.md` only for historical rationale or bug archaeology.
-7. `.design/tmp/README.md` only if a current PR explicitly points to scratch work there.
+- If the task is a trivial or localized code or test fix and does not change package semantics, public docs, or planning, stop after this file and inspect the touched code.
+- If the task changes package behavior, layout, public docs, testing evidence, or planning, keep reading only the matching minimum set below.
+- Do not scan `.design/reference/`, `.design/archived/`, or `.design/tmp/` unless the task needs that topic.
+
+## Minimum Read Sets
+
+- Local bugfix or test repair: this file only, then code.
+- Narrow implementation PR: `package_state.md` -> `next_pr.md`.
+- Broader refactor or module move: `package_state.md` -> `development_roadmap.md` -> `ideas.md`.
+- Tests, diagnostics, or numerical evidence: `package_state.md` -> `next_pr.md` -> `reference/README.md` -> the matching note.
+- Docs, README, paper, or public-surface work: `reference/README.md` -> `project_principles.md`, `docs_layout_plan.md`, `public_surfaces_plan.md`, or `joss_audit.md`.
+- `.design` maintenance or planning cleanup: `MAINTENANCE.md` -> `package_state.md` -> `next_pr.md` -> `ideas.md`.
+- Historical investigation: current docs first, then `archived/README.md`.
 
 ## What Is Authoritative
 
@@ -18,30 +24,19 @@ Stop as soon as you have enough context for the task.
 - `.design/reference/` holds focused deep dives and audit notes. Read them only when the task needs their topic.
 - `.design/archived/` is historical context only. It never overrides the live root docs.
 - `.design/tmp/` is scratch space. Ignore it by default.
-- Repo memory snapshots can be useful for quick context, but source-controlled `.design/` docs are the authoritative repo-local record.
-- New implementation work should target canonical modules first, not compatibility barrels, unless the task is explicitly about compatibility cleanup.
+- Repo memory can be a shortcut, but source-controlled `.design/` docs are the authoritative repo-local record.
 
-## Minimum Read Sets
+## Root File Roles
 
-- Narrow implementation PR: `package_state.md` -> `next_pr.md`.
-- Broader refactor or module move: `package_state.md` -> `development_roadmap.md` -> `ideas.md`.
-- Tests or diagnostics: `package_state.md` -> `next_pr.md` -> `reference/README.md` -> the one matching reference note.
-- Docs, paper, or repo-surface work: `reference/README.md` -> `project_principles.md`, `docs_layout_plan.md`, `public_surfaces_plan.md`, or `joss_audit.md`.
-- Scope, positioning, or cross-cutting design decisions: `package_state.md` -> `development_roadmap.md` -> `reference/README.md` -> `project_principles.md`.
-- Runtime/OpenCL internals: `package_state.md` -> `reference/README.md` -> `pyopencl_leverage_audit.md` or `continuation_timebase_note.md`.
-- Historical investigation: current docs first, then `archived/README.md`.
-
-## Live Docs At The Root
-
-- `package_state.md`: factual repo and package map.
-- `next_pr.md`: current active implementation target and acceptance criteria.
+- `package_state.md`: factual current package map, constraints, and contributor routing.
+- `next_pr.md`: one active implementation target with acceptance criteria.
 - `ideas.md`: terse backlog and dependency board.
-- `development_roadmap.md`: longer rationale and priority ordering.
-- `MAINTENANCE.md`: rules for adding, updating, moving, archiving, and pruning design docs.
+- `development_roadmap.md`: medium-lived rationale and sequencing.
+- `MAINTENANCE.md`: rules for keeping this tree small and current.
 
 ## Editing Rules
 
-- Update an existing live doc before creating a new one.
+- Update the smallest authoritative doc instead of creating a near-duplicate.
 - Keep the root small. New deep dives should usually live under `.design/reference/`.
 - Promote enduring facts into `package_state.md`; keep `next_pr.md` narrow and current.
 - Move completed or stale notes into `.design/archived/` rather than leaving them at the root.

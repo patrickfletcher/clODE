@@ -1,5 +1,11 @@
 # Docs Layout Plan
 
+Purpose: define the docs-site information architecture, example-execution policy, and API reference cleanup direction.
+Read when: editing pages under `docs/`, changing docs navigation, or deciding where a user-facing docs topic belongs.
+Update when: docs IA, example-execution policy, or API-reference curation strategy changes.
+
+Use `public_surfaces_plan.md` for README, paper, contributor-doc, and broader public-surface ownership. This note is specifically about the docs site.
+
 ## Goals
 
 - Keep the docs slim, task-oriented, and easy to scan.

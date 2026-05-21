@@ -1,5 +1,11 @@
 # Public Surfaces Plan
 
+Purpose: define the distinct jobs and wording guardrails for README, the docs site, the package index page, the paper, contributor docs, and repo metadata.
+Read when: editing README, the paper, contributor-facing docs, or cross-surface public wording and ownership.
+Update when: public-surface ownership, wording constraints, or publication-adjacent repo metadata priorities change.
+
+Use `docs_layout_plan.md` for docs-site IA and API-reference curation. This note is about cross-surface ownership and wording.
+
 ## Goal
 
 - Give the repository, docs site, package index page, and paper distinct jobs.
@@ -21,7 +27,7 @@
 | Surface | Primary audience | Purpose | Should contain | Should avoid |
 | --- | --- | --- | --- | --- |
 | `README.md` | GitHub visitors and PyPI readers | Shared landing page and package index long description | one-paragraph positioning, install snippet, one quick-start example, capability summary, docs links, repo layout, license | redirects-only copy, deep API detail, migration history, long benchmark discussion, repo-relative links that break on package indexes |
-| `docs/index.md` (target) | Docs readers | Entry page for the documentation site | task-oriented navigation, short package overview, where to start, links to install/tutorials/API/examples | full repo pitch, repeated badges, long scholarly framing |
+| `docs/index.md` | Docs readers | Entry page for the documentation site | task-oriented navigation, short package overview, where to start, links to install/tutorials/API/examples | full repo pitch, repeated badges, long scholarly framing |
 | `docs/install.md` | Users installing clODE | Platform and runtime setup | Python support, OpenCL runtime expectations, verification steps, source install notes | broad package overview already covered elsewhere |
 | `docs/getting_started.md` | New users | First successful run | one end-to-end example, core concepts, next docs links | benchmark claims, contributor guidance |
 | tutorial/example pages under `docs/` | Users evaluating workflows | Task-oriented walkthroughs | runnable examples, plots, expected outputs, links back to API | duplicate installation or project overview copy |
@@ -31,56 +37,24 @@
 | `CONTRIBUTING.md` | Contributors | Project contribution path | local setup, test/docs commands, issue/PR expectations, release-adjacent notes | user onboarding or solver overview |
 | GitHub repo settings | Casual visitors | Fast project summary outside markdown | short description, topics, homepage/docs URL, social preview image | long text duplicated from `README.md` |
 
-## Recommended Target State
+## Current Target State
 
 1. `README.md` is the canonical GitHub landing page and the package index long description.
-2. `docs/index.md` becomes the MkDocs home page.
-3. `docs/index.md` owns the docs-home job.
-4. `pyproject.toml` points to `README.md`, and `README.md` uses absolute URLs so it renders correctly on package indexes.
-5. `paper/paper.md` is refreshed as a research-facing artifact, not a substitute for user documentation.
+2. `docs/index.md` owns the docs-home job.
+3. The docs site keeps a task-oriented IA and a narrow curated examples surface.
+4. `paper/paper.md` remains a research-facing artifact rather than a substitute for user documentation.
+5. `CONTRIBUTING.md` remains contributor-facing rather than part of the user docs narrative.
 
-## Concrete Checklist
+Most of the initial surface split is already landed. This note should track current policy and remaining open work, not a closeout checklist.
 
-### Phase 1: Repo Landing Page
+## Open Follow-Ups
 
-- [x] Replace the root `README.md` redirect with a standalone landing page.
-- [x] Keep the wording focused on current user-facing workflows and supported inputs.
-- [x] Include direct links to installation, getting started, feature extraction, trajectory simulation, and the API reference.
-- [ ] Add a short citation section once `CITATION.cff` exists.
-
-Citation metadata remains intentionally deferred until the paper and software citation details are stable enough to publish.
-
-### Phase 2: Docs Site Split
-
-- [x] Create `docs/index.md` as the dedicated docs homepage.
-- [x] Update `mkdocs.yml` so `Home` points to `docs/index.md` instead of `docs/README.md`.
-- [x] Narrow `docs/index.md` to orientation and navigation rather than package-index prose.
-- [x] Keep the docs home page separate from the package long description.
-- [x] Collapse the GitHub/PyPI split back to `README.md` as the single source of truth for the package overview.
-- [x] Add a clear tutorials/examples landing page in `docs/` that curates the best scripts from `examples/`.
-- [x] Add a performance-notes page that documents current benchmark scripts and reproducibility context without overclaiming.
-- [x] Remove the overlapping fast-and-slow page rather than keeping two docs pages for the same trajectory-oriented workflow.
-- [ ] Keep iterating on the docs IA rather than treating the current nav as final while API and example priorities are still shifting.
-- [ ] Keep the examples surface intentionally narrow and let the guides carry most of the explanatory burden.
-- [ ] Promote the performance-notes page to headline benchmark claims once they are supported by stable reproducible runs.
-
-### Phase 3: Project Metadata
-
-- [ ] Add `CITATION.cff`.
-- [x] Add `CONTRIBUTING.md`.
-- [ ] Decide whether to add `CODE_OF_CONDUCT.md`.
-- [x] Expand `[project.urls]` in `pyproject.toml` with Issues and, once ready, Changelog or Paper links.
-- [ ] Fill out the GitHub About section, topics, and social preview image.
-
-`CONTRIBUTING.md` now covers local setup, test bundles, docs builds, and the current public-surface ownership model. GitHub About metadata remains manual repo-settings work.
-
-### Phase 4: Paper Refresh
-
-- [x] Update the paper title and summary so they describe the current Python package directly.
-- [x] Rework the statement of need around large ensemble simulation, online feature extraction, and model-ingestion workflows.
-- [x] Refresh the alternatives section with present-day comparisons.
-- [ ] Add benchmark and reproducibility material that can be rerun from the repo.
-- [x] Align paper wording with the public docs so the project tells one consistent story.
+- Add `CITATION.cff` once the paper and software citation details are stable enough to publish.
+- Decide whether to add `CODE_OF_CONDUCT.md`.
+- Fill out the GitHub About section, topics, and social preview image manually in repo settings.
+- Keep iterating on the docs IA while the public API and example priorities continue to move.
+- Keep the examples surface intentionally narrow and let the guides carry most of the explanatory burden.
+- Add benchmark and reproducibility material that can be rerun from the repo before making stronger public performance claims.
 
 ## Example-source policy
 
