@@ -14,8 +14,9 @@ Update when: canonical module homes, public compatibility surfaces, packaging ru
 - `InitialValueProblem`, canonical solver-setting resolution, canonical `ObserverParams` resolution, Python-owned stepper definitions, observer definitions, and solver-state or result-cache invalidation boundaries are all live.
 - The runtime is explicitly single-device only, and kernels remain compile-time specialized by precision, stepper, observer, and problem shape.
 - Exact shared-final-time continuation is available through `advance_tspan_to_attained_final_time()`, while diverged per-work-item final times still require explicit caller policy.
-- Live numerical hardening now includes fixed-step counter-reconstructed time, adaptive compensated elapsed time, compensated `basic` and `basicall` means, inverse-linear `threshold_2` timestamps, and bounded three-sample `local_max` helpers.
-- The active planning focus is a numerical validation and evidence bundle rather than another execution-state refactor.
+- Live numerical hardening now includes solver-owned compensated elapsed time across fixed-step and adaptive steppers, compensated `basic` and `basicall` means, inverse-linear `threshold_2` timestamps, bounded three-sample `local_max` helpers, corrected Kahan-style elapsed-time reconstruction, and fixed multi-stage stage times rebuilt from `t0 + elapsed + fractional_dt` rather than from a rounded absolute `ti`.
+- The stepper wrapper boundary now preserves both failure status and accepted step width while still keeping next-step `dt` as controller state.
+- The active planning focus is the next solver-state follow-through: make per-work-item step and time diagnostics solver-owned and stop treating them as observer-owned legacy outputs.
 
 ## Contributor Routing
 
@@ -33,9 +34,10 @@ Update when: canonical module homes, public compatibility surfaces, packaging ru
 
 - The runtime is single-device only. Any future multi-device execution needs a dedicated API and execution model.
 - Simulators still carry compatibility delegates and cached mirrors alongside the IVP; richer IVP-side batch helpers such as grids, random sampling, and quasi-random sampling are still missing.
-- `SolverState` is a useful first pass, but there is still no device-side per-work-item `t0` or richer completion or error status model.
+- `SolverState` is a useful first pass, but there is still no matched device-side per-work-item solver-state object for current time, step counts, accepted step width, or richer completion and error status.
 - `advance_tspan_to_attained_final_time()` only covers the representable shared-final-time case. `shift_tspan()` remains the requested-window continuation tool, not the exact attained-time path.
 - Public `SolverParams` still mixes integration policy with trajectory-output policy, and `FeatureSimulator` still exposes legacy `observer_*` compatibility inputs alongside canonical `ObserverParams`.
+- Some observer structs still carry legacy step or time diagnostics that should become solver-owned state or solver-owned fetched outputs rather than observer responsibilities.
 - Heavier observer-state footprint and register-pressure work remains backlog rather than active scope.
 - Numerical validation and public evidence still need tighter exact-solution and convergence coverage to match the current claims.
 - RNG continuation details still live in separate buffers rather than a clearer named per-work-item state model.
@@ -44,6 +46,7 @@ Update when: canonical module homes, public compatibility surfaces, packaging ru
 ## Deep Dives
 
 - Layout and semantic ownership: `.design/reference/semantic_layout_audit.md`
+- Solver-state boundary and deferred follow-through: `.design/reference/solver_state_implementation_plan.md`
 - Continuation and time-base behavior: `.design/reference/continuation_timebase_note.md`
 - Float32 numerics and helper guardrails: `.design/reference/single_precision_numerics_note.md`
 - Testing strategy and bundle intent: `.design/reference/testing_audit.md`

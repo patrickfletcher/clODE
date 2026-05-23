@@ -1006,7 +1006,7 @@ def main() -> None:
     print("- for time-weighted features, a large absolute t0 can break the elapsed-time denominator when it is formed as ti - t_start in float32; relative elapsed bookkeeping is much safer.")
     print("- direct time updates accumulate rounding error from the current absolute time; writing t = t + dt instead of t += dt does not change that.")
     print("- Kahan-style and structured time updates improve long-horizon endpoint accuracy, but once dt is below ulp(t) they still move in quantized jumps rather than resolving every step.")
-    print("- reconstructing time from a step counter avoids repeated-add drift for fixed-step methods, but it is still limited by float32 spacing and, after 2^24, by float32 step-counter casts unless the counter stays wider than float32.")
+    print("- structured t0 + step*dt remains a useful fixed-step comparison baseline in this demo, but the live solver now uses compensated solve-relative elapsed bookkeeping for both fixed-step and adaptive steppers.")
     print("- for oscillation-oriented observers, amplitude floors, Schmitt-trigger-style hysteresis, and derivative thresholds are practical safeguards against overcounting tiny, chatter-driven, or noisy crossings.")
     print("- threshold timestamps have the same kind of interpolation tradeoff: sample times are coarse, inverse-linear interpolation is cheap and much better, and slope-aware Hermite interpolation is promising but needs stronger robustness checks before broad kernel use.")
     print("- for local-extremum observers, smaller dt or double precision are the safe user-side choices today when accurate peak timing matters; a shared interpolation helper is a strong candidate for future improvement.")

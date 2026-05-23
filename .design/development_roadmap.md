@@ -18,7 +18,8 @@ Use `.design/ideas.md` as the short living board. This file is the longer ration
 
 ### Friction That Still Matters
 
-- The package's numerical and continuation claims are now ahead of the proof layer. The main near-term gap is tighter exact-solution, convergence, and public evidence coverage.
+- The next architectural gap is not the low-level time-base itself; it is the missing solver-owned per-work-item state model for step counts, accepted or current `dt`, and failure status.
+- The package's numerical and continuation claims still need tighter exact-solution, convergence, and public evidence coverage, but that is now the second grouped follow-on rather than the immediate target.
 - The heavier feature kernels still need an observer-state and register-pressure audit before deeper redesign decisions are justified.
 - Large-ensemble ergonomics are still missing the next obvious layer: IVP-side batch-generation helpers and device-capacity batching.
 - Diverged-time continuation still has a real representational limit because the live shared-window model cannot encode exact continuation after different attained `tf` values.
@@ -37,32 +38,32 @@ Use `.design/ideas.md` as the short living board. This file is the longer ration
 
 Keep the next planning pass centered on one product story: fast large-ensemble workflows where users mainly want final states or on-device features, and where single-precision robustness is part of the value rather than a later cleanup.
 
-### 1. Numerical validation and evidence bundle
+### 1. Solver-owned per-work-item state and failure reporting
 
-Keep the next validation pass narrow and purposeful: a slim exact-solution solver-validation suite, alignment of precision-sensitive references with the live solver semantics, and public docs or examples that show where the adopted safeguards matter.
+The next grouped pass should make step counts, accepted or current `dt`, time-base values, and failure status explicitly solver-owned rather than leaving legacy pieces of that information inside observer state or observer outputs.
 
 Why first:
 
-- it strengthens the proof layer without turning into a broad test-suite rewrite
-- it lets public docs and planning notes point to maintained evidence instead of ad hoc demos
+- the current wrapper boundary already preserves accepted step width and failure status, so the remaining work is mainly about making ownership explicit and fetchable
+- it restores single source of truth before any broader observer-memory or continuation redesign
 
-### 2. Observer-state and register-pressure audit
+### 2. Numerical validation and evidence bundle
 
-After the proof layer is tighter, audit the heavier feature kernels with throughput in mind. Measure per-work-item observer state, retained event storage, and avoidable private scratch before deciding whether deeper observer-time redesign is worth the complexity.
+After the solver-state boundary is clearer, keep the validation pass narrow and purposeful: a slim exact-solution solver-validation suite, alignment of precision-sensitive references with the live solver semantics, and public docs or examples that show where the adopted safeguards matter.
 
 Why second:
 
-- it targets the main remaining performance risk in large feature sweeps
-- it keeps redesign pressure evidence-driven instead of speculative
+- it strengthens the proof layer without mixing documentation work into the state-ownership refactor
+- it lets public docs and planning notes point to maintained evidence instead of ad hoc demos
 
-### 3. Large-ensemble execution ergonomics
+### 3. Observer-state and register-pressure audit
 
-After the validation bundle and observer-footprint audit are clearer, group the next ergonomics work around IVP-side batch-generation helpers and device-capacity ensemble batching. Keep broader trajectory chunking, dense output, and output-surface expansion behind those more central workflows.
+After the solver-state split is explicit and the proof layer is tighter, audit the heavier feature kernels with throughput in mind. Measure per-work-item observer state, retained event storage, and avoidable private scratch before deciding whether deeper observer-time redesign is worth the complexity.
 
 Why third:
 
-- it aligns the next ergonomics work with the package's strongest workflow niche
-- it avoids broad trajectory-surface work before final-state and feature-first workflows are fully hardened
+- it avoids auditing observer footprint while solver-owned diagnostics are still mixed into observer state
+- it keeps redesign pressure evidence-driven instead of speculative
 
 ### Later and lower leverage
 

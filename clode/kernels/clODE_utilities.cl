@@ -178,8 +178,10 @@ static inline realtype meanFromCompensatedIntegral(
 	return compensatedSumValue(integral, correction) / total_delta;
 }
 
-// Kahan-style time accumulation prototype for adaptive steppers and relative
-// elapsed-time bookkeeping. The caller keeps both parts of the time pair.
+// Kahan-style time accumulation for solver-relative elapsed-time bookkeeping.
+// The correction term stores the low-order bits that were lost by the running
+// sum, so reconstructing the compensated value subtracts that term back out.
+// This mutates the elapsed time and correction in place - performs the true updates to timeValue and timeCorrection
 // Reference: https://en.wikipedia.org/wiki/Kahan_summation_algorithm
 static inline void compensatedTimeAdd(realtype *timeValue, realtype *timeCorrection, realtype dt) {
 	if (dt == ZERO)
@@ -190,10 +192,12 @@ static inline void compensatedTimeAdd(realtype *timeValue, realtype *timeCorrect
 	*timeValue = total;
 }
 
+// reconstruct the compensated time value from the running sum and correction term - does not mutate either term
 static inline realtype compensatedTimeValue(realtype timeValue, realtype timeCorrection) {
-	return timeValue + timeCorrection;
+	return timeValue - timeCorrection;
 }
 
+// compute the compensated time value after adding a step, without mutating the running sum or correction term
 static inline realtype compensatedTimeValueAfterStep(
 	realtype timeValue,
 	realtype timeCorrection,
@@ -203,6 +207,7 @@ static inline realtype compensatedTimeValueAfterStep(
 	return compensatedTimeValue(timeValue, timeCorrection);
 }
 
+// compute the compensated time from the origin, given the current elapsed time and correction - does not mutate either term
 static inline realtype compensatedTimeFromOrigin(
 	realtype origin,
 	realtype elapsed,
@@ -211,6 +216,7 @@ static inline realtype compensatedTimeFromOrigin(
 	return origin + compensatedTimeValue(elapsed, elapsedCorrection);
 }
 
+// this is read-only; it doesn't update the elapsed time or correction, so it can be used to compute stage times without mutating the state of the time accumulator
 static inline realtype compensatedTimeFromOriginAfterStep(
 	realtype origin,
 	realtype elapsed,
@@ -218,19 +224,6 @@ static inline realtype compensatedTimeFromOriginAfterStep(
 	realtype dt
 ) {
 	return origin + compensatedTimeValueAfterStep(elapsed, elapsedCorrection, dt);
-}
-
-// Fixed-step prototype: reconstruct absolute time from the step counter rather
-// than by repeated addition. A 64-bit counter improves overflow headroom, but
-// the returned realtype still obeys float32/float64 spacing limits.
-static inline realtype fixedStepTimeFromCounter(realtype t0, ulong stepCount, realtype dt) {
-	return t0 + ((realtype)stepCount) * dt;
-}
-
-// Fixed-step stage helper: reconstruct an intermediate stage time directly
-// from the origin instead of averaging already-quantized endpoints.
-static inline realtype fixedStepTimeFromRealIndex(realtype t0, realtype stepIndex, realtype dt) {
-	return t0 + stepIndex * dt;
 }
 
 // TODO: evaluate incremental versions (below) vs running sum (two-sum) then a single division at the end. Need to do so for variance already anyway

@@ -20,5 +20,13 @@ Use `.design/README.md` as the repo-local router.
 
 - New implementation work belongs in `clode.problem`, `clode.observers`, `clode.simulation`, `clode.runtime`, and `clode._opencl` unless the task is explicitly about compatibility behavior.
 - Treat the flat root modules as compatibility barrels, not the default home for new implementation work.
+- When touching OpenCL code under `clode/kernels/`, read `.design/reference/single_precision_ode_solver_guide.md` first, then add the smallest repo-specific numerics note needed for the task.
 - When package layout, public behavior, the active implementation target, or the meaning of a reference note changes, update the smallest authoritative `.design` doc in the same PR.
 - Public-facing docs should describe current behavior, supported workflows, and tradeoffs without development-history narration.
+
+# python environment
+
+Use the `clode` python environment for all clODE work:
+```bash
+~/envs/clode/bin/python
+```

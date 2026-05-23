@@ -5,7 +5,9 @@
 // #define EXPON RCONST(1.0)/LOCAL_ERROR_ORDER  //controls error per step -> local error only; err~tol
 #define EXPON RCONST(1.0)/(LOCAL_ERROR_ORDER+RCONST(1.0))  //controls error per unit step (err/dt~tol) -> global error proportional to tol (tolerance proportional) 
 
-//Wrapper to handle step-size adaptation.  note: wi should be zeros
+// Wrapper to handle step-size adaptation. wi should be zeros. The wrapper
+// returns a status flag and reports the accepted step width separately from the
+// next step size to try.
 static inline int stepper(
     realtype *ti,
     realtype *solveElapsed,
@@ -15,51 +17,49 @@ static inline int stepper(
     const realtype pars[],
     __constant struct IntegrationSettings *settings,
     realtype *dt,
+    realtype *acceptedDt,
     __constant realtype *tspan,
     realtype aux[],
     realtype wi[],
-    __private struct rngData *rd,
-    realtype *acceptedStepDt,
-    const ulong stepCount
+    __private struct rngData *rd
 )
 {
-    (void)stepCount;
     (void)rd;
-    realtype tNew, normErr, err[N_VAR], newxi[N_VAR], newk1[N_VAR];
+    realtype trialTime, normErr, err[N_VAR], trialXi[N_VAR], trialK1[N_VAR];
 
-    realtype newDt = *dt;
+    realtype proposedDt = *dt;
+    *acceptedDt = ZERO;
     realtype threshold = settings->abstol / settings->reltol;
-    realtype currentTime = compensatedTimeFromOrigin(
+    realtype acceptedTime = compensatedTimeFromOrigin(
         tspan[0],
         *solveElapsed,
         *solveElapsedCorrection
     );
-    realtype hmin = RCONST(16.0) * fabs(fabs(nextafter(currentTime, RCONST(1.1)*tspan[1])) - currentTime); //matches Matlab: hmin=16*eps(t)
+    realtype hmin = RCONST(16.0) * fabs(fabs(nextafter(acceptedTime, RCONST(1.1)*tspan[1])) - acceptedTime); //matches Matlab: hmin=16*eps(t)
     realtype solveDuration = tspan[1] - tspan[0];
 
     bool noFailedSteps = true;
-    *acceptedStepDt = ZERO;
     while (true)
     {
         realtype trialElapsed = *solveElapsed;
         realtype trialElapsedCorrection = *solveElapsedCorrection;
-        tNew = currentTime;
+        trialTime = acceptedTime;
         for (int j = 0; j < N_VAR; j++)
         {
-            newxi[j] = xi[j];
-            newk1[j] = k1[j];
+            trialXi[j] = xi[j];
+            trialK1[j] = k1[j];
         }
 
-        newDt = clamp(newDt, hmin, settings->dtmax); //limiters
-        realtype attemptedDt = do_step(
+        proposedDt = clamp(proposedDt, hmin, settings->dtmax); //limiters
+        realtype stepDt = do_step(
             tspan[0],
             &trialElapsed,
             &trialElapsedCorrection,
-            &tNew,
-            newxi,
-            newk1,
+            &trialTime,
+            trialXi,
+            trialK1,
             pars,
-            newDt,
+            proposedDt,
             aux,
             err,
             wi
@@ -67,16 +67,17 @@ static inline int stepper(
 
         //Error estimation - elementwise
         for (int j = 0; j < N_VAR; j++)
-            err[j] /= fmax( fmax( fabs(xi[j]), fabs(newxi[j]) ) , threshold);
+            err[j] /= fmax( fmax( fabs(xi[j]), fabs(trialXi[j]) ) , threshold);
         
         normErr = norm_inf(err, N_VAR); //largest relative error among variables (most conservative)
 
         //shrink dt if too much error
         if (normErr > settings->reltol)
         {
-            if (attemptedDt <= hmin)
+            if (stepDt <= hmin)
             {
                 *dt = hmin;
+                *acceptedDt = ZERO;
                 return -1;
             } //pass error signal back to main loop..
 
@@ -84,39 +85,39 @@ static inline int stepper(
             if (noFailedSteps)
             { //first failure: shrink proportional to error
                 noFailedSteps = false;
-                newDt = attemptedDt * fmax(ADAPTIVE_STEP_MAX_SHRINK, SAFETY_FACTOR*pow(settings->reltol / normErr, EXPON)); 
+                proposedDt = stepDt * fmax(ADAPTIVE_STEP_MAX_SHRINK, SAFETY_FACTOR*pow(settings->reltol / normErr, EXPON));
             }
             else
             { //repeated failed step: cut stepsize in half
-                newDt = attemptedDt * RCONST(0.5);
+                proposedDt = stepDt * RCONST(0.5);
             }
         }
         else
-        {
+        {   //accept the step, update time and solution
             *solveElapsed = trialElapsed;
             *solveElapsedCorrection = trialElapsedCorrection;
-            *acceptedStepDt = attemptedDt;
-            currentTime = tNew;
+            acceptedTime = trialTime;
+            *acceptedDt = stepDt;
             break;
         }
     }
 
     //no failure this step => attempt to increase dt for next timestep
     if (noFailedSteps)
-        newDt *= fmin(ADAPTIVE_STEP_MAX_GROW,  SAFETY_FACTOR*pow(settings->reltol / normErr, EXPON)); //matches matlab (double precision)
+        proposedDt *= fmin(ADAPTIVE_STEP_MAX_GROW,  SAFETY_FACTOR*pow(settings->reltol / normErr, EXPON)); //matches matlab (double precision)
 
     realtype currentElapsed = compensatedTimeValue(*solveElapsed, *solveElapsedCorrection);
     realtype remaining = fmax(ZERO, solveDuration - currentElapsed);
-    newDt = fmin(newDt, remaining); //hit the final time exactly
-    newDt = clamp(newDt, hmin, settings->dtmax); //limiters
+    proposedDt = fmin(proposedDt, remaining); //hit the final time exactly
+    proposedDt = clamp(proposedDt, hmin, settings->dtmax); //limiters
 
     //update the solution and dt
-    *dt = newDt; //new step size to attempt on next step
-    *ti = currentTime;
+    *dt = proposedDt; //new step size to attempt on next step
+    *ti = acceptedTime;
     for (int j = 0; j < N_VAR; j++)
     {
-        xi[j] = newxi[j];
-        k1[j] = newk1[j];
+        xi[j] = trialXi[j];
+        k1[j] = trialK1[j];
     }
 
     return 0;

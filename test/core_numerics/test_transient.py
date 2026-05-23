@@ -53,7 +53,7 @@ def test_dormand_prince_stable_linear_matches_exact_final_state() -> None:
     np.testing.assert_allclose(actual, expected, atol=DOPRI_ATOL, rtol=0.0)
 
 
-def test_rk4_large_origin_fixed_step_reports_counter_reconstructed_final_time() -> None:
+def test_rk4_large_origin_fixed_step_reports_compensated_elapsed_final_time() -> None:
     simulator = make_simulator(
         "stable_linear",
         stepper=clode.Stepper.rk4,

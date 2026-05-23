@@ -28,7 +28,7 @@ static inline realtype do_step(
     const realtype tOrigin,
     realtype *elapsed,
     realtype *elapsedCorrection,
-    realtype *ti,
+    realtype *stepEndTime,
     realtype xi[],
     realtype k1[],
     const realtype pars[],
@@ -38,26 +38,26 @@ static inline realtype do_step(
     const realtype wi[]
 )
 {
-    realtype newDt = dt;
-    realtype tNew = compensatedTimeFromOriginAfterStep(
+    realtype tEnd = compensatedTimeFromOriginAfterStep(
         tOrigin,
         *elapsed,
         *elapsedCorrection,
-        newDt
+        dt
     );
     realtype xtmp[N_VAR], k2[N_VAR], k3[N_VAR], k4[N_VAR];
 
-    //expects k1 to be precomputed (FSAL)
+    // On entry k1 is the slope at the current accepted state. On return it is
+    // refreshed at the accepted endpoint for the next step.
 
     //compute k2: xtmp[k]=xi[k]+h2*k1[k]; xtmp[k] = fma(h2, k1[k], xi[k]);
     for (int k = 0; k < N_VAR; k++)
-        xtmp[k]=xi[k] + newDt * RCONST(0.5) * k1[k];
+        xtmp[k]=xi[k] + dt * RCONST(0.5) * k1[k];
     getRHS(
         compensatedTimeFromOriginAfterStep(
             tOrigin,
             *elapsed,
             *elapsedCorrection,
-            newDt * RCONST(0.5)
+            dt * RCONST(0.5)
         ),
         xtmp,
         pars,
@@ -68,13 +68,13 @@ static inline realtype do_step(
 
     //compute k3: xtmp[k]=xi[k]+h3*k2[k]; xtmp[k] = fma(h3, k2[k], xi[k]);
     for (int k = 0; k < N_VAR; k++)
-        xtmp[k]=xi[k] + newDt * RCONST(0.75) * k2[k]; 
+        xtmp[k]=xi[k] + dt * RCONST(0.75) * k2[k];
     getRHS(
         compensatedTimeFromOriginAfterStep(
             tOrigin,
             *elapsed,
             *elapsedCorrection,
-            newDt * RCONST(0.75)
+            dt * RCONST(0.75)
         ),
         xtmp,
         pars,
@@ -85,21 +85,21 @@ static inline realtype do_step(
 
     //update xi
     for (int k = 0; k < N_VAR; k++)
-        xi[k] = xi[k] + newDt * (B1 * k1[k] + B2 * k2[k] + B3 * k3[k]); //third order
+        xi[k] = xi[k] + dt * (B1 * k1[k] + B2 * k2[k] + B3 * k3[k]); //third order
 
     //compute k4
-    getRHS(tNew, xi, pars, k4, aux, wi);
+    getRHS(tEnd, xi, pars, k4, aux, wi);
 
     //update error estimate
     for (int k = 0; k < N_VAR; k++)
     {
-        //~ xtmp[k] = xi[k] + newDt*(_C1*k1[k] +_B2*k2[k] +_C3*k3[k] +_C4*k4[k]); //second order
-        //~ err[k]=xi[k]-xtmp[k] =  newDt*( (B1-_C1)*k1[k] + (B2-_B2)*k2[k] + (B3-_C3)*k3[k] + (B4-_C4)*k4[k]);
-        err[k] = newDt * (E1 * k1[k] + E2 * k2[k] + E3 * k3[k] + E4 * k4[k]);
+        //~ xtmp[k] = xi[k] + dt*(_C1*k1[k] +_B2*k2[k] +_C3*k3[k] +_C4*k4[k]); //second order
+        //~ err[k]=xi[k]-xtmp[k] =  dt*( (B1-_C1)*k1[k] + (B2-_B2)*k2[k] + (B3-_C3)*k3[k] + (B4-_C4)*k4[k]);
+        err[k] = dt * (E1 * k1[k] + E2 * k2[k] + E3 * k3[k] + E4 * k4[k]);
         k1[k] = k4[k]; //first same as last (FSAL) property
     }
 
-    compensatedTimeAdd(elapsed, elapsedCorrection, newDt);
-    *ti = compensatedTimeFromOrigin(tOrigin, *elapsed, *elapsedCorrection);
-    return newDt;
+    compensatedTimeAdd(elapsed, elapsedCorrection, dt);
+    *stepEndTime = tEnd;
+    return dt;
 }

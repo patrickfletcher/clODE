@@ -93,9 +93,8 @@ raises `ValueError`. In that case the caller still has to choose an explicit pol
 
 ## Current float32 limitation
 
-clODE no longer relies on one naive float32 absolute-time update path for every stepper. Fixed-step
-methods reconstruct time from `t0 + step * dt`, and adaptive methods keep a compensated
-solve-relative elapsed pair and reconstruct absolute times from `t0 + elapsed`.
+Fixed-step and adaptive methods both keep a compensated solve-relative elapsed pair and reconstruct
+absolute times from `t0 + elapsed`.
 
 Those choices materially improve endpoint accuracy, elapsed-time bookkeeping, and split-window
 continuation behavior, but they do not change float32 spacing itself. At large absolute times,
@@ -108,7 +107,7 @@ Implications:
 - for non-autonomous systems or workflows that need fine absolute-time resolution, double precision remains the safer choice
 
 For a reproducible float32 demonstration of this behavior, plus comparisons against compensated and
-structured time updates, see [numerical_accuracy.md](numerical_accuracy.md).
+structured comparison baselines, see [numerical_accuracy.md](numerical_accuracy.md).
 
 ## Runnable example
 

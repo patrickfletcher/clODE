@@ -15,7 +15,7 @@ clODE looks plausibly publishable in JOSS, but not yet as a strong submission in
 - A distinctive workflow around very large ensembles of ODE solves on OpenCL devices, with one work-item per solve and compile-time specialization by precision, stepper, observer, and problem dimensions.
 - On-device observer/feature extraction that can avoid storing full trajectories when users only need summary statistics or events.
 - Multiple front doors into the solver stack: OpenCL RHS source, Python-authored RHS conversion, and XPP parsing/interoperability.
-- A cleaner PyOpenCL-only architecture than the current paper draft describes.
+- A PyOpenCL-only package story aligned across the paper, README, and docs.
 
 ## Strongest publication angles
 

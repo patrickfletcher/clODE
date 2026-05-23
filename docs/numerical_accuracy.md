@@ -43,7 +43,7 @@ become unreliable once $\Delta t$ is small relative to $\operatorname{ulp}(t_n)$
 
 ## Compensated Mean Accumulation
 
-The `basic` and `basicall` observers accumulate
+The `basic` and `basic_all_variables` observers accumulate
 
 $$
 I_n = \sum_{k=1}^{n} \Delta t_k x_k
@@ -63,7 +63,7 @@ With the default script parameters:
 - the compensated integral path returns about `1.00005007`, keeping the error near $7 \times 10^{-8}$
 - on the smooth oscillation, `runningMeanTime` drifts by about $7.1 \times 10^{-6}$ while the compensated integral path stays near $7.5 \times 10^{-8}$
 
-This is the clearest current empirical justification for the compensated helper already used in `basic` and `basicall`.
+This is the clearest current empirical justification for the compensated helper already used in `basic` and `basic_all_variables`.
 
 ## Feature Windows and Elapsed-Time Origin
 
@@ -80,7 +80,7 @@ With `dt = 0.01` over a 100-unit feature window:
 - at `t0 = 1e4`, the `ti - t_start` path already biases the mean to about `1.02405` because the elapsed time snaps to `97.65625` instead of about `100`
 - at `t0 = 1e6`, the `ti - t_start` path collapses completely because the float32 absolute time no longer advances relative to `t_start`
 
-This prototype explains the live bookkeeping choice in clODE. The affected observers now track elapsed feature time from accepted step sizes instead of reconstructing it as `ti - t_start` or `t_this - t_last` in float32. That keeps time-weighted means, periods, and durations much more stable when a solve window starts at a large absolute time.
+In clODE, the affected observers track elapsed feature time from accepted step sizes instead of reconstructing it as `ti - t_start` or `t_this - t_last` in float32. That keeps time-weighted means, periods, and durations much more stable when a solve window starts at a large absolute time.
 
 What remains limited is absolute timestamp resolution itself. Stored event timestamps and other absolute-time outputs are still float32 values, so a large origin can still quantize them in `ulp(t)`-sized jumps even when elapsed-time statistics stay accurate. For autonomous workflows where absolute timestamps are only labels, starting near `t = 0` is still the simpler float32 setup.
 
@@ -123,12 +123,12 @@ The same script also pushes the zero-origin case to 30,000,000 steps.
 
 So `t = t0 + step * dt` is a bounded-error float32 strategy, not a complete fix for absolute-time representability.
 
-clODE now uses two live time-base strategies.
+The example keeps that structured fixed-step reconstruction as a comparison baseline because it is easy to inspect and it explains why direct repeated addition drifts. clODE uses one time-base story across steppers:
 
-- fixed-step steppers keep a 64-bit step counter and reconstruct absolute time from `t0 + step * dt`
-- adaptive steppers keep a compensated solve-relative elapsed pair and reconstruct stage and endpoint times from `t0 + elapsed` instead of repeatedly adding `dt` to one float32 absolute time
+- fixed-step steppers keep a compensated solve-relative elapsed pair and reconstruct stage and endpoint times from `t0 + elapsed`
+- adaptive steppers use the same compensated solve-relative elapsed pair, with accepted step sizes instead of one constant `dt`
 
-Both choices materially improve endpoint and elapsed-time bookkeeping, but neither changes the underlying float32 spacing of absolute timestamps.
+That unified compensated bookkeeping materially improves endpoint and elapsed-time stability, but it still does not change the underlying float32 spacing of absolute timestamps.
 
 ## How To Run The Demonstration
 
@@ -202,12 +202,12 @@ This comparison shows why `local_max` uses bounded three-sample refinement, but 
 
 ## User Recommendations
 
-- The compensated integral helper used by `basic` and `basicall` has a clear empirical justification.
-- For autonomous feature extraction, the live observers now keep elapsed-time bookkeeping separate from large absolute timestamps, so means, periods, and durations are much more robust at large origins. If you also need high-fidelity absolute event timestamps, starting near `t = 0` is still the simpler float32 setup.
+- The compensated integral helper used by `basic` and `basic_all_variables` has a clear empirical justification.
+- For autonomous feature extraction, the observers keep elapsed-time bookkeeping separate from large absolute timestamps, so means, periods, and durations are much more robust at large origins. If you also need high-fidelity absolute event timestamps, starting near `t = 0` is still the simpler float32 setup.
 - For non-autonomous systems where absolute time matters semantically, prefer double precision or shorter windows when the timestamp itself must be resolved more finely than `ulp(t)`.
 - The stepper time-base issue is a representability problem, not a notation problem.
-- For fixed-step steppers, clODE uses a step-counter time base instead of repeated float32 addition, but the result is still quantized by float32 spacing.
-- Adaptive steppers now use a compensated solve-relative elapsed pair instead of repeated one-float absolute-time updates. Double precision or shorter windows are still the safer choice when absolute-time fidelity itself is the requirement.
+- clODE uses the same compensated solve-relative elapsed bookkeeping across fixed-step and adaptive steppers rather than a one-float absolute-time update path. Double precision or shorter windows are still the safer choice when absolute-time fidelity itself is the requirement.
+- The example script compares structured `t0 + step * dt` against Kahan-style updates because that fixed-step reconstruction remains a useful reference baseline alongside the live compensated elapsed-time path.
 - For `threshold_2`, use a real hysteresis gap when crossings chatter, and consider derivative thresholds when noisy shallow crossings still slip through.
 - `threshold_2` stores threshold-transition times with inverse-linear interpolation; the example script also compares that choice with Hermite interpolation on smooth monotone crossings.
 - Set `min_amp` above the numerical or measurement floor you want to ignore and below the smallest oscillation you still care about.

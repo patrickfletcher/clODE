@@ -10,7 +10,7 @@ static inline realtype do_step(
     const realtype tOrigin,
     realtype *elapsed,
     realtype *elapsedCorrection,
-    realtype *ti,
+    realtype *stepEndTime,
     realtype xi[],
     realtype k1[],
     const realtype pars[],
@@ -20,40 +20,39 @@ static inline realtype do_step(
     const realtype wi[]
 )
 {
-    realtype newDt = dt;
-    realtype tNew = compensatedTimeFromOriginAfterStep(
+    realtype tEnd = compensatedTimeFromOriginAfterStep(
         tOrigin,
         *elapsed,
         *elapsedCorrection,
-        newDt
+        dt
     );
     realtype xtmp[N_VAR], k2[N_VAR];
 
-    //compute k1
-    //getRHS(*ti, xi, pars, k1, aux, wi); //slope at *ti
+    // On entry k1 is the slope at the current accepted state. On return it is
+    // refreshed at the accepted endpoint for the next step.
 
     //compute k2: xtmp[k]=xi[k]+dt*k1[k];  fma(dt, k1[k], xi[k]);
     for (int k = 0; k < N_VAR; k++)
-        xtmp[k] = xi[k] + newDt*k1[k];  //Euler
-    getRHS(tNew, xtmp, pars, k2, aux, wi); //slope at *ti+dt
+        xtmp[k] = xi[k] + dt*k1[k];  //Euler
+    getRHS(tEnd, xtmp, pars, k2, aux, wi); //slope at the accepted endpoint
 
     //update to new xi
     for (int k = 0; k < N_VAR; k++)
-        xi[k] = xi[k] + newDt * RCONST(0.5) * (k1[k] + k2[k]); //average the above to get new xi
+        xi[k] = xi[k] + dt * RCONST(0.5) * (k1[k] + k2[k]); //average the above to get new xi
 
     //error estimate in each variable
     for (int k = 0; k < N_VAR; k++) 
-        err[k] = newDt * RCONST(0.5) * (-k1[k] + k2[k]);
+        err[k] = dt * RCONST(0.5) * (-k1[k] + k2[k]);
 
         //err[k] = xi[k] - xtmp[k];
         // xi[k] = xtmp[k]; //use euler?
         // xi[k] += err[k]; //Richardson?
 
-    getRHS(tNew, xi, pars, k2, aux, wi); //redo k2 at actual new point - alt, don't do FSAL.
+    getRHS(tEnd, xi, pars, k2, aux, wi); //redo k2 at actual new point - alt, don't do FSAL.
     for (int k = 0; k < N_VAR; k++) 
         k1[k] = k2[k];
 
-    compensatedTimeAdd(elapsed, elapsedCorrection, newDt);
-    *ti = compensatedTimeFromOrigin(tOrigin, *elapsed, *elapsedCorrection);
-    return newDt;
+    compensatedTimeAdd(elapsed, elapsedCorrection, dt);
+    *stepEndTime = tEnd;
+    return dt;
 }

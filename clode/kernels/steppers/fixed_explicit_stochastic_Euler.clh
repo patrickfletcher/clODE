@@ -1,19 +1,40 @@
 #include "realtype.cl"
 
-//Explicit (Forward) Euler
+//Stochastic Explicit (Forward) Euler
 #define FIXED_STEPSIZE_EXPLICIT
 #define STOCHASTIC_STEPPER
-static inline void do_step(realtype xi[], realtype k1[], const realtype pars[], const realtype dt, const realtype tStart, const realtype tMid, const realtype tEnd, realtype aux[], realtype wi[])
-{   
-    (void)tStart;
-    (void)tMid;
-    (void)tEnd;
+static inline void do_step(
+    const realtype tOrigin,
+    realtype *elapsed,
+    realtype *elapsedCorrection,
+    realtype *stepEndTime,
+    realtype xi[],
+    realtype k1[],
+    const realtype pars[],
+    const realtype dt,
+    realtype aux[],
+    realtype wi[],
+    __private struct rngData *rd
+)
+{
+    realtype tEnd = compensatedTimeFromOriginAfterStep(
+        tOrigin,
+        *elapsed,
+        *elapsedCorrection,
+        dt
+    );
 
-    //k1 passed in
-    // getRHS(*ti, xi, pars, k1, aux, wi);
-    
-    //update to new ti, xi, k1
+    // On entry k1 is the slope at the current accepted state. On return it is
+    // refreshed at the accepted endpoint for the next step.
     for (int k = 0; k < N_VAR; k++)
         xi[k] = fma(dt, k1[k], xi[k]);
+
+    // this is the only stochastic stepper for now - it owns the Wiener variable update
+    for (int j = 0; j < N_WIENER; ++j)
+        wi[j] = randn(rd) / sqrt(dt);
+
+    getRHS(tEnd, xi, pars, k1, aux, wi);
+    compensatedTimeAdd(elapsed, elapsedCorrection, dt);
+    *stepEndTime = tEnd;
 
 }

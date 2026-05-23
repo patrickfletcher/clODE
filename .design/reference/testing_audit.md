@@ -21,7 +21,6 @@ The current bundle and marker taxonomy is a good base. The new `test/kernel_comp
 - The physical layout is still transitional, so the intent of each file is not always obvious from its location.
 - Too much OpenCL-specific correctness signal still arrives through full simulator paths instead of smaller component tests; the new component layer is still only a first slice.
 - The numerical regression surface still mixes a small exact-reference backbone in `test/core_numerics/` with standalone exact-solution tests such as `test/test_ornl_thompson_a1.py`; it does not yet behave like a slim curated solver-validation suite with explicit global-error and convergence expectations.
-- Some fixed-step numerical reference helpers still need alignment with the current counter-reconstructed time semantics, so fixed-step numerics checks are not yet as uniform as the live solver behavior.
 - There is no clearly separated performance layer yet.
 - Device and platform coverage is still mostly controlled by environment selection instead of a richer parametrization story.
 

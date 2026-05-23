@@ -27,6 +27,40 @@ def _build_program(runtime: OpenCLRuntime, source: str, *, extra_options: tuple[
     )
 
 
+def _reference_compensated_time_add(
+    value: np.float32,
+    correction: np.float32,
+    dt: np.float32,
+) -> tuple[np.float32, np.float32]:
+    y = np.float32(dt - correction)
+    total = np.float32(value + y)
+    correction = np.float32((total - value) - y)
+    value = total
+    return value, correction
+
+
+def _reference_compensated_time_value(value: np.float32, correction: np.float32) -> np.float32:
+    return np.float32(value - correction)
+
+
+def _reference_compensated_time_from_origin(
+    origin: np.float32,
+    elapsed: np.float32,
+    correction: np.float32,
+) -> np.float32:
+    return np.float32(origin + _reference_compensated_time_value(elapsed, correction))
+
+
+def _reference_compensated_time_from_origin_after_step(
+    origin: np.float32,
+    elapsed: np.float32,
+    correction: np.float32,
+    dt: np.float32,
+) -> np.float32:
+    elapsed, correction = _reference_compensated_time_add(elapsed, correction, dt)
+    return _reference_compensated_time_from_origin(origin, elapsed, correction)
+
+
 def test_compensated_sum_helper_recovers_small_term_lost_by_naive_sum() -> None:
     runtime = OpenCLRuntime.create(**_explicit_runtime_kwargs())
     program = _build_program(
@@ -969,7 +1003,42 @@ def test_relative_elapsed_mean_prototype_survives_large_origin_bias() -> None:
     assert out[3] == pytest.approx(np.float32(100.0))
 
 
-def test_time_prototypes_reduce_large_origin_failure_and_zero_origin_drift() -> None:
+def test_compensated_time_value_reconstructs_large_elapsed_with_kahan_sign() -> None:
+    runtime = OpenCLRuntime.create(**_explicit_runtime_kwargs())
+    program = _build_program(
+        runtime,
+        """
+        #include \"clODE_utilities.cl\"
+
+        __kernel void probe_compensated_time_value(__global realtype *out) {
+            realtype elapsed = RCONST(4096.0);
+            realtype elapsed_correction = ZERO;
+
+            compensatedTimeAdd(&elapsed, &elapsed_correction, RCONST(2.0e-4));
+
+            out[0] = elapsed;
+            out[1] = elapsed_correction;
+            out[2] = compensatedTimeValue(elapsed, elapsed_correction);
+            out[3] = compensatedTimeFromOrigin(ZERO, elapsed, elapsed_correction);
+            out[4] = compensatedTimeFromOriginAfterStep(ZERO, RCONST(4096.0), ZERO, RCONST(2.0e-4));
+        }
+        """,
+    )
+
+    out = np.empty(5, dtype=np.float32)
+    out_buffer = pyopencl.Buffer(runtime.context, pyopencl.mem_flags.WRITE_ONLY, out.nbytes)
+
+    program.probe_compensated_time_value(runtime.queue, (1,), None, out_buffer)
+    pyopencl.enqueue_copy(runtime.queue, out, out_buffer).wait()
+
+    assert out[0] == pytest.approx(np.float32(4096.0))
+    assert out[1] == pytest.approx(np.float32(-2.0e-4), abs=1e-7)
+    assert out[2] == pytest.approx(np.float32(4096.0))
+    assert out[3] == pytest.approx(np.float32(4096.0))
+    assert out[4] == pytest.approx(np.float32(4096.0))
+
+
+def test_compensated_time_helpers_reduce_large_origin_failure_and_zero_origin_drift() -> None:
     runtime = OpenCLRuntime.create(**_explicit_runtime_kwargs())
     program = _build_program(
         runtime,
@@ -980,33 +1049,59 @@ def test_time_prototypes_reduce_large_origin_failure_and_zero_origin_drift() -> 
             const realtype dt = RCONST(0.01);
 
             realtype large_direct = RCONST(1000000.0);
-            realtype large_kahan = RCONST(1000000.0);
-            realtype large_kahan_correction = ZERO;
+            realtype large_elapsed = ZERO;
+            realtype large_elapsed_correction = ZERO;
             for (uint step = 0; step < 10000; ++step) {
                 large_direct += dt;
-                compensatedTimeAdd(&large_kahan, &large_kahan_correction, dt);
+                compensatedTimeAdd(&large_elapsed, &large_elapsed_correction, dt);
             }
             out[0] = large_direct;
-            out[1] = large_kahan;
-            out[2] = large_kahan_correction;
-            out[3] = fixedStepTimeFromCounter(RCONST(1000000.0), (ulong)10000, dt);
+            out[1] = compensatedTimeFromOrigin(
+                RCONST(1000000.0),
+                large_elapsed,
+                large_elapsed_correction
+            );
+            out[2] = compensatedTimeValue(large_elapsed, large_elapsed_correction);
+            out[3] = compensatedTimeFromOriginAfterStep(
+                RCONST(1000000.0),
+                large_elapsed,
+                large_elapsed_correction,
+                ZERO
+            );
 
             realtype zero_direct = ZERO;
-            realtype zero_kahan = ZERO;
-            realtype zero_kahan_correction = ZERO;
+            realtype zero_elapsed = ZERO;
+            realtype zero_elapsed_correction = ZERO;
             for (uint step = 0; step < 200000; ++step) {
                 zero_direct += dt;
-                compensatedTimeAdd(&zero_kahan, &zero_kahan_correction, dt);
+                compensatedTimeAdd(&zero_elapsed, &zero_elapsed_correction, dt);
             }
             out[4] = zero_direct;
-            out[5] = zero_kahan;
-            out[6] = zero_kahan_correction;
-            out[7] = fixedStepTimeFromCounter(ZERO, (ulong)200000, dt);
+            out[5] = compensatedTimeValue(zero_elapsed, zero_elapsed_correction);
+            out[6] = compensatedTimeFromOrigin(ZERO, zero_elapsed, zero_elapsed_correction);
+            out[7] = compensatedTimeFromOriginAfterStep(
+                ZERO,
+                zero_elapsed,
+                zero_elapsed_correction,
+                ZERO
+            );
 
-            realtype step3 = fixedStepTimeFromCounter(RCONST(1000000.0), (ulong)3, dt);
-            realtype step4 = fixedStepTimeFromCounter(RCONST(1000000.0), (ulong)4, dt);
-            out[8] = step3 + RCONST(0.5) * (step4 - step3);
-            out[9] = fixedStepTimeFromRealIndex(RCONST(1000000.0), RCONST(3.5), dt);
+            realtype step3_elapsed = ZERO;
+            realtype step3_elapsed_correction = ZERO;
+            for (uint step = 0; step < 3; ++step)
+                compensatedTimeAdd(&step3_elapsed, &step3_elapsed_correction, dt);
+
+            out[8] = compensatedTimeFromOrigin(
+                RCONST(1000000.0),
+                step3_elapsed,
+                step3_elapsed_correction
+            );
+            out[9] = compensatedTimeFromOriginAfterStep(
+                RCONST(1000000.0),
+                step3_elapsed,
+                step3_elapsed_correction,
+                RCONST(0.5) * dt
+            );
         }
         """,
     )
@@ -1019,9 +1114,11 @@ def test_time_prototypes_reduce_large_origin_failure_and_zero_origin_drift() -> 
 
     assert out[0] == pytest.approx(np.float32(1.0e6))
     assert out[1] == pytest.approx(np.float32(1000100.0))
+    assert out[2] == pytest.approx(np.float32(100.0))
     assert out[3] == pytest.approx(np.float32(1000100.0))
     assert abs(float(out[4]) - 2000.0) > 1.0
     assert out[5] == pytest.approx(np.float32(2000.0))
+    assert out[6] == pytest.approx(np.float32(2000.0))
     assert out[7] == pytest.approx(np.float32(2000.0))
     assert out[8] == pytest.approx(np.float32(1000000.0))
     assert out[9] == pytest.approx(np.float32(1000000.0625))
@@ -1122,6 +1219,331 @@ def test_adaptive_he12_component_step_uses_compensated_relative_time_at_large_or
     assert out[2] == pytest.approx(np.float32(100.0), abs=1e-4)
     assert out[3] == pytest.approx(np.float32(0.0))
     assert out[4] == pytest.approx(np.float32(100.0), abs=5e-3)
+
+
+def test_fixed_stepper_reports_accepted_step_width_without_elapsed_differencing() -> None:
+    runtime = OpenCLRuntime.create(**_explicit_runtime_kwargs())
+    program = _build_program(
+        runtime,
+        """
+        #include \"clODE_random.cl\"
+        #include \"clODE_struct_defs.cl\"
+        #include \"clODE_utilities.cl\"
+
+        void getRHS(
+            const realtype t,
+            const realtype x_[],
+            const realtype p_[],
+            realtype dx_[],
+            realtype aux_[],
+            const realtype w_[]
+        );
+
+        #include \"steppers.cl\"
+
+        __constant struct IntegrationSettings TEST_SETTINGS = {
+            RCONST(1.0e-4),
+            RCONST(1.0e-4),
+            ZERO,
+            ZERO,
+            8
+        };
+        __constant realtype TEST_TSPAN[2] = {RCONST(1000000.0), RCONST(1005000.0)};
+
+        void getRHS(
+            const realtype t,
+            const realtype x_[],
+            const realtype p_[],
+            realtype dx_[],
+            realtype aux_[],
+            const realtype w_[]
+        ) {
+            (void)t;
+            (void)x_;
+            (void)p_;
+            (void)aux_;
+            (void)w_;
+            dx_[0] = ONE;
+        }
+
+        __kernel void probe_fixed_stepper_width(__global realtype *out) {
+            realtype ti = RCONST(1004096.0);
+            realtype dt = RCONST(1.0e-4);
+            realtype accepted_dt = ZERO;
+            realtype solve_elapsed = RCONST(4096.0);
+            realtype solve_elapsed_correction = ZERO;
+            realtype xi[1] = {ZERO};
+            realtype k1[1] = {ONE};
+            realtype pars[1] = {ZERO};
+            realtype aux[1] = {ZERO};
+            realtype wi[1] = {ZERO};
+            struct rngData rd;
+
+            for (int j = 0; j < N_RNGSTATE; ++j)
+                rd.state[j] = 0UL;
+            rd.randnUselast = 0;
+            rd.randnLast = ZERO;
+
+            realtype previous_elapsed = compensatedTimeValue(
+                solve_elapsed,
+                solve_elapsed_correction
+            );
+            int stepflag = stepper(
+                &ti,
+                &solve_elapsed,
+                &solve_elapsed_correction,
+                xi,
+                k1,
+                pars,
+                &TEST_SETTINGS,
+                &dt,
+                &accepted_dt,
+                TEST_TSPAN,
+                aux,
+                wi,
+                &rd
+            );
+
+            out[0] = stepflag;
+            out[1] = accepted_dt;
+            out[2] = compensatedTimeValue(solve_elapsed, solve_elapsed_correction) - previous_elapsed;
+            out[3] = xi[0];
+            out[4] = ti;
+        }
+        """,
+        extra_options=("-DEXPLICIT_EULER", "-DN_VAR=1", "-DN_AUX=0", "-DN_PAR=1", "-DN_WIENER=0"),
+    )
+
+    out = np.empty(5, dtype=np.float32)
+    out_buffer = pyopencl.Buffer(runtime.context, pyopencl.mem_flags.WRITE_ONLY, out.nbytes)
+
+    program.probe_fixed_stepper_width(runtime.queue, (1,), None, out_buffer)
+    pyopencl.enqueue_copy(runtime.queue, out, out_buffer).wait()
+
+    assert out[0] == pytest.approx(np.float32(0.0))
+    assert out[1] == pytest.approx(np.float32(1.0e-4), abs=1e-8)
+    assert out[2] == pytest.approx(np.float32(0.0))
+    assert out[3] == pytest.approx(np.float32(1.0e-4), abs=1e-8)
+    assert out[4] == pytest.approx(np.float32(1004096.0))
+
+
+def test_fixed_heun_component_step_uses_origin_plus_elapsed_end_stage_time() -> None:
+    runtime = OpenCLRuntime.create(**_explicit_runtime_kwargs())
+    program = _build_program(
+        runtime,
+        """
+        #include "clODE_random.cl"
+        #include "clODE_utilities.cl"
+
+        void getRHS(
+            const realtype t,
+            const realtype x_[],
+            const realtype p_[],
+            realtype dx_[],
+            realtype aux_[],
+            const realtype w_[]
+        );
+
+        #include "steppers/fixed_explicit_Trapezoidal.clh"
+
+        void getRHS(
+            const realtype t,
+            const realtype x_[],
+            const realtype p_[],
+            realtype dx_[],
+            realtype aux_[],
+            const realtype w_[]
+        ) {
+            (void)x_;
+            (void)aux_;
+            (void)w_;
+            dx_[0] = p_[0] * (t - p_[1]);
+        }
+
+        __kernel void run_fixed_heun_step(__global realtype *out) {
+            const realtype t_origin = ONE;
+            realtype elapsed = ONE;
+            realtype elapsed_correction = ZERO;
+            const realtype dt = RCONST(1.0e-4);
+            realtype ti = compensatedTimeFromOrigin(t_origin, elapsed, elapsed_correction);
+            realtype xi[1] = {ZERO};
+            realtype pars[2] = {RCONST(1.0e8), RCONST(2.0)};
+            realtype aux[1] = {ZERO};
+            realtype wi[1] = {ZERO};
+            realtype k1[1] = {ZERO};
+            struct rngData rd;
+
+            for (int j = 0; j < N_RNGSTATE; ++j)
+                rd.state[j] = 0UL;
+            rd.randnUselast = 0;
+            rd.randnLast = ZERO;
+
+            getRHS(
+                ti,
+                xi,
+                pars,
+                k1,
+                aux,
+                wi
+            );
+            do_step(
+                t_origin,
+                &elapsed,
+                &elapsed_correction,
+                &ti,
+                xi,
+                k1,
+                pars,
+                dt,
+                aux,
+                wi,
+                &rd
+            );
+            out[0] = xi[0];
+            out[1] = k1[0];
+            out[2] = ti;
+        }
+        """,
+        extra_options=("-DN_VAR=1", "-DN_AUX=0", "-DN_PAR=2", "-DN_WIENER=0"),
+    )
+
+    out = np.empty(3, dtype=np.float32)
+    out_buffer = pyopencl.Buffer(runtime.context, pyopencl.mem_flags.WRITE_ONLY, out.nbytes)
+
+    program.run_fixed_heun_step(runtime.queue, (1,), None, out_buffer)
+    pyopencl.enqueue_copy(runtime.queue, out, out_buffer).wait()
+
+    origin = np.float32(1.0)
+    elapsed = np.float32(1.0)
+    correction = np.float32(0.0)
+    dt = np.float32(1.0e-4)
+    scale = np.float32(1.0e8)
+    anchor = np.float32(2.0)
+    t_start = _reference_compensated_time_from_origin(origin, elapsed, correction)
+    t_end = _reference_compensated_time_from_origin_after_step(origin, elapsed, correction, dt)
+    expected = np.float32(
+        dt * np.float32(0.5) * (scale * (t_start - anchor) + scale * (t_end - anchor))
+    )
+
+    assert out[0] == pytest.approx(expected, abs=1e-6)
+    assert out[1] == pytest.approx(scale * (t_end - anchor), abs=1e-3)
+    assert out[2] == pytest.approx(t_end, abs=1e-7)
+
+
+def test_fixed_rk4_component_step_uses_origin_plus_elapsed_stage_times() -> None:
+    runtime = OpenCLRuntime.create(**_explicit_runtime_kwargs())
+    program = _build_program(
+        runtime,
+        """
+        #include "clODE_random.cl"
+        #include "clODE_utilities.cl"
+
+        void getRHS(
+            const realtype t,
+            const realtype x_[],
+            const realtype p_[],
+            realtype dx_[],
+            realtype aux_[],
+            const realtype w_[]
+        );
+
+        #include "steppers/fixed_explicit_RK4.clh"
+
+        void getRHS(
+            const realtype t,
+            const realtype x_[],
+            const realtype p_[],
+            realtype dx_[],
+            realtype aux_[],
+            const realtype w_[]
+        ) {
+            (void)x_;
+            (void)aux_;
+            (void)w_;
+            dx_[0] = p_[0] * (t - p_[1]);
+        }
+
+        __kernel void run_fixed_rk4_step(__global realtype *out) {
+            const realtype t_origin = RCONST(100.0);
+            realtype elapsed = RCONST(10.0);
+            realtype elapsed_correction = ZERO;
+            const realtype dt = RCONST(1.0e-4);
+            realtype ti = compensatedTimeFromOrigin(t_origin, elapsed, elapsed_correction);
+            realtype xi[1] = {ZERO};
+            realtype pars[2] = {RCONST(1.0e8), RCONST(110.0)};
+            realtype aux[1] = {ZERO};
+            realtype wi[1] = {ZERO};
+            realtype k1[1] = {ZERO};
+            struct rngData rd;
+
+            for (int j = 0; j < N_RNGSTATE; ++j)
+                rd.state[j] = 0UL;
+            rd.randnUselast = 0;
+            rd.randnLast = ZERO;
+
+            getRHS(
+                ti,
+                xi,
+                pars,
+                k1,
+                aux,
+                wi
+            );
+            do_step(
+                t_origin,
+                &elapsed,
+                &elapsed_correction,
+                &ti,
+                xi,
+                k1,
+                pars,
+                dt,
+                aux,
+                wi,
+                &rd
+            );
+            out[0] = xi[0];
+            out[1] = k1[0];
+            out[2] = ti;
+        }
+        """,
+        extra_options=("-DN_VAR=1", "-DN_AUX=0", "-DN_PAR=2", "-DN_WIENER=0"),
+    )
+
+    out = np.empty(3, dtype=np.float32)
+    out_buffer = pyopencl.Buffer(runtime.context, pyopencl.mem_flags.WRITE_ONLY, out.nbytes)
+
+    program.run_fixed_rk4_step(runtime.queue, (1,), None, out_buffer)
+    pyopencl.enqueue_copy(runtime.queue, out, out_buffer).wait()
+
+    origin = np.float32(100.0)
+    elapsed = np.float32(10.0)
+    correction = np.float32(0.0)
+    dt = np.float32(1.0e-4)
+    scale = np.float32(1.0e8)
+    anchor = np.float32(110.0)
+    t_start = _reference_compensated_time_from_origin(origin, elapsed, correction)
+    t_mid = _reference_compensated_time_from_origin_after_step(
+        origin,
+        elapsed,
+        correction,
+        np.float32(0.5) * dt,
+    )
+    t_end = _reference_compensated_time_from_origin_after_step(origin, elapsed, correction, dt)
+    expected = np.float32(
+        dt
+        * (
+            scale * (t_start - anchor)
+            + np.float32(2.0) * scale * (t_mid - anchor)
+            + np.float32(2.0) * scale * (t_mid - anchor)
+            + scale * (t_end - anchor)
+        )
+        / np.float32(6.0)
+    )
+
+    assert out[0] == pytest.approx(expected, abs=1e-6)
+    assert out[1] == pytest.approx(scale * (t_end - anchor), abs=1e-3)
+    assert out[2] == pytest.approx(t_end, abs=1e-7)
 
 
 def test_threshold_2_period_features_survive_large_origin_bias() -> None:

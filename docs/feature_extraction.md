@@ -83,7 +83,7 @@ systems.
 
 For autonomous systems, prefer feature windows whose local `t_span` starts near `0` when
 absolute time is not part of the model. Large absolute times still coarsen stored float32
-absolute timestamps even though the live observers keep elapsed-time statistics separate from
+absolute timestamps even though the observers keep elapsed-time statistics separate from
 those large absolute values.
 
 See `continuation.md` for the full continuation model and `examples/continuation.py` for a

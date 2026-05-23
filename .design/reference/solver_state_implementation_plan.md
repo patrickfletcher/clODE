@@ -10,7 +10,7 @@ Update when: the solver-state boundary changes materially or this note becomes h
 - IVP owns next-solve problem data.
 - `clode/simulation/_state.py` now owns Python-side solver state plus fetched-output caches.
 - `_opencl/executors.py` now treats host mirrors as transfer caches rather than semantic state owners.
-- No device-side per-work-item `t0` or matched solver-state struct was added in this pass.
+- The stepper wrapper boundary now preserves failure status and accepted step width explicitly, but no matched device-side per-work-item solver-state struct was added in this pass.
 
 ## Landed internal shape
 
@@ -44,16 +44,19 @@ Update when: the solver-state boundary changes materially or this note becomes h
 - device-side per-work-item `t0`
 - richer per-work-item completion/error status
 - a matched device-side solver-state struct
+- solver-owned device buffers for step counts, accepted step width, and other per-item stepping diagnostics
 - separation of integration state from output/storage policy (`max_store`, `nout`, event capacity)
 - continuation-state guardrails for diverged per-work-item final times and any later public continuation helper
+- migration of legacy step/time diagnostic ownership out of observer structs and outputs
 - observer-definition cleanup beyond preserving the boundary for later work, which has now landed separately
 
 ## Handoff to the next PR
 
-- Treat the landed solver-state boundary as stable enough to build on, not as the next thing to reopen.
-- The planned output/storage, observer-definition, execution-setting, and stepper-definition follow-ons have now landed; the next structural cleanup is to make the continuation-state contract explicit where shared `t_span` stops being exact, before any broader public continuation API is added.
+- Treat the landed solver-state boundary as stable enough to build on, not as something to reopen wholesale.
+- The next structural cleanup is to make solver-owned per-work-item stepping state explicit on the device and runtime sides: step counts, accepted or current `dt`, time-base values, and failure status.
+- Strip matching legacy step or time diagnostics out of observer ownership while keeping observer-specific interpolation and event geometry intact.
 - Keep the current owner split intact in follow-on work:
   - IVP owns next-solve problem data
-  - solver state owns execution progress and continuation facts
+  - solver state owns execution progress, accepted-step and status facts, and continuation semantics
   - persistent observer state stays adjacent but separate
   - fetched outputs and transfer caches remain derived

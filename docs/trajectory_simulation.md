@@ -1,9 +1,10 @@
 # Trajectory simulation
-CLODE can simulate ODE trajectories using the TrajectorySimulator class.
+
+`TrajectorySimulator` stores sampled trajectories for plotting, post-processing, and inspection.
 
 ## Example - FitzHugh-Nagumo oscillator
 
-The following example simulates the FitzHugh-Nagumo oscillator using the RK45 integrator.
+The following example simulates the FitzHugh-Nagumo oscillator with the fixed-step RK4 stepper.
 
 ### Python
 
@@ -43,6 +44,7 @@ simulator = clode.TrajectorySimulator(
     rhs_equation=fitzhugh_nagumo,
     variables=variables,
     parameters=parameters,
+    stepper=clode.Stepper.rk4,
     t_span=(0, 200),
     dt=0.02,
 )

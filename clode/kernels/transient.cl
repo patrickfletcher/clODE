@@ -23,7 +23,7 @@ __kernel void transient(
     int i = get_global_id(0);
     int nPts = get_global_size(0);
 
-    realtype ti, dt, solveElapsed, solveElapsedCorrection, acceptedStepDt;
+    realtype ti, dt, solveElapsed, solveElapsedCorrection;
     realtype p[N_PAR], xi[N_VAR], dxi[N_VAR];
     realtype auxi[N_AUX>0?N_AUX:1];
     realtype wi[N_WIENER>0?N_WIENER:1];
@@ -61,14 +61,14 @@ __kernel void transient(
 
 	//time-stepping loop
     ulong step = 0;
-    int stepflag = 0;
+    realtype acceptedStepDt = ZERO;
     while (
         compensatedTimeValue(solveElapsed, solveElapsedCorrection) < solveDuration
         && step < settings->max_steps
     )
     {
 		++step;
-        stepflag = stepper(
+        int stepflag = stepper(
             &ti,
             &solveElapsed,
             &solveElapsedCorrection,
@@ -77,15 +77,14 @@ __kernel void transient(
             p,
             settings,
             &dt,
+            &acceptedStepDt,
             tspan,
             auxi,
             wi,
-            &rd,
-            &acceptedStepDt,
-            step
+            &rd
         );
-        // if (stepflag!=0)
-        //     break;
+        if (stepflag != 0)
+            break;
     }
 
     //write the final solution values to global memory.

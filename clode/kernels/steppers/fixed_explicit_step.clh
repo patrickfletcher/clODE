@@ -1,13 +1,11 @@
 #include "clODE_struct_defs.cl" //for IntegrationSettings struct definition
 #include "realtype.cl"
 
-// time update: Which should it be? adaptive uses:
-// realtype tNew = *ti + dt;
-// realtype newDt = tNew - *ti; //use the effective part of dt
-
-// Wrapper for fixed-step explicit steppers. The loop owns the integer step
-// count; this wrapper reconstructs absolute time from t0 + step * dt so the
-// kernels do not depend on repeated float32 time addition.
+// Wrapper for fixed-step explicit steppers. Fixed and adaptive steppers both
+// advance solve-relative elapsed time with compensated accumulation and
+// reconstruct stage times from t0 + elapsed. The wrapper returns a status flag
+// and reports the accepted step width explicitly so solver consumers never need
+// to recover it by differencing large elapsed totals.
 static inline int stepper(
     realtype *ti,
     realtype *solveElapsed,
@@ -17,52 +15,34 @@ static inline int stepper(
     const realtype pars[],
     __constant struct IntegrationSettings *settings,
     realtype *dt,
+    realtype *acceptedDt,
     __constant realtype *tspan,
     realtype aux[],
     realtype wi[],
-    __private struct rngData *rd,
-    realtype *acceptedStepDt,
-    const ulong stepCount
+    __private struct rngData *rd
 )
 {
     (void)settings;
-    realtype stepStartTime = fixedStepTimeFromCounter(tspan[0], stepCount - (ulong)1, *dt);
-    realtype stepMidTime = fixedStepTimeFromRealIndex(
+    realtype stepDt = *dt;
+    *acceptedDt = stepDt;
+
+    // The concrete fixed-step method owns its stage times, compensated
+    // endpoint advance, endpoint slope refresh, and any step-local stochastic
+    // bookkeeping. Fixed-step has no controller state, so dt is also the
+    // accepted step width for this call.
+    do_step(
         tspan[0],
-        ((realtype)stepCount) - RCONST(0.5),
-        *dt
+        solveElapsed,
+        solveElapsedCorrection,
+        ti,
+        xi,
+        k1,
+        pars,
+        stepDt,
+        aux,
+        wi,
+        rd
     );
-    realtype stepEndTime = fixedStepTimeFromCounter(tspan[0], stepCount, *dt);
-
-    // The concrete fixed-step method only updates state; this wrapper owns the
-    // reconstructed absolute time values.
-    do_step(xi, k1, pars, *dt, stepStartTime, stepMidTime, stepEndTime, aux, wi);
-    *ti = stepEndTime;
-    *solveElapsed = fixedStepTimeFromCounter(ZERO, stepCount, *dt);
-    *solveElapsedCorrection = ZERO;
-    *acceptedStepDt = *dt;
-
-    // naive time update - this is the one consistent with what's in each stepper...
-    // *ti += *dt;
-
-    // // update time using Kahan summation
-    // realtype y = *dt - *terr;
-    // realtype tmp = *ti + y;
-    // *terr = (tmp - *ti) - *dt;
-    // *ti = tmp;
-
-    //update the solution and dt - fma(step, *dt, tspan[0]) doesn't seem to change anything (compiler does it?)
-    // *ti = tspan[0] + *dt * step;
-    
-    //NOTE: XPP doesn't care, it lets you have Wiener vars for any solver. Assumes noise value is constant across whole step
-#ifdef STOCHASTIC_STEPPER 
-    //get the new random variables for the next time step
-    for (int j = 0; j < N_WIENER; ++j)
-        wi[j] = randn(rd) / sqrt(*dt);
-#endif
-
-    //compute k1 at new (purified) time. only really matters for non-autonomous case
-    getRHS(*ti, xi, pars, k1, aux, wi); 
 
     return 0;
 }

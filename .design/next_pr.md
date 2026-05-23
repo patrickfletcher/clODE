@@ -6,95 +6,82 @@ Update when: the active target changes, the scope narrows or broadens, or the ac
 
 ## Title
 
-Numerical validation and evidence bundle
+Solver-owned per-work-item state and failure reporting
 
 ## Assumed Repo State
 
-- Canonical public homes are now `clode.problem`, `clode.observers`, `clode.simulation`, and `clode.runtime`.
-- `clode._opencl` is the canonical internal execution layer.
-- The first-pass solver-state, observer-definition, observer-parameter, stepper-definition, and result-cache invalidation boundaries are live.
-- `Simulator.advance_tspan_to_attained_final_time()` now provides a narrow exact-continuation helper for the shared-final-time case.
-- `FeatureSimulator` now resolves legacy `observer_*` compatibility inputs through one canonical `ObserverParams` path and copies caller-provided bundles instead of aliasing them.
-- `clode/kernels/clODE_utilities.cl` now carries the shared helper layer for compensated means, compensated time pairs, fixed-step counter time reconstruction, threshold timestamps, and bounded three-sample extrema.
-- The `basic` and `basicall` observers now use compensated integral accumulation for their time-weighted means.
-- Fixed-step live steppers now reconstruct absolute time from `t0 + step * dt` with a 64-bit step counter, and adaptive steppers now keep solve-relative compensated elapsed time.
-- `threshold_2` now uses inverse-linear timestamps for stored up/down threshold transitions, `local_max` now uses the shared bounded three-sample max/min helpers, and the observer metadata layer now matches the live kernel structs.
-- Direct tests now cover program-cache build keys, `t_span` invalidation, observer-layout rebuilds, event-storage changes, and the main helper contracts already adopted in the kernels.
-- Public `SolverParams`, `ObserverParams`, and the public `Stepper` enum remain thin compatibility surfaces; broader public config redesign is still intentionally deferred.
+- Canonical public homes are `clode.problem`, `clode.observers`, `clode.simulation`, and `clode.runtime`, with `clode._opencl` as the internal execution layer.
+- The first-pass Python-side `SolverState`, observer definitions, observer-parameter resolution, stepper definitions, and result-cache invalidation boundaries are live.
+- Fixed-step and adaptive live steppers now share one compensated solve-relative elapsed-time story for endpoints and internal stages.
+- The wrapper boundary now preserves both stepper status and accepted step width while leaving the next-step proposal in `dt`.
+- `features.cl` now feeds observers the accepted step width from the solver boundary rather than recovering it from elapsed-time differences.
+- Observer kernels still retain some legacy step or time diagnostics even though those values semantically belong to solver state rather than to observers.
+- Public `SolverParams`, `ObserverParams`, and the public `Stepper` enum remain thin compatibility surfaces; broader public config redesign is still deferred.
 
 ## Why this should be next
 
-The code is now ahead of the planning docs: the recent execution-state and invalidation cleanup is already landed and covered by tests. The next leverage point is no longer another cache-ownership refactor. It is tightening the proof layer so the numerics, continuation behavior, and public docs say only what the repository can currently demonstrate.
+The numerical time-base cleanup has now made the architectural boundary clearer rather than fuzzier: the solver owns solve-relative elapsed time, accepted step width, next-step proposal, and failure policy. The remaining mismatch is that some observer paths and outputs still carry legacy step or time diagnostics that should be solver-owned state instead of observer-owned bookkeeping.
 
-The recent time-base and observer work improved correctness, but it also widened the set of claims around single-precision behavior, split-window continuation, and large-ensemble feature extraction. A narrow validation-and-evidence PR gives those claims a stable backbone before deeper observer-memory or performance architecture work.
+The wrapper-level prep is already in place. The next leverage point is to turn that into an explicit per-work-item solver-state model and a deterministic surfaced failure policy before any deeper observer-memory or continuation redesign. That keeps single source of truth with the solver and lets observers ingest time values rather than invent or report them.
 
 ## Scope
 
-- audit the current numerical and continuation claims against the live tests, examples, and docs
-- add the smallest missing exact-solution, convergence, or component regressions needed to support the landed helper and observer work
-- update public docs and design notes so each important claim maps to runnable evidence and the remaining limitations stay explicit
-- allow only small, evidence-backed hot-path tidy-ups while keeping the public API stable
-- keep the public API stable in this PR
-- keep broader observer-time redesign, large-ensemble batching, public packaging hygiene, citation metadata, and release-tag cleanup intentionally out of scope
+- define one explicit internal per-work-item solver-state layout for step counts, current or accepted `dt`, current time-base values, and completion or failure status
+- make the runtime persist and fetch that solver-owned state separately from observer state
+- move legacy step or time diagnostic ownership out of observer structs and outputs where the value is really solver state
+- keep only interpolation or event-timestamp sample geometry in observers where it is still semantically observer-owned
+- make the failure-to-accept-step policy deterministic and surfaced, even if the public API exposure stays narrow in this PR
+- keep the public API stable unless a small diagnostic accessor is clearly needed and low-risk
 
 ## Likely Internal Shape
 
-- extend `test/core_numerics/` and `test/kernel_components/` only where the current public or design wording still depends on thin evidence
-- keep the docs tied to runnable scripts and direct regressions rather than anecdotal claims or internal narratives
-- only touch observer or kernel code when it removes obvious ambiguity or avoidable overhead without expanding the architectural scope
-- keep the public docs explicit about what continuation, timestamps, and float32 safeguards do today without widening the public configuration surface in the same PR
+- choose and document one internal per-work-item solver-state representation, likely struct-of-arrays or an equivalent explicit buffer bundle, instead of scattering step or time facts across observers and executors
+- thread solver-owned status and stepping outputs through `_opencl/buffers.py`, `_opencl/executors.py`, and the simulation-state layer without widening public config scope
+- remove or retire observer-owned step or time diagnostics that are no longer semantically observer state
+- keep observer buffers focused on event semantics, interpolation geometry, and retained event samples
 
 ## Design Constraints
 
-- no public config redesign in this PR
-- preserve the landed solver-state, continuation-helper, output-policy, observer-state, observer-parameter, execution-setting, stepper-definition, and adaptive-time boundaries
-- do not turn this into a broad performance campaign or a benchmark-paper pass
-- do not reopen execution-state ownership unless a validation gap exposes a real bug
-- keep deeper observer-memory or register-pressure redesign on the ideas board unless a small change has direct evidence and low risk
-- no helper in this PR should depend on a general nonlinear system solver; anything that needs that should still be deferred with the later implicit-method work
-- public docs should stay clear about what continues automatically, what time-base safeguards are live, and where caller-managed policy still exists
-- public docs should compare current package features to relevant algorithmic alternatives, not narrate the package's development history
-- leave citation metadata, release-tag alignment, and similar repo-surface packaging hygiene for later
+- no broad public config redesign in this PR
+- preserve the landed compensated time-base, accepted-step-width plumbing, and fixed-stage reconstruction semantics
+- do not reintroduce duplicated time or step bookkeeping across solver and observer code paths
+- keep interpolation buffers and event timestamps in observers where they are still needed for observer semantics
+- do not fold trajectory-output policy, observer metadata, and solver-state refactoring into one large rewrite
+- do not turn this into a broad performance campaign or a continuation-policy redesign
+- keep public docs and design notes explicit about what is solver-owned, what remains observer-owned, and what is still deferred
 
 ## Non-goals
 
-- no constructor signature removals or compatibility-breaking renames
-- no public solver-state object redesign in the same PR
-- no implicit or IMEX solver implementation in the same PR
-- no chunked trajectory streaming or ensemble batching in the same PR
+- no implicit or IMEX solver work
 - no multi-device work
 - no broader diverged-time continuation-policy redesign in the same PR
-- no deeper observer time-window architecture redesign in the same PR
-- no citation metadata or release-tag cleanup in the same PR
+- no broad observer-feature redesign beyond removing solver-owned legacy diagnostics from observers
+- no citation metadata, release-tag, or broader repo-surface cleanup in the same PR
 
 ## Suggested Implementation Slices
 
-1. Audit the current numerical and continuation claims against the live tests, examples, and docs.
-2. Add or tighten the smallest missing exact-solution, convergence, or component regressions.
-3. Refresh the public docs and examples so each important claim points to live evidence.
-4. Record deeper observer-memory or architecture ideas in `.design/ideas.md` instead of widening the PR.
+1. Define the internal solver-state fields and runtime ownership boundary.
+2. Thread solver-owned step, time, and status data through executors and simulation state.
+3. Remove or deprecate the matching legacy observer-owned diagnostics.
+4. Add direct tests for failure status, step counters, accepted-step-width handoff, and fetched solver-state semantics.
 
 ## Code-Facing Checklist
 
-- `test/core_numerics/` and `test/kernel_components/`: add or tighten the smallest missing direct evidence around the live helper and observer contracts
-- `docs/numerical_accuracy.md`, `docs/continuation.md`, `docs/feature_extraction.md`, and `docs/performance_notes.md`: keep user-facing claims aligned with live behavior and reproducible scripts
-- `.design/package_state.md`, `.design/ideas.md`, `.design/development_roadmap.md`, and `.design/reference/single_precision_numerics_note.md`: keep the maintainer rationale aligned with the lived implementation and the deferred observer-footprint ideas
-- `clode/kernels/observers/`: only take low-risk tidy-ups that clearly reduce avoidable scratch or ambiguity
+- `clode/simulation/_state.py`, `clode/simulation/base.py`: keep solver-owned execution progress distinct from fetched results and IVP problem data
+- `clode/_opencl/buffers.py`, `clode/_opencl/executors.py`: add or formalize per-work-item solver-state buffers and fetch semantics
+- `clode/kernels/transient.cl`, `clode/kernels/features.cl`, `clode/kernels/trajectory.cl`, `clode/kernels/initializeObserver.cl`, `clode/kernels/steppers/`: keep solver-owned status, time, and accepted-step-width plumbing consistent
+- `clode/kernels/observers/`: remove legacy solver-diagnostic ownership while preserving event and interpolation state
+- `test/kernel_components/`, `test/test_simulation_contracts.py`, and the continuation numerics slices: add direct evidence for the new solver-state boundary and failure policy
 
 ## Acceptance Criteria
 
-- the main numerical and continuation claims in the docs map to runnable examples or direct tests
-- the current helper and observer mitigations have a slim maintained evidence layer rather than only ad hoc regressions
-- the public docs and design notes clearly describe what is robust today and what is still limited by float32 spacing or deferred continuation work
-- the `.design` docs no longer describe already-landed execution-state or invalidation cleanup as the active next PR
-- deeper observer-footprint redesign remains documented as future work rather than being silently expanded into this PR
+- the runtime has one explicit solver-owned internal home for per-work-item step counts, accepted or current `dt`, time-base values, and completion or failure status
+- observers no longer own or report solver-state diagnostics except for sample geometry still needed for interpolation or event timestamps
+- failure to accept a step has one deterministic policy in the kernels and that status is available to the runtime on fetch
+- the `.design` docs describe the solver/observer boundary in the same way the code now implements it
 
 ## Follow-on If This Lands Cleanly
 
-If this lands cleanly, the next grouped follow-ons should stay selective and ordered:
-
-1. observer-state and register-pressure audit, including whether the heavier event detectors can carry a leaner time-window representation without losing the large-origin safeguards
-2. large-ensemble ergonomics: IVP-side batch-generation helpers and device-capacity ensemble batching before broader trajectory-output expansion
-3. any later per-work-item current-time or `t0` follow-through only if diverged-time continuation becomes a real user-facing priority
-
-Keep broader observer-helper rollout, source-assembly reshaping, broader PyOpenCL helper leverage, and any helper that would need general nonlinear system solve machinery deferred until those grouped follow-ons settle.
+1. numerical validation and evidence bundle refresh, with docs and examples tied to maintained tests
+2. observer-state and register-pressure audit once solver-owned diagnostics are no longer mixed into observer state
+3. any later per-work-item `t0` or diverged-time continuation follow-through only if that becomes a stronger user-facing need

@@ -20,6 +20,7 @@ Read the root `.design` docs first. This directory is not default reading.
 ### Numerics and testing
 
 - `single_precision_numerics_note.md`: verified float32 failure modes, current demos, and mitigation guardrails.
+- `single_precision_ode_solver_guide.md`: compact float32 arithmetic, scaling, conditioning, and mixed-precision guidance for sensitive ODE and kernel work. Read when editing `clode/kernels/*` or other float32-sensitive solver math.
 - `testing_audit.md`: test taxonomy, evidence strategy, and component-test direction.
 
 ### Public docs and publication
