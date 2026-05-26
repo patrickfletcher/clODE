@@ -18,7 +18,7 @@ Use `.design/ideas.md` as the short living board. This file is the longer ration
 
 ### Friction That Still Matters
 
-- The next architectural gap is not the low-level time-base itself; it is the remaining solver-owned per-work-item state follow-through for current-time and other unresolved time-base facts beyond the landed status, accepted-step-count, last-accepted-step-width, and collapsed-window no-progress path.
+- The next architectural gap is no longer the solver-owned failure-policy path; that maintained contract now covers the currently adopted collapsed-window and in-loop float32 `NO_PROGRESS` cases. The next gap is a thinner-than-desired numerical proof layer for the current package claims.
 - The package's numerical and continuation claims still need tighter exact-solution, convergence, and public evidence coverage, but that is now the second grouped follow-on rather than the immediate target.
 - The heavier feature kernels still need an observer-state and register-pressure audit before deeper redesign decisions are justified.
 - Large-ensemble ergonomics are still missing the next obvious layer: IVP-side batch-generation helpers and device-capacity batching.
@@ -38,25 +38,16 @@ Use `.design/ideas.md` as the short living board. This file is the longer ration
 
 Keep the next planning pass centered on one product story: fast large-ensemble workflows where users mainly want final states or on-device features, and where single-precision robustness is part of the value rather than a later cleanup.
 
-### 1. Solver-owned per-work-item state and failure reporting
+### 1. Numerical validation and evidence bundle
 
-The next grouped pass should extend the landed solver-owned status, accepted-step-count, last-accepted-step-width, and collapsed-window no-progress path to any remaining current-time values and any broader precision-loss reporting, without reintroducing solver-owned diagnostics through observer bookkeeping or observer public outputs.
+After the failure-policy slice is clearer, keep the validation pass narrow and purposeful: a slim exact-solution solver-validation suite, alignment of precision-sensitive references with the live solver semantics, and public docs or examples that show where the adopted safeguards matter.
 
 Why first:
-
-- the current wrapper boundary already preserves and surfaces accepted step width, accepted step counts, and failure status, so the remaining work is mainly about extending that ownership model to the unresolved time-base facts
-- it restores single source of truth before any broader observer-memory or continuation redesign
-
-### 2. Numerical validation and evidence bundle
-
-After the solver-state boundary is clearer, keep the validation pass narrow and purposeful: a slim exact-solution solver-validation suite, alignment of precision-sensitive references with the live solver semantics, and public docs or examples that show where the adopted safeguards matter.
-
-Why second:
 
 - it strengthens the proof layer without mixing documentation work into the state-ownership refactor
 - it lets public docs and planning notes point to maintained evidence instead of ad hoc demos
 
-### 3. Observer-state and register-pressure audit
+### 2. Observer-state and register-pressure audit
 
 After the solver-state split is explicit and the proof layer is tighter, audit the heavier feature kernels with throughput in mind. Measure per-work-item observer state, retained event storage, and avoidable private scratch before deciding whether deeper observer-time redesign is worth the complexity.
 
@@ -65,7 +56,7 @@ Why third:
 - it avoids auditing observer footprint while solver-owned diagnostics are still mixed into observer state
 - it keeps redesign pressure evidence-driven instead of speculative
 
-### Later and lower leverage
+### 3. Later and lower leverage
 
 Keep source-assembly reshaping, broader PyOpenCL helper adoption, compatibility-barrel cleanup, richer observer-surface expansion, diverged-time continuation follow-through, and implicit-method work behind the grouped passes above unless a concrete bug or benchmark result pulls one of them forward.
 

@@ -6,7 +6,7 @@ Update when: the active target changes, the scope narrows or broadens, or the ac
 
 ## Title
 
-Solver-owned per-work-item state and failure reporting
+Numerical validation and evidence bundle
 
 ## Assumed Repo State
 
@@ -14,81 +14,70 @@ Solver-owned per-work-item state and failure reporting
 - The first-pass Python-side `SolverState`, observer definitions, observer-parameter resolution, stepper definitions, and result-cache invalidation boundaries are live.
 - Fixed-step and adaptive live steppers now share one compensated solve-relative elapsed-time story for endpoints and internal stages.
 - The wrapper boundary now preserves both stepper status and accepted step width while leaving the next-step proposal in `dt`.
-- The runtime and simulator layer now surface solver-owned per-work-item status, accepted-step-count, and last-accepted-step-width arrays, and now also report `NO_PROGRESS` when a positive requested window collapses to zero in runtime precision; richer time-base state and any work metrics are still not explicit device-side solver state.
+- The runtime and simulator layer now surface solver-owned per-work-item status, accepted-step-count, and last-accepted-step-width arrays, and now report `NO_PROGRESS` both when a positive requested window collapses to zero in runtime precision and for the maintained in-loop float32 time-stall cases currently covered across transient, trajectory, and feature runs.
 - `features.cl` now feeds observers the accepted step width from the solver boundary rather than recovering it from elapsed-time differences.
 - Public observer feature surfaces no longer report step count or `dt` summary diagnostics; remaining observer-private counters only persist where event geometry or internal running means still need them.
 - Public `SolverParams`, `ObserverParams`, and the public `Stepper` enum remain thin compatibility surfaces; broader public config redesign is still deferred.
+- The current test surface now has a maintained public-contract slice for collapsed-window and in-loop `NO_PROGRESS` status behavior, but the broader numerical evidence layer is still thinner than the current public claims.
 
 ## Why this should be next
 
-The numerical time-base cleanup has now made the architectural boundary clearer rather than fuzzier: the solver owns solve-relative elapsed time, accepted step width, next-step proposal, and failure policy. The remaining mismatch is that some observer paths and private bookkeeping still carry legacy step or time diagnostics that should be solver-owned state instead of observer-owned bookkeeping, and some remaining time-base facts are still not explicit per-work-item solver state.
+The next highest-value gap is now proof rather than plumbing. The solver-owned status boundary and the currently adopted `NO_PROGRESS` policy are maintained, but the repo still lacks a slim, explicit solver-validation bundle with clear global-error or convergence expectations that matches the current numerical claims.
 
-The wrapper-level prep is already in place. The next leverage point is to turn that into an explicit per-work-item solver-state model and a deterministic surfaced failure policy before any deeper observer-memory or continuation redesign. That keeps single source of truth with the solver and lets observers ingest time values rather than invent or report them.
+That is the right next cut because it raises confidence in the current package story without reopening settled ownership boundaries or mixing in another runtime refactor. It also gives later docs, examples, and performance notes maintained evidence to point at instead of ad hoc demonstrations.
 
 ## Scope
 
-- extend the now-landed solver-owned status, accepted-step-count, and last-accepted-step-width path toward any remaining current time-base diagnostics and later work metrics
-- make the runtime persist and fetch that solver-owned state separately from observer state
-- keep solver-owned diagnostics on solver fetch paths rather than reintroducing them through observer outputs or metadata
-- keep only interpolation or event-timestamp sample geometry in observers where it is still semantically observer-owned
-- make the failure-to-accept-step policy deterministic and surfaced, even if the public API exposure stays narrow in this PR
-- extend the current no-progress handling beyond collapsed runtime-precision windows if broader precision-loss cases need one coherent surfaced status
-- keep the public API stable unless a small diagnostic accessor is clearly needed and low-risk
+- add a slim exact-solution solver-validation slice in `test/core_numerics/` with explicit global-error or convergence expectations for a small representative problem set
+- keep release-gating evidence separate from non-gating work-precision or exploratory numerical demos
+- align any touched docs or examples with the maintained evidence instead of broadening public numerical claims beyond what the tests prove
+- preserve the current solver-owned diagnostics and continuation semantics while validating them through narrower numerical contracts rather than new public API
+- keep the public API stable and avoid turning this PR into a broad benchmark or performance campaign
 
 ## Likely Internal Shape
 
-- choose and document one internal per-work-item solver-state representation for the remaining time-base and work-metric facts, building on the landed status, step-count, and last-accepted-step-width buffers
-- thread solver-owned status and stepping outputs through `_opencl/buffers.py`, `_opencl/executors.py`, and the simulation-state layer without widening public config scope
-- keep observer public outputs free of solver-owned step or time diagnostics while leaving observer-private counters only where the event logic still needs them
-- keep observer buffers focused on event semantics, interpolation geometry, and retained event samples
-- defer a bundled public solver-stats object until the remaining fields are stable enough that one object would reduce churn rather than freeze an incomplete story
+- choose one or two realistic ODE problems with exact or high-confidence references and make their acceptance criteria explicit
+- keep the authoritative correctness layer in `test/core_numerics/` and use docs or examples only as supplementary demonstrations
+- add the smallest helper or reference scaffolding needed for maintained global-error and convergence checks
+- leave broader performance plots, benchmark trees, and heavier work-precision experiments outside the release gate
 
 ## Design Constraints
 
 - no broad public config redesign in this PR
-- preserve the landed compensated time-base, accepted-step-width plumbing, and fixed-stage reconstruction semantics
-- do not reintroduce duplicated time or step bookkeeping across solver and observer code paths
-- keep any adopted precision-loss or no-progress detection on the same solver-owned status path instead of adding ad hoc wrapper or observer reporting
-- keep event count observer-owned and do not reintroduce step-count or `dt` summary outputs on observer public surfaces while the remaining solver-owned diagnostics settle
-- do not freeze SciPy-style work metrics or a bundled stats object until their semantics are explicit across fixed, adaptive, stochastic, and any later implicit paths
-- keep interpolation buffers and event timestamps in observers where they are still needed for observer semantics
-- do not fold trajectory-output policy, observer metadata, and solver-state refactoring into one large rewrite
-- do not turn this into a broad performance campaign or a continuation-policy redesign
-- keep public docs and design notes explicit about what is solver-owned, what remains observer-owned, and what is still deferred
+- preserve the landed compensated time-base, accepted-step-width plumbing, solver-owned status boundary, and continuation semantics
+- keep correctness evidence separate from performance exploration and avoid turning the test suite into a benchmark harness
+- prefer maintained exact-solution or explicit-reference checks over qualitative demo-only evidence
+- keep docs and examples explicit about what the maintained tests prove and what remains illustrative only
+- do not use this PR to reopen observer-state ownership, current-time modeling, or public solver-stats design
 
 ## Non-goals
 
 - no implicit or IMEX solver work
 - no multi-device work
-- no broader diverged-time continuation-policy redesign in the same PR
-- no broad observer-feature redesign beyond removing solver-owned legacy diagnostics from observers
+- no broader diverged-time continuation-policy redesign or matched device-side current-time model in the same PR
+- no broad observer-feature redesign or solver-state refactor in the same PR
 - no citation metadata, release-tag, or broader repo-surface cleanup in the same PR
 
 ## Suggested Implementation Slices
 
-1. Treat the landed status, step-count, and last-accepted-step-width accessors as the stable public slice for this PR.
-2. Keep observer public outputs aligned with that boundary while retaining only private counters needed for observer internals.
-3. Defer bundled stats and heavier work metrics until the remaining fields have one coherent solver-owned story.
+1. Pick one representative exact-solution or high-confidence reference problem already close to the live workflows.
+2. Add explicit global-error or convergence assertions in `test/core_numerics/`.
+3. Sync any touched numerical docs or examples so they point to maintained evidence rather than broader claims.
 
 ## Code-Facing Checklist
 
-- `clode/simulation/_state.py`, `clode/simulation/base.py`: keep solver-owned execution progress distinct from fetched results and IVP problem data
-- `clode/_opencl/buffers.py`, `clode/_opencl/executors.py`: add or formalize per-work-item solver-state buffers and fetch semantics
-- `clode/kernels/transient.cl`, `clode/kernels/features.cl`, `clode/kernels/trajectory.cl`, `clode/kernels/initializeObserver.cl`, `clode/kernels/steppers/`: keep solver-owned status, time, and accepted-step-width plumbing consistent
-- `clode/kernels/observers/`: remove legacy solver-diagnostic ownership while preserving event and interpolation state
-- `test/kernel_components/`, `test/test_simulation_contracts.py`, and the continuation numerics slices: add direct evidence for the new solver-state boundary and failure policy
+- `test/core_numerics/`: add one narrow solver-validation slice with explicit expectations
+- `test/test_ornl_thompson_a1.py`, `examples/`, and `docs/numerical_accuracy.md`: reuse or realign existing evidence where it reduces duplication
+- `.design/reference/testing_audit.md` and the root `.design` docs: keep the evidence story aligned with what the maintained tests now prove
 
 ## Acceptance Criteria
 
-- the runtime has one explicit solver-owned internal home for per-work-item completion or failure status, accepted step counts, and last accepted step width, and any remaining time-base values land on that same path
-- observer public outputs no longer own or report solver-state diagnostics except for event count and sample geometry still needed for interpolation or event timestamps
-- failure to accept a step has one deterministic policy in the kernels and that status is available to the runtime on fetch
-- any adopted no-progress or precision-loss condition uses the same solver-owned status path instead of a parallel wrapper-only signal
-- a bundled solver-stats object is intentionally deferred until the remaining fields and work metrics are stable enough to justify freezing one public shape
-- the `.design` docs describe the solver/observer boundary in the same way the code now implements it
+- at least one representative solver-validation problem has explicit maintained error expectations in `test/core_numerics/`
+- the maintained numerical evidence is clearly separated from illustrative examples or work-precision experiments
+- the `.design` docs and any touched public numerical docs describe the same evidence boundary the code now enforces
 
 ## Follow-on If This Lands Cleanly
 
-1. numerical validation and evidence bundle refresh, with docs and examples tied to maintained tests
-2. observer-state and register-pressure audit once solver-owned diagnostics are no longer mixed into observer state
-3. any later per-work-item `t0` or diverged-time continuation follow-through only if that becomes a stronger user-facing need
+1. observer-state and register-pressure audit once the proof layer is tighter
+2. examples or docs that show where compensated safeguards help in practice without widening the release gate
+3. any later per-work-item current-time or `t0` follow-through only if exact diverged-time continuation becomes a stronger user-facing need
