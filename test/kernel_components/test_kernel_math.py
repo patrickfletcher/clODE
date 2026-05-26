@@ -110,7 +110,7 @@ def test_basic_observer_component_kernel_reports_expected_features() -> None:
         #include \"clODE_utilities.cl\"
         #include \"observers.cl\"
 
-        __constant struct ObserverParams TEST_PARAMS = {
+        __constant struct ObserverRuntimeSettings TEST_PARAMS = {
             0,
             0,
             100,
@@ -161,7 +161,7 @@ def test_basic_observer_component_kernel_reports_expected_features() -> None:
     times = np.array([0.0, 1.0, 3.0], dtype=np.float32)
     x_values = np.array([0.0, 10.0, 4.0], dtype=np.float32)
     dx_values = np.array([1.0, 2.0, -1.0], dtype=np.float32)
-    features = np.empty(6, dtype=np.float32)
+    features = np.empty(5, dtype=np.float32)
 
     time_buffer = pyopencl.Buffer(
         runtime.context,
@@ -201,7 +201,6 @@ def test_basic_observer_component_kernel_reports_expected_features() -> None:
     assert features[2] == pytest.approx(6.0)
     assert features[3] == pytest.approx(2.0)
     assert features[4] == pytest.approx(-1.0)
-    assert features[5] == pytest.approx(2.0)
 
 
 def test_basic_observer_constant_signal_preserves_exact_unit_mean() -> None:
@@ -212,7 +211,7 @@ def test_basic_observer_constant_signal_preserves_exact_unit_mean() -> None:
         #include \"clODE_utilities.cl\"
         #include \"observers.cl\"
 
-        __constant struct ObserverParams TEST_PARAMS = {
+        __constant struct ObserverRuntimeSettings TEST_PARAMS = {
             0,
             0,
             100,
@@ -295,7 +294,7 @@ def test_basicall_observer_component_kernel_reports_expected_feature_layout() ->
         #include \"clODE_utilities.cl\"
         #include \"observers.cl\"
 
-        __constant struct ObserverParams TEST_PARAMS = {
+        __constant struct ObserverRuntimeSettings TEST_PARAMS = {
             0,
             0,
             100,
@@ -351,7 +350,7 @@ def test_basicall_observer_component_kernel_reports_expected_feature_layout() ->
     x_values = np.array([0.0, 1.0, 10.0, -5.0, 4.0, 8.0], dtype=np.float32)
     dx_values = np.array([1.0, 0.0, 2.0, -1.0, -1.0, 4.0], dtype=np.float32)
     aux_values = np.array([7.0, 9.0, 6.0], dtype=np.float32)
-    features = np.empty(14, dtype=np.float32)
+    features = np.empty(13, dtype=np.float32)
 
     time_buffer = pyopencl.Buffer(
         runtime.context,
@@ -393,7 +392,7 @@ def test_basicall_observer_component_kernel_reports_expected_feature_layout() ->
     pyopencl.enqueue_copy(runtime.queue, features, feature_buffer).wait()
 
     expected = np.array(
-        [10.0, 4.0, 6.0, 2.0, -1.0, 8.0, -5.0, 11.0 / 3.0, 4.0, -1.0, 9.0, 6.0, 7.0, 2.0],
+        [10.0, 4.0, 6.0, 2.0, -1.0, 8.0, -5.0, 11.0 / 3.0, 4.0, -1.0, 9.0, 6.0, 7.0],
         dtype=np.float32,
     )
     np.testing.assert_allclose(features, expected, rtol=1e-6, atol=1e-6)
@@ -407,7 +406,7 @@ def test_threshold_2_observer_kernel_uses_inverse_linear_threshold_timestamps() 
         #include \"clODE_utilities.cl\"
         #include \"observers.cl\"
 
-        __constant struct ObserverParams TEST_PARAMS = {
+        __constant struct ObserverRuntimeSettings TEST_PARAMS = {
             0,
             0,
             4,
@@ -521,7 +520,7 @@ def test_threshold_2_observer_kernel_ignores_dx_when_dx_thresholds_zero() -> Non
         #include \"clODE_utilities.cl\"
         #include \"observers.cl\"
 
-        __constant struct ObserverParams TEST_PARAMS = {
+        __constant struct ObserverRuntimeSettings TEST_PARAMS = {
             0,
             0,
             4,
@@ -735,7 +734,7 @@ def test_threshold_2_state_machine_waits_for_second_active_gate(
         #include \"clODE_utilities.cl\"
         #include \"observers.cl\"
 
-        __constant struct ObserverParams TEST_PARAMS = {
+        __constant struct ObserverRuntimeSettings TEST_PARAMS = {
             0,
             0,
             4,
@@ -838,7 +837,7 @@ def test_local_max_observer_kernel_uses_three_sample_extremum_helpers() -> None:
         #include \"clODE_utilities.cl\"
         #include \"observers.cl\"
 
-        __constant struct ObserverParams TEST_PARAMS = {
+        __constant struct ObserverRuntimeSettings TEST_PARAMS = {
             0,
             0,
             4,
@@ -1554,7 +1553,7 @@ def test_threshold_2_period_features_survive_large_origin_bias() -> None:
         #include \"clODE_utilities.cl\"
         #include \"observers.cl\"
 
-        __constant struct ObserverParams TEST_PARAMS = {
+        __constant struct ObserverRuntimeSettings TEST_PARAMS = {
             0,
             0,
             6,

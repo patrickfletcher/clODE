@@ -25,7 +25,7 @@ __kernel void features(
     __global realtype *acceptedDt,      //last accepted dt     [nPts]
     __global realtype *tf,              //final time values    [nPts]
 	__global ObserverState *observer_states, //persistent observer state
-	__constant struct ObserverParams *opars, //observer runtime settings
+	__constant struct ObserverRuntimeSettings *opars, //observer runtime settings
 	__global realtype *F)               //features             [nPts*nFeat]
 {
 	int i = get_global_id(0);

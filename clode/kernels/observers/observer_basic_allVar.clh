@@ -25,7 +25,7 @@ struct ObserverState_basicAll
 
 typedef struct ObserverState_basicAll ObserverState;
 
-static inline void initializeObserverState(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverParams *op) {
+static inline void initializeObserverState(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op) {
     for (int j = 0; j < N_VAR; ++j) {
         od->xTrajectoryMax[j] = -BIG_REAL;
         od->xTrajectoryMin[j] = BIG_REAL;
@@ -47,25 +47,25 @@ static inline void initializeObserverState(realtype *ti, realtype xi[], realtype
 }
 
 //nothing to do - One pass detector
-static inline void warmupObserverState(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverParams *op) {
+static inline void warmupObserverState(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op) {
 }
 
 //no events
-static inline void initializeEventDetector(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverParams *op) {
+static inline void initializeEventDetector(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op) {
 }
 
 //no events
-static inline bool eventFunction(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverParams *op) {
+static inline bool eventFunction(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op) {
     return false;
 }
 
 //no events
-static inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverParams *op) {
+static inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op) {
     return false;
 }
 
 //all features are per-timestep (eventOccurred unused)
-static inline void updateObserverState(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], const realtype stepDt, ObserverState *od, __constant struct ObserverParams *op) {
+static inline void updateObserverState(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], const realtype stepDt, ObserverState *od, __constant struct ObserverRuntimeSettings *op) {
     compensatedIntegrateConstant(
         &od->elapsed_total,
         &od->elapsed_total_correction,
@@ -111,7 +111,7 @@ static inline void updateObserverState(realtype *ti, realtype xi[], realtype dxi
 }
 
 
-static inline void finalizeFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverParams *op, __global realtype *F, int i, int nPts) {
+static inline void finalizeFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op, __global realtype *F, int i, int nPts) {
     int ix = 0;
     for (int j = 0; j < N_VAR; ++j) {
         F[ix++ * nPts + i] = od->xTrajectoryMax[j];
@@ -128,7 +128,7 @@ static inline void finalizeFeatures(realtype *ti, realtype xi[], realtype dxi[],
 }
 
 //Perform and post-integration cleanup of observer state to ensure it is ready for continuation if needed
-static inline void finalizeObserverState(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverParams *op, __constant realtype *tspan) {
+static inline void finalizeObserverState(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op, __constant realtype *tspan) {
 }
 
 #endif // USE_OBSERVER_BASIC_ALLVAR

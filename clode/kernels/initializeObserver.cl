@@ -18,7 +18,7 @@ __kernel void initializeObserver(
 	__global uint *preparedWienerValid, //prepared next-step Wiener availability [nPts]
     __global realtype *d_dt,            //final dt values      [nPts]
 	__global ObserverState *observer_states, //persistent observer state
-	__constant struct ObserverParams *opars) //observer runtime settings
+	__constant struct ObserverRuntimeSettings *opars) //observer runtime settings
 {
 	int i = get_global_id(0);
 	int nPts = get_global_size(0);

@@ -14,26 +14,26 @@ struct ObserverState_template
 typedef struct ObserverState_template ObserverState;
 
 //set initial values to relevant fields in ObserverState
-static inline void initializeObserverState(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverParams *op) {
+static inline void initializeObserverState(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op) {
     od->eventcount = 0;
     od->stepcount = 0;
 }
 
 //restricted per-timestep update of observer state for initializing event detector
-static inline void warmupObserverState(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverParams *op) {
+static inline void warmupObserverState(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op) {
 }
 
 //process warmup data to compute relevant event detector quantities (e.g. thresholds)
-static inline void initializeEventDetector(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverParams *op) {
+static inline void initializeEventDetector(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op) {
 }
 
 //per-timestep check for an event.  Option: refine event (t,x,dx,aux) within the timestep with interpolation
-static inline bool eventFunction(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverParams *op) {
+static inline bool eventFunction(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op) {
     return false;
 }
 
 //When an event is detected, computes desired event-based features. returns true if a terminal event was reached
-static inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverParams *op) {
+static inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op) {
     ++od->eventcount;
     if (od->eventcount > op->maxEventCount){
         return true;
@@ -42,16 +42,16 @@ static inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dx
 }
 
 //full per-timestep update of observer state. If an event occurred this timestep, event-based observer state is reset. Per-timestep features are computed here.
-static inline void updateObserverState(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverParams *op) {
+static inline void updateObserverState(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op) {
     ++od->stepcount;
 }
 
 //Perform and post-integration cleanup and write desired features into the global array F
-static inline void finalizeFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverParams *op, __global realtype *F, int i, int nPts) { 
+static inline void finalizeFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op, __global realtype *F, int i, int nPts) {
 }
 
 //Perform and post-integration cleanup of observer state to ensure it is ready for continuation if needed
-static inline void finalizeObserverState(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverParams *op, __constant realtype *tspan) {//eg. times of last events need to be shifted left of t0
+static inline void finalizeObserverState(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op, __constant realtype *tspan) {//eg. times of last events need to be shifted left of t0
 }
 
 #endif

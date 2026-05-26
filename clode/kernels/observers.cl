@@ -13,34 +13,11 @@
  * - finalizeFeatures: post-integration cleanup and write to global feature array
  */
 
-//TODO: expose different observerParams for each observer (provide relevant values only)
+//TODO: expose different observer runtime settings for each observer (provide relevant values only)
 //TODO: support using aux vars as event/feature var in observers.
 //TODO: concept of "solution buffer" or "solver state" structure could simplify observer coding. Update it in the ode driver, pass to observer functions
 
-#include "realtype.cl"
-
-struct ObserverParams
-{
-    unsigned int eVarIx; //variable for event detection
-    unsigned int fVarIx; //variable for features
-
-    unsigned int maxEventCount; //time loop limiter
-	// maxEventTimestamps - not here: used as #define N_STORE_EVENTS for fixed-size event timestamp buffer
-    realtype minXamp;  //consider oscillations lower than this to be steady state (return mean X)
-    realtype minIMI;
-
-    //neighborhood return map
-    realtype nHoodRadius;
-
-    //section. Two interpretations: absolute, relative
-    realtype xUpThresh;
-    realtype xDownThresh;
-    realtype dxUpThresh;
-    realtype dxDownThresh;
-
-    //local extremum - tolerance for zero crossing of dx - for single precision: if RHS involves sum of terms of O(1), dx=zero is noise at O(1e-7)
-    realtype eps_dx;
-};
+#include "clODE_struct_defs.cl"
 
 
 // Design criteria

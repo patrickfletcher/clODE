@@ -44,7 +44,7 @@ struct ObserverState_nhood2
 typedef struct ObserverState_nhood2 ObserverState;
 
 //set initial values to relevant fields in ObserverState
-static inline void initializeObserverState(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverParams *op) {
+static inline void initializeObserverState(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op) {
 
     //put x0 in the leading position of the solution buffer
     od->tbuffer[2] = *ti;
@@ -93,7 +93,7 @@ static inline void initializeObserverState(realtype *ti, realtype xi[], realtype
 
 //restricted per-timestep update of observer state for initializing event detector
 // - get extent of trajectory in state space, and max/min slopes
-static inline void warmupObserverState(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverParams *op) {
+static inline void warmupObserverState(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op) {
     for (int j = 0; j < N_VAR; ++j) {
         od->xTrajectoryMax[j] = fmax(xi[j], od->xTrajectoryMax[j]);
         od->xTrajectoryMin[j] = fmin(xi[j], od->xTrajectoryMin[j]);
@@ -101,14 +101,14 @@ static inline void warmupObserverState(realtype *ti, realtype xi[], realtype dxi
 }
 
 //process warmup data to compute relevant event detector quantities (e.g. thresholds)
-static inline void initializeEventDetector(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverParams *op) {
+static inline void initializeEventDetector(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op) {
     for (int j = 0; j < N_VAR; ++j)
         od->xTrajectoryRange[j] = od->xTrajectoryMax[j] - od->xTrajectoryMin[j];
     od->xThreshold = od->xTrajectoryMin[op->eVarIx] + op->xDownThresh * od->xTrajectoryRange[op->eVarIx]; 
 }
 
 //check for exit from "epsilon ball" surrounding od->x0
-static inline bool eventFunction(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverParams *op) {
+static inline bool eventFunction(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op) {
     if (od->stepcount < 2 || !od->foundX0)
         return false;
 
@@ -131,7 +131,7 @@ static inline bool eventFunction(realtype *ti, realtype xi[], realtype dxi[], re
 }
 
 //When an event is detected, computes desired event-based features. returns true if a terminal event was reached
-static inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverParams *op) {
+static inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op) {
     ++od->eventcount;
     
     //simplest: time and state of trajectory point on exit of nhood
@@ -163,7 +163,7 @@ static inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dx
 }
 
 //full per-timestep update of observer state. If an event occurred this timestep, event-based observer state is reset. Per-timestep features are computed here.
-static inline void updateObserverState(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], const realtype stepDt, ObserverState *od, __constant struct ObserverParams *op) {    
+static inline void updateObserverState(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], const realtype stepDt, ObserverState *od, __constant struct ObserverRuntimeSettings *op) {
     ++od->stepcount;
     od->elapsedTotal += stepDt;
 
@@ -219,7 +219,7 @@ static inline void updateObserverState(realtype *ti, realtype xi[], realtype dxi
 }
 
 //Perform and post-integration cleanup and write desired features into the global array F
-static inline void finalizeFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverParams *op, __global realtype *F, int i, int nPts) {
+static inline void finalizeFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op, __global realtype *F, int i, int nPts) {
     int ix = 0;
     F[ix++ * nPts + i] = od->eventcount > 1 ? od->period[0] : ZERO;
     F[ix++ * nPts + i] = od->eventcount > 1 ? od->period[1] : ZERO;
@@ -249,7 +249,7 @@ static inline void finalizeFeatures(realtype *ti, realtype xi[], realtype dxi[],
 }
 
 //Perform and post-integration cleanup of observer state to ensure it is ready for continuation if needed
-static inline void finalizeObserverState(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverParams *op, __constant realtype *tspan) {
+static inline void finalizeObserverState(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op, __constant realtype *tspan) {
 }
 
 #endif //USE_OBSERVER_NEIGHBORHOOD_2
