@@ -100,7 +100,11 @@ __kernel void features(
 		);
 		if (stepflag != 0)
 		{
-			solveStatus = SOLVE_STATUS_STEPPER_FAILED;
+			solveStatus = (
+				stepflag == SOLVE_STATUS_NO_PROGRESS
+				? SOLVE_STATUS_NO_PROGRESS
+				: SOLVE_STATUS_STEPPER_FAILED
+			);
 			break;
 		}
 		acceptedSteps = step;

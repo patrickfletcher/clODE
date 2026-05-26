@@ -7,7 +7,7 @@ Update when: the solver-state boundary changes materially or this note becomes h
 ## Bottom line
 
 - The first-pass solver-state cleanup landed.
-- Follow-on slices have since landed solver-owned per-work-item status, accepted-step-count, and last-accepted-step-width buffers plus public `get_status()`, `get_step_count()`, and `get_last_accepted_dt()` fetch paths.
+- Follow-on slices have since landed solver-owned per-work-item status, accepted-step-count, and last-accepted-step-width buffers plus public `get_status()`, `get_step_count()`, and `get_last_accepted_dt()` fetch paths, and now surface a `NO_PROGRESS` status when a positive requested window collapses to zero in runtime precision.
 - IVP owns next-solve problem data.
 - `clode/simulation/_state.py` now owns Python-side solver state plus fetched-output caches.
 - `_opencl/executors.py` now treats host mirrors as transfer caches rather than semantic state owners.
@@ -53,7 +53,7 @@ Update when: the solver-state boundary changes materially or this note becomes h
 ## Handoff to the next PR
 
 - Treat the landed solver-state boundary as stable enough to build on, not as something to reopen wholesale.
-- The next structural cleanup is to extend the solver-owned device and runtime path from the landed status, step-count, and last-accepted-step-width buffers to any remaining time-base values and any later no-progress status.
+- The next structural cleanup is to extend the solver-owned device and runtime path from the landed status, step-count, last-accepted-step-width, and collapsed-window no-progress path to any remaining time-base values and any broader precision-loss status.
 - Keep observer public outputs free of solver-owned step or time diagnostics while leaving observer-specific interpolation geometry and any private sample counters intact.
 - Keep the public API fine-grained for now. A bundled stats object should wait until the remaining fields and any SciPy-style work metrics have one coherent cross-stepper definition.
 - Keep the current owner split intact in follow-on work:

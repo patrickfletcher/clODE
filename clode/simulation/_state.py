@@ -22,6 +22,7 @@ class SolverStatus(IntEnum):
     MAX_STEPS_REACHED = 1
     TERMINAL_EVENT_REACHED = 2
     OUTPUT_CAPACITY_REACHED = 3
+    NO_PROGRESS = 4
     STEPPER_FAILED = -1
 
 

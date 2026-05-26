@@ -18,7 +18,7 @@ Use `.design/ideas.md` as the short living board. This file is the longer ration
 
 ### Friction That Still Matters
 
-- The next architectural gap is not the low-level time-base itself; it is the missing solver-owned per-work-item state model for step counts, accepted or current `dt`, and failure status.
+- The next architectural gap is not the low-level time-base itself; it is the remaining solver-owned per-work-item state follow-through for current-time and other unresolved time-base facts beyond the landed status, accepted-step-count, last-accepted-step-width, and collapsed-window no-progress path.
 - The package's numerical and continuation claims still need tighter exact-solution, convergence, and public evidence coverage, but that is now the second grouped follow-on rather than the immediate target.
 - The heavier feature kernels still need an observer-state and register-pressure audit before deeper redesign decisions are justified.
 - Large-ensemble ergonomics are still missing the next obvious layer: IVP-side batch-generation helpers and device-capacity batching.
@@ -40,11 +40,11 @@ Keep the next planning pass centered on one product story: fast large-ensemble w
 
 ### 1. Solver-owned per-work-item state and failure reporting
 
-The next grouped pass should make step counts, accepted or current `dt`, time-base values, and failure status explicitly solver-owned rather than leaving legacy pieces of that information inside observer state or observer outputs.
+The next grouped pass should extend the landed solver-owned status, accepted-step-count, last-accepted-step-width, and collapsed-window no-progress path to any remaining current-time values and any broader precision-loss reporting, without reintroducing solver-owned diagnostics through observer bookkeeping or observer public outputs.
 
 Why first:
 
-- the current wrapper boundary already preserves accepted step width and failure status, so the remaining work is mainly about making ownership explicit and fetchable
+- the current wrapper boundary already preserves and surfaces accepted step width, accepted step counts, and failure status, so the remaining work is mainly about extending that ownership model to the unresolved time-base facts
 - it restores single source of truth before any broader observer-memory or continuation redesign
 
 ### 2. Numerical validation and evidence bundle

@@ -1,3 +1,4 @@
+#include "clODE_solver_status.cl"
 #include "clODE_struct_defs.cl" //for IntegrationSettings struct definition
 #include "realtype.cl"
 
@@ -94,6 +95,11 @@ static inline int stepper(
         }
         else
         {   //accept the step, update time and solution
+            if (stepDt > ZERO && trialTime == *ti)
+            {
+                *acceptedDt = ZERO;
+                return SOLVE_STATUS_NO_PROGRESS;
+            }
             *solveElapsed = trialElapsed;
             *solveElapsedCorrection = trialElapsedCorrection;
             acceptedTime = trialTime;

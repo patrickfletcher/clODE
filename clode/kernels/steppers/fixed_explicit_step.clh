@@ -1,3 +1,4 @@
+#include "clODE_solver_status.cl"
 #include "clODE_struct_defs.cl" //for IntegrationSettings struct definition
 #include "realtype.cl"
 
@@ -25,6 +26,18 @@ static inline int stepper(
     (void)settings;
     realtype stepDt = *dt;
     *acceptedDt = stepDt;
+
+    realtype stepEndTime = compensatedTimeFromOriginAfterStep(
+        tspan[0],
+        *solveElapsed,
+        *solveElapsedCorrection,
+        stepDt
+    );
+    if (stepDt > ZERO && stepEndTime == *ti)
+    {
+        *acceptedDt = ZERO;
+        return SOLVE_STATUS_NO_PROGRESS;
+    }
 
     // The concrete fixed-step method owns its stage times, compensated
     // endpoint advance, endpoint slope refresh, and any step-local stochastic

@@ -96,7 +96,7 @@ complete runnable example.
 
 After `trajectory()`, inspect solver diagnostics on the simulator instead of inferring them from the returned samples:
 
-- `get_status()` reports whether the solve completed, hit `max_steps`, stopped at a terminal event, or stopped because trajectory storage filled
+- `get_status()` reports whether the solve completed, hit `max_steps`, stopped at a terminal event, stopped because trajectory storage filled, or made no progress because the requested window collapsed in runtime precision
 - `get_step_count()` reports accepted step counts
 - `get_last_accepted_dt()` reports the width of the last accepted step
 - `get_dt()` reports the continuation step size currently stored on the device, which for adaptive steppers is the next step size the controller would try on a continued solve rather than the last accepted width

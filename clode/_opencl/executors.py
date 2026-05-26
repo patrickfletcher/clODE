@@ -13,6 +13,7 @@ from ..observers.types import (
     _copy_observer_params,
 )
 from ..problem._core import ProblemInfo, RhsSource
+from ..simulation._state import SolverStatus
 from ..simulation.params import (
     SolverParams,
     _TrajectoryOutputSettings,
@@ -416,8 +417,29 @@ class OpenCLTransientExecutor:
             (buffers.ensemble_size,),
             None,
         ).wait()
+        if self._requested_window_collapses_in_runtime_precision():
+            self._upload_no_progress_status(buffers)
         self._runtime.queue.finish()
         self._transient_cache.mark_result_pending()
+
+    def _requested_window_collapses_in_runtime_precision(self) -> bool:
+        if self._tspan[1] <= self._tspan[0]:
+            return False
+        dtype = np.float32 if self._precision is Precision.SINGLE else np.float64
+        quantized_tspan = np.asarray(self._tspan, dtype=dtype)
+        return bool(quantized_tspan[1] == quantized_tspan[0])
+
+    def _upload_no_progress_status(self, buffers: CommonBuffers) -> None:
+        host_status = np.full(
+            buffers.ensemble_size,
+            fill_value=np.int32(int(SolverStatus.NO_PROGRESS)),
+            dtype=np.int32,
+        )
+        self._opencl_binding.enqueue_copy(
+            self._runtime.queue,
+            buffers.status,
+            host_status,
+        ).wait()
 
     def _reset_solver_state_cache(
         self,
@@ -656,6 +678,8 @@ class OpenCLTrajectoryExecutor(OpenCLTransientExecutor):
             (buffers.ensemble_size,),
             None,
         ).wait()
+        if self._requested_window_collapses_in_runtime_precision():
+            self._upload_no_progress_status(buffers)
         self._runtime.queue.finish()
         self._transient_cache.mark_result_pending()
         self._trajectory_cache.mark_result_pending()
@@ -764,6 +788,8 @@ class OpenCLFeatureExecutor(OpenCLTransientExecutor):
             (buffers.ensemble_size,),
             None,
         ).wait()
+        if self._requested_window_collapses_in_runtime_precision():
+            self._upload_no_progress_status(buffers)
         self._runtime.queue.finish()
         self._transient_cache.mark_result_pending()
         self._observer_initialized = True

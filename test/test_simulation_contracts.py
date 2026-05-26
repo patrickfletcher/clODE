@@ -218,6 +218,76 @@ def test_get_status_reports_max_steps_exhaustion() -> None:
     np.testing.assert_allclose(simulator.get_final_time().reshape(-1), [0.3])
 
 
+def test_get_status_reports_no_progress_when_float32_time_cannot_advance() -> None:
+    simulator = make_simulator(
+        "stable_linear",
+        stepper=clode.Stepper.rk4,
+        t_span=(1.0e6, 1.0e6 + 0.01),
+        dt=0.001,
+        dtmax=0.001,
+        max_steps=FIXED_MAX_STEPS,
+        single_precision=True,
+    )
+
+    simulator.transient(update_x0=False, fetch_results=False)
+
+    np.testing.assert_array_equal(
+        simulator.get_status().reshape(-1),
+        [clode.SolverStatus.NO_PROGRESS],
+    )
+    np.testing.assert_array_equal(simulator.get_step_count().reshape(-1), [0])
+    np.testing.assert_allclose(simulator.get_last_accepted_dt().reshape(-1), [0.0])
+    np.testing.assert_allclose(simulator.get_final_time().reshape(-1), [1.0e6])
+
+
+def test_trajectory_status_reports_no_progress_when_float32_time_cannot_advance() -> None:
+    simulator = make_trajectory_simulator(
+        "stable_linear",
+        stepper=clode.Stepper.rk4,
+        t_span=(1.0e6, 1.0e6 + 0.01),
+        dt=0.001,
+        dtmax=0.001,
+        max_steps=FIXED_MAX_STEPS,
+        max_store=32,
+        nout=1,
+        single_precision=True,
+    )
+
+    trajectory = simulator.trajectory(update_x0=False)
+    output = trajectory if not isinstance(trajectory, list) else trajectory[0]
+
+    np.testing.assert_array_equal(
+        simulator.get_status().reshape(-1),
+        [clode.SolverStatus.NO_PROGRESS],
+    )
+    np.testing.assert_array_equal(simulator.get_step_count().reshape(-1), [0])
+    np.testing.assert_allclose(simulator.get_last_accepted_dt().reshape(-1), [0.0])
+    np.testing.assert_allclose(simulator.get_final_time().reshape(-1), [1.0e6])
+    assert len(output.t) == 1
+
+
+def test_feature_status_reports_no_progress_when_float32_time_cannot_advance() -> None:
+    simulator = make_feature_simulator(
+        "stable_linear",
+        stepper=clode.Stepper.rk4,
+        t_span=(1.0e6, 1.0e6 + 0.01),
+        dt=0.001,
+        dtmax=0.001,
+        max_steps=FIXED_MAX_STEPS,
+        single_precision=True,
+    )
+
+    simulator.features(update_x0=False)
+
+    np.testing.assert_array_equal(
+        simulator.get_status().reshape(-1),
+        [clode.SolverStatus.NO_PROGRESS],
+    )
+    np.testing.assert_array_equal(simulator.get_step_count().reshape(-1), [0])
+    np.testing.assert_allclose(simulator.get_last_accepted_dt().reshape(-1), [0.0])
+    np.testing.assert_allclose(simulator.get_final_time().reshape(-1), [1.0e6])
+
+
 def test_feature_status_reports_terminal_event_stop() -> None:
     simulator = clode.FeatureSimulator(
         src_file=model_path("hopf_normal_form.cl"),

@@ -14,14 +14,14 @@ Solver-owned per-work-item state and failure reporting
 - The first-pass Python-side `SolverState`, observer definitions, observer-parameter resolution, stepper definitions, and result-cache invalidation boundaries are live.
 - Fixed-step and adaptive live steppers now share one compensated solve-relative elapsed-time story for endpoints and internal stages.
 - The wrapper boundary now preserves both stepper status and accepted step width while leaving the next-step proposal in `dt`.
-- The runtime and simulator layer now surface solver-owned per-work-item status, accepted-step-count, and last-accepted-step-width arrays, while richer time-base state and any work metrics are still not explicit device-side solver state.
+- The runtime and simulator layer now surface solver-owned per-work-item status, accepted-step-count, and last-accepted-step-width arrays, and now also report `NO_PROGRESS` when a positive requested window collapses to zero in runtime precision; richer time-base state and any work metrics are still not explicit device-side solver state.
 - `features.cl` now feeds observers the accepted step width from the solver boundary rather than recovering it from elapsed-time differences.
 - Public observer feature surfaces no longer report step count or `dt` summary diagnostics; remaining observer-private counters only persist where event geometry or internal running means still need them.
 - Public `SolverParams`, `ObserverParams`, and the public `Stepper` enum remain thin compatibility surfaces; broader public config redesign is still deferred.
 
 ## Why this should be next
 
-The numerical time-base cleanup has now made the architectural boundary clearer rather than fuzzier: the solver owns solve-relative elapsed time, accepted step width, next-step proposal, and failure policy. The remaining mismatch is that some observer paths and outputs still carry legacy step or time diagnostics that should be solver-owned state instead of observer-owned bookkeeping.
+The numerical time-base cleanup has now made the architectural boundary clearer rather than fuzzier: the solver owns solve-relative elapsed time, accepted step width, next-step proposal, and failure policy. The remaining mismatch is that some observer paths and private bookkeeping still carry legacy step or time diagnostics that should be solver-owned state instead of observer-owned bookkeeping, and some remaining time-base facts are still not explicit per-work-item solver state.
 
 The wrapper-level prep is already in place. The next leverage point is to turn that into an explicit per-work-item solver-state model and a deterministic surfaced failure policy before any deeper observer-memory or continuation redesign. That keeps single source of truth with the solver and lets observers ingest time values rather than invent or report them.
 
@@ -32,7 +32,7 @@ The wrapper-level prep is already in place. The next leverage point is to turn t
 - keep solver-owned diagnostics on solver fetch paths rather than reintroducing them through observer outputs or metadata
 - keep only interpolation or event-timestamp sample geometry in observers where it is still semantically observer-owned
 - make the failure-to-accept-step policy deterministic and surfaced, even if the public API exposure stays narrow in this PR
-- decide whether no-progress from float32 time quantization belongs in the same surfaced failure-status model and, if so, represent it as solver-owned status rather than as a wrapper-side special case
+- extend the current no-progress handling beyond collapsed runtime-precision windows if broader precision-loss cases need one coherent surfaced status
 - keep the public API stable unless a small diagnostic accessor is clearly needed and low-risk
 
 ## Likely Internal Shape
