@@ -6,7 +6,7 @@ Update when: the active target changes, the scope narrows or broadens, or the ac
 
 ## Title
 
-Numerical validation and evidence bundle
+Simulation state and output ownership model
 
 ## Assumed Repo State
 
@@ -18,66 +18,77 @@ Numerical validation and evidence bundle
 - `features.cl` now feeds observers the accepted step width from the solver boundary rather than recovering it from elapsed-time differences.
 - Public observer feature surfaces no longer report step count or `dt` summary diagnostics; remaining observer-private counters only persist where event geometry or internal running means still need them.
 - Public `SolverParams`, `ObserverParams`, and the public `Stepper` enum remain thin compatibility surfaces; broader public config redesign is still deferred.
-- The current test surface now has a maintained public-contract slice for collapsed-window and in-loop `NO_PROGRESS` status behavior plus a first exact stable-linear transient evidence pair: an explicit RK4 global-error convergence slice and an adaptive Dormand-Prince tolerance-refinement slice, but the broader numerical evidence layer is still thinner than the current public claims.
+- The current test surface now has a maintained public-contract slice for collapsed-window and in-loop `NO_PROGRESS` status behavior plus a first exact stable-linear transient evidence pair: an explicit RK4 global-error convergence slice and an adaptive Dormand-Prince tolerance-refinement slice.
+- The release-gating numerics bundle now centers on `test/core_numerics/`, while older top-level workflow and scientific numerics files remain available through a supplemental bundle instead of defining the proof layer.
+- `TrajectorySimulator` already keeps trajectory output settings separate at runtime, but `SolverParams` still mixes integration and trajectory-output concerns at the compatibility surface.
+- `ObserverParams` already exposes derived runtime and event-output views, but built-in observers, persistent observer state layout, and fetched feature output are still braided together across simulator code and `_opencl` runtime paths.
+- `_opencl` already owns buffer allocation, struct packing, and matched observer-state layouts, but it still consumes too many mixed policy bundles and primitive values instead of one explicit Python-owned semantic contract.
 
 ## Why this should be next
 
-The next highest-value gap is now proof rather than plumbing. The solver-owned status boundary and the currently adopted `NO_PROGRESS` policy are maintained, but the repo still lacks a slim, explicit solver-validation bundle with clear global-error or convergence expectations that matches the current numerical claims.
+The hardest remaining blocker is no longer observer footprint. It is that solver state, trajectory output policy, observer runtime settings, event-output capacity, persistent observer state, and fetched outputs are still split across compatibility bundles, simulator subclasses, caches, and `_opencl` transfer or metadata helpers.
 
-That is the right next cut because it raises confidence in the current package story without reopening settled ownership boundaries or mixing in another runtime refactor. It also gives later docs, examples, and performance notes maintained evidence to point at instead of ad hoc demonstrations.
+That is the right next cut because it clarifies the Python-vs-OpenCL ownership story before more observer work, output ergonomics, or public narrative growth piles on top. It also makes the package's distinctive "observer" workflow easier to explain for a stronger JOSS story and easier to extend with additional built-in or later composable observers.
+
+One important framing decision from the pre-PR audit is now explicit: `transient` and `trajectory` should not be forced under the observer metaphor. Transient is the no-retained-output solve path, trajectory is a retained-sample output policy, and observers remain the stateful event or feature path.
 
 ## Scope
 
-- add a slim exact-solution solver-validation slice in `test/core_numerics/` with explicit global-error or convergence expectations for a small representative problem set
-- keep release-gating evidence separate from non-gating work-precision or exploratory numerical demos
-- align any touched docs or examples with the maintained evidence instead of broadening public numerical claims beyond what the tests prove
-- preserve the current solver-owned diagnostics and continuation semantics while validating them through narrower numerical contracts rather than new public API
-- keep the public API stable and avoid turning this PR into a broad benchmark or performance campaign
+- make one explicit Python semantic owner for each of: integration settings, trajectory output policy, observer runtime settings, event-output policy, solver state, persistent observer state, and fetched feature or trajectory outputs
+- make `_opencl` consume those models for buffer allocation, struct packing, and invalidation rather than silently define the concepts through mixed bundles or mirrored fields
+- keep `Simulator`, `TrajectorySimulator`, and `FeatureSimulator` as orchestration handles while reducing the semantic ownership they still carry today
+- preserve the public compatibility inputs for now; this PR should clarify internal ownership first, not ship a broad public API redesign
+- leave user-facing custom/composable observers and deeper continuation redesign for follow-on PRs, but shape this slice so those follow-ons are smaller and easier to reason about
+- preserve the distinction between retained-output policy and observer semantics rather than trying to model trajectory storage as "just another observer"
 
 ## Likely Internal Shape
 
-- choose one or two realistic ODE problems with exact or high-confidence references and make their acceptance criteria explicit
-- keep the authoritative correctness layer in `test/core_numerics/` and use docs or examples only as supplementary demonstrations
-- add the smallest helper or reference scaffolding needed for maintained global-error and convergence checks
-- leave broader performance plots, benchmark trees, and heavier work-precision experiments outside the release gate
+- split the internal owners under `clode/simulation/params.py`, `clode/observers/types.py`, and `clode/simulation/_state.py` into smaller value-oriented models while keeping `SolverParams` and `ObserverParams` as thin compatibility surfaces
+- keep persistent observer state distinct from observer runtime settings and from fetched observer output
+- keep trajectory output settings distinct from integration settings and solver state
+- align `clode/_opencl/executors.py`, `buffers.py`, `observer_metadata.py`, and `structs.py` to consume those explicit owners instead of mixed compatibility bundles
 
 ## Design Constraints
 
 - no broad public config redesign in this PR
-- preserve the landed compensated time-base, accepted-step-width plumbing, solver-owned status boundary, and continuation semantics
-- keep correctness evidence separate from performance exploration and avoid turning the test suite into a benchmark harness
-- prefer maintained exact-solution or explicit-reference checks over qualitative demo-only evidence
-- keep docs and examples explicit about what the maintained tests prove and what remains illustrative only
-- do not use this PR to reopen observer-state ownership, current-time modeling, or public solver-stats design
+- preserve the landed compensated time-base, accepted-step-width plumbing, solver-owned status boundary, continuation semantics, and current proof layer
+- do not reintroduce solver-owned step, status, or time diagnostics through observer outputs or observer-private state
+- keep semantic ownership in Python first and treat `_opencl` as the execution consumer rather than the authoritative definition layer
+- no user-facing custom-observer DSL, codegen surface, or broad inheritance redesign in the same PR
+- avoid turning this PR into a benchmark or register-pressure campaign; the point is architectural clarity, not immediate throughput claims
+- keep public docs and design notes explicit about what is clarified here and what remains deferred
 
 ## Non-goals
 
 - no implicit or IMEX solver work
 - no multi-device work
 - no broader diverged-time continuation-policy redesign or matched device-side current-time model in the same PR
-- no broad observer-feature redesign or solver-state refactor in the same PR
+- no public bundled solver-stats object in the same PR
+- no broad observer-feature redesign or solver-state refactor beyond the owner split needed for this pass
 - no citation metadata, release-tag, or broader repo-surface cleanup in the same PR
 
 ## Suggested Implementation Slices
 
-1. Pick one representative exact-solution or high-confidence reference problem already close to the live workflows.
-2. Add explicit global-error or convergence assertions in `test/core_numerics/`.
-3. Sync any touched numerical docs or examples so they point to maintained evidence rather than broader claims.
+1. Name and codify the internal owners for settings, solver state, persistent observer state, and fetched outputs.
+2. Align feature and trajectory executors plus cache invalidation with those owners.
+3. Leave one narrow follow-on target for observer authoring/composition once the owner map is explicit.
 
 ## Code-Facing Checklist
 
-- `test/core_numerics/`: add one narrow solver-validation slice with explicit expectations
-- `test/test_ornl_thompson_a1.py`, `examples/`, and `docs/numerical_accuracy.md`: reuse or realign existing evidence where it reduces duplication
-- `.design/reference/testing_audit.md` and the root `.design` docs: keep the evidence story aligned with what the maintained tests now prove
+- `clode/simulation/params.py`, `clode/observers/types.py`, `clode/simulation/_state.py`: make the internal owner split explicit
+- `clode/simulation/features.py`, `clode/simulation/trajectory.py`, `clode/simulation/results.py`: keep simulator orchestration and fetched output handling aligned with those owners
+- `clode/_opencl/executors.py`, `clode/_opencl/buffers.py`, `clode/_opencl/observer_metadata.py`, `clode/_opencl/structs.py`: make runtime code consume the semantic models rather than define them first
+- `.design/reference/semantic_layout_audit.md`, `.design/reference/solver_state_implementation_plan.md`, and `.design/reference/joss_audit.md`: keep the architecture and publication story aligned with the live owner model
 
 ## Acceptance Criteria
 
-- at least one representative solver-validation problem has explicit maintained error expectations in `test/core_numerics/`
-- the maintained numerical evidence is clearly separated from illustrative examples or work-precision experiments
-- the `.design` docs and any touched public numerical docs describe the same evidence boundary the code now enforces
+- the root `.design` docs and touched code can name one owner for integration settings, trajectory output policy, observer runtime settings, event-output policy, solver state, persistent observer state, and fetched outputs
+- the feature and trajectory paths stop relying on mixed compatibility bundles internally when a narrower owner model already exists
+- the updated design docs give a coherent answer to what solver state, observer state, and outputs mean on the Python side versus the OpenCL side
+- the next follow-on for observer authoring/composition is smaller and more explicit than it is today
 
 ## Follow-on If This Lands Cleanly
 
-1. observer-state and register-pressure audit once the proof layer is tighter
-2. examples or docs that show where compensated safeguards help in practice without widening the release gate
-3. any later per-work-item current-time or `t0` follow-through only if exact diverged-time continuation becomes a stronger user-facing need
+1. observer authoring and composition follow-through built on the explicit owner split
+2. numerical evidence and publication-facing benchmark follow-through for the JOSS story
+3. later observer-state/register-pressure work once the semantic model is settled enough that the optimization target is clear

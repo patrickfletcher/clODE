@@ -1,3 +1,5 @@
+"""Compatibility barrel retained for legacy trajectory-related imports."""
+
 from .simulation.base import Simulator, Stepper
 from .simulation.params import SolverParams
 from .simulation.results import TrajectoryOutput

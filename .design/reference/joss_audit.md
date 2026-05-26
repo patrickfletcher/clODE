@@ -39,6 +39,7 @@ The submission should explain why clODE exists alongside these tools instead of 
 ## Gaps before this is a strong JOSS contender
 
 - The evidence base is still thin. Public materials now have an updated repo/package overview, docs home split, contributor guide, refreshed paper framing, and performance-notes scaffolding, but they still need benchmark data and comparison cases tied to real research workflows.
+- The package-wide observer and state/output narrative is still too scattered. Reviewers should be able to understand what solver state, persistent observer state, feature outputs, and trajectory outputs are, and how Python owns those concepts while OpenCL executes them. Right now that story is more implicit than explicit.
 - The scholarly impact story needs updating. The existing draft cites older work and current applications, but the public submission package should show present-day use, citations, or concrete near-term users.
 - The contributor and review signals are improved but still incomplete. CI, docs, security policy, license, and a contributor guide are present, but there is still no citation file and the public repo metadata could be tighter.
 - The release story is a little rough. Git tags stop at `v0.8.1` while the package reports `0.10.0`, which makes the public maintenance story look less polished than the codebase now is.
@@ -49,6 +50,7 @@ The submission should explain why clODE exists alongside these tools instead of 
 Short term:
 
 - Keep the paper, README, and docs surfaces aligned around the current PyOpenCL-only package and its workflow niche.
+- Clarify the package-wide execution and observer/output model before broadening the paper's feature-extraction claims; "observer" should read as a coherent first-class concept, not a loose collection of kernel modes.
 - Build a comparison table centered on workload shape, feature extraction, portability, and model-ingestion paths.
 - Turn the current performance-notes scaffolding into one or two benchmark scripts and result pages that reviewers can rerun without archaeology.
 - Add citation metadata once the paper and software citation details are ready.
@@ -56,6 +58,8 @@ Short term:
 Medium term:
 
 - Close the continuation and state-semantics gap so the public story is not ahead of the implementation.
+- Consider adding a solver suitable for stiff dynamics.
+- Use the clearer observer/state/output model to make additional built-in observers and, later, composable observer authoring look like a credible extension rather than an open-ended wish list.
 - Keep the scope tight. "High-throughput ensemble ODE simulation with online observers" is a more defensible JOSS claim than a broad claim about being a fully general solver platform.
 
 ## Verdict

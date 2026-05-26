@@ -16,9 +16,10 @@ from ..observers.types import (
 	_DEFAULT_NHOOD_RADIUS,
 	_DEFAULT_X_DOWN_THRESHOLD,
 	_DEFAULT_X_UP_THRESHOLD,
+	EventOutputSettings,
 	Observer,
 	ObserverParams,
-	_copy_observer_params,
+	ObserverRuntimeSettings,
 	_resolve_observer_params,
 )
 from ..problem.ivp import InitialValueProblem
@@ -39,6 +40,8 @@ class FeatureSimulator(Simulator):
 
 	_feature_cache: FeatureCache
 	_integrator: OpenCLFeatureExecutor
+	_observer_runtime_settings: ObserverRuntimeSettings
+	_event_output_settings: EventOutputSettings
 
 	def __init__(
 		self,
@@ -107,8 +110,9 @@ class FeatureSimulator(Simulator):
 			observer_dx_down_thresh: Falling derivative threshold for threshold
 				observers.
 			observer_eps_dx: Derivative tolerance used near threshold crossings.
-			observer_parameters: Optional complete observer-parameter bundle. When
-				provided, it overrides the individual `observer_*` arguments above.
+			observer_parameters: Optional public compatibility bundle. When
+				provided, it overrides the individual `observer_*` compatibility
+				arguments above.
 		"""
 
 		self._observer_type = observer
@@ -117,7 +121,7 @@ class FeatureSimulator(Simulator):
 			ivp.variable_names if ivp is not None else list((variables or {}).keys())
 		)
 
-		self._op = _resolve_observer_params(
+		resolved_observer_params = _resolve_observer_params(
 			problem_variable_names,
 			observer_params=observer_parameters,
 			event_var=event_var or None,
@@ -133,6 +137,8 @@ class FeatureSimulator(Simulator):
 			dx_down_threshold=observer_dx_down_thresh,
 			eps_dx=observer_eps_dx,
 		)
+		self._observer_runtime_settings = resolved_observer_params.runtime_settings
+		self._event_output_settings = resolved_observer_params.event_output_settings
 
 		super().__init__(
 			variables=variables,
@@ -166,7 +172,8 @@ class FeatureSimulator(Simulator):
 			self._rhs_source,
 			self._stepper.value,
 			self._observer_type.value,
-			self._op,
+			self._observer_runtime_settings,
+			self._event_output_settings,
 			self._single_precision,
 			self._create_opencl_runtime(),
 			_clode_root_dir,
@@ -211,8 +218,8 @@ class FeatureSimulator(Simulator):
 		"""Update observer parameters and push them to the device.
 
 		Args:
-			op: Optional complete observer-parameter bundle. When provided, it
-				replaces the current observer settings.
+			op: Optional public compatibility bundle. When provided, it replaces
+				the current observer settings.
 			event_var: Variable name used for event detection.
 			feature_var: Variable name used for feature readout.
 			max_event_count: Maximum number of tracked events.
@@ -226,12 +233,12 @@ class FeatureSimulator(Simulator):
 			dx_down_threshold: Falling derivative threshold for threshold observers.
 			eps_dx: Derivative tolerance used near threshold crossings.
 		"""
-		current_max_event_timestamps = self._op.event_output_settings.max_event_timestamps
+		current_max_event_timestamps = self._event_output_settings.max_event_timestamps
 
-		self._op = _resolve_observer_params(
+		resolved_observer_params = _resolve_observer_params(
 			self.variable_names,
 			observer_params=op,
-			base_params=self._op,
+			base_params=self.get_observer_parameters(),
 			event_var=event_var,
 			feature_var=feature_var,
 			max_event_count=max_event_count,
@@ -245,16 +252,28 @@ class FeatureSimulator(Simulator):
 			dx_down_threshold=dx_down_threshold,
 			eps_dx=eps_dx,
 		)
+		updated_runtime_settings = resolved_observer_params.runtime_settings
+		updated_event_output_settings = resolved_observer_params.event_output_settings
 
-		if self._op.event_output_settings.max_event_timestamps != current_max_event_timestamps:
+		if (
+			updated_event_output_settings.max_event_timestamps
+			!= current_max_event_timestamps
+		):
 			self._cl_program_is_valid = False
 
-		self._integrator.set_observer_params(self._op)
+		self._observer_runtime_settings = updated_runtime_settings
+		self._event_output_settings = updated_event_output_settings
+		self._integrator.set_observer_settings(
+			self._observer_runtime_settings,
+			self._event_output_settings,
+		)
 		self._invalidate_feature_cache()
 
 	def get_observer_parameters(self) -> ObserverParams:
-		"""Return the current observer-parameter bundle from the backend."""
-		return _copy_observer_params(self._integrator.get_observer_params())
+		"""Return the current public compatibility bundle for observer settings."""
+		return self._observer_runtime_settings.to_observer_params(
+			self._event_output_settings
+		)
 
 	def get_feature_names(self) -> List[str]:
 		"""Get the list of feature names for the current observer."""
@@ -335,7 +354,7 @@ class FeatureSimulator(Simulator):
 		).reshape((self._ensemble_size, self._feature_cache.num_features), order="F")
 
 		return ObserverOutput(
-			self._op,
+			self._event_output_settings,
 			self._feature_cache.feature_array,
 			self._feature_cache.num_features,
 			self.variable_names,

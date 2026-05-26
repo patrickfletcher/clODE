@@ -20,7 +20,9 @@ _DEFAULT_EPS_DX = 0.0
 
 
 @dataclass(frozen=True, slots=True)
-class _ObserverRuntimeSettings:
+class ObserverRuntimeSettings:
+    """Internal value object for observer runtime thresholds and selector indices."""
+
     e_var_ix: int = _DEFAULT_EVENT_VAR_INDEX
     f_var_ix: int = _DEFAULT_FEATURE_VAR_INDEX
     max_event_count: int = _DEFAULT_MAX_EVENT_COUNT
@@ -46,9 +48,29 @@ class _ObserverRuntimeSettings:
         object.__setattr__(self, "dx_down_threshold", float(self.dx_down_threshold))
         object.__setattr__(self, "eps_dx", float(self.eps_dx))
 
+    def to_observer_params(
+        self, event_output_settings: EventOutputSettings
+    ) -> ObserverParams:
+        return ObserverParams(
+            e_var_ix=self.e_var_ix,
+            f_var_ix=self.f_var_ix,
+            max_event_count=self.max_event_count,
+            max_event_timestamps=event_output_settings.max_event_timestamps,
+            min_amp=self.min_amp,
+            min_imi=self.min_imi,
+            nhood_radius=self.nhood_radius,
+            x_up_threshold=self.x_up_threshold,
+            x_down_threshold=self.x_down_threshold,
+            dx_up_threshold=self.dx_up_threshold,
+            dx_down_threshold=self.dx_down_threshold,
+            eps_dx=self.eps_dx,
+        )
+
 
 @dataclass(frozen=True, slots=True)
-class _EventOutputSettings:
+class EventOutputSettings:
+    """Internal value object for retained observer event-output policy."""
+
     max_event_timestamps: int = _DEFAULT_MAX_EVENT_TIMESTAMPS
 
     def __post_init__(self) -> None:
@@ -68,7 +90,11 @@ class Observer(Enum):
 
 @dataclass(slots=True)
 class ObserverParams:
-    """Configuration for built-in observer feature detection.
+    """Public compatibility bundle for built-in observer configuration.
+
+    This object is retained for the current user-facing API. Internal code should
+    prefer `ObserverRuntimeSettings` and `EventOutputSettings` when the narrower
+    owner model is sufficient.
 
     Attributes:
         e_var_ix: Index of the variable used for event detection.
@@ -113,8 +139,8 @@ class ObserverParams:
         self.eps_dx = float(self.eps_dx)
 
     @property
-    def runtime_settings(self) -> _ObserverRuntimeSettings:
-        return _ObserverRuntimeSettings(
+    def runtime_settings(self) -> ObserverRuntimeSettings:
+        return ObserverRuntimeSettings(
             e_var_ix=self.e_var_ix,
             f_var_ix=self.f_var_ix,
             max_event_count=self.max_event_count,
@@ -129,8 +155,8 @@ class ObserverParams:
         )
 
     @property
-    def event_output_settings(self) -> _EventOutputSettings:
-        return _EventOutputSettings(
+    def event_output_settings(self) -> EventOutputSettings:
+        return EventOutputSettings(
             max_event_timestamps=self.max_event_timestamps,
         )
 

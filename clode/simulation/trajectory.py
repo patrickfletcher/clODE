@@ -14,7 +14,8 @@ from .params import (
 	_DEFAULT_INTEGRATION_SETTINGS,
 	_DEFAULT_TRAJECTORY_OUTPUT_SETTINGS,
 	SolverParams,
-	_TrajectoryOutputSettings,
+	TrajectoryOutputSettings,
+	_resolve_solver_params,
 )
 from .results import TrajectoryOutput
 
@@ -23,7 +24,7 @@ class TrajectorySimulator(Simulator):
 	"""Simulator that stores time samples and returns `TrajectoryOutput` objects."""
 
 	_trajectory_cache: TrajectoryCache
-	_trajectory_output_settings: _TrajectoryOutputSettings
+	_trajectory_output_settings: TrajectoryOutputSettings
 	_integrator: OpenCLTrajectoryExecutor
 
 	def __init__(
@@ -116,57 +117,44 @@ class TrajectorySimulator(Simulator):
 		"""Update integration and trajectory-output settings.
 
 		Integration changes invalidate solver state. Output-only changes only
-		invalidate stored trajectory results.
+		invalidate stored trajectory results. `solver_parameters` remains the
+		public compatibility bundle while the internal owner split settles.
 		"""
-		if all(
-			value is None
-			for value in (
-				solver_parameters,
-				dt,
-				dtmax,
-				abstol,
-				reltol,
-				max_steps,
-				max_store,
-				nout,
-			)
-		):
-			super().set_solver_parameters()
-			self._trajectory_output_settings = self._sp.trajectory_output_settings
-			return
-
-		previous_solver_parameters = self._sp.copy()
-		previous_integration = previous_solver_parameters.integration_settings
+		previous_integration = self._integration_settings
 		previous_output = self._trajectory_output_settings
 
-		if solver_parameters is not None:
-			updated_solver_parameters = solver_parameters.copy()
-		else:
-			updated_solver_parameters = previous_solver_parameters.copy()
-			if dt is not None:
-				updated_solver_parameters.dt = dt
-			if dtmax is not None:
-				updated_solver_parameters.dtmax = dtmax
-			if abstol is not None:
-				updated_solver_parameters.abstol = abstol
-			if reltol is not None:
-				updated_solver_parameters.reltol = reltol
-			if max_steps is not None:
-				updated_solver_parameters.max_steps = max_steps
-			if max_store is not None:
-				updated_solver_parameters.max_store = max_store
-			if nout is not None:
-				updated_solver_parameters.nout = nout
+		resolved_solver_params = _resolve_solver_params(
+			solver_parameters=solver_parameters,
+			dt=self._integration_settings.dt if dt is None else dt,
+			dtmax=self._integration_settings.dtmax if dtmax is None else dtmax,
+			abstol=self._integration_settings.abstol if abstol is None else abstol,
+			reltol=self._integration_settings.reltol if reltol is None else reltol,
+			max_steps=(
+				self._integration_settings.max_steps if max_steps is None else max_steps
+			),
+			max_store=(
+				self._trajectory_output_settings.max_store
+				if max_store is None
+				else max_store
+			),
+			nout=self._trajectory_output_settings.nout if nout is None else nout,
+		)
 
-		if updated_solver_parameters == previous_solver_parameters:
+		updated_integration = resolved_solver_params.integration_settings
+		updated_output = resolved_solver_params.trajectory_output_settings
+
+		if (
+			updated_integration == previous_integration
+			and updated_output == previous_output
+		):
 			return
 
-		updated_integration = updated_solver_parameters.integration_settings
-		updated_output = updated_solver_parameters.trajectory_output_settings
-
-		self._sp = updated_solver_parameters
 		self._trajectory_output_settings = updated_output
-		self._integrator.set_solver_params(self._sp)
+		self._integration_settings = updated_integration
+		self._integrator.set_solver_settings(
+			self._integration_settings,
+			self._trajectory_output_settings,
+		)
 
 		if updated_integration != previous_integration:
 			self._invalidate_runtime_caches()

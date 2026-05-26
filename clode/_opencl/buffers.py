@@ -4,11 +4,11 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from ..observers.types import ObserverParams, _ObserverRuntimeSettings
+from ..observers.types import ObserverParams, ObserverRuntimeSettings
 from ..simulation.params import (
     SolverParams,
-    _IntegrationSettings,
-    _TrajectoryOutputSettings,
+    IntegrationSettings,
+    TrajectoryOutputSettings,
 )
 from .models import Precision, ProblemShape
 from .runtime import OpenCLRuntime, _require_opencl_binding
@@ -180,7 +180,7 @@ class BufferManager:
         self,
         ensemble_size: int,
         shape: ProblemShape,
-        output_settings: _TrajectoryOutputSettings,
+        output_settings: TrajectoryOutputSettings,
     ) -> TrajectoryBuffers:
         flags = self._opencl_binding.mem_flags
         real_bytes = self._real_dtype.itemsize
@@ -255,7 +255,7 @@ class BufferManager:
         return host
 
     def upload_integration_settings(
-        self, buffers: CommonBuffers, integration_settings: _IntegrationSettings
+        self, buffers: CommonBuffers, integration_settings: IntegrationSettings
     ) -> np.ndarray:
         host = pack_integration_settings(
             self._runtime,
@@ -268,7 +268,7 @@ class BufferManager:
     def upload_trajectory_output_settings(
         self,
         buffers: TrajectoryBuffers,
-        output_settings: _TrajectoryOutputSettings,
+        output_settings: TrajectoryOutputSettings,
     ) -> np.ndarray:
         host = pack_trajectory_output_settings(self._runtime, output_settings)
         self._enqueue_copy(buffers.output_settings, host)
@@ -277,7 +277,7 @@ class BufferManager:
     def upload_observer_runtime_settings(
         self,
         buffers: FeatureBuffers,
-        observer_runtime_settings: _ObserverRuntimeSettings,
+        observer_runtime_settings: ObserverRuntimeSettings,
     ) -> np.ndarray:
         host = pack_observer_runtime_settings(
             self._runtime,
@@ -337,7 +337,7 @@ class BufferManager:
         return host
 
     def reset_solver_dt(
-        self, buffers: CommonBuffers, integration_settings: _IntegrationSettings
+        self, buffers: CommonBuffers, integration_settings: IntegrationSettings
     ) -> np.ndarray:
         dt_values = np.full(
             buffers.ensemble_size,

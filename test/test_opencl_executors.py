@@ -83,12 +83,14 @@ def _make_trajectory_executor() -> OpenCLTrajectoryExecutor:
 
 def _make_feature_executor() -> OpenCLFeatureExecutor:
     runtime = OpenCLRuntime.create(**_explicit_runtime_kwargs())
+    observer_params = clode.ObserverParams(f_var_ix=0)
     executor = OpenCLFeatureExecutor(
         ProblemInfo("stable_linear.cl", ["x", "y"], ["a", "b"], [], 0),
         load_rhs_source(model_path("stable_linear.cl")),
         "rk4",
         "basic",
-        clode.ObserverParams(f_var_ix=0),
+        observer_params.runtime_settings,
+        observer_params.event_output_settings,
         True,
         runtime,
         _clode_root_dir,

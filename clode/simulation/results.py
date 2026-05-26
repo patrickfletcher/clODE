@@ -5,7 +5,7 @@ from typing import Any, Optional, Tuple
 import numpy as np
 from numpy.lib import recfunctions as rfn
 
-from ..observers.types import Observer, ObserverParams
+from ..observers.types import EventOutputSettings, Observer
 
 
 class TrajectoryOutput:
@@ -70,7 +70,7 @@ class ObserverOutput:
 
     def __init__(
         self,
-        observer_params: ObserverParams,
+        event_output_settings: EventOutputSettings,
         feature_array: np.ndarray[Any, np.dtype[np.float64]],
         num_features: int,
         variables: list[str],
@@ -78,7 +78,7 @@ class ObserverOutput:
         feature_names: list[str],
         ensemble_shape: Tuple,
     ) -> None:
-        self._op = observer_params
+        self._event_output_settings = event_output_settings
         self._num_features = num_features
         self._vars = variables
         self._observer_type = observer_type
@@ -162,7 +162,7 @@ class ObserverOutput:
                 f"{self._observer_type} does not track {name} event {type}s!"
             )
         data = []
-        for event_idx in range(0, self._op.max_event_timestamps):
+        for event_idx in range(0, self._event_output_settings.max_event_timestamps):
             datapoint = self._get_var(f"{name} event {type} {event_idx}")
             if np.all(datapoint == 0):
                 break
@@ -180,7 +180,7 @@ class ObserverOutput:
                 f"{self._observer_type} does not track {var} event times!"
             )
         data = []
-        for key_idx in range(0, self._op.max_event_timestamps):
+        for key_idx in range(0, self._event_output_settings.max_event_timestamps):
             datapoint = self._get_var(f"{var} event time {key_idx}")
             if np.all(datapoint == 0):
                 break

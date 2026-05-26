@@ -95,6 +95,23 @@ Consequence:
 - the current built-in observer story is much easier to follow than it was before the cleanup
 - the remaining semantic pressure has shifted toward stepper definitions and execution-setting resolution rather than observer naming or layout ownership
 
+#### 4a. Output policy should not collapse into the observer metaphor
+
+- It is tempting to describe `trajectory` as a very dense observer that stores one event every `nout` steps, and `transient` as an observer with no retained output.
+- That framing is possible in the abstract, but it is semantically awkward for clODE.
+
+What is clearer:
+
+- `transient` is the no-retained-output solve path
+- `trajectory` is a retained-sample output policy layered on one solve path
+- observers are stateful feature or event-detection contracts that may additionally expose sparse event outputs
+
+Why keep that distinction:
+
+- trajectory storage is defined by output cadence and retained sample layout, not by event semantics
+- forcing trajectories into the observer model would blur output-policy concerns with observer-state and feature-schema concerns
+- clODE's distinctive observer story is stronger when observers mean online event or feature extraction, not every possible emitted output
+
 #### 5. Core concepts still reach `_opencl` as primitives more often than as richer objects
 
 - observer selection still becomes a resolved name and define pair before `_opencl` consumes it

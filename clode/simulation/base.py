@@ -24,7 +24,9 @@ from ._state import SolverState, TransientCache
 from .params import (
 	_DEFAULT_INTEGRATION_SETTINGS,
 	_DEFAULT_TRAJECTORY_OUTPUT_SETTINGS,
+	IntegrationSettings,
 	SolverParams,
+	TrajectoryOutputSettings,
 	_resolve_solver_params,
 )
 
@@ -59,7 +61,8 @@ class Simulator:
 
 	_cl_program_is_valid: bool = False
 
-	_sp: SolverParams
+	_integration_settings: IntegrationSettings
+	_trajectory_output_settings: TrajectoryOutputSettings
 	_solver_state: SolverState
 	_transient_cache: TransientCache
 	_ivp: InitialValueProblem
@@ -112,8 +115,9 @@ class Simulator:
 			max_steps: Maximum number of integration steps per solve.
 			max_store: Maximum number of stored time samples for trajectory solves.
 			nout: Output stride for stored trajectories.
-			solver_parameters: Optional prebuilt solver-parameter bundle. When
-				provided, it overrides the scalar solver arguments above.
+			solver_parameters: Optional compatibility bundle retained for the
+				current public API. When provided, it overrides the scalar solver
+				arguments above.
 			t_span: Initial integration interval as `(t0, tf)`.
 			single_precision: Whether to build the backend in single precision.
 			device_type: Preferred OpenCL device class for runtime selection.
@@ -154,7 +158,7 @@ class Simulator:
 		self._solver_state = SolverState()
 		self._transient_cache = TransientCache()
 
-		self._sp = _resolve_solver_params(
+		resolved_solver_params = _resolve_solver_params(
 			solver_parameters=solver_parameters,
 			dt=dt,
 			dtmax=dtmax,
@@ -164,7 +168,14 @@ class Simulator:
 			max_store=max_store,
 			nout=nout,
 		)
-		self.set_solver_parameters()
+		self._integration_settings = resolved_solver_params.integration_settings
+		self._trajectory_output_settings = (
+			resolved_solver_params.trajectory_output_settings
+		)
+		self._integrator.set_solver_settings(
+			self._integration_settings,
+			self._trajectory_output_settings,
+		)
 
 		self.set_tspan(t_span=t_span)
 		self._sync_problem_data_from_ivp()
@@ -453,8 +464,9 @@ class Simulator:
 		"""Update solver parameters and push them to the device.
 
 		Args:
-			solver_parameters: Optional complete parameter bundle. When provided, it
-				replaces the current solver settings.
+			solver_parameters: Optional compatibility bundle retained for the
+				current public API. When provided, it replaces the current solver
+				settings.
 			dt: Initial or fixed time step.
 			dtmax: Maximum time step for adaptive steppers.
 			abstol: Absolute tolerance for adaptive steppers.
@@ -463,29 +475,37 @@ class Simulator:
 			max_store: Maximum number of stored samples for trajectory solves.
 			nout: Output stride for stored trajectories.
 		"""
-		if solver_parameters is not None:
-			self._sp = solver_parameters.copy()
-		else:
-			if dt is not None:
-				self._sp.dt = dt
-			if dtmax is not None:
-				self._sp.dtmax = dtmax
-			if abstol is not None:
-				self._sp.abstol = abstol
-			if reltol is not None:
-				self._sp.reltol = reltol
-			if max_steps is not None:
-				self._sp.max_steps = max_steps
-			if max_store is not None:
-				self._sp.max_store = max_store
-			if nout is not None:
-				self._sp.nout = nout
-		self._integrator.set_solver_params(self._sp)
+		resolved_solver_params = _resolve_solver_params(
+			solver_parameters=solver_parameters,
+			dt=self._integration_settings.dt if dt is None else dt,
+			dtmax=self._integration_settings.dtmax if dtmax is None else dtmax,
+			abstol=self._integration_settings.abstol if abstol is None else abstol,
+			reltol=self._integration_settings.reltol if reltol is None else reltol,
+			max_steps=(
+				self._integration_settings.max_steps if max_steps is None else max_steps
+			),
+			max_store=(
+				self._trajectory_output_settings.max_store
+				if max_store is None
+				else max_store
+			),
+			nout=self._trajectory_output_settings.nout if nout is None else nout,
+		)
+		self._integration_settings = resolved_solver_params.integration_settings
+		self._trajectory_output_settings = (
+			resolved_solver_params.trajectory_output_settings
+		)
+		self._integrator.set_solver_settings(
+			self._integration_settings,
+			self._trajectory_output_settings,
+		)
 		self._invalidate_runtime_caches()
 
 	def get_solver_parameters(self) -> SolverParams:
-		"""Return the solver parameters currently stored on the device."""
-		return self._integrator.get_solver_params()
+		"""Return the current public compatibility bundle for solver settings."""
+		return self._integration_settings.to_solver_params(
+			self._trajectory_output_settings
+		)
 
 	def seed_rng(self, seed: int | None = None) -> None:
 		"""Seed the random number generator."""

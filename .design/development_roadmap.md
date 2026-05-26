@@ -18,9 +18,10 @@ Use `.design/ideas.md` as the short living board. This file is the longer ration
 
 ### Friction That Still Matters
 
-- The next architectural gap is no longer the solver-owned failure-policy path; that maintained contract now covers the currently adopted collapsed-window and in-loop float32 `NO_PROGRESS` cases. The next gap is a thinner-than-desired numerical proof layer for the current package claims.
+- The next architectural gap is no longer the solver-owned failure-policy path. It is that integration settings, trajectory output policy, observer runtime settings, event-output capacity, persistent observer state, and fetched outputs are still represented across compatibility bundles, simulator subclasses, caches, and `_opencl` helpers rather than one explicit owner model.
+- That ambiguity matters more than observer register pressure because it makes the code harder to reason about, blocks a cleaner observer-authoring story, and weakens the package's distinctive JOSS narrative around on-device observers and outputs.
 - The package's numerical and continuation claims still need tighter exact-solution, convergence, and public evidence coverage, but that is now the second grouped follow-on rather than the immediate target.
-- The heavier feature kernels still need an observer-state and register-pressure audit before deeper redesign decisions are justified.
+- The heavier feature kernels still need an observer-state and register-pressure audit, but that is better treated as a later optimization pass after the semantic owner model is explicit.
 - Large-ensemble ergonomics are still missing the next obvious layer: IVP-side batch-generation helpers and device-capacity batching.
 - Diverged-time continuation still has a real representational limit because the live shared-window model cannot encode exact continuation after different attained `tf` values.
 - Public compatibility bundles still mix concerns: `SolverParams` spans integration and output policy, and `FeatureSimulator` still exposes broad legacy `observer_*` inputs.
@@ -36,29 +37,38 @@ Use `.design/ideas.md` as the short living board. This file is the longer ration
 
 ## Recommended Near-Term Sequence
 
-Keep the next planning pass centered on one product story: fast large-ensemble workflows where users mainly want final states or on-device features, and where single-precision robustness is part of the value rather than a later cleanup.
+Keep the next planning pass centered on one product story: clODE's differentiator is not just solving ODEs on OpenCL, but supporting first-class on-device observers and output workflows from Python with a model that remains inspectable and extensible.
 
-### 1. Numerical validation and evidence bundle
+### 1. Simulation state and output ownership model
 
-After the failure-policy slice is clearer, keep the validation pass narrow and purposeful: a slim exact-solution solver-validation suite, alignment of precision-sensitive references with the live solver semantics, and public docs or examples that show where the adopted safeguards matter.
+Clarify which concepts are Python-owned semantic models and which are `_opencl` execution details: integration settings, trajectory output policy, observer runtime settings, event-output policy, solver state, persistent observer state, and fetched outputs.
 
 Why first:
 
-- it strengthens the proof layer without mixing documentation work into the state-ownership refactor
-- it lets public docs and planning notes point to maintained evidence instead of ad hoc demos
+- it gives the codebase one legible answer to what solver state, observer state, and outputs mean on the Python side versus the OpenCL side
+- it makes later observer authoring/composition, output ergonomics, and public narrative work easier to explain and safer to extend
 
-### 2. Observer-state and register-pressure audit
+### 2. Observer authoring and composition follow-through
 
-After the solver-state split is explicit and the proof layer is tighter, audit the heavier feature kernels with throughput in mind. Measure per-work-item observer state, retained event storage, and avoidable private scratch before deciding whether deeper observer-time redesign is worth the complexity.
+Once the owner split is explicit, shape a narrower path for adding more built-in observers and eventually supporting composable or user-authored observers from Python-side definitions instead of a hand-wired kernel catalog.
+
+Why second:
+
+- observers are a first-class clODE concept and one of the clearest ways to differentiate the package in both engineering and publication terms
+- it avoids mixing higher-risk authoring-surface decisions into the lower-level owner-split PR
+
+### 3. Numerical evidence and publication follow-through
+
+Keep the proof and publication story moving after the owner model is clearer: add a few more representative exact-solution problems, keep the release-gating evidence centered on `test/core_numerics/`, and build the benchmark or comparison material the paper will need.
 
 Why third:
 
-- it avoids auditing observer footprint while solver-owned diagnostics are still mixed into observer state
-- it keeps redesign pressure evidence-driven instead of speculative
+- it strengthens the JOSS case without letting public-surface work outrun the internal execution and observer model
+- it keeps docs, benchmarks, and the paper tied to a clearer and more stable package story
 
-### 3. Later and lower leverage
+### 4. Later and lower leverage
 
-Keep source-assembly reshaping, broader PyOpenCL helper adoption, compatibility-barrel cleanup, richer observer-surface expansion, diverged-time continuation follow-through, and implicit-method work behind the grouped passes above unless a concrete bug or benchmark result pulls one of them forward.
+Keep observer-state/register-pressure cleanup, source-assembly reshaping, broader PyOpenCL helper adoption, compatibility-barrel cleanup, diverged-time continuation follow-through, and implicit-method work behind the grouped passes above unless a concrete bug or benchmark result pulls one of them forward.
 
 ## Priority Guardrails
 

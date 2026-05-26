@@ -1,3 +1,5 @@
+"""Compatibility barrel retained for legacy feature-related imports."""
+
 from .observers.types import Observer, ObserverParams
 from .simulation.base import Simulator, Stepper
 from .simulation.features import FeatureSimulator

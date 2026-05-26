@@ -1,3 +1,5 @@
+"""Compatibility barrel retained for legacy type-bundle imports."""
+
 from __future__ import annotations
 
 from .observers.types import ObserverParams

@@ -16,7 +16,9 @@ def _coerce_max_steps(value: int) -> int:
 
 
 @dataclass(frozen=True, slots=True)
-class _TrajectoryOutputSettings:
+class TrajectoryOutputSettings:
+    """Internal value object for retained trajectory-sample policy."""
+
     max_store: int = 1_000_000
     nout: int = 1
 
@@ -26,7 +28,9 @@ class _TrajectoryOutputSettings:
 
 
 @dataclass(frozen=True, slots=True)
-class _IntegrationSettings:
+class IntegrationSettings:
+    """Internal value object for integration policy independent of output policy."""
+
     dt: float = 0.1
     dtmax: float = 0.5
     abstol: float = 1e-6
@@ -41,7 +45,7 @@ class _IntegrationSettings:
         object.__setattr__(self, "max_steps", _coerce_max_steps(self.max_steps))
 
     def to_solver_params(
-        self, output_settings: _TrajectoryOutputSettings
+        self, output_settings: TrajectoryOutputSettings
     ) -> SolverParams:
         return SolverParams(
             dt=self.dt,
@@ -54,13 +58,17 @@ class _IntegrationSettings:
         )
 
 
-_DEFAULT_TRAJECTORY_OUTPUT_SETTINGS = _TrajectoryOutputSettings()
-_DEFAULT_INTEGRATION_SETTINGS = _IntegrationSettings()
+_DEFAULT_TRAJECTORY_OUTPUT_SETTINGS = TrajectoryOutputSettings()
+_DEFAULT_INTEGRATION_SETTINGS = IntegrationSettings()
 
 
 @dataclass(slots=True)
 class SolverParams:
-    """Compatibility bundle for integration and trajectory-output settings.
+    """Public compatibility bundle for integration and trajectory-output settings.
+
+    This object is retained for the current user-facing API. Internal code should
+    prefer `IntegrationSettings` and `TrajectoryOutputSettings` when the narrower
+    owner model is sufficient.
 
     Attributes:
         dt: Initial or fixed time step.
@@ -101,8 +109,8 @@ class SolverParams:
         )
 
     @property
-    def integration_settings(self) -> _IntegrationSettings:
-        return _IntegrationSettings(
+    def integration_settings(self) -> IntegrationSettings:
+        return IntegrationSettings(
             dt=self.dt,
             dtmax=self.dtmax,
             abstol=self.abstol,
@@ -111,8 +119,8 @@ class SolverParams:
         )
 
     @property
-    def trajectory_output_settings(self) -> _TrajectoryOutputSettings:
-        return _TrajectoryOutputSettings(
+    def trajectory_output_settings(self) -> TrajectoryOutputSettings:
+        return TrajectoryOutputSettings(
             max_store=self.max_store,
             nout=self.nout,
         )
@@ -132,14 +140,14 @@ def _resolve_solver_params(
     if solver_parameters is not None:
         return solver_parameters.copy()
 
-    integration_settings = _IntegrationSettings(
+    integration_settings = IntegrationSettings(
         dt=dt,
         dtmax=dtmax,
         abstol=abstol,
         reltol=reltol,
         max_steps=max_steps,
     )
-    output_settings = _TrajectoryOutputSettings(
+    output_settings = TrajectoryOutputSettings(
         max_store=max_store,
         nout=nout,
     )
