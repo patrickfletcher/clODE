@@ -14,8 +14,9 @@ Solver-owned per-work-item state and failure reporting
 - The first-pass Python-side `SolverState`, observer definitions, observer-parameter resolution, stepper definitions, and result-cache invalidation boundaries are live.
 - Fixed-step and adaptive live steppers now share one compensated solve-relative elapsed-time story for endpoints and internal stages.
 - The wrapper boundary now preserves both stepper status and accepted step width while leaving the next-step proposal in `dt`.
+- The runtime and simulator layer now surface solver-owned per-work-item status, accepted-step-count, and last-accepted-step-width arrays, while richer time-base state and any work metrics are still not explicit device-side solver state.
 - `features.cl` now feeds observers the accepted step width from the solver boundary rather than recovering it from elapsed-time differences.
-- Observer kernels still retain some legacy step or time diagnostics even though those values semantically belong to solver state rather than to observers.
+- Public observer feature surfaces no longer report step count or `dt` summary diagnostics; remaining observer-private counters only persist where event geometry or internal running means still need them.
 - Public `SolverParams`, `ObserverParams`, and the public `Stepper` enum remain thin compatibility surfaces; broader public config redesign is still deferred.
 
 ## Why this should be next
@@ -26,25 +27,30 @@ The wrapper-level prep is already in place. The next leverage point is to turn t
 
 ## Scope
 
-- define one explicit internal per-work-item solver-state layout for step counts, current or accepted `dt`, current time-base values, and completion or failure status
+- extend the now-landed solver-owned status, accepted-step-count, and last-accepted-step-width path toward any remaining current time-base diagnostics and later work metrics
 - make the runtime persist and fetch that solver-owned state separately from observer state
-- move legacy step or time diagnostic ownership out of observer structs and outputs where the value is really solver state
+- keep solver-owned diagnostics on solver fetch paths rather than reintroducing them through observer outputs or metadata
 - keep only interpolation or event-timestamp sample geometry in observers where it is still semantically observer-owned
 - make the failure-to-accept-step policy deterministic and surfaced, even if the public API exposure stays narrow in this PR
+- decide whether no-progress from float32 time quantization belongs in the same surfaced failure-status model and, if so, represent it as solver-owned status rather than as a wrapper-side special case
 - keep the public API stable unless a small diagnostic accessor is clearly needed and low-risk
 
 ## Likely Internal Shape
 
-- choose and document one internal per-work-item solver-state representation, likely struct-of-arrays or an equivalent explicit buffer bundle, instead of scattering step or time facts across observers and executors
+- choose and document one internal per-work-item solver-state representation for the remaining time-base and work-metric facts, building on the landed status, step-count, and last-accepted-step-width buffers
 - thread solver-owned status and stepping outputs through `_opencl/buffers.py`, `_opencl/executors.py`, and the simulation-state layer without widening public config scope
-- remove or retire observer-owned step or time diagnostics that are no longer semantically observer state
+- keep observer public outputs free of solver-owned step or time diagnostics while leaving observer-private counters only where the event logic still needs them
 - keep observer buffers focused on event semantics, interpolation geometry, and retained event samples
+- defer a bundled public solver-stats object until the remaining fields are stable enough that one object would reduce churn rather than freeze an incomplete story
 
 ## Design Constraints
 
 - no broad public config redesign in this PR
 - preserve the landed compensated time-base, accepted-step-width plumbing, and fixed-stage reconstruction semantics
 - do not reintroduce duplicated time or step bookkeeping across solver and observer code paths
+- keep any adopted precision-loss or no-progress detection on the same solver-owned status path instead of adding ad hoc wrapper or observer reporting
+- keep event count observer-owned and do not reintroduce step-count or `dt` summary outputs on observer public surfaces while the remaining solver-owned diagnostics settle
+- do not freeze SciPy-style work metrics or a bundled stats object until their semantics are explicit across fixed, adaptive, stochastic, and any later implicit paths
 - keep interpolation buffers and event timestamps in observers where they are still needed for observer semantics
 - do not fold trajectory-output policy, observer metadata, and solver-state refactoring into one large rewrite
 - do not turn this into a broad performance campaign or a continuation-policy redesign
@@ -60,10 +66,9 @@ The wrapper-level prep is already in place. The next leverage point is to turn t
 
 ## Suggested Implementation Slices
 
-1. Define the internal solver-state fields and runtime ownership boundary.
-2. Thread solver-owned step, time, and status data through executors and simulation state.
-3. Remove or deprecate the matching legacy observer-owned diagnostics.
-4. Add direct tests for failure status, step counters, accepted-step-width handoff, and fetched solver-state semantics.
+1. Treat the landed status, step-count, and last-accepted-step-width accessors as the stable public slice for this PR.
+2. Keep observer public outputs aligned with that boundary while retaining only private counters needed for observer internals.
+3. Defer bundled stats and heavier work metrics until the remaining fields have one coherent solver-owned story.
 
 ## Code-Facing Checklist
 
@@ -75,9 +80,11 @@ The wrapper-level prep is already in place. The next leverage point is to turn t
 
 ## Acceptance Criteria
 
-- the runtime has one explicit solver-owned internal home for per-work-item step counts, accepted or current `dt`, time-base values, and completion or failure status
-- observers no longer own or report solver-state diagnostics except for sample geometry still needed for interpolation or event timestamps
+- the runtime has one explicit solver-owned internal home for per-work-item completion or failure status, accepted step counts, and last accepted step width, and any remaining time-base values land on that same path
+- observer public outputs no longer own or report solver-state diagnostics except for event count and sample geometry still needed for interpolation or event timestamps
 - failure to accept a step has one deterministic policy in the kernels and that status is available to the runtime on fetch
+- any adopted no-progress or precision-loss condition uses the same solver-owned status path instead of a parallel wrapper-only signal
+- a bundled solver-stats object is intentionally deferred until the remaining fields and work metrics are stable enough to justify freezing one public shape
 - the `.design` docs describe the solver/observer boundary in the same way the code now implements it
 
 ## Follow-on If This Lands Cleanly

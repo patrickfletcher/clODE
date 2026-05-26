@@ -71,6 +71,15 @@ integrator.set_observer_parameters(
 - `get_var_count(name)`
 - `get_event_data(name, type="time")`
 
+Solver diagnostics stay on the simulator rather than in `ObserverOutput`:
+
+- `get_status()` returns solver-owned completion or early-stop codes
+- `get_step_count()` returns accepted step counts
+- `get_last_accepted_dt()` returns the width of the last accepted step
+- `get_dt()` returns the continuation step size stored on the device; for adaptive steppers that can differ from `get_last_accepted_dt()` because it is the next step size the controller would attempt on a continued solve
+
+If you need stop reasons or stepping diagnostics, query the simulator after `features()` rather than expecting observer feature names such as step-count or `dt` summaries.
+
 ## Continuation and repeated calls
 
 `features()` continues device state by default and also continues the observer state unless

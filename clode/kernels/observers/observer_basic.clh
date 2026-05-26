@@ -16,7 +16,6 @@ struct ObserverState_basic
     realtype dxTrajectoryMin;
     realtype elapsed_total;
     realtype elapsed_total_correction;
-    unsigned int stepcount;
 };
 typedef struct ObserverState_basic ObserverState;
 
@@ -30,7 +29,6 @@ static inline void initializeObserverState(realtype *ti, realtype xi[], realtype
     od->dxTrajectoryMin = BIG_REAL;
     od->elapsed_total = ZERO;
     od->elapsed_total_correction = ZERO;
-    od->stepcount = 0;
 }
 //nothing to do - One pass detector
 static inline void warmupObserverState(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverParams *op) {
@@ -52,7 +50,6 @@ static inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dx
 
 //all features are per-timestep (eventOccurred unused)
 static inline void updateObserverState(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], const realtype stepDt, ObserverState *od, __constant struct ObserverParams *op) {
-    ++od->stepcount;
     compensatedIntegrateConstant(
         &od->elapsed_total,
         &od->elapsed_total_correction,
@@ -88,7 +85,6 @@ static inline void finalizeFeatures(realtype *ti, realtype xi[], realtype dxi[],
     F[ix++ * nPts + i] = od->xTrajectoryMean;
     F[ix++ * nPts + i] = od->dxTrajectoryMax;
     F[ix++ * nPts + i] = od->dxTrajectoryMin;
-    F[ix++ * nPts + i] = od->stepcount;
 }
 
 //Perform and post-integration cleanup of observer state to ensure it is ready for continuation if needed

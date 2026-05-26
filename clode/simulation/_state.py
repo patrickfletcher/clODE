@@ -1,12 +1,28 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from enum import IntEnum
 from typing import Any
 
 import numpy as np
 
 FloatArray = np.ndarray[Any, np.dtype[np.float64]]
 IntArray = np.ndarray[Any, np.dtype[np.int32]]
+UIntArray = np.ndarray[Any, np.dtype[np.uint64]]
+
+
+class SolverStatus(IntEnum):
+    """Per-instance solve completion or failure status.
+
+    Keep these values in sync with the kernel-side status codes written by the
+    transient, feature, and trajectory entrypoints.
+    """
+
+    COMPLETED = 0
+    MAX_STEPS_REACHED = 1
+    TERMINAL_EVENT_REACHED = 2
+    OUTPUT_CAPACITY_REACHED = 3
+    STEPPER_FAILED = -1
 
 
 @dataclass(slots=True)
@@ -14,6 +30,9 @@ class SolverState:
     t_span: tuple[float, float] = (0.0, 0.0)
     current_time: FloatArray | None = None
     current_dt: FloatArray | None = None
+    status: IntArray | None = None
+    step_count: UIntArray | None = None
+    last_accepted_dt: FloatArray | None = None
     final_time: FloatArray | None = None
     problem_data_needs_pull: bool = False
 
@@ -58,6 +77,9 @@ class SolverState:
 
     def invalidate_results(self) -> None:
         self.current_dt = None
+        self.status = None
+        self.step_count = None
+        self.last_accepted_dt = None
         self.final_time = None
 
 
@@ -114,6 +136,7 @@ class TrajectoryCache:
 
 __all__ = [
     "FeatureCache",
+    "SolverStatus",
     "SolverState",
     "TrajectoryCache",
     "TransientCache",

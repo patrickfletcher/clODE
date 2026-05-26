@@ -197,6 +197,56 @@ def test_set_solver_parameters_resets_device_dt() -> None:
     np.testing.assert_allclose(np.asarray(simulator.get_dt()).reshape(-1), [0.025])
 
 
+def test_get_status_reports_max_steps_exhaustion() -> None:
+    simulator = make_simulator(
+        "stable_linear",
+        stepper=clode.Stepper.rk4,
+        t_span=(0.0, 1.0),
+        dt=0.3,
+        dtmax=0.3,
+        max_steps=1,
+    )
+
+    simulator.transient(update_x0=False, fetch_results=False)
+
+    np.testing.assert_array_equal(
+        simulator.get_status().reshape(-1),
+        [clode.SolverStatus.MAX_STEPS_REACHED],
+    )
+    np.testing.assert_array_equal(simulator.get_step_count().reshape(-1), [1])
+    np.testing.assert_allclose(simulator.get_last_accepted_dt().reshape(-1), [0.3])
+    np.testing.assert_allclose(simulator.get_final_time().reshape(-1), [0.3])
+
+
+def test_feature_status_reports_terminal_event_stop() -> None:
+    simulator = clode.FeatureSimulator(
+        src_file=model_path("hopf_normal_form.cl"),
+        variables=HOPF_VARIABLES.copy(),
+        parameters=HOPF_PARAMETERS.copy(),
+        aux=HOPF_AUX.copy(),
+        num_noise=0,
+        observer=clode.Observer.local_max,
+        stepper=clode.Stepper.rk4,
+        dt=FIXED_DT,
+        dtmax=FIXED_DT,
+        t_span=(0.0, 8.0),
+        max_steps=FIXED_MAX_STEPS,
+        single_precision=True,
+        **device_kwargs_for_tests(),
+    )
+    simulator.set_observer_parameters(max_event_count=1, max_event_timestamps=1)
+
+    result = simulator.features(update_x0=False)
+
+    assert result is not None
+    assert int(result.get_var_count("event")) == 1
+    np.testing.assert_array_equal(
+        simulator.get_status().reshape(-1),
+        [clode.SolverStatus.TERMINAL_EVENT_REACHED],
+    )
+    assert float(simulator.get_final_time().reshape(-1)[0]) < 8.0
+
+
 def test_get_initial_state_after_update_x0_pulls_runtime_state_back_into_ivp() -> None:
     simulator = make_simulator(
         "stable_linear",
@@ -317,7 +367,6 @@ def test_feature_observer_switch_rebuilds_and_runs() -> None:
         "mean x",
         "max dx/dt",
         "min dx/dt",
-        "step count",
     ]
 
 
@@ -463,16 +512,18 @@ def test_features_initialize_observer_path_refreshes_results() -> None:
     )
 
     first = simulator.features(update_x0=False)
+    first_step_count = int(simulator.get_step_count().reshape(-1)[0])
     second = simulator.features(
         t_span=(0.0, 2.0),
         initialize_observer=True,
         update_x0=False,
     )
+    second_step_count = int(simulator.get_step_count().reshape(-1)[0])
 
     assert first is not None
     assert second is not None
-    assert int(first.get_var_count("step")) == fixed_step_step_count(0.0, 1.0, FIXED_DT)
-    assert int(second.get_var_count("step")) == fixed_step_step_count(0.0, 2.0, FIXED_DT)
+    assert first_step_count == fixed_step_step_count(0.0, 1.0, FIXED_DT)
+    assert second_step_count == fixed_step_step_count(0.0, 2.0, FIXED_DT)
 
 
 def test_feature_max_event_timestamps_rebuild_updates_event_storage() -> None:

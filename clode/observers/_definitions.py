@@ -170,7 +170,6 @@ def _basic_feature_names(
         f"mean {feature_var}",
         f"max d{feature_var}/dt",
         f"min d{feature_var}/dt",
-        "step count",
     )
 
 
@@ -198,7 +197,6 @@ def _basicall_feature_names(
                 f"mean {aux_name}",
             ]
         )
-    names.append("step count")
     return tuple(names)
 
 
@@ -241,7 +239,7 @@ def _localmax_feature_names(
                 f"localmin event evar {event_idx}",
             ]
         )
-    names.extend(["event count", "step count"])
+    names.append("event count")
     return tuple(names)
 
 
@@ -276,7 +274,7 @@ def _nhood1_feature_names(
                 f"mean {aux_name}",
             ]
         )
-    names.extend(["period count", "step count", "max dt", "min dt", "mean dt"])
+    names.append("period count")
     return tuple(names)
 
 
@@ -314,7 +312,7 @@ def _nhood2_feature_names(
         )
     for event_idx in range(observer_params.max_event_timestamps):
         names.append(f"nhood event time {event_idx}")
-    names.extend(["event count", "step count", "max dt", "min dt", "mean dt"])
+    names.append("event count")
     return tuple(names)
 
 
@@ -367,7 +365,7 @@ def _thresh2_feature_names(
                 f"down event time {event_idx}",
             ]
         )
-    names.extend(["event count", "step count", "max dt", "min dt", "mean dt"])
+    names.append("event count")
     return tuple(names)
 
 
@@ -389,7 +387,6 @@ def _basic_layout(
             _real_field("dxTrajectoryMin", real_dtype),
             _real_field("elapsed_total", real_dtype),
             _real_field("elapsed_total_correction", real_dtype),
-            _uint_field("stepcount"),
         )
     )
 
@@ -420,7 +417,6 @@ def _basicall_layout(
             ),
             _real_field("elapsed_total", real_dtype),
             _real_field("elapsed_total_correction", real_dtype),
-            _uint_field("stepcount"),
         )
     )
 
@@ -486,7 +482,6 @@ def _nhood1_layout(
             _real_field("auxTrajectoryMean", real_dtype, problem_info.num_aux),
             _real_field("nMaxima", real_dtype, 3),
             _real_field("period", real_dtype, 3),
-            _real_field("stepDt", real_dtype, 3),
             _real_field("elapsedTotal", real_dtype),
             _real_field("tLastEvent", real_dtype),
             _real_field("elapsedLastEvent", real_dtype),
@@ -524,7 +519,6 @@ def _nhood2_layout(
             _real_field("tExitNhood", real_dtype, n_store_events),
             _real_field("nMaxima", real_dtype, 3),
             _real_field("period", real_dtype, 3),
-            _real_field("stepDt", real_dtype, 3),
             _real_field("elapsedTotal", real_dtype),
             _real_field("tLastEvent", real_dtype),
             _real_field("elapsedLastEvent", real_dtype),
@@ -565,7 +559,6 @@ def _thresh2_layout(
             _real_field("downDuration", real_dtype, 3),
             _real_field("duty", real_dtype, 3),
             _real_field("activeDip", real_dtype, 3),
-            _real_field("stepDt", real_dtype, 3),
             _real_field("fVarUpstateMean", real_dtype),
             _real_field("fVarDownstateMean", real_dtype),
             _real_field("xGlobalMax", real_dtype),

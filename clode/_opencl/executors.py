@@ -37,6 +37,9 @@ from .source_builder import SourceBuilder
 class _TransientTransferCache:
     initial_state: np.ndarray | None = None
     current_dt: np.ndarray | None = None
+    status: np.ndarray | None = None
+    step_count: np.ndarray | None = None
+    last_accepted_dt: np.ndarray | None = None
     final_state: np.ndarray | None = None
     final_time: np.ndarray | None = None
     has_result: bool = False
@@ -51,11 +54,17 @@ class _TransientTransferCache:
             self.initial_state = np.array(initial_state, dtype=np.float64, copy=True)
         if current_dt is not None:
             self.current_dt = np.array(current_dt, dtype=np.float64, copy=True)
+        self.status = None
+        self.step_count = None
+        self.last_accepted_dt = None
         self.final_state = None
         self.final_time = None
         self.has_result = False
 
     def invalidate_result(self) -> None:
+        self.status = None
+        self.step_count = None
+        self.last_accepted_dt = None
         self.final_state = None
         self.final_time = None
         self.has_result = False
@@ -63,6 +72,9 @@ class _TransientTransferCache:
     def mark_result_pending(self) -> None:
         self.final_state = None
         self.current_dt = None
+        self.status = None
+        self.step_count = None
+        self.last_accepted_dt = None
         self.final_time = None
         self.has_result = True
 
@@ -190,6 +202,35 @@ class OpenCLTransientExecutor:
 
     def get_solver_params(self) -> SolverParams:
         return self._copy_solver_params(self._solver_params)
+
+    def get_status(self) -> list[int]:
+        if self._buffers is None or not self._transient_cache.has_result:
+            return []
+        if self._transient_cache.status is None:
+            self._transient_cache.status = self._buffer_manager.download_status(
+                self._buffers
+            ).reshape(-1)
+        return self._transient_cache.status.astype(np.int32, copy=False).tolist()
+
+    def get_step_count(self) -> list[int]:
+        if self._buffers is None or not self._transient_cache.has_result:
+            return []
+        if self._transient_cache.step_count is None:
+            self._transient_cache.step_count = self._buffer_manager.download_step_count(
+                self._buffers
+            ).reshape(-1)
+        return self._transient_cache.step_count.astype(np.uint64, copy=False).tolist()
+
+    def get_last_accepted_dt(self) -> list[float]:
+        if self._buffers is None or not self._transient_cache.has_result:
+            return []
+        if self._transient_cache.last_accepted_dt is None:
+            self._transient_cache.last_accepted_dt = (
+                self._buffer_manager.download_accepted_dt(self._buffers).reshape(-1)
+            )
+        return self._transient_cache.last_accepted_dt.astype(
+            np.float64, copy=False
+        ).tolist()
 
     def get_tf(self) -> list[float]:
         if self._buffers is None or not self._transient_cache.has_result:
@@ -364,6 +405,9 @@ class OpenCLTransientExecutor:
             buffers.prepared_wiener,
             buffers.prepared_wiener_valid,
             buffers.dt,
+            buffers.status,
+            buffers.step_count,
+            buffers.accepted_dt,
             buffers.tf,
         )
         self._opencl_binding.enqueue_nd_range_kernel(
@@ -595,6 +639,9 @@ class OpenCLTrajectoryExecutor(OpenCLTransientExecutor):
             buffers.prepared_wiener,
             buffers.prepared_wiener_valid,
             buffers.dt,
+            buffers.status,
+            buffers.step_count,
+            buffers.accepted_dt,
             buffers.tf,
             trajectory_buffers.output_settings,
             trajectory_buffers.t,
@@ -703,6 +750,9 @@ class OpenCLFeatureExecutor(OpenCLTransientExecutor):
             buffers.prepared_wiener,
             buffers.prepared_wiener_valid,
             buffers.dt,
+            buffers.status,
+            buffers.step_count,
+            buffers.accepted_dt,
             buffers.tf,
             feature_buffers.observer_state,
             feature_buffers.observer_runtime_settings,

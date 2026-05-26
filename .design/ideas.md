@@ -22,13 +22,15 @@ Format:
 
 ## Core Execution And State Semantics
 
-- [ ] P0 Solver-owned per-work-item step and status state: make step counts, accepted or current `dt`, time-base values, and failure status explicit solver-owned buffers or a matched SoA-style state model; remove legacy observer ownership of those diagnostics while keeping only interpolation geometry in observers. depends: current wrapper-level status and accepted-step-width plumbing. blocks: observer-state audit, cleaner continuation semantics. refs: `clode/simulation/_state.py`, `clode/_opencl/buffers.py`, `clode/_opencl/executors.py`, `clode/kernels/transient.cl`, `clode/kernels/features.cl`, `clode/kernels/trajectory.cl`, `clode/kernels/initializeObserver.cl`, `.design/reference/solver_state_implementation_plan.md`
+- [ ] P0 Solver-owned per-work-item stepping diagnostics follow-through: extend the landed solver-owned status, step-count, and last-accepted-step-width buffers to any remaining time-base values and any no-progress or precision-loss status when solve time stops advancing in float32; keep only observer-private sample geometry where it is still required. depends: current wrapper-level status, step-count, and accepted-step-width plumbing. blocks: observer-state audit, cleaner continuation semantics. refs: `clode/simulation/_state.py`, `clode/_opencl/buffers.py`, `clode/_opencl/executors.py`, `clode/kernels/transient.cl`, `clode/kernels/features.cl`, `clode/kernels/trajectory.cl`, `clode/kernels/initializeObserver.cl`, `.design/reference/solver_state_implementation_plan.md`, `.design/reference/continuation_timebase_note.md`
+- [ ] P2 User-facing solver stats surface: bundle solver-owned status, step counts, last accepted step width, any remaining accepted-step or current-time diagnostics, and later work metrics such as RHS evaluation counts into one read-only stats object once the remaining internal solver-state model is explicit enough to freeze. depends: landed status, step-count, and last-accepted-step-width buffers plus settled public diagnostic scope for the remaining fields. refs: `clode/simulation/_state.py`, `clode/simulation/base.py`, `clode/kernels/steppers/`, `.design/next_pr.md`
 - [ ] P2 Device-side per-work-item current time / `t0` if exact continuation after diverged `tf` becomes a real priority. depends: continuation-state semantics and guardrails. refs: `clode/simulation/_state.py`, `clode/_opencl/executors.py`, `clode/_opencl/buffers.py`, `clode/kernels/transient.cl`, `.design/reference/continuation_timebase_note.md`
 - [ ] P1 Batch-generation helpers such as `grid`, random, and quasi-random sampling layered on top of the IVP model and current shape metadata instead of keeping ensemble creation buried in `Simulator`. refs: `clode/simulation/base.py`, `.design/reference/semantic_layout_audit.md`
 - [ ] P2 Execution-model experiments: `per-work-item` vs `per-work-group` vs shared/global solver state. refs: `clode/kernels/odedriver.cl`
 
 ## Observer And Feature Model
 
+- [x] P1 Retire observer-owned step count and dt summary features once the solver-owned step-count fetch path is live; keep event count observer-owned. refs: `clode/observers/_definitions.py`, `clode/simulation/base.py`, `.design/next_pr.md`
 - [ ] P2 Add a small set of dynamical-systems-oriented observers or features such as direction-of-crossing or Poincare-section style events once the built-in observer model settles further. refs: `clode/observers/_definitions.py`, `clode/kernels/observers/`, `docs/examples.md`
 - [ ] P2 Improve neighborhood-observer exit timestamps with inverse interpolation across bracketing `thisXdiff` samples if a lean state layout can support it cleanly. depends: observer-state and register-pressure audit. refs: `clode/kernels/observers/observer_neighborhood_1.clh`, `clode/kernels/observers/observer_neighborhood_2.clh`, `.design/reference/single_precision_numerics_note.md`
 - [ ] P2 Observer-specific parameter models/classes instead of one broad `ObserverParams`. depends: explicit observer-definition model. refs: `clode/features.py`, `clode/kernels/observers.cl`
@@ -49,7 +51,7 @@ Format:
 
 ## OpenCL Program And Runtime Model
 
-- [ ] P1 Solution-buffer or solver-state kernel abstraction shared by steppers and observers after the explicit solver-state model lands. depends: explicit solver-state model. refs: `clode/kernels/observers.cl`, `clode/kernels/odedriver.cl`
+- [ ] P1 Single-source-of-truth solution-buffer or solver-state kernel abstraction plus shared update helpers for steppers and observers after the explicit solver-state model lands. depends: explicit solver-state model. refs: `clode/kernels/observers.cl`, `clode/kernels/odedriver.cl`
 - [ ] P2 Kernel specialization and source-assembly audit: decide whether `KernelKind`, entrypoint selection, and the current `#define`/`#include` model should specialize more aggressively, but keep kernel files separate from Python definition catalogs unless stronger evidence appears. refs: `clode/_opencl/source_builder.py`, `clode/_opencl/registry.py`, `clode/_opencl/models.py`, `clode/kernels/`, `.design/reference/pyopencl_leverage_audit.md`
 - [ ] P2 Leverage remaining PyOpenCL runtime/build helpers (`cache_dir`, broader `characterize` helpers, `capture_call`) plus device-side fill/map helpers before growing more custom diagnostics or transfer code. refs: `clode/runtime/query.py`, `clode/_opencl/runtime.py`, `clode/_opencl/program_cache.py`, `clode/_opencl/buffers.py`, `clode/_opencl/executors.py`, `.design/reference/pyopencl_leverage_audit.md`
 - [ ] P2 Benchmark whether PyOpenCL `MemoryPool` / `ImmediateAllocator` reduce transient, trajectory, or feature buffer churn before inventing custom allocation policy. depends: clearer PyOpenCL leverage strategy. refs: `clode/_opencl/buffers.py`, `clode/_opencl/executors.py`, `.design/reference/pyopencl_leverage_audit.md`
@@ -89,4 +91,4 @@ Format:
 
 Temporary holding area for rough notes. Process this section with the `design-ideas-inbox` skill when routing items into the maintained `.design` framework.
 
-- fixed_explicit_step wrapper could return an integer error code that indicates that loss of precision has occurred in the time accumulation: that is, something like checking if ti before the step is equal to ti after the step (?)
+Currently empty.

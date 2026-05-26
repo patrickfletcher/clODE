@@ -38,6 +38,9 @@ class CommonBuffers:
     prepared_wiener: object
     prepared_wiener_valid: object
     dt: object
+    status: object
+    step_count: object
+    accepted_dt: object
     tf: object
 
 
@@ -152,6 +155,21 @@ class BufferManager:
             ),
             dt=self._opencl_binding.Buffer(
                 self._runtime.context, flags.READ_WRITE, size=ensemble_size * real_bytes
+            ),
+            status=self._opencl_binding.Buffer(
+                self._runtime.context,
+                flags.WRITE_ONLY,
+                size=ensemble_size * np.dtype(np.int32).itemsize,
+            ),
+            step_count=self._opencl_binding.Buffer(
+                self._runtime.context,
+                flags.WRITE_ONLY,
+                size=ensemble_size * np.dtype(np.uint64).itemsize,
+            ),
+            accepted_dt=self._opencl_binding.Buffer(
+                self._runtime.context,
+                flags.WRITE_ONLY,
+                size=ensemble_size * real_bytes,
             ),
             tf=self._opencl_binding.Buffer(
                 self._runtime.context, flags.WRITE_ONLY, size=ensemble_size * real_bytes
@@ -361,6 +379,25 @@ class BufferManager:
 
     def download_dt(self, buffers: CommonBuffers) -> np.ndarray:
         return self._download_vector_buffer(buffers.dt, (buffers.ensemble_size,))
+
+    def download_status(self, buffers: CommonBuffers) -> np.ndarray:
+        host = np.empty(buffers.ensemble_size, dtype=np.int32)
+        self._opencl_binding.enqueue_copy(
+            self._runtime.queue, host, buffers.status, is_blocking=True
+        )
+        return host
+
+    def download_step_count(self, buffers: CommonBuffers) -> np.ndarray:
+        host = np.empty(buffers.ensemble_size, dtype=np.uint64)
+        self._opencl_binding.enqueue_copy(
+            self._runtime.queue, host, buffers.step_count, is_blocking=True
+        )
+        return host
+
+    def download_accepted_dt(self, buffers: CommonBuffers) -> np.ndarray:
+        return self._download_vector_buffer(
+            buffers.accepted_dt, (buffers.ensemble_size,)
+        )
 
     def download_tf(self, buffers: CommonBuffers) -> np.ndarray:
         return self._download_vector_buffer(buffers.tf, (buffers.ensemble_size,))

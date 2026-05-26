@@ -552,12 +552,57 @@ class Simulator:
 		return self._transient_cache.final_state
 
 	def get_dt(self) -> np.ndarray:
-		"""Return per-instance step sizes with shape matching the ensemble shape."""
+		"""Return per-instance continuation step sizes with shape matching the ensemble shape.
+
+		For adaptive steppers this is the next step size the controller would attempt on
+		a continued solve, not the width of the last accepted step. Use
+		`get_last_accepted_dt()` for the latter.
+		"""
 		if self._solver_state.current_dt is None:
 			self._solver_state.current_dt = np.array(
 				self._integrator.get_dt(), dtype=np.float64
 			).reshape(self._ensemble_shape, order="F")
 		return self._solver_state.current_dt
+
+	def get_status(self) -> np.ndarray:
+		"""Return per-instance solve status codes with shape matching the ensemble shape.
+
+		Values correspond to `clode.SolverStatus`.
+		"""
+		if self._solver_state.status is None:
+			status = self._integrator.get_status()
+			if len(status) == 0:
+				raise ValueError("Must run a simulation before getting status")
+			self._solver_state.status = np.array(
+				status, dtype=np.int32
+			).reshape(self._ensemble_shape, order="F")
+		return self._solver_state.status
+
+	def get_step_count(self) -> np.ndarray:
+		"""Return per-instance accepted step counts with shape matching the ensemble shape."""
+		if self._solver_state.step_count is None:
+			step_count = self._integrator.get_step_count()
+			if len(step_count) == 0:
+				raise ValueError("Must run a simulation before getting step count")
+			self._solver_state.step_count = np.array(
+				step_count, dtype=np.uint64
+			).reshape(self._ensemble_shape, order="F")
+		return self._solver_state.step_count
+
+	def get_last_accepted_dt(self) -> np.ndarray:
+		"""Return the last accepted step width for each instance.
+
+		Values have shape matching the ensemble shape. If a solve ends before any step
+		is accepted, the reported value is zero.
+		"""
+		if self._solver_state.last_accepted_dt is None:
+			accepted_dt = self._integrator.get_last_accepted_dt()
+			if len(accepted_dt) == 0:
+				raise ValueError("Must run a simulation before getting accepted step width")
+			self._solver_state.last_accepted_dt = np.array(
+				accepted_dt, dtype=np.float64
+			).reshape(self._ensemble_shape, order="F")
+		return self._solver_state.last_accepted_dt
 
 	def get_final_time(self) -> np.ndarray:
 		"""Return per-instance final times with shape matching the ensemble shape."""

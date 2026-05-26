@@ -7,10 +7,11 @@ Update when: the solver-state boundary changes materially or this note becomes h
 ## Bottom line
 
 - The first-pass solver-state cleanup landed.
+- Follow-on slices have since landed solver-owned per-work-item status, accepted-step-count, and last-accepted-step-width buffers plus public `get_status()`, `get_step_count()`, and `get_last_accepted_dt()` fetch paths.
 - IVP owns next-solve problem data.
 - `clode/simulation/_state.py` now owns Python-side solver state plus fetched-output caches.
 - `_opencl/executors.py` now treats host mirrors as transfer caches rather than semantic state owners.
-- The stepper wrapper boundary now preserves failure status and accepted step width explicitly, but no matched device-side per-work-item solver-state struct was added in this pass.
+- The stepper wrapper boundary now preserves failure status and accepted step width explicitly, but there is still no matched device-side per-work-item solver-state struct for the remaining time-base diagnostics or later work metrics.
 
 ## Landed internal shape
 
@@ -42,21 +43,21 @@ Update when: the solver-state boundary changes materially or this note becomes h
 ## Intentionally deferred
 
 - device-side per-work-item `t0`
-- richer per-work-item completion/error status
-- a matched device-side solver-state struct
-- solver-owned device buffers for step counts, accepted step width, and other per-item stepping diagnostics
+- a matched device-side solver-state struct for current-time or other remaining time-base values
+- solver-owned device buffers or a matched state object for work metrics beyond status, step counts, and last accepted step width
 - separation of integration state from output/storage policy (`max_store`, `nout`, event capacity)
 - continuation-state guardrails for diverged per-work-item final times and any later public continuation helper
-- migration of legacy step/time diagnostic ownership out of observer structs and outputs
-- observer-definition cleanup beyond preserving the boundary for later work, which has now landed separately
+- a read-only bundled solver stats surface and later work metrics such as RHS evaluation counts, Jacobian evaluations, or linear-solver work once those quantities are semantically stable across steppers
+- deeper observer-state cleanup beyond retiring public observer-owned step-count and `dt` summary outputs
 
 ## Handoff to the next PR
 
 - Treat the landed solver-state boundary as stable enough to build on, not as something to reopen wholesale.
-- The next structural cleanup is to make solver-owned per-work-item stepping state explicit on the device and runtime sides: step counts, accepted or current `dt`, time-base values, and failure status.
-- Strip matching legacy step or time diagnostics out of observer ownership while keeping observer-specific interpolation and event geometry intact.
+- The next structural cleanup is to extend the solver-owned device and runtime path from the landed status, step-count, and last-accepted-step-width buffers to any remaining time-base values and any later no-progress status.
+- Keep observer public outputs free of solver-owned step or time diagnostics while leaving observer-specific interpolation geometry and any private sample counters intact.
+- Keep the public API fine-grained for now. A bundled stats object should wait until the remaining fields and any SciPy-style work metrics have one coherent cross-stepper definition.
 - Keep the current owner split intact in follow-on work:
   - IVP owns next-solve problem data
-  - solver state owns execution progress, accepted-step and status facts, and continuation semantics
+  - solver state owns execution progress, step counts, accepted-step and status facts, and continuation semantics
   - persistent observer state stays adjacent but separate
   - fetched outputs and transfer caches remain derived

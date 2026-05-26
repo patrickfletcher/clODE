@@ -1,6 +1,7 @@
 // trajectory solver that enables observers
 
 #include "clODE_random.cl"
+#include "clODE_solver_status.cl"
 #include "clODE_struct_defs.cl"
 #include "clODE_utilities.cl"
 #include "observers.cl"
@@ -19,6 +20,9 @@ __kernel void features(
 	__global realtype *preparedWiener,  //prepared next-step Wiener sample [nPts*nWiener]
 	__global uint *preparedWienerValid, //prepared next-step Wiener availability [nPts]
     __global realtype *d_dt,            //final dt values      [nPts]
+    __global int *status,               //solve status values  [nPts]
+	__global ulong *stepCount,           //accepted step counts [nPts]
+    __global realtype *acceptedDt,      //last accepted dt     [nPts]
     __global realtype *tf,              //final time values    [nPts]
 	__global ObserverState *observer_states, //persistent observer state
 	__constant struct ObserverParams *opars, //observer runtime settings
@@ -67,9 +71,12 @@ __kernel void features(
 
 	//time-stepping loop
     ulong step = 0;
+	ulong acceptedSteps = 0;
 	realtype acceptedStepDt = ZERO;
-	bool eventOccurred;
-	bool terminalEvent;
+	realtype lastAcceptedStepDt = ZERO;
+	int solveStatus = SOLVE_STATUS_COMPLETED;
+	bool eventOccurred = false;
+	bool terminalEvent = false;
 	while (
 		compensatedTimeValue(solveElapsed, solveElapsedCorrection) < solveDuration
 		&& step < settings->max_steps
@@ -92,7 +99,12 @@ __kernel void features(
 			&rd
 		);
 		if (stepflag != 0)
+		{
+			solveStatus = SOLVE_STATUS_STEPPER_FAILED;
 			break;
+		}
+		acceptedSteps = step;
+		lastAcceptedStepDt = acceptedStepDt;
 		updateObserverState(&ti, xi, dxi, auxi, acceptedStepDt, &observer_state, opars);
 
 		eventOccurred = eventFunction(&ti, xi, dxi, auxi, &observer_state, opars);
@@ -105,6 +117,14 @@ __kernel void features(
 				break;
 		}
 	}
+
+	solveStatus = finalizeSolveStatus(
+		solveStatus,
+		compensatedTimeValue(solveElapsed, solveElapsedCorrection) >= solveDuration,
+		step >= settings->max_steps,
+		terminalEvent,
+		false
+	);
 
 	//readout features of interest and write to global F:
 	finalizeFeatures(&ti, xi, dxi, auxi, &observer_state, opars, F, i, nPts);
@@ -137,6 +157,10 @@ __kernel void features(
 
     // update dt to its final value (for adaptive stepper continue)
     d_dt[i] = dt;
+
+	status[i] = solveStatus;
+	stepCount[i] = acceptedSteps;
+	acceptedDt[i] = lastAcceptedStepDt;
 
     // store the actual final time value
     tf[i] = ti;

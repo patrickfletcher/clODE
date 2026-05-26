@@ -1,3 +1,4 @@
+from ._state import SolverStatus
 from .base import Simulator, Stepper
 from .features import FeatureSimulator
 from .params import SolverParams
@@ -9,6 +10,7 @@ __all__ = [
     "ObserverOutput",
     "Simulator",
     "SolverParams",
+    "SolverStatus",
     "Stepper",
     "TrajectoryOutput",
     "TrajectorySimulator",

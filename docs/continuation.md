@@ -8,9 +8,18 @@ question is what state persists across calls and what has to be advanced explici
 By default, repeated calls preserve solver-side state:
 
 - `x0` is replaced with the previous `xf` when `update_x0=True`
-- device `dt` is preserved
+- device `dt` is preserved as continuation/controller state
 - RNG state is preserved
 - `FeatureSimulator` also preserves observer state unless the observer is reinitialized
+
+For solver diagnostics after a run:
+
+- `get_dt()` returns the continuation step size currently stored on the device
+- `get_last_accepted_dt()` returns the width of the last accepted step
+- `get_step_count()` returns accepted step counts
+- `get_status()` returns the solver-owned stop reason
+
+For adaptive steppers, `get_dt()` and `get_last_accepted_dt()` can differ because the controller proposes a next step size after each accepted step.
 
 What does **not** change automatically is the requested time window. The next kernel
 still starts from whatever `t_span` is currently configured on the simulator.

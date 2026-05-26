@@ -154,8 +154,18 @@ def test_observer_catalog_helpers_expose_feature_names_and_two_pass_flags() -> N
         "mean y",
         "max dy/dt",
         "min dy/dt",
-        "step count",
     )
+
+    threshold_feature_names = get_observer_feature_names(
+        problem_info,
+        "thresh2",
+        ObserverParams(max_event_timestamps=2),
+    )
+
+    assert "step count" not in threshold_feature_names
+    assert "max dt" not in threshold_feature_names
+    assert "min dt" not in threshold_feature_names
+    assert "mean dt" not in threshold_feature_names
     assert is_two_pass_observer("nhood2") is True
     assert is_two_pass_observer("basic") is False
 

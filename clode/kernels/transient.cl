@@ -1,5 +1,6 @@
 
 #include "clODE_random.cl"
+#include "clODE_solver_status.cl"
 #include "clODE_struct_defs.cl"
 #include "clODE_utilities.cl"
 #include "realtype.cl"
@@ -18,6 +19,9 @@ __kernel void transient(
     __global realtype *preparedWiener,  //prepared next-step Wiener sample [nPts*nWiener]
     __global uint *preparedWienerValid, //prepared next-step Wiener availability [nPts]
     __global realtype *d_dt,            //final dt values      [nPts]
+    __global int *status,               //solve status values  [nPts]
+    __global ulong *stepCount,          //accepted step counts [nPts]
+    __global realtype *acceptedDt,      //last accepted dt     [nPts]
     __global realtype *tf)              //final time values    [nPts]
 {
     int i = get_global_id(0);
@@ -61,7 +65,10 @@ __kernel void transient(
 
 	//time-stepping loop
     ulong step = 0;
+    ulong acceptedSteps = 0;
     realtype acceptedStepDt = ZERO;
+    realtype lastAcceptedStepDt = ZERO;
+    int solveStatus = SOLVE_STATUS_COMPLETED;
     while (
         compensatedTimeValue(solveElapsed, solveElapsedCorrection) < solveDuration
         && step < settings->max_steps
@@ -84,8 +91,21 @@ __kernel void transient(
             &rd
         );
         if (stepflag != 0)
+        {
+            solveStatus = SOLVE_STATUS_STEPPER_FAILED;
             break;
+        }
+        acceptedSteps = step;
+        lastAcceptedStepDt = acceptedStepDt;
     }
+
+    solveStatus = finalizeSolveStatus(
+        solveStatus,
+        compensatedTimeValue(solveElapsed, solveElapsedCorrection) >= solveDuration,
+        step >= settings->max_steps,
+        false,
+        false
+    );
 
     //write the final solution values to global memory.
     for (int j = 0; j < N_VAR; ++j)
@@ -108,6 +128,10 @@ __kernel void transient(
 
     // update dt to its final value (for adaptive stepper continue)
     d_dt[i] = dt;
+
+    status[i] = solveStatus;
+    stepCount[i] = acceptedSteps;
+    acceptedDt[i] = lastAcceptedStepDt;
 
     // store the actual final time value
     tf[i] = ti;

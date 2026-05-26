@@ -277,7 +277,6 @@ static inline void finalizeFeatures(realtype *ti, realtype xi[], realtype dxi[],
 		F[ix++ * nPts + i] = od->xMinList[j];
     }
     F[ix++ * nPts + i] = od->eventcount;
-    F[ix++ * nPts + i] = od->stepcount;
 }
 
 //Perform and post-integration cleanup of observer state to ensure it is ready for continuation if needed

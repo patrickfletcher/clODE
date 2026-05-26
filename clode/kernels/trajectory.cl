@@ -6,6 +6,7 @@
 //TODO: is there any way to avoid writing to global at each store step? shared mem?
 
 #include "clODE_random.cl"
+#include "clODE_solver_status.cl"
 #include "clODE_struct_defs.cl"
 #include "clODE_utilities.cl"
 #include "realtype.cl"
@@ -23,6 +24,9 @@ __kernel void trajectory(
     __global realtype *preparedWiener,  //prepared next-step Wiener sample [nPts*nWiener]
     __global uint *preparedWienerValid, //prepared next-step Wiener availability [nPts]
     __global realtype *d_dt,            //final dt values      [nPts]
+    __global int *status,               //solve status values  [nPts]
+    __global ulong *stepCount,          //accepted step counts [nPts]
+    __global realtype *acceptedDt,      //last accepted dt     [nPts]
     __global realtype *tf,              //final time values    [nPts]
     __constant struct TrajectoryOutputSettings *output_settings, //trajectory storage policy
     __global realtype *t,               //stored time points
@@ -82,7 +86,10 @@ __kernel void trajectory(
     
 	//time-stepping loop
     ulong step = 0;
+    ulong acceptedSteps = 0;
     realtype acceptedStepDt = ZERO;
+    realtype lastAcceptedStepDt = ZERO;
+    int solveStatus = SOLVE_STATUS_COMPLETED;
     while (
         compensatedTimeValue(solveElapsed, solveElapsedCorrection) < solveDuration
         && step < settings->max_steps
@@ -106,7 +113,12 @@ __kernel void trajectory(
             &rd
         );
         if (stepflag != 0)
+        {
+            solveStatus = SOLVE_STATUS_STEPPER_FAILED;
             break;
+        }
+        acceptedSteps = step;
+        lastAcceptedStepDt = acceptedStepDt;
 
         //store every output_settings.nout'th step after the initial point
         if (step % (ulong)output_settings->nout == 0)
@@ -121,6 +133,14 @@ __kernel void trajectory(
                 aux[storeix * nPts * N_AUX + j * nPts + i] = auxi[j];
         }
     }
+
+    solveStatus = finalizeSolveStatus(
+        solveStatus,
+        compensatedTimeValue(solveElapsed, solveElapsedCorrection) >= solveDuration,
+        step >= settings->max_steps,
+        false,
+        storeix >= output_settings->max_store
+    );
 
     nStored[i] = storeix; //storeix ranged from 0 to nStored-1
 
@@ -145,6 +165,10 @@ __kernel void trajectory(
 
     // update dt to its final value (for adaptive stepper continue)
     d_dt[i] = dt;
+
+    status[i] = solveStatus;
+    stepCount[i] = acceptedSteps;
+    acceptedDt[i] = lastAcceptedStepDt;
     
     // store the actual final time value
     tf[i] = ti;

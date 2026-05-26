@@ -42,7 +42,8 @@ def _feature_matrix(output: clode.ObserverOutput) -> np.ndarray:
 
 
 def test_rk4_basicall_linear_state_statistics_match_exact_values() -> None:
-    output = _settled_feature_simulator("stable_linear").features()
+    simulator = _settled_feature_simulator("stable_linear")
+    output = simulator.features()
 
     assert output is not None
     sample_times = fixed_step_observer_times(
@@ -113,7 +114,7 @@ def test_rk4_basicall_linear_state_statistics_match_exact_values() -> None:
         atol=FIXED_ATOL,
         rtol=0.0,
     )
-    assert output.get_var_count("step") == fixed_step_step_count(
+    assert int(simulator.get_step_count().reshape(-1)[0]) == fixed_step_step_count(
         FIXED_SETTLE_END,
         FIXED_SETTLE_END + FIXED_WINDOW,
         FIXED_DT,
