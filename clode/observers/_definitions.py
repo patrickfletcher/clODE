@@ -6,11 +6,14 @@ from typing import Callable
 import numpy as np
 
 from ..problem._core import ProblemInfo
-from .types import Observer, ObserverParams
+from .types import EventOutputSettings, Observer, ObserverRuntimeSettings
 
 
 LayoutField = tuple[object, ...]
-FeatureNameFactory = Callable[[ProblemInfo, ObserverParams], tuple[str, ...]]
+FeatureNameFactory = Callable[
+    [ProblemInfo, ObserverRuntimeSettings, int],
+    tuple[str, ...],
+]
 LayoutFactory = Callable[[ProblemInfo, np.dtype, int], "ResolvedObserverLayout"]
 
 
@@ -101,27 +104,32 @@ class ObserverDefinition:
     def get_feature_names(
         self,
         problem_info: ProblemInfo,
-        observer_params: ObserverParams,
+        observer_runtime_settings: ObserverRuntimeSettings,
+        n_store_events: int,
     ) -> tuple[str, ...]:
-        return self.feature_name_factory(problem_info, observer_params)
+        return self.feature_name_factory(
+            problem_info,
+            observer_runtime_settings,
+            int(n_store_events),
+        )
 
     def resolve(
         self,
         problem_info: ProblemInfo,
-        observer_params: ObserverParams,
+        observer_runtime_settings: ObserverRuntimeSettings,
         *,
         real_dtype: np.dtype,
-        n_store_events: int | None = None,
+        n_store_events: int,
     ) -> ResolvedObserverSpec:
         resolved_real_dtype = np.dtype(real_dtype)
-        resolved_n_store_events = (
-            observer_params.event_output_settings.max_event_timestamps
-            if n_store_events is None
-            else int(n_store_events)
-        )
+        resolved_n_store_events = int(n_store_events)
         return ResolvedObserverSpec(
             definition=self,
-            feature_names=self.get_feature_names(problem_info, observer_params),
+            feature_names=self.get_feature_names(
+                problem_info,
+                observer_runtime_settings,
+                resolved_n_store_events,
+            ),
             layout=self.layout_factory(
                 problem_info,
                 resolved_real_dtype,
@@ -145,25 +153,33 @@ def get_observer_definition(observer: Observer | str) -> ObserverDefinition:
 def resolve_observer_spec(
     problem_info: ProblemInfo,
     observer: Observer | str,
-    observer_params: ObserverParams,
+    observer_runtime_settings: ObserverRuntimeSettings,
     *,
     real_dtype: np.dtype,
+    event_output_settings: EventOutputSettings,
     n_store_events: int | None = None,
 ) -> ResolvedObserverSpec:
     definition = get_observer_definition(observer)
+    resolved_n_store_events = (
+        event_output_settings.max_event_timestamps
+        if n_store_events is None
+        else int(n_store_events)
+    )
     return definition.resolve(
         problem_info,
-        observer_params,
+        observer_runtime_settings,
         real_dtype=real_dtype,
-        n_store_events=n_store_events,
+        n_store_events=resolved_n_store_events,
     )
 
 
 def _basic_feature_names(
     problem_info: ProblemInfo,
-    observer_params: ObserverParams,
+    observer_runtime_settings: ObserverRuntimeSettings,
+    n_store_events: int,
 ) -> tuple[str, ...]:
-    feature_var = _name_at(list(problem_info.vars), observer_params.f_var_ix)
+    del n_store_events
+    feature_var = _name_at(list(problem_info.vars), observer_runtime_settings.f_var_ix)
     return (
         f"max {feature_var}",
         f"min {feature_var}",
@@ -175,9 +191,11 @@ def _basic_feature_names(
 
 def _basicall_feature_names(
     problem_info: ProblemInfo,
-    observer_params: ObserverParams,
+    observer_runtime_settings: ObserverRuntimeSettings,
+    n_store_events: int,
 ) -> tuple[str, ...]:
-    del observer_params
+    del observer_runtime_settings
+    del n_store_events
     names: list[str] = []
     for var_name in problem_info.vars:
         names.extend(
@@ -202,8 +220,10 @@ def _basicall_feature_names(
 
 def _localmax_feature_names(
     problem_info: ProblemInfo,
-    observer_params: ObserverParams,
+    observer_runtime_settings: ObserverRuntimeSettings,
+    n_store_events: int,
 ) -> tuple[str, ...]:
+    del observer_runtime_settings
     names = [
         "max IMI",
         "min IMI",
@@ -230,7 +250,7 @@ def _localmax_feature_names(
                 f"mean {aux_name}",
             ]
         )
-    for event_idx in range(observer_params.max_event_timestamps):
+    for event_idx in range(n_store_events):
         names.extend(
             [
                 f"localmax event time {event_idx}",
@@ -245,9 +265,11 @@ def _localmax_feature_names(
 
 def _nhood1_feature_names(
     problem_info: ProblemInfo,
-    observer_params: ObserverParams,
+    observer_runtime_settings: ObserverRuntimeSettings,
+    n_store_events: int,
 ) -> tuple[str, ...]:
-    del observer_params
+    del observer_runtime_settings
+    del n_store_events
     names = [
         "max period",
         "min period",
@@ -280,8 +302,10 @@ def _nhood1_feature_names(
 
 def _nhood2_feature_names(
     problem_info: ProblemInfo,
-    observer_params: ObserverParams,
+    observer_runtime_settings: ObserverRuntimeSettings,
+    n_store_events: int,
 ) -> tuple[str, ...]:
+    del observer_runtime_settings
     names = [
         "max period",
         "min period",
@@ -310,7 +334,7 @@ def _nhood2_feature_names(
                 f"mean {aux_name}",
             ]
         )
-    for event_idx in range(observer_params.max_event_timestamps):
+    for event_idx in range(n_store_events):
         names.append(f"nhood event time {event_idx}")
     names.append("event count")
     return tuple(names)
@@ -318,8 +342,10 @@ def _nhood2_feature_names(
 
 def _thresh2_feature_names(
     problem_info: ProblemInfo,
-    observer_params: ObserverParams,
+    observer_runtime_settings: ObserverRuntimeSettings,
+    n_store_events: int,
 ) -> tuple[str, ...]:
+    del observer_runtime_settings
     names = [
         "max period",
         "min period",
@@ -358,7 +384,7 @@ def _thresh2_feature_names(
                 f"mean {aux_name}",
             ]
         )
-    for event_idx in range(observer_params.max_event_timestamps):
+    for event_idx in range(n_store_events):
         names.extend(
             [
                 f"up event time {event_idx}",

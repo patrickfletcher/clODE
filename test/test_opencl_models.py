@@ -18,6 +18,7 @@ from clode._opencl import (
 )
 from clode.observers._definitions import resolve_observer_spec
 from clode.observers import ObserverParams, get_observer_feature_names, is_two_pass_observer
+from clode.observers.types import EventOutputSettings, ObserverRuntimeSettings
 from clode.problem._core import ProblemInfo, create_rhs_source
 from clode.simulation._stepper_definitions import (
     StepperMethodKind,
@@ -204,8 +205,9 @@ def test_resolved_observer_spec_splits_persistent_and_event_layout() -> None:
     resolved_spec = resolve_observer_spec(
         problem_info,
         "localmax",
-        ObserverParams(max_event_timestamps=2),
+        ObserverRuntimeSettings(),
         real_dtype=np.dtype(np.float32),
+        event_output_settings=EventOutputSettings(max_event_timestamps=2),
     )
 
     assert resolved_spec.observer_name == "localmax"

@@ -5,9 +5,8 @@ import warnings
 
 import numpy as np
 
-from ..observers.types import ObserverParams, ObserverRuntimeSettings
+from ..observers.types import ObserverRuntimeSettings
 from ..simulation.params import (
-    SolverParams,
     IntegrationSettings,
     TrajectoryOutputSettings,
 )
@@ -136,7 +135,6 @@ def pack_integration_settings(
         dtype=struct_spec.dtype,
     )
 
-
 def pack_trajectory_output_settings(
     runtime: OpenCLRuntime,
     output_settings: TrajectoryOutputSettings,
@@ -173,35 +171,3 @@ def pack_observer_runtime_settings(
         ),
         dtype=struct_spec.dtype,
     )
-
-
-def pack_solver_params(
-    runtime: OpenCLRuntime, solver_params: SolverParams, precision: Precision
-) -> np.ndarray:
-    return pack_integration_settings(
-        runtime,
-        solver_params.integration_settings,
-        precision,
-    )
-
-
-def pack_observer_params(
-    runtime: OpenCLRuntime, observer_params: ObserverParams, precision: Precision
-) -> np.ndarray:
-    return pack_observer_runtime_settings(
-        runtime,
-        observer_params.runtime_settings,
-        precision,
-    )
-
-
-def get_solver_params_struct(
-    runtime: OpenCLRuntime, precision: Precision
-) -> MatchedStruct:
-    return get_integration_settings_struct(runtime, precision)
-
-
-def get_observer_params_struct(
-    runtime: OpenCLRuntime, precision: Precision
-) -> MatchedStruct:
-    return get_observer_runtime_settings_struct(runtime, precision)

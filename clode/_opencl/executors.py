@@ -982,7 +982,8 @@ class OpenCLFeatureExecutor(OpenCLTransientExecutor):
             self._runtime,
             self._problem_info,
             self._observer_name,
-            self.get_observer_params(),
+            self._observer_runtime_settings,
+            self._event_output_settings,
             self._precision,
             resolved_observer_spec=self._resolved_observer_spec,
         )
@@ -991,9 +992,9 @@ class OpenCLFeatureExecutor(OpenCLTransientExecutor):
         return resolve_observer_spec(
             self._problem_info,
             self._observer_name,
-            self.get_observer_params(),
+            self._observer_runtime_settings,
             real_dtype=np.dtype(
                 np.float32 if self._precision is Precision.SINGLE else np.float64
             ),
-            n_store_events=self._event_output_settings.max_event_timestamps,
+            event_output_settings=self._event_output_settings,
         )

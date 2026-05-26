@@ -4,9 +4,8 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from ..observers.types import ObserverParams, ObserverRuntimeSettings
+from ..observers.types import ObserverRuntimeSettings
 from ..simulation.params import (
-    SolverParams,
     IntegrationSettings,
     TrajectoryOutputSettings,
 )
@@ -286,22 +285,6 @@ class BufferManager:
         )
         self._enqueue_copy(buffers.observer_runtime_settings, host)
         return host
-
-    def upload_solver_params(
-        self, buffers: CommonBuffers, solver_params: SolverParams
-    ) -> np.ndarray:
-        return self.upload_integration_settings(
-            buffers,
-            solver_params.integration_settings,
-        )
-
-    def upload_observer_params(
-        self, buffers: FeatureBuffers, observer_params: ObserverParams
-    ) -> np.ndarray:
-        return self.upload_observer_runtime_settings(
-            buffers,
-            observer_params.runtime_settings,
-        )
 
     def clear_observer_state(self, buffers: FeatureBuffers, ensemble_size: int) -> None:
         host = np.zeros(

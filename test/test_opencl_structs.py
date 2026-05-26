@@ -19,9 +19,9 @@ from clode._opencl import (
     pack_observer_runtime_settings,
     pack_trajectory_output_settings,
 )
+from clode.observers.types import ObserverRuntimeSettings
 from clode.runtime import _clode_root_dir
-from clode.observers import ObserverParams
-from clode.simulation import SolverParams
+from clode.simulation.params import IntegrationSettings, TrajectoryOutputSettings
 from test.core_numerics.helpers import TEST_DEVICE_ID, TEST_PLATFORM_ID
 
 
@@ -66,20 +66,21 @@ def test_internal_config_structs_use_device_matched_struct_dtypes() -> None:
 
 def test_pack_helpers_preserve_internal_config_values() -> None:
     runtime = OpenCLRuntime.create(**_explicit_runtime_kwargs())
-    solver_params = SolverParams(
+    integration_settings = IntegrationSettings(
         dt=0.125,
         dtmax=0.5,
         abstol=1e-6,
         reltol=1e-3,
         max_steps=(1 << 40) + 123,
+    )
+    trajectory_output_settings = TrajectoryOutputSettings(
         max_store=456,
         nout=7,
     )
-    observer_params = ObserverParams(
+    observer_runtime_settings = ObserverRuntimeSettings(
         e_var_ix=1,
         f_var_ix=2,
         max_event_count=30,
-        max_event_timestamps=4,
         min_amp=0.2,
         min_imi=0.3,
         nhood_radius=0.4,
@@ -92,16 +93,16 @@ def test_pack_helpers_preserve_internal_config_values() -> None:
 
     packed_integration = pack_integration_settings(
         runtime,
-        solver_params.integration_settings,
+        integration_settings,
         Precision.SINGLE,
     )
     packed_trajectory_output = pack_trajectory_output_settings(
         runtime,
-        solver_params.trajectory_output_settings,
+        trajectory_output_settings,
     )
     packed_observer_runtime = pack_observer_runtime_settings(
         runtime,
-        observer_params.runtime_settings,
+        observer_runtime_settings,
         Precision.DOUBLE,
     )
 

@@ -14,7 +14,7 @@ from clode._opencl import (
     UnsupportedStepperError,
 )
 from clode.observers._definitions import resolve_observer_spec
-from clode.observers import ObserverParams
+from clode.observers.types import EventOutputSettings, ObserverRuntimeSettings
 from clode.problem._core import ProblemInfo
 from clode.problem._core import create_rhs_source, load_rhs_source
 from clode.runtime import _clode_root_dir
@@ -134,8 +134,9 @@ def test_source_builder_accepts_resolved_observer_spec_for_feature_builds() -> N
     resolved_spec = resolve_observer_spec(
         ProblemInfo("model.cl", ["x", "y"], ["k"], ["aux0"], 0),
         "nhood2",
-        ObserverParams(max_event_timestamps=4),
+        ObserverRuntimeSettings(),
         real_dtype=np.dtype(np.float32),
+        event_output_settings=EventOutputSettings(max_event_timestamps=4),
     )
 
     bundle = builder.build(
