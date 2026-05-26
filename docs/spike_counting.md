@@ -118,7 +118,7 @@ plt.show()
 
 
 # Now get the trajectories
-steps_taken = features.get_var_count("step")
+steps_taken = integrator.get_step_count().reshape(-1)
 max_steps = int(np.max(steps_taken))
 
 integrator_traj = clode.TrajectorySimulator(

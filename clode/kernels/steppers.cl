@@ -24,7 +24,7 @@ void getRHS(const realtype t, const realtype x_[], const realtype p_[], realtype
 
 #ifdef STOCHASTIC_EULER
 #define STOCHASTIC_STEPPER
-#include "steppers/fixed_explicit_Euler.clh"
+#include "steppers/fixed_explicit_stochastic_Euler.clh"
 #endif
 
 #ifdef EXPLICIT_EULER
