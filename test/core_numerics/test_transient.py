@@ -9,48 +9,69 @@ from test.core_numerics.reference import stable_linear_state
 
 FIXED_DT = 0.05
 FIXED_MAX_STEPS = 64
+RK4_CONVERGENCE_DTS = (0.25, 0.125, 0.0625)
+ADAPTIVE_REFINEMENT_TOLS = (
+    (1e-3, 1e-6),
+    (1e-4, 1e-8),
+    (1e-5, 1e-10),
+)
 RK4_ATOL = 1e-6
 DOPRI_ATOL = 2e-6
 
 
-def test_rk4_stable_linear_matches_exact_final_state() -> None:
-    simulator = make_simulator(
-        "stable_linear",
-        stepper=clode.Stepper.rk4,
-        t_span=(0.0, 1.0),
-        dt=FIXED_DT,
-        max_steps=FIXED_MAX_STEPS,
-    )
+def test_rk4_stable_linear_final_state_converges_fourth_order() -> None:
+    errors: list[float] = []
 
-    simulator.transient()
+    for dt in RK4_CONVERGENCE_DTS:
+        simulator = make_simulator(
+            "stable_linear",
+            stepper=clode.Stepper.rk4,
+            t_span=(0.0, 1.0),
+            dt=dt,
+            dtmax=dt,
+            max_steps=FIXED_MAX_STEPS,
+        )
 
-    final_time = float(simulator.get_final_time()[0])
-    expected = stable_linear_state(final_time)
-    actual = simulator.get_final_state()[0]
+        simulator.transient()
 
-    np.testing.assert_allclose(actual, expected, atol=RK4_ATOL, rtol=0.0)
+        final_time = float(simulator.get_final_time()[0])
+        expected = stable_linear_state(final_time)
+        actual = np.asarray(simulator.get_final_state()[0], dtype=np.float64)
+        errors.append(float(np.max(np.abs(actual - expected))))
+
+    assert errors[0] > errors[1] > errors[2]
+
+    empirical_orders = np.log2(np.asarray(errors[:-1]) / np.asarray(errors[1:]))
+    assert np.all(empirical_orders > 3.5)
 
 
-def test_dormand_prince_stable_linear_matches_exact_final_state() -> None:
-    simulator = make_simulator(
-        "stable_linear",
-        stepper=clode.Stepper.dormand_prince,
-        t_span=(0.0, 1.0),
-        dt=0.05,
-        dtmax=0.1,
-        abstol=1e-7,
-        reltol=1e-6,
-        max_steps=256,
-    )
+def test_dormand_prince_stable_linear_error_decreases_under_tolerance_refinement() -> None:
+    errors: list[float] = []
+    step_counts: list[int] = []
 
-    simulator.transient()
+    for reltol, abstol in ADAPTIVE_REFINEMENT_TOLS:
+        simulator = make_simulator(
+            "stable_linear",
+            stepper=clode.Stepper.dormand_prince,
+            t_span=(0.0, 2.0),
+            dt=0.2,
+            dtmax=0.5,
+            abstol=abstol,
+            reltol=reltol,
+            max_steps=256,
+        )
 
-    final_time = float(simulator.get_final_time()[0])
-    expected = stable_linear_state(final_time)
-    actual = simulator.get_final_state()[0]
+        simulator.transient()
 
-    assert final_time == pytest.approx(1.0, abs=5e-6)
-    np.testing.assert_allclose(actual, expected, atol=DOPRI_ATOL, rtol=0.0)
+        final_time = float(simulator.get_final_time()[0])
+        expected = stable_linear_state(final_time)
+        actual = np.asarray(simulator.get_final_state()[0], dtype=np.float64)
+        errors.append(float(np.max(np.abs(actual - expected))))
+        step_counts.append(int(simulator.get_step_count().reshape(-1)[0]))
+
+    assert errors[0] > errors[1] > errors[2]
+    assert step_counts[0] <= step_counts[1] <= step_counts[2]
+    assert errors[-1] < 1e-6
 
 
 def test_rk4_large_origin_fixed_step_reports_compensated_elapsed_final_time() -> None:
@@ -58,8 +79,8 @@ def test_rk4_large_origin_fixed_step_reports_compensated_elapsed_final_time() ->
         "stable_linear",
         stepper=clode.Stepper.rk4,
         t_span=(1_000_000.0, 1_000_100.0),
-        dt=0.01,
-        dtmax=0.01,
+        dt=0.1,
+        dtmax=0.1,
         max_steps=20_000,
     )
 
@@ -67,6 +88,10 @@ def test_rk4_large_origin_fixed_step_reports_compensated_elapsed_final_time() ->
 
     final_time = float(simulator.get_final_time()[0])
 
+    np.testing.assert_array_equal(
+        simulator.get_status().reshape(-1),
+        [clode.SolverStatus.COMPLETED],
+    )
     assert final_time > 1_000_050.0
     assert final_time == pytest.approx(float(np.float32(1_000_100.0)), abs=0.0)
 

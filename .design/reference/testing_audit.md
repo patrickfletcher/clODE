@@ -20,7 +20,7 @@ The current bundle and marker taxonomy is a good base. The new `test/kernel_comp
 
 - The physical layout is still transitional, so the intent of each file is not always obvious from its location.
 - Too much OpenCL-specific correctness signal still arrives through full simulator paths instead of smaller component tests; the new component layer is still only a first slice.
-- The numerical regression surface still mixes a small exact-reference backbone in `test/core_numerics/` with standalone exact-solution tests such as `test/test_ornl_thompson_a1.py`; it does not yet behave like a slim curated solver-validation suite with explicit global-error and convergence expectations.
+- The numerical regression surface now has an explicit global-error convergence slice and a tighter adaptive tolerance-refinement slice in `test/core_numerics/`, and the older top-level workflow/scientific numerics files are now best treated as supplemental regressions rather than as release-gating proof. The curated solver-validation suite is still intentionally small and still needs a few more representative exact-solution problems before the public numerical story is fully evidenced.
 - There is no clearly separated performance layer yet.
 - Device and platform coverage is still mostly controlled by environment selection instead of a richer parametrization story.
 
@@ -73,14 +73,15 @@ Rule of thumb:
 
 ## CI guidance
 
-- Keep the current `release = frontend + runtime_api + numerics` gate narrow and meaningful.
+- Keep the current `release = frontend + runtime_api + numerics` gate narrow and meaningful, with `numerics` centered on `test/core_numerics/`.
 - Do not put `opencl_internal` or `performance` into the default release gate.
+- Keep the older top-level workflow/scientific numerics files available through a separate supplemental bundle for manual verification instead of letting them silently define the release-gating evidence boundary.
 - Add a new component-oriented bundle first for manual or Linux OpenCL validation, then decide later whether parts of it belong in the gate.
 - Consider PyOpenCL's own pytest parametrization helpers for signal-only multi-device coverage.
 
 ## Concrete next steps
 
-1. Add a slim exact-solution solver-validation slice with explicit global-error and convergence-rate checks for a few realistic problems, then keep broader work-precision demos outside the release gate.
+1. Build on the first slim exact-solution solver-validation slice with a few more explicit global-error and convergence-rate checks, then keep broader work-precision demos outside the release gate.
 2. Expand `test/kernel_components/` beyond helper math and the currently covered observer contracts.
 3. Move future build-key, observer-storage, and source-assembly checks there instead of burying them inside larger end-to-end tests.
 4. Add a non-gating performance bundle with explicit hardware assumptions.

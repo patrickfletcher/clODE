@@ -41,7 +41,7 @@ Update when: canonical module homes, public compatibility surfaces, packaging ru
 - The public solver-diagnostics API is still intentionally fine-grained. A bundled stats object is deferred until the remaining fields and work-metric semantics settle.
 - Some observer structs still carry private step-count bookkeeping for event geometry or running means, but public observer outputs no longer expose solver-owned step-count or `dt` summary diagnostics; event counts remain semantically observer-owned.
 - Heavier observer-state footprint and register-pressure work remains backlog rather than active scope.
-- Numerical validation and public evidence still need tighter exact-solution and convergence coverage to match the current claims.
+- Numerical validation and public evidence still need broader exact-solution and convergence coverage beyond the landed stable-linear transient evidence slices for RK4 global-error convergence and Dormand-Prince tolerance refinement to match the current claims.
 - RNG continuation details still live in separate buffers rather than a clearer named per-work-item state model.
 - Packaging, citation, and other repo-surface cleanup remain lower priority than numerical, runtime, and UX work.
 

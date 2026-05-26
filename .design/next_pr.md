@@ -18,7 +18,7 @@ Numerical validation and evidence bundle
 - `features.cl` now feeds observers the accepted step width from the solver boundary rather than recovering it from elapsed-time differences.
 - Public observer feature surfaces no longer report step count or `dt` summary diagnostics; remaining observer-private counters only persist where event geometry or internal running means still need them.
 - Public `SolverParams`, `ObserverParams`, and the public `Stepper` enum remain thin compatibility surfaces; broader public config redesign is still deferred.
-- The current test surface now has a maintained public-contract slice for collapsed-window and in-loop `NO_PROGRESS` status behavior, but the broader numerical evidence layer is still thinner than the current public claims.
+- The current test surface now has a maintained public-contract slice for collapsed-window and in-loop `NO_PROGRESS` status behavior plus a first exact stable-linear transient evidence pair: an explicit RK4 global-error convergence slice and an adaptive Dormand-Prince tolerance-refinement slice, but the broader numerical evidence layer is still thinner than the current public claims.
 
 ## Why this should be next
 

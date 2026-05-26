@@ -27,6 +27,8 @@ PRIMARY_BUNDLES: dict[str, tuple[str, ...]] = {
     ),
     "numerics": (
         "test/core_numerics",
+    ),
+    "supplemental_numerics": (
         "test/test_ornl_thompson_a1.py",
         "test/test_vdp.py",
         "test/test_aux_values.py",
@@ -46,19 +48,20 @@ PRIMARY_BUNDLES: dict[str, tuple[str, ...]] = {
 ALIASES: dict[str, tuple[str, ...]] = {
     "release": ("frontend", "runtime_api", "numerics"),
     "opencl": ("release",),
-    "extended": ("opencl_internal", "kernel_components"),
+    "extended": ("opencl_internal", "kernel_components", "supplemental_numerics"),
 }
 
 DESCRIPTIONS = {
     "smoke": "Cross-platform packaging and driver-independent smoke checks.",
     "frontend": "Frontend-facing conversion and API-surface tests.",
     "runtime_api": "Public runtime and simulator contract tests.",
-    "numerics": "Numerical regression tests, including the core OpenCL reference suite.",
+    "numerics": "Authoritative numerical regression tests centered on the maintained core OpenCL reference suite.",
+    "supplemental_numerics": "Older workflow and scientific-regression numerics checks kept outside the release gate.",
     "opencl_internal": "Focused tests for internal OpenCL support layers.",
     "kernel_components": "Tiny synthetic OpenCL component tests for helpers, observers, and build contracts.",
-    "release": "The OpenCL-backed release gate: frontend, runtime/API, and numerical regressions.",
+    "release": "The OpenCL-backed release gate: frontend, runtime/API, and the maintained core numerical regressions.",
     "opencl": "Compatibility alias for the release gate bundle.",
-    "extended": "Additional OpenCL component and internal checks for manual verification.",
+    "extended": "Additional OpenCL component, internal, and supplemental numerics checks for manual verification.",
 }
 
 
