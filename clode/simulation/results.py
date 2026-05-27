@@ -135,6 +135,9 @@ class ObserverOutput:
     def get_var_min_slope(self, var: str) -> np.ndarray[Any, np.dtype[np.float64]]:
         return self.get_var_min(f"d{var}/dt")
 
+    def get_var_mean_slope(self, var: str) -> np.ndarray[Any, np.dtype[np.float64]]:
+        return self.get_var_mean(f"d{var}/dt")
+
     def get_var_count(self, var: str) -> np.ndarray[Any, np.dtype[np.float64]]:
         """Return the tracked count for one event or feature family."""
 

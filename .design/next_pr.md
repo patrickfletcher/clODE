@@ -6,40 +6,39 @@ Update when: the active target changes, the scope narrows or broadens, or the ac
 
 ## Title
 
-Summary observer family and selected-variable policy
+Observer declaration follow-on audit
 
 ## Assumed Repo State
 
 - Canonical public homes are `clode.problem`, `clode.observers`, `clode.simulation`, and `clode.runtime`, with `clode._opencl` as the internal execution layer.
-- The observer concept audit is now captured in `.design/reference/observer_concept_audit.md`, including the conclusion that clODE observers are broader than `solve_ivp`-style event functions and that the best first proof target is the summary-observer family.
+- The summary-observer proof slice is now landed: `Observer.summary` plus `SummaryObserverSelection` resolve to build-specialized summary variants, while `basic` and `basicall` remain compatibility presets over that same family.
 - The simulation state and output ownership pass is wrapped tightly enough that integration settings, trajectory output policy, observer runtime settings, event-output policy, solver state, persistent observer state, and fetched outputs have clearer named homes on the Python side.
 - Public `SolverParams`, `ObserverParams`, and the public `Stepper` enum remain thin compatibility surfaces; broader public config redesign is still deferred.
-- `basic` and `basicall` are one-pass, no-event summary reducers that already share the same online reduction logic and compensated-mean numerics but still exist as separate built-ins with coarse selection scope.
-- `basic` tracks one selected feature variable, while `basicall` eagerly tracks all state variables plus all auxiliary variables. There is still no middle ground for "some but not all variables" or for narrower summary groups that would reduce persistent state and output size.
-- The heavier event observers remain important, but they should not be the first place where the new declaration model is proven.
+- The heavier event observers still use monolithic built-ins with large all-variable layouts, fixed feature bundles, and event-retention policy tied tightly to the chosen observer mode.
 
 ## Why this should be next
 
-The audit is complete enough to stop being the active target. The next useful move is to prove the observer declaration model on the simplest family that still matters to users.
+The summary slice answered the first implementation question, but it exposed the next architectural one: which observer choices belong in the build-specialized declaration path and which should remain scalar runtime settings.
 
-This is the right next cut because summary observers already cover an essential clODE workflow: online trajectory reduction without full trajectory storage. They also expose the clearest missing user control today, namely choosing which variables and summary groups to track so state and output size scale with the requested readout rather than with all variables.
+That boundary matters more than immediately adding another observer because the heavier event families are not structured like summary reducers. If clODE locks in one ad hoc specialization pattern too early, it risks either macro-heavy duplication or a premature code-generation layer without knowing which parts of the observer model truly vary together.
 
-It is lower risk than starting with event detectors because it avoids warmup passes, crossing interpolation, and event-retention semantics while still exercising Python-side declaration, layout derivation, build inputs, and compatibility preservation.
+The next useful move is therefore to audit the landed summary path, compare it to one-pass and two-pass event observers, and decide what the next actual implementation slice should be with that evidence in hand.
 
 ## Scope
 
-- unify `basic` and `basicall` behind one internal summary-observer family
-- make tracked state variables, tracked auxiliary variables, and slope-summary inclusion explicit parts of the internal declaration model
-- preserve current `Observer.basic` and `Observer.basic_all_variables` behavior as compatibility presets over that smaller model
-- keep the one-observer-per-build compile-time model, but let summary state layout and feature schema scale with the selected summary scope rather than always one variable or all variables
-- keep event detectors and trajectory variable-subset storage out of this PR
+- audit the landed summary-observer runtime and build path and record what part of it is a reusable observer-family pattern
+- make the build-specialized versus runtime-configurable boundary explicit in the design docs
+- compare the landed summary family to one-pass and two-pass event observers and identify where the same pattern does or does not generalize cleanly
+- decide whether the current `#define` plus injected-preamble model is still the right near-term default, whether limited code generation is warranted anywhere, or whether some future selections should stay runtime-only
+- keep actual event-observer implementation, trajectory variable-subset work, and any public custom-observer DSL out of this PR
 
-## Likely Internal Shape
+## Key Questions
 
-- introduce one summary-family declaration or adjacent helper layer that can express current one-variable and all-variable summary modes as presets
-- derive feature names, persistent layout, and any build- or layout-signature inputs from explicit selected summary groups rather than from a hard-coded observer mode split
-- carry selected indices or related summary-family configuration in a narrower internal path than the current broad `ObserverRuntimeSettings` bundle when that is needed to make state size truly depend on selected scope
-- keep `_opencl` as the consumer of the resolved summary-family declaration rather than re-specifying summary structure ad hoc
+- Which observer choices necessarily change persistent-state layout or feature schema and therefore belong in the resolved spec and build key?
+- Which choices are scalar enough to stay in `ObserverRuntimeSettings` or a future narrower runtime-settings object?
+- Can heavier observers reuse the same declaration pattern while keeping trigger semantics, running summaries, and retained event-output policy separate enough to avoid one giant monolithic selector?
+- Does the current preprocessor-based source specialization remain the best fit for the next family, or has the summary slice revealed enough repeated boilerplate to justify limited code generation?
+- What is the smallest next implementation slice once those answers are written down?
 
 ## Design Constraints
 
@@ -48,8 +47,8 @@ It is lower risk than starting with event detectors because it avoids warmup pas
 - do not reintroduce solver-owned step, status, or time diagnostics through observer outputs or observer-private state
 - keep semantic ownership in Python first and treat `_opencl` as the execution consumer rather than the authoritative definition layer
 - no user-facing custom-observer DSL, broad inheritance hierarchy, or full code-conversion surface in the same PR
-- avoid turning this PR into a benchmark, register-pressure, or "add every missing observer" campaign; the point is a smaller declaration model and better scope control for summary workflows
-- preserve current feature names and behavior for the existing public `basic` and `basic_all_variables` presets unless a change is clearly justified and documented
+- avoid turning this PR into a benchmark, register-pressure, or "add every missing observer" campaign; the point is to record the right observer-family design boundary before more implementation
+- preserve the landed summary-family behavior and current public presets while evaluating follow-on directions
 - keep public docs and design notes explicit about what is clarified here and what remains deferred
 
 ## Non-goals
@@ -61,32 +60,33 @@ It is lower risk than starting with event detectors because it avoids warmup pas
 - no solver-family or stepper-model redesign in the same PR
 - no public observer-state fetch API or public rename of `ObserverOutput` in the same PR
 - no trajectory variable-subset implementation in the same PR
-- no event-observer redesign beyond whatever compatibility hooks are needed to keep the family model coherent
+- no production event-observer implementation beyond whatever doc or prototype evidence is needed to choose the next slice
 - no citation metadata, release-tag, or broader repo-surface cleanup in the same PR
 
-## Suggested Implementation Slices
+## Suggested Work Slices
 
-1. Introduce the internal summary-family declaration and map current `basic` and `basicall` modes onto it.
-2. Make resolved summary feature names and state layout depend on selected state or aux scope and summary groups.
-3. Add one narrow selected-subset contract beyond the current one-variable and all-variable presets to prove the model without touching the event observers.
+1. Update `.design/reference/observer_concept_audit.md` with what the landed summary slice taught about build-specialized declarations, runtime settings, and preprocessor specialization.
+2. Fill and maintain a current built-in observer matrix by trigger geometry, pass structure, parameter source, retained sparse outputs, and summary-bundle scope.
+3. Compare that pattern explicitly to `localmax`, neighborhood, and `threshold_2` so the next implementation slice is chosen against current code rather than intuition.
+4. If one design ambiguity remains after the audit, use a very small trial artifact or scratch prototype to answer that question instead of broadening production code.
 
 ## Code-Facing Checklist
 
-- `clode/observers/_definitions.py`, `clode/observers/types.py`, `clode/observers/metadata.py`: introduce the summary-family declaration and compatibility mappings for current summary modes
-- `clode/simulation/features.py`, `clode/simulation/results.py`: keep simulator configuration and `ObserverOutput` coherent with the narrower summary selection model
-- `clode/_opencl/observer_metadata.py`, `clode/_opencl/executors.py`, `clode/_opencl/source_builder.py`: make resolved summary scope drive feature metadata, layout shape, and any build-signature changes
-- `clode/kernels/observers/observer_basic.clh`, `clode/kernels/observers/observer_basic_allVar.clh`, and any shared replacement helper: keep the summary kernel contract small and explicit
-- targeted tests under `test/core_numerics/test_features_basicall.py`, `test/kernel_components/test_kernel_math.py`, `test/test_opencl_models.py`, and `test/test_simulation_contracts.py`: preserve current summary presets and add one narrower selection contract
+- `clode/observers/_definitions.py`, `clode/observers/types.py`, `clode/observers/metadata.py`: treat the landed summary-family declaration as the current evidence base for what belongs in a family-specific declaration layer
+- `clode/_opencl/source_builder.py`, `clode/_opencl/models.py`, `clode/_opencl/executors.py`: document how build signature, source preamble, and runtime-setting uploads currently divide responsibility
+- `clode/kernels/observers/observer_summary.clh`, `clode/kernels/observers/observer_local_maximum.clh`, `clode/kernels/observers/observer_threshold_2.clh`: compare the simple summary pattern to one-pass and two-pass event observers before proposing more implementation
+- `.design/reference/observer_concept_audit.md`, `.design/ideas.md`, `.design/development_roadmap.md`, `.design/package_state.md`: keep the planning and current-state narrative aligned with the landed summary slice and the new audit target
 
 ## Acceptance Criteria
 
-- current `Observer.basic` and `Observer.basic_all_variables` remain supported through compatibility presets over one internal summary family
-- at least one narrower selected-summary scope exists beyond the current one-variable or all-variable extremes
-- the resolved summary feature schema and persistent layout shrink when the selected summary scope shrinks
-- the updated code and docs make the later extension of the same selection model to heavier observers more explicit than it is today
+- the design docs explain, using current code, why the landed summary selection path is build-specialized and not just a runtime knob
+- the reusable observer-family pattern from the summary slice is recorded explicitly
+- the audit includes a current built-in observer matrix that distinguishes trigger geometry, pass structure, and parameter source
+- the audit makes clear which parts of that pattern do not generalize directly to one-pass and two-pass event observers
+- the next actual observer implementation candidate is either named with evidence or explicitly deferred behind one remaining design question
 
 ## Follow-on If This Lands Cleanly
 
-1. decide which parts of the same selection model should extend to local-extrema, threshold, or neighborhood observers
-2. add a small set of additional dynamical-systems-oriented built-in observers or features on top of the smaller declaration model
-3. evaluate whether any user-authored or code-converted observer surface is justified once the built-in declaration model stops moving
+1. pick one event-observer family whose trigger, running-summary, and retained-output policy can be split cleanly enough to test the declaration model beyond summary reducers
+2. evaluate count-only versus timestamp-retaining event policies as the next likely state-footprint win for heavier observers
+3. revisit limited code generation only if the next family repeats the same build-specialization boilerplate rather than because the summary slice alone felt verbose

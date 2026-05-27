@@ -17,7 +17,12 @@ from clode._opencl import (
     UnsupportedStepperError,
 )
 from clode.observers._definitions import resolve_observer_spec
-from clode.observers import ObserverParams, get_observer_feature_names, is_two_pass_observer
+from clode.observers import (
+    ObserverParams,
+    SummaryObserverSelection,
+    get_observer_feature_names,
+    is_two_pass_observer,
+)
 from clode.observers.types import EventOutputSettings, ObserverRuntimeSettings
 from clode.problem._core import ProblemInfo, create_rhs_source
 from clode.simulation._stepper_definitions import (
@@ -38,6 +43,7 @@ def _make_build_key(**overrides: object) -> BuildKey:
         "stepper_name": "rk4",
         "stepper_define": "EXPLICIT_RK4",
         "observer_define": None,
+        "observer_signature": None,
         "problem_shape": ProblemShape(n_var=2, n_par=1, n_aux=1, n_wiener=0),
         "n_store_events": 0,
         "rhs_digest": rhs.digest,
@@ -169,6 +175,34 @@ def test_observer_catalog_helpers_expose_feature_names_and_two_pass_flags() -> N
     assert "mean dt" not in threshold_feature_names
     assert is_two_pass_observer("nhood2") is True
     assert is_two_pass_observer("basic") is False
+
+
+def test_summary_feature_name_helper_supports_custom_selection() -> None:
+    problem_info = ProblemInfo(
+        "stable_linear_aux.cl",
+        ["x", "y"],
+        ["k"],
+        ["aux0"],
+        0,
+    )
+
+    feature_names = get_observer_feature_names(
+        problem_info,
+        "summary",
+        ObserverParams(),
+        summary_selection=SummaryObserverSelection(
+            state={"y": ("max", "mean")},
+            slope={"x": "min"},
+            aux={"aux0": "mean"},
+        ),
+    )
+
+    assert feature_names == (
+        "max y",
+        "mean y",
+        "min dx/dt",
+        "mean aux0",
+    )
 
 
 def test_stepper_catalog_exposes_traits_and_build_mapping() -> None:

@@ -11,6 +11,7 @@ from ..observers.types import (
     EventOutputSettings,
     ObserverParams,
     ObserverRuntimeSettings,
+    SummaryObserverSelection,
 )
 from ..problem._core import ProblemInfo, RhsSource
 from ..simulation._state import SolverStatus
@@ -728,6 +729,7 @@ class OpenCLFeatureExecutor(OpenCLTransientExecutor):
         observer: str,
         observer_runtime_settings: ObserverRuntimeSettings,
         event_output_settings: EventOutputSettings,
+        summary_selection: SummaryObserverSelection | None,
         single_precision: bool,
         runtime: OpenCLRuntime,
         clode_root: str,
@@ -743,6 +745,7 @@ class OpenCLFeatureExecutor(OpenCLTransientExecutor):
         self._observer_name = observer
         self._observer_runtime_settings = observer_runtime_settings
         self._event_output_settings = event_output_settings
+        self._summary_selection = summary_selection
         self._resolved_observer_spec = self._resolve_observer_spec()
         self._feature_metadata = self._resolve_feature_metadata()
         self._feature_buffers: FeatureBuffers | None = None
@@ -880,7 +883,7 @@ class OpenCLFeatureExecutor(OpenCLTransientExecutor):
         self,
         observer_runtime_settings: ObserverRuntimeSettings,
         event_output_settings: EventOutputSettings,
-    ) -> None:
+    ) -> bool:
         previous_spec = self._resolved_observer_spec
         previous_runtime_settings = self._observer_runtime_settings
         previous_metadata = self._feature_metadata
@@ -909,6 +912,36 @@ class OpenCLFeatureExecutor(OpenCLTransientExecutor):
                     self._feature_buffers,
                     self._observer_runtime_settings,
                 )
+        return build_changed
+
+    def set_summary_selection(
+        self, summary_selection: SummaryObserverSelection | None
+    ) -> bool:
+        if summary_selection == self._summary_selection:
+            return False
+
+        previous_spec = self._resolved_observer_spec
+        previous_metadata = self._feature_metadata
+        self._summary_selection = summary_selection
+        self._resolved_observer_spec = self._resolve_observer_spec()
+        build_changed = (
+            previous_spec.build_signature != self._resolved_observer_spec.build_signature
+        )
+        if build_changed:
+            self._program_bundle = None
+        self._observer_initialized = False
+        self._invalidate_feature_cache()
+        self._feature_metadata = self._resolve_feature_metadata()
+
+        if self._feature_buffers is not None:
+            buffer_shape_changed = (
+                self._resolved_observer_spec.layout_signature
+                != previous_spec.layout_signature
+                or self._feature_metadata.n_features != previous_metadata.n_features
+            )
+            if buffer_shape_changed:
+                self._feature_buffers = None
+        return build_changed
 
     def set_observer_params(self, observer_params: ObserverParams) -> None:
         self.set_observer_settings(
@@ -986,6 +1019,7 @@ class OpenCLFeatureExecutor(OpenCLTransientExecutor):
             self._event_output_settings,
             self._precision,
             resolved_observer_spec=self._resolved_observer_spec,
+            summary_selection=self._summary_selection,
         )
 
     def _resolve_observer_spec(self) -> ResolvedObserverSpec:
@@ -997,4 +1031,5 @@ class OpenCLFeatureExecutor(OpenCLTransientExecutor):
                 np.float32 if self._precision is Precision.SINGLE else np.float64
             ),
             event_output_settings=self._event_output_settings,
+            summary_selection=self._summary_selection,
         )

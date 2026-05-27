@@ -20,6 +20,7 @@ from ..observers.types import (
 	Observer,
 	ObserverParams,
 	ObserverRuntimeSettings,
+	SummaryObserverSelection,
 	_resolve_observer_params,
 )
 from ..problem.ivp import InitialValueProblem
@@ -42,6 +43,7 @@ class FeatureSimulator(Simulator):
 	_integrator: OpenCLFeatureExecutor
 	_observer_runtime_settings: ObserverRuntimeSettings
 	_event_output_settings: EventOutputSettings
+	_summary_selection: SummaryObserverSelection | None
 
 	def __init__(
 		self,
@@ -82,6 +84,7 @@ class FeatureSimulator(Simulator):
 		observer_dx_down_thresh: float = _DEFAULT_DX_DOWN_THRESHOLD,
 		observer_eps_dx: float = _DEFAULT_EPS_DX,
 		observer_parameters: Optional[ObserverParams] = None,
+		summary_selection: Optional[SummaryObserverSelection] = None,
 	) -> None:
 		"""Create a feature-extraction simulator.
 
@@ -113,9 +116,13 @@ class FeatureSimulator(Simulator):
 			observer_parameters: Optional public compatibility bundle. When
 				provided, it overrides the individual `observer_*` compatibility
 				arguments above.
+			summary_selection: Optional explicit selection for the summary observer
+				family. Use this with `Observer.summary` for subset summary workflows,
+				or to override the `basic` and `basic_all_variables` presets.
 		"""
 
 		self._observer_type = observer
+		self._summary_selection = summary_selection
 		self._feature_cache = FeatureCache()
 		problem_variable_names = (
 			ivp.variable_names if ivp is not None else list((variables or {}).keys())
@@ -174,6 +181,7 @@ class FeatureSimulator(Simulator):
 			self._observer_type.value,
 			self._observer_runtime_settings,
 			self._event_output_settings,
+			self._summary_selection,
 			self._single_precision,
 			self._create_opencl_runtime(),
 			_clode_root_dir,
@@ -233,8 +241,6 @@ class FeatureSimulator(Simulator):
 			dx_down_threshold: Falling derivative threshold for threshold observers.
 			eps_dx: Derivative tolerance used near threshold crossings.
 		"""
-		current_max_event_timestamps = self._event_output_settings.max_event_timestamps
-
 		resolved_observer_params = _resolve_observer_params(
 			self.variable_names,
 			observer_params=op,
@@ -255,18 +261,14 @@ class FeatureSimulator(Simulator):
 		updated_runtime_settings = resolved_observer_params.runtime_settings
 		updated_event_output_settings = resolved_observer_params.event_output_settings
 
-		if (
-			updated_event_output_settings.max_event_timestamps
-			!= current_max_event_timestamps
-		):
-			self._cl_program_is_valid = False
-
 		self._observer_runtime_settings = updated_runtime_settings
 		self._event_output_settings = updated_event_output_settings
-		self._integrator.set_observer_settings(
+		build_changed = self._integrator.set_observer_settings(
 			self._observer_runtime_settings,
 			self._event_output_settings,
 		)
+		if build_changed:
+			self._cl_program_is_valid = False
 		self._invalidate_feature_cache()
 
 	def get_observer_parameters(self) -> ObserverParams:
@@ -274,6 +276,22 @@ class FeatureSimulator(Simulator):
 		return self._observer_runtime_settings.to_observer_params(
 			self._event_output_settings
 		)
+
+	def set_summary_selection(
+		self, summary_selection: Optional[SummaryObserverSelection]
+	) -> None:
+		"""Set or clear the explicit summary selection for summary-family observers."""
+		if summary_selection == self._summary_selection:
+			return
+		self._summary_selection = summary_selection
+		build_changed = self._integrator.set_summary_selection(summary_selection)
+		if build_changed:
+			self._cl_program_is_valid = False
+		self._invalidate_feature_cache()
+
+	def get_summary_selection(self) -> Optional[SummaryObserverSelection]:
+		"""Return the explicit summary selection, if one is set."""
+		return self._summary_selection
 
 	def get_feature_names(self) -> List[str]:
 		"""Get the list of feature names for the current observer."""

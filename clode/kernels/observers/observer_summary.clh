@@ -1,0 +1,358 @@
+
+#ifndef OBSERVER_SUMMARY_H
+#define OBSERVER_SUMMARY_H
+
+#ifdef USE_OBSERVER_SUMMARY
+
+#ifndef CLODE_SUMMARY_STATE_MAX_COUNT
+#define CLODE_SUMMARY_STATE_MAX_COUNT 0
+#endif
+
+#ifndef CLODE_SUMMARY_STATE_MIN_COUNT
+#define CLODE_SUMMARY_STATE_MIN_COUNT 0
+#endif
+
+#ifndef CLODE_SUMMARY_STATE_MEAN_COUNT
+#define CLODE_SUMMARY_STATE_MEAN_COUNT 0
+#endif
+
+#ifndef CLODE_SUMMARY_SLOPE_MAX_COUNT
+#define CLODE_SUMMARY_SLOPE_MAX_COUNT 0
+#endif
+
+#ifndef CLODE_SUMMARY_SLOPE_MIN_COUNT
+#define CLODE_SUMMARY_SLOPE_MIN_COUNT 0
+#endif
+
+#ifndef CLODE_SUMMARY_SLOPE_MEAN_COUNT
+#define CLODE_SUMMARY_SLOPE_MEAN_COUNT 0
+#endif
+
+#ifndef CLODE_SUMMARY_AUX_MAX_COUNT
+#define CLODE_SUMMARY_AUX_MAX_COUNT 0
+#endif
+
+#ifndef CLODE_SUMMARY_AUX_MIN_COUNT
+#define CLODE_SUMMARY_AUX_MIN_COUNT 0
+#endif
+
+#ifndef CLODE_SUMMARY_AUX_MEAN_COUNT
+#define CLODE_SUMMARY_AUX_MEAN_COUNT 0
+#endif
+
+#ifndef CLODE_SUMMARY_OUTPUT_COUNT
+#define CLODE_SUMMARY_OUTPUT_COUNT 0
+#endif
+
+#define CLODE_SUMMARY_KIND_STATE_MAX 1
+#define CLODE_SUMMARY_KIND_STATE_MIN 2
+#define CLODE_SUMMARY_KIND_STATE_MEAN 3
+#define CLODE_SUMMARY_KIND_SLOPE_MAX 4
+#define CLODE_SUMMARY_KIND_SLOPE_MIN 5
+#define CLODE_SUMMARY_KIND_SLOPE_MEAN 6
+#define CLODE_SUMMARY_KIND_AUX_MAX 7
+#define CLODE_SUMMARY_KIND_AUX_MIN 8
+#define CLODE_SUMMARY_KIND_AUX_MEAN 9
+
+struct ObserverState_summary
+{
+#if CLODE_SUMMARY_STATE_MAX_COUNT > 0
+    realtype stateMax[CLODE_SUMMARY_STATE_MAX_COUNT];
+#endif
+#if CLODE_SUMMARY_STATE_MIN_COUNT > 0
+    realtype stateMin[CLODE_SUMMARY_STATE_MIN_COUNT];
+#endif
+#if CLODE_SUMMARY_STATE_MEAN_COUNT > 0
+    realtype stateIntegral[CLODE_SUMMARY_STATE_MEAN_COUNT];
+    realtype stateIntegralCorrection[CLODE_SUMMARY_STATE_MEAN_COUNT];
+#endif
+#if CLODE_SUMMARY_SLOPE_MAX_COUNT > 0
+    realtype slopeMax[CLODE_SUMMARY_SLOPE_MAX_COUNT];
+#endif
+#if CLODE_SUMMARY_SLOPE_MIN_COUNT > 0
+    realtype slopeMin[CLODE_SUMMARY_SLOPE_MIN_COUNT];
+#endif
+#if CLODE_SUMMARY_SLOPE_MEAN_COUNT > 0
+    realtype slopeIntegral[CLODE_SUMMARY_SLOPE_MEAN_COUNT];
+    realtype slopeIntegralCorrection[CLODE_SUMMARY_SLOPE_MEAN_COUNT];
+#endif
+#if CLODE_SUMMARY_AUX_MAX_COUNT > 0
+    realtype auxMax[CLODE_SUMMARY_AUX_MAX_COUNT];
+#endif
+#if CLODE_SUMMARY_AUX_MIN_COUNT > 0
+    realtype auxMin[CLODE_SUMMARY_AUX_MIN_COUNT];
+#endif
+#if CLODE_SUMMARY_AUX_MEAN_COUNT > 0
+    realtype auxIntegral[CLODE_SUMMARY_AUX_MEAN_COUNT];
+    realtype auxIntegralCorrection[CLODE_SUMMARY_AUX_MEAN_COUNT];
+#endif
+    realtype elapsed_total;
+    realtype elapsed_total_correction;
+};
+
+typedef struct ObserverState_summary ObserverState;
+
+static inline void initializeObserverState(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op) {
+    (void)ti;
+    (void)xi;
+    (void)dxi;
+    (void)auxi;
+    (void)op;
+#if CLODE_SUMMARY_STATE_MAX_COUNT > 0
+    for (int j = 0; j < CLODE_SUMMARY_STATE_MAX_COUNT; ++j)
+        od->stateMax[j] = -BIG_REAL;
+#endif
+#if CLODE_SUMMARY_STATE_MIN_COUNT > 0
+    for (int j = 0; j < CLODE_SUMMARY_STATE_MIN_COUNT; ++j)
+        od->stateMin[j] = BIG_REAL;
+#endif
+#if CLODE_SUMMARY_STATE_MEAN_COUNT > 0
+    for (int j = 0; j < CLODE_SUMMARY_STATE_MEAN_COUNT; ++j) {
+        od->stateIntegral[j] = ZERO;
+        od->stateIntegralCorrection[j] = ZERO;
+    }
+#endif
+#if CLODE_SUMMARY_SLOPE_MAX_COUNT > 0
+    for (int j = 0; j < CLODE_SUMMARY_SLOPE_MAX_COUNT; ++j)
+        od->slopeMax[j] = -BIG_REAL;
+#endif
+#if CLODE_SUMMARY_SLOPE_MIN_COUNT > 0
+    for (int j = 0; j < CLODE_SUMMARY_SLOPE_MIN_COUNT; ++j)
+        od->slopeMin[j] = BIG_REAL;
+#endif
+#if CLODE_SUMMARY_SLOPE_MEAN_COUNT > 0
+    for (int j = 0; j < CLODE_SUMMARY_SLOPE_MEAN_COUNT; ++j) {
+        od->slopeIntegral[j] = ZERO;
+        od->slopeIntegralCorrection[j] = ZERO;
+    }
+#endif
+#if CLODE_SUMMARY_AUX_MAX_COUNT > 0
+    for (int j = 0; j < CLODE_SUMMARY_AUX_MAX_COUNT; ++j)
+        od->auxMax[j] = -BIG_REAL;
+#endif
+#if CLODE_SUMMARY_AUX_MIN_COUNT > 0
+    for (int j = 0; j < CLODE_SUMMARY_AUX_MIN_COUNT; ++j)
+        od->auxMin[j] = BIG_REAL;
+#endif
+#if CLODE_SUMMARY_AUX_MEAN_COUNT > 0
+    for (int j = 0; j < CLODE_SUMMARY_AUX_MEAN_COUNT; ++j) {
+        od->auxIntegral[j] = ZERO;
+        od->auxIntegralCorrection[j] = ZERO;
+    }
+#endif
+    od->elapsed_total = ZERO;
+    od->elapsed_total_correction = ZERO;
+}
+
+static inline void warmupObserverState(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op) {
+    (void)ti;
+    (void)xi;
+    (void)dxi;
+    (void)auxi;
+    (void)od;
+    (void)op;
+}
+
+static inline void initializeEventDetector(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op) {
+    (void)ti;
+    (void)xi;
+    (void)dxi;
+    (void)auxi;
+    (void)od;
+    (void)op;
+}
+
+static inline bool eventFunction(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op) {
+    (void)ti;
+    (void)xi;
+    (void)dxi;
+    (void)auxi;
+    (void)od;
+    (void)op;
+    return false;
+}
+
+static inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op) {
+    (void)ti;
+    (void)xi;
+    (void)dxi;
+    (void)auxi;
+    (void)od;
+    (void)op;
+    return false;
+}
+
+static inline void updateObserverState(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], const realtype stepDt, ObserverState *od, __constant struct ObserverRuntimeSettings *op) {
+    (void)ti;
+    (void)op;
+    compensatedIntegrateConstant(
+        &od->elapsed_total,
+        &od->elapsed_total_correction,
+        stepDt,
+        ONE
+    );
+
+#if CLODE_SUMMARY_STATE_MAX_COUNT > 0
+    for (int j = 0; j < CLODE_SUMMARY_STATE_MAX_COUNT; ++j) {
+        const uint varIx = CLODE_SUMMARY_STATE_MAX_INDICES[j];
+        od->stateMax[j] = fmax(xi[varIx], od->stateMax[j]);
+    }
+#endif
+#if CLODE_SUMMARY_STATE_MIN_COUNT > 0
+    for (int j = 0; j < CLODE_SUMMARY_STATE_MIN_COUNT; ++j) {
+        const uint varIx = CLODE_SUMMARY_STATE_MIN_INDICES[j];
+        od->stateMin[j] = fmin(xi[varIx], od->stateMin[j]);
+    }
+#endif
+#if CLODE_SUMMARY_STATE_MEAN_COUNT > 0
+    for (int j = 0; j < CLODE_SUMMARY_STATE_MEAN_COUNT; ++j) {
+        const uint varIx = CLODE_SUMMARY_STATE_MEAN_INDICES[j];
+        compensatedIntegrateConstant(
+            &od->stateIntegral[j],
+            &od->stateIntegralCorrection[j],
+            stepDt,
+            xi[varIx]
+        );
+    }
+#endif
+#if CLODE_SUMMARY_SLOPE_MAX_COUNT > 0
+    for (int j = 0; j < CLODE_SUMMARY_SLOPE_MAX_COUNT; ++j) {
+        const uint varIx = CLODE_SUMMARY_SLOPE_MAX_INDICES[j];
+        od->slopeMax[j] = fmax(dxi[varIx], od->slopeMax[j]);
+    }
+#endif
+#if CLODE_SUMMARY_SLOPE_MIN_COUNT > 0
+    for (int j = 0; j < CLODE_SUMMARY_SLOPE_MIN_COUNT; ++j) {
+        const uint varIx = CLODE_SUMMARY_SLOPE_MIN_INDICES[j];
+        od->slopeMin[j] = fmin(dxi[varIx], od->slopeMin[j]);
+    }
+#endif
+#if CLODE_SUMMARY_SLOPE_MEAN_COUNT > 0
+    for (int j = 0; j < CLODE_SUMMARY_SLOPE_MEAN_COUNT; ++j) {
+        const uint varIx = CLODE_SUMMARY_SLOPE_MEAN_INDICES[j];
+        compensatedIntegrateConstant(
+            &od->slopeIntegral[j],
+            &od->slopeIntegralCorrection[j],
+            stepDt,
+            dxi[varIx]
+        );
+    }
+#endif
+#if CLODE_SUMMARY_AUX_MAX_COUNT > 0
+    for (int j = 0; j < CLODE_SUMMARY_AUX_MAX_COUNT; ++j) {
+        const uint auxIx = CLODE_SUMMARY_AUX_MAX_INDICES[j];
+        od->auxMax[j] = fmax(auxi[auxIx], od->auxMax[j]);
+    }
+#endif
+#if CLODE_SUMMARY_AUX_MIN_COUNT > 0
+    for (int j = 0; j < CLODE_SUMMARY_AUX_MIN_COUNT; ++j) {
+        const uint auxIx = CLODE_SUMMARY_AUX_MIN_INDICES[j];
+        od->auxMin[j] = fmin(auxi[auxIx], od->auxMin[j]);
+    }
+#endif
+#if CLODE_SUMMARY_AUX_MEAN_COUNT > 0
+    for (int j = 0; j < CLODE_SUMMARY_AUX_MEAN_COUNT; ++j) {
+        const uint auxIx = CLODE_SUMMARY_AUX_MEAN_INDICES[j];
+        compensatedIntegrateConstant(
+            &od->auxIntegral[j],
+            &od->auxIntegralCorrection[j],
+            stepDt,
+            auxi[auxIx]
+        );
+    }
+#endif
+}
+
+static inline void finalizeFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op, __global realtype *F, const int i, const int nPts) {
+    (void)ti;
+    (void)xi;
+    (void)dxi;
+    (void)auxi;
+    (void)op;
+#if CLODE_SUMMARY_OUTPUT_COUNT > 0
+    const realtype elapsedTotal = compensatedSumValue(
+        od->elapsed_total,
+        od->elapsed_total_correction
+    );
+    for (int outputIx = 0; outputIx < CLODE_SUMMARY_OUTPUT_COUNT; ++outputIx) {
+        const uint outputKind = CLODE_SUMMARY_OUTPUT_KINDS[outputIx];
+        const uint slot = CLODE_SUMMARY_OUTPUT_SLOTS[outputIx];
+        switch (outputKind) {
+#if CLODE_SUMMARY_STATE_MAX_COUNT > 0
+            case CLODE_SUMMARY_KIND_STATE_MAX:
+                F[outputIx * nPts + i] = od->stateMax[slot];
+                break;
+#endif
+#if CLODE_SUMMARY_STATE_MIN_COUNT > 0
+            case CLODE_SUMMARY_KIND_STATE_MIN:
+                F[outputIx * nPts + i] = od->stateMin[slot];
+                break;
+#endif
+#if CLODE_SUMMARY_STATE_MEAN_COUNT > 0
+            case CLODE_SUMMARY_KIND_STATE_MEAN:
+                F[outputIx * nPts + i] = meanFromCompensatedIntegral(
+                    od->stateIntegral[slot],
+                    od->stateIntegralCorrection[slot],
+                    elapsedTotal
+                );
+                break;
+#endif
+#if CLODE_SUMMARY_SLOPE_MAX_COUNT > 0
+            case CLODE_SUMMARY_KIND_SLOPE_MAX:
+                F[outputIx * nPts + i] = od->slopeMax[slot];
+                break;
+#endif
+#if CLODE_SUMMARY_SLOPE_MIN_COUNT > 0
+            case CLODE_SUMMARY_KIND_SLOPE_MIN:
+                F[outputIx * nPts + i] = od->slopeMin[slot];
+                break;
+#endif
+#if CLODE_SUMMARY_SLOPE_MEAN_COUNT > 0
+            case CLODE_SUMMARY_KIND_SLOPE_MEAN:
+                F[outputIx * nPts + i] = meanFromCompensatedIntegral(
+                    od->slopeIntegral[slot],
+                    od->slopeIntegralCorrection[slot],
+                    elapsedTotal
+                );
+                break;
+#endif
+#if CLODE_SUMMARY_AUX_MAX_COUNT > 0
+            case CLODE_SUMMARY_KIND_AUX_MAX:
+                F[outputIx * nPts + i] = od->auxMax[slot];
+                break;
+#endif
+#if CLODE_SUMMARY_AUX_MIN_COUNT > 0
+            case CLODE_SUMMARY_KIND_AUX_MIN:
+                F[outputIx * nPts + i] = od->auxMin[slot];
+                break;
+#endif
+#if CLODE_SUMMARY_AUX_MEAN_COUNT > 0
+            case CLODE_SUMMARY_KIND_AUX_MEAN:
+                F[outputIx * nPts + i] = meanFromCompensatedIntegral(
+                    od->auxIntegral[slot],
+                    od->auxIntegralCorrection[slot],
+                    elapsedTotal
+                );
+                break;
+#endif
+            default:
+                F[outputIx * nPts + i] = ZERO;
+                break;
+        }
+    }
+#endif
+}
+
+static inline void finalizeObserverState(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op, __constant realtype *tspan) {
+    (void)ti;
+    (void)xi;
+    (void)dxi;
+    (void)auxi;
+    (void)od;
+    (void)op;
+    (void)tspan;
+}
+
+#endif // USE_OBSERVER_SUMMARY
+
+#endif // OBSERVER_SUMMARY_H

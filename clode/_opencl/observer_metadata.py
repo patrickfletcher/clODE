@@ -6,7 +6,11 @@ import numpy as np
 
 from ..observers._definitions import ResolvedObserverSpec, resolve_observer_spec
 from ..problem._core import ProblemInfo
-from ..observers.types import EventOutputSettings, ObserverRuntimeSettings
+from ..observers.types import (
+    EventOutputSettings,
+    ObserverRuntimeSettings,
+    SummaryObserverSelection,
+)
 from .models import Precision
 from .runtime import OpenCLRuntime
 from .structs import MatchedStruct, match_struct_dtype
@@ -37,6 +41,7 @@ def get_observer_metadata(
     precision: Precision,
     n_store_events: int | None = None,
     resolved_observer_spec: ResolvedObserverSpec | None = None,
+    summary_selection: SummaryObserverSelection | None = None,
 ) -> ObserverMetadata:
     resolved_spec = resolved_observer_spec
     if resolved_spec is None:
@@ -52,6 +57,7 @@ def get_observer_metadata(
             real_dtype=_real_dtype_for_precision(precision),
             event_output_settings=event_output_settings,
             n_store_events=resolved_n_store_events,
+            summary_selection=summary_selection,
         )
     return ObserverMetadata(
         observer_name=resolved_spec.observer_name,

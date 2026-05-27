@@ -1,8 +1,15 @@
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from enum import Enum
+
+
+SummaryReductionSpec = str | Sequence[str]
+NormalizedSummaryGroup = tuple[tuple[str, tuple[str, ...]], ...]
+
+_SUMMARY_REDUCTION_ORDER = ("max", "min", "mean")
+_SUMMARY_REDUCTION_NAMES = frozenset(_SUMMARY_REDUCTION_ORDER)
 
 
 _DEFAULT_EVENT_VAR_INDEX = 0
@@ -80,12 +87,62 @@ class EventOutputSettings:
 class Observer(Enum):
     """Built-in observer modes available to `FeatureSimulator`."""
 
+    summary = "summary"
     basic = "basic"
     basic_all_variables = "basicall"
     local_max = "localmax"
     neighbourhood_1 = "nhood1"
     neighbourhood_2 = "nhood2"
     threshold_2 = "thresh2"
+
+
+@dataclass(frozen=True, slots=True)
+class SummaryObserverSelection:
+    """Explicit variable and reduction selection for summary observers.
+
+    The mapping for each group preserves insertion order. Values may be a single
+    reduction name or a sequence drawn from `"max"`, `"min"`, and `"mean"`.
+    """
+
+    state: NormalizedSummaryGroup = ()
+    aux: NormalizedSummaryGroup = ()
+    slope: NormalizedSummaryGroup = ()
+
+    def __init__(
+        self,
+        *,
+        state: Mapping[str, SummaryReductionSpec] | None = None,
+        aux: Mapping[str, SummaryReductionSpec] | None = None,
+        slope: Mapping[str, SummaryReductionSpec] | None = None,
+    ) -> None:
+        object.__setattr__(self, "state", _normalize_summary_group(state, "state"))
+        object.__setattr__(self, "aux", _normalize_summary_group(aux, "aux"))
+        object.__setattr__(self, "slope", _normalize_summary_group(slope, "slope"))
+
+    @property
+    def is_empty(self) -> bool:
+        return not (self.state or self.aux or self.slope)
+
+    @classmethod
+    def single_variable(cls, variable_name: str) -> SummaryObserverSelection:
+        return cls(
+            state={variable_name: ("max", "min", "mean")},
+            slope={variable_name: ("max", "min")},
+        )
+
+    @classmethod
+    def all_variables(
+        cls,
+        variable_names: Sequence[str],
+        aux_names: Sequence[str] = (),
+    ) -> SummaryObserverSelection:
+        state = {
+            variable_name: ("max", "min", "mean")
+            for variable_name in variable_names
+        }
+        aux = {aux_name: ("max", "min", "mean") for aux_name in aux_names}
+        slope = {variable_name: ("max", "min") for variable_name in variable_names}
+        return cls(state=state, aux=aux, slope=slope)
 
 
 @dataclass(slots=True)
@@ -260,4 +317,56 @@ def _resolve_variable_index(
         ) from error
 
 
-__all__ = ["Observer", "ObserverParams"]
+def _normalize_summary_group(
+    group: Mapping[str, SummaryReductionSpec] | None,
+    group_name: str,
+) -> NormalizedSummaryGroup:
+    if group is None:
+        return ()
+
+    normalized: list[tuple[str, tuple[str, ...]]] = []
+    for variable_name, reduction_spec in group.items():
+        if not isinstance(variable_name, str) or not variable_name:
+            raise ValueError(f"{group_name} selection keys must be non-empty strings")
+        reductions = _normalize_reduction_spec(
+            reduction_spec,
+            group_name=group_name,
+            variable_name=variable_name,
+        )
+        normalized.append((variable_name, reductions))
+    return tuple(normalized)
+
+
+def _normalize_reduction_spec(
+    reduction_spec: SummaryReductionSpec,
+    *,
+    group_name: str,
+    variable_name: str,
+) -> tuple[str, ...]:
+    raw_reductions = (
+        (reduction_spec,)
+        if isinstance(reduction_spec, str)
+        else tuple(reduction_spec)
+    )
+    if not raw_reductions:
+        raise ValueError(
+            f"{group_name} selection for '{variable_name}' must include at least one reduction"
+        )
+
+    normalized: list[str] = []
+    seen: set[str] = set()
+    for reduction_name in raw_reductions:
+        normalized_name = str(reduction_name).strip().lower()
+        if normalized_name not in _SUMMARY_REDUCTION_NAMES:
+            allowed = ", ".join(_SUMMARY_REDUCTION_ORDER)
+            raise ValueError(
+                f"Unsupported {group_name} reduction '{reduction_name}' for '{variable_name}'. "
+                f"Expected one of: {allowed}"
+            )
+        if normalized_name not in seen:
+            normalized.append(normalized_name)
+            seen.add(normalized_name)
+    return tuple(normalized)
+
+
+__all__ = ["Observer", "ObserverParams", "SummaryObserverSelection"]

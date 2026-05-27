@@ -38,7 +38,7 @@ def test_kernel_registry_exposes_current_cpp_defines_and_entrypoints() -> None:
         "dopri5",
         "seuler",
     )
-    assert registry.get_observer_define("basicall") == "USE_OBSERVER_BASIC_ALLVAR"
+    assert registry.get_observer_define("basicall") == "USE_OBSERVER_SUMMARY"
     assert tuple(path.name for path in registry.get_entrypoint_paths(KernelKind.FEATURES)) == (
         "transient.cl",
         "initializeObserver.cl",
@@ -93,6 +93,14 @@ def test_source_builder_features_include_observer_options_and_build_key_changes(
     builder = SourceBuilder(KERNEL_ROOT)
     rhs_a = create_rhs_source("rhs_a.cl", "void getRHS() {}\n")
     rhs_b = create_rhs_source("rhs_b.cl", "void getRHS() {\n    return;\n}\n")
+    problem_info = ProblemInfo("model.cl", ["x", "y"], ["k"], ["aux0"], 0)
+    resolved_spec = resolve_observer_spec(
+        problem_info,
+        "basicall",
+        ObserverRuntimeSettings(),
+        real_dtype=np.dtype(np.float64),
+        event_output_settings=EventOutputSettings(max_event_timestamps=7),
+    )
 
     first = builder.build(
         kernel_kind=KernelKind.FEATURES,
@@ -100,9 +108,8 @@ def test_source_builder_features_include_observer_options_and_build_key_changes(
         stepper_name="dopri5",
         problem_shape=ProblemShape(n_var=2, n_par=1, n_aux=1, n_wiener=0),
         rhs=rhs_a,
-        observer_name="basicall",
-        n_store_events=7,
         debug_build=True,
+        resolved_observer_spec=resolved_spec,
     )
     second = builder.build(
         kernel_kind=KernelKind.FEATURES,
@@ -110,18 +117,19 @@ def test_source_builder_features_include_observer_options_and_build_key_changes(
         stepper_name="dopri5",
         problem_shape=ProblemShape(n_var=2, n_par=1, n_aux=1, n_wiener=0),
         rhs=rhs_b,
-        observer_name="basicall",
-        n_store_events=7,
         debug_build=True,
+        resolved_observer_spec=resolved_spec,
     )
 
     assert first.kernel_names == ("transient", "initializeObserver", "features")
     assert "__kernel void initializeObserver" in first.source_text
     assert "__kernel void features" in first.source_text
-    assert "-DUSE_OBSERVER_BASIC_ALLVAR" in first.build_options
+    assert first.source_text.startswith(resolved_spec.source_preamble)
+    assert "-DUSE_OBSERVER_SUMMARY" in first.build_options
     assert "-DN_STORE_EVENTS=7" in first.build_options
     assert first.build_key.stepper_define == "EXPLICIT_DOPRI5"
-    assert first.build_key.observer_define == "USE_OBSERVER_BASIC_ALLVAR"
+    assert first.build_key.observer_define == "USE_OBSERVER_SUMMARY"
+    assert first.build_key.observer_signature == resolved_spec.build_variant
     assert "-g" in first.build_options
     assert "-cl-opt-disable" in first.build_options
     assert first.build_key.rhs_digest != second.build_key.rhs_digest

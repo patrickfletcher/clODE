@@ -59,6 +59,7 @@ class BuildKey:
     stepper_name: str
     stepper_define: str
     observer_define: str | None
+    observer_signature: str | None
     problem_shape: ProblemShape
     n_store_events: int
     rhs_digest: str
@@ -74,10 +75,16 @@ class BuildKey:
             raise ValueError("stepper_define must not be empty")
         if self.observer_define == "":
             raise ValueError("observer_define must be None or a non-empty string")
+        if self.observer_signature == "":
+            raise ValueError("observer_signature must be None or a non-empty string")
         if self.n_store_events < 0:
             raise ValueError("n_store_events must be non-negative")
         if self.observer_define is None and self.n_store_events != 0:
             raise ValueError("n_store_events requires an observer_define")
+        if self.observer_define is None and self.observer_signature is not None:
+            raise ValueError("observer_signature requires an observer_define")
+        if self.observer_define is not None and self.observer_signature is None:
+            raise ValueError("observer_signature is required when observer_define is set")
         if not self.rhs_digest:
             raise ValueError("rhs_digest must not be empty")
         if not self.kernel_tree_digest:

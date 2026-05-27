@@ -6,12 +6,15 @@
 
 clODE currently ships the following observer modes through the public `Observer` enum:
 
+- `Observer.summary`: selected summary statistics for explicit state, auxiliary, and slope subsets
 - `Observer.basic`: basic summary statistics for one variable
-- `Observer.basic_all_variables`: basic summary statistics for all state variables
+- `Observer.basic_all_variables`: compatibility preset for the full summary bundle across all state and auxiliary variables
 - `Observer.local_max`: local-maximum event tracking
 - `Observer.neighbourhood_1`
 - `Observer.neighbourhood_2`
 - `Observer.threshold_2`: threshold-based event tracking and period-style measurements
+
+`Observer.basic` and `Observer.basic_all_variables` remain supported, but they now route through the same summary-observer family as `Observer.summary`.
 
 The exact feature names depend on the observer. Use `get_feature_names()` on a configured simulator or `get_feature_names()` on the resulting `ObserverOutput` to inspect what is available.
 
@@ -28,6 +31,8 @@ This example is also stored as [examples/van_der_pol_periods.py](https://github.
 ## Configuring an observer
 
 Most observer updates go through `set_observer_parameters(...)`. The public `ObserverParams` bundle remains available when you want to pass one object through the legacy-compatible surface.
+
+For summary-only workflows, `Observer.summary` also accepts an explicit `SummaryObserverSelection` at construction time or through `set_summary_selection(...)`.
 
 Common options include:
 
@@ -47,6 +52,8 @@ Not every field is active in every built-in observer, so treat observer paramete
 
 Persistent observer state also stays on the device for the duration of the solve, so its footprint depends on the observer mode, the model size, and `max_event_timestamps`. That internal state is distinct from the `ObserverOutput` readout object that `features()` returns. If you only need counts or summary statistics, keep `max_event_timestamps` as small as practical and prefer the lightest observer that answers the question.
 
+For summary observers, the persistent state and output schema also scale with the selected summary groups. Changing a custom summary selection rebuilds the specialized OpenCL feature program, but it lets the stored summary state shrink to the requested subset instead of always following a one-variable or all-variable preset.
+
 `threshold_2` stores up/down transition times with inverse-linear interpolation of the active threshold boundary. When a `dx` threshold is zero, that slope gate is ignored; when it is nonzero, the stored transition time is the later of the active `x` and `dx` boundary crossings within the step. `local_max` stores extrema using bounded three-sample quadratic refinement. See [numerical_accuracy.md](numerical_accuracy.md) for empirical tradeoffs and comparisons with alternative interpolation choices.
 
 Example:
@@ -60,6 +67,22 @@ integrator.set_observer_parameters(
 )
 ```
 
+Custom summary-selection example:
+
+```python
+selection = clode.SummaryObserverSelection(
+    state={"y": ("max", "mean")},
+    slope={"x": "min"},
+    aux={"sum": "mean"},
+)
+
+simulator = clode.FeatureSimulator(
+    ...,
+    observer=clode.Observer.summary,
+    summary_selection=selection,
+)
+```
+
 ## Reading results
 
 `features()` returns an `ObserverOutput` readout object. Common accessors are:
@@ -68,6 +91,7 @@ integrator.set_observer_parameters(
 - `get_var_mean(name)`
 - `get_var_min(name)`
 - `get_var_max(name)`
+- `get_var_mean_slope(name)`, `get_var_min_slope(name)`, `get_var_max_slope(name)`
 - `get_var_count(name)`
 - `get_event_data(name, type="time")`
 

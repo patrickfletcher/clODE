@@ -1,4 +1,4 @@
-from clode.observers import Observer, ObserverParams
+from clode.observers import Observer, ObserverParams, SummaryObserverSelection
 from clode.problem import (
     InitialValueProblem,
     OpenCLConverter,
@@ -107,6 +107,7 @@ __all__ = [
     "FeatureSimulator",
     "Observer",
     "ObserverParams",
+    "SummaryObserverSelection",
     "ObserverOutput",
     "TrajectorySimulator",
     "TrajectoryOutput",

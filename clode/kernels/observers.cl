@@ -42,9 +42,8 @@
 // one-pass detectors
 ////////////////////////////////////////////////
 
-//basic detectors: no events. Measure extent of state space explored, max/min/mean x and aux, max/min dx
-#include "observers/observer_basic.clh" //one variable, specified by fVarIx
-#include "observers/observer_basic_allVar.clh"
+//basic detectors: no events. Measure selected max/min/mean x and aux, max/min/mean dx
+#include "observers/observer_summary.clh"
 
 // convex hull of trajectory in state-space?
 

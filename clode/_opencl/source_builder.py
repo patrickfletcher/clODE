@@ -41,7 +41,9 @@ class SourceBuilder:
         (
             observer_name,
             observer_define,
+            observer_signature,
             n_store_events,
+            source_preamble,
         ) = self._resolve_observer_build_inputs(
             observer_name,
             n_store_events,
@@ -68,6 +70,7 @@ class SourceBuilder:
             stepper_name=stepper_definition.stepper_name,
             stepper_define=stepper_definition.build_define,
             observer_define=observer_define,
+            observer_signature=observer_signature,
             problem_shape=problem_shape,
             n_store_events=n_store_events,
             rhs_digest=rhs.digest,
@@ -77,7 +80,7 @@ class SourceBuilder:
 
         return SourceBundle(
             build_key=build_key,
-            source_text=entrypoint_source + rhs.text,
+            source_text=source_preamble + entrypoint_source + rhs.text,
             build_options=self._make_build_options(build_key),
             kernel_names=self._registry.get_kernel_names(kernel_kind),
         )
@@ -117,15 +120,25 @@ class SourceBuilder:
         observer_name: str | None,
         n_store_events: int,
         resolved_observer_spec: ResolvedObserverSpec | None,
-    ) -> tuple[str | None, str | None, int]:
+    ) -> tuple[str | None, str | None, str | None, int, str]:
         if resolved_observer_spec is None:
             if observer_name is None:
-                return None, None, n_store_events
+                return None, None, None, n_store_events, ""
             try:
                 definition = get_observer_definition(observer_name)
             except ValueError as error:
                 raise UnsupportedObserverError(observer_name) from error
-            return definition.observer_name, definition.build_define, n_store_events
+            if definition.observer_name == "summary":
+                raise ValueError(
+                    "summary observer builds require a resolved_observer_spec"
+                )
+            return (
+                definition.observer_name,
+                definition.build_define,
+                definition.observer_name,
+                n_store_events,
+                "",
+            )
 
         if observer_name is not None and observer_name != resolved_observer_spec.observer_name:
             raise ValueError("observer_name must match resolved_observer_spec.observer_name")
@@ -136,7 +149,9 @@ class SourceBuilder:
         return (
             resolved_observer_spec.observer_name,
             resolved_observer_spec.build_define,
+            resolved_observer_spec.build_variant,
             resolved_observer_spec.n_store_events,
+            resolved_observer_spec.source_preamble,
         )
 
     def _validate_kernel_configuration(

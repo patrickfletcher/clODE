@@ -52,12 +52,12 @@ Why first:
 
 Once the owner split is explicit, first audit what clODE observers currently mean, where that model overlaps with standard event-function semantics, and which parts of feature selection or memory-footprint control need separate declaration on the Python side. Then shape a narrower path for adding more built-in observers and, later, composable or user-authored observers from Python-side definitions instead of a hand-wired kernel catalog.
 
-The strongest first proof target is the summary-observer family: `basic` and `basicall` already share one-pass online reduction semantics, and turning them into one declaration family with explicit selection policy is the clearest low-risk way to validate the observer model before touching heavier event detectors.
+That strongest first proof target is now landed in the summary-observer family: `basic`, `basicall`, and `summary` now share one declaration family with explicit selection policy. The next useful move in the same workstream is to audit what that slice taught about build-specialized declarations versus scalar runtime settings before extending the model to heavier event detectors.
 
 Why second:
 
 - observers are a first-class clODE concept and one of the clearest ways to differentiate the package in both engineering and publication terms
-- it avoids mixing higher-risk authoring-surface decisions into the lower-level owner-split PR and makes the first implementation slice evidence-backed instead of speculative
+- it avoided mixing higher-risk authoring-surface decisions into the lower-level owner-split PR, and the follow-on audit should keep the next event-observer slice evidence-backed instead of speculative
 
 ### 3. Numerical evidence and publication follow-through
 

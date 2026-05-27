@@ -712,7 +712,7 @@ def test_feature_max_event_timestamps_rebuild_updates_event_storage() -> None:
     assert "-DN_STORE_EVENTS=3" in simulator._integrator.get_program_string()
 
 
-def test_feature_non_layout_observer_change_preserves_program_and_buffers() -> None:
+def test_feature_var_change_rebuilds_program_but_reuses_feature_buffers() -> None:
     simulator = clode.FeatureSimulator(
         src_file=model_path("stable_linear.cl"),
         variables=STABLE_LINEAR_VARIABLES.copy(),
@@ -740,7 +740,7 @@ def test_feature_non_layout_observer_change_preserves_program_and_buffers() -> N
 
     simulator.set_observer_parameters(feature_var="y")
 
-    assert simulator._integrator._program_bundle is program_bundle
+    assert simulator._integrator._program_bundle is None
     assert simulator._integrator._feature_buffers is feature_buffers
 
     with pytest.raises(ValueError, match=r"features\(\)"):
@@ -750,6 +750,75 @@ def test_feature_non_layout_observer_change_preserves_program_and_buffers() -> N
 
     assert second is not None
     assert second.get_feature_names()[0] == "max y"
+
+
+def test_feature_summary_selection_matches_basicall_subset() -> None:
+    selection = clode.SummaryObserverSelection(
+        state={"y": ("max", "mean")},
+        slope={"x": "min"},
+        aux={STABLE_LINEAR_AUX[0]: "mean"},
+    )
+
+    all_simulator = clode.FeatureSimulator(
+        src_file=model_path("stable_linear_aux.cl"),
+        variables=STABLE_LINEAR_VARIABLES.copy(),
+        parameters=STABLE_LINEAR_PARAMETERS.copy(),
+        aux=STABLE_LINEAR_AUX.copy(),
+        num_noise=0,
+        observer=clode.Observer.basic_all_variables,
+        stepper=clode.Stepper.rk4,
+        dt=FIXED_DT,
+        dtmax=FIXED_DT,
+        t_span=(0.0, 1.0),
+        max_steps=FIXED_MAX_STEPS,
+        single_precision=True,
+        **device_kwargs_for_tests(),
+    )
+    summary_simulator = clode.FeatureSimulator(
+        src_file=model_path("stable_linear_aux.cl"),
+        variables=STABLE_LINEAR_VARIABLES.copy(),
+        parameters=STABLE_LINEAR_PARAMETERS.copy(),
+        aux=STABLE_LINEAR_AUX.copy(),
+        num_noise=0,
+        observer=clode.Observer.summary,
+        summary_selection=selection,
+        stepper=clode.Stepper.rk4,
+        dt=FIXED_DT,
+        dtmax=FIXED_DT,
+        t_span=(0.0, 1.0),
+        max_steps=FIXED_MAX_STEPS,
+        single_precision=True,
+        **device_kwargs_for_tests(),
+    )
+
+    all_result = all_simulator.features(update_x0=False)
+    summary_result = summary_simulator.features(update_x0=False)
+
+    assert all_result is not None
+    assert summary_result is not None
+    assert summary_simulator.get_summary_selection() == selection
+    assert summary_result.get_feature_names() == [
+        "max y",
+        "mean y",
+        "min dx/dt",
+        f"mean {STABLE_LINEAR_AUX[0]}",
+    ]
+    np.testing.assert_allclose(
+        summary_result.get_var_max("y"),
+        all_result.get_var_max("y"),
+    )
+    np.testing.assert_allclose(
+        summary_result.get_var_mean("y"),
+        all_result.get_var_mean("y"),
+    )
+    np.testing.assert_allclose(
+        summary_result.get_var_min_slope("x"),
+        all_result.get_var_min_slope("x"),
+    )
+    np.testing.assert_allclose(
+        summary_result.get_var_mean(STABLE_LINEAR_AUX[0]),
+        all_result.get_var_mean(STABLE_LINEAR_AUX[0]),
+    )
 
 
 def test_feature_observer_parameter_update_rejects_unknown_variable_names() -> None:
