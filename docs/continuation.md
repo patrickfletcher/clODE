@@ -10,7 +10,7 @@ By default, repeated calls preserve solver-side state:
 - `x0` is replaced with the previous `xf` when `update_x0=True`
 - device `dt` is preserved as continuation/controller state
 - RNG state is preserved
-- `FeatureSimulator` also preserves observer state unless the observer is reinitialized
+- `FeatureSimulator` also preserves the persistent observer state unless the observer is reinitialized
 
 For solver diagnostics after a run:
 
@@ -69,7 +69,7 @@ objects on the host and drop the duplicated boundary sample from the later windo
 
 ## Feature continuation
 
-Repeated `features()` calls continue the observer state by default. Exact continuation of
+Repeated `features()` calls continue the persistent observer state by default. Exact continuation of
 time-based feature accumulators and event timestamps therefore requires the next requested
 window to start from the previous attained final time.
 

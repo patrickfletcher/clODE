@@ -83,7 +83,7 @@ auxvars = ['ica']
 
 # reuse these for both features and trajectories
 stepper = clode.Stepper.dormand_prince
-sp = clode.SolverParams(dt=0.1, dtmax=10.0, abstol=1.0e-6, reltol=1.0e-4)
+solver_kwargs = dict(dt=0.1, dtmax=10.0, abstol=1.0e-6, reltol=1.0e-4)
 t_span=(0., 2000.)
 
 observer=clode.Observer.neighbourhood_2
@@ -96,7 +96,7 @@ feature_simulator = clode.FeatureSimulator(
     parameters=parameters,
     aux=auxvars,
     stepper=stepper,
-    solver_parameters = sp,
+    **solver_kwargs,
     observer=observer,
     observer_max_event_timestamps=10,
 )
@@ -122,7 +122,7 @@ trajectory_integrator = clode.TrajectorySimulator(
     parameters=parameters,
     aux=auxvars,
     stepper=stepper,
-    solver_parameters=sp,
+    **solver_kwargs,
     t_span=t_span,
 )
 

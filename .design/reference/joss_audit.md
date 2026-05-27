@@ -39,7 +39,7 @@ The submission should explain why clODE exists alongside these tools instead of 
 ## Gaps before this is a strong JOSS contender
 
 - The evidence base is still thin. Public materials now have an updated repo/package overview, docs home split, contributor guide, refreshed paper framing, and performance-notes scaffolding, but they still need benchmark data and comparison cases tied to real research workflows.
-- The package-wide observer and state/output narrative is still too scattered. Reviewers should be able to understand what solver state, persistent observer state, feature outputs, and trajectory outputs are, and how Python owns those concepts while OpenCL executes them. Right now that story is more implicit than explicit.
+- The package-wide observer and state/output narrative is clearer than it was before the ownership cleanup, but reviewers should still be able to understand in one concise public explanation what solver state, persistent observer state, feature outputs, and trajectory outputs are, and how Python owns those concepts while OpenCL executes them.
 - The scholarly impact story needs updating. The existing draft cites older work and current applications, but the public submission package should show present-day use, citations, or concrete near-term users.
 - The contributor and review signals are improved but still incomplete. CI, docs, security policy, license, and a contributor guide are present, but there is still no citation file and the public repo metadata could be tighter.
 - The release story is a little rough. Git tags stop at `v0.8.1` while the package reports `0.10.0`, which makes the public maintenance story look less polished than the codebase now is.

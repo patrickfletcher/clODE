@@ -18,6 +18,7 @@ Simulation state and output ownership model
 - `features.cl` now feeds observers the accepted step width from the solver boundary rather than recovering it from elapsed-time differences.
 - Public observer feature surfaces no longer report step count or `dt` summary diagnostics; remaining observer-private counters only persist where event geometry or internal running means still need them.
 - Public `SolverParams`, `ObserverParams`, and the public `Stepper` enum remain thin compatibility surfaces; broader public config redesign is still deferred.
+- The wrap-up naming stance is now narrower: `SolverState` means solver-owned live state, `TrajectoryOutput` means fetched retained-sample data, device-side `ObserverState` means persistent observer runtime state, and public `ObserverOutput` means the current feature or event readout emitted by `finalizeFeatures(...)` rather than the persistent observer state object.
 - The current test surface now has a maintained public-contract slice for collapsed-window and in-loop `NO_PROGRESS` status behavior plus a first exact stable-linear transient evidence pair: an explicit RK4 global-error convergence slice and an adaptive Dormand-Prince tolerance-refinement slice.
 - The release-gating numerics bundle now centers on `test/core_numerics/`, while older top-level workflow and scientific numerics files remain available through a supplemental bundle instead of defining the proof layer.
 - `TrajectorySimulator` already keeps trajectory output settings separate at runtime, but `SolverParams` still mixes integration and trajectory-output concerns at the compatibility surface.
@@ -46,6 +47,7 @@ One important framing decision from the pre-PR audit is now explicit: `transient
 - split the internal owners under `clode/simulation/params.py`, `clode/observers/types.py`, and `clode/simulation/_state.py` into smaller value-oriented models while keeping `SolverParams` and `ObserverParams` as thin compatibility surfaces
 - keep persistent observer state distinct from observer runtime settings and from fetched observer output
 - keep trajectory output settings distinct from integration settings and solver state
+- keep fetched observer readouts conceptually distinct from persistent `ObserverState`; any direct observer-state fetch API or public readout rename is follow-on work, not part of this wrap-up slice
 - align `clode/_opencl/executors.py`, `buffers.py`, `observer_metadata.py`, and `structs.py` to consume those explicit owners instead of mixed compatibility bundles
 
 ## Design Constraints
@@ -65,6 +67,7 @@ One important framing decision from the pre-PR audit is now explicit: `transient
 - no broader diverged-time continuation-policy redesign or matched device-side current-time model in the same PR
 - no public bundled solver-stats object in the same PR
 - no broad observer-feature redesign or solver-state refactor beyond the owner split needed for this pass
+- no public observer-state fetch API or public rename of `ObserverOutput` in the same PR
 - no citation metadata, release-tag, or broader repo-surface cleanup in the same PR
 
 ## Suggested Implementation Slices
@@ -84,6 +87,7 @@ One important framing decision from the pre-PR audit is now explicit: `transient
 
 - the root `.design` docs and touched code can name one owner for integration settings, trajectory output policy, observer runtime settings, event-output policy, solver state, persistent observer state, and fetched outputs
 - the feature and trajectory paths stop relying on mixed compatibility bundles internally when a narrower owner model already exists
+- the live docs can state clearly that `ObserverOutput` is currently a readout object distinct from persistent observer state, without committing this PR to a public observer-state fetch surface
 - the updated design docs give a coherent answer to what solver state, observer state, and outputs mean on the Python side versus the OpenCL side
 - the next follow-on for observer authoring/composition is smaller and more explicit than it is today
 

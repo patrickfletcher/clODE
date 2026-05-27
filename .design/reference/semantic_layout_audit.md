@@ -36,7 +36,7 @@ Historical peer-library comparisons and broader layout-option analysis from the 
 What is missing:
 
 - no settled home yet for richer batch generation, broadcasting helpers, and longer-term result-shape policy beyond the current IVP-owned first pass
-- no sharper distinction yet between simulator orchestration, solver execution state, and fetched output state
+- the naming distinction is now sharper, but simulator orchestration still carries more cache and continuation-adjacent semantic weight than the long-term split should keep
 
 Consequence:
 
@@ -126,7 +126,7 @@ Consequence:
 
 - The flat root barrels. They are still useful as collaborator orientation guides and compatibility shims.
 - The simulator classes themselves. The cleanup is about what they compose and own, not about removing them as the public handle.
-- `clode/kernels/odedriver.cl`. It remains reasonable to keep as deferred design context rather than active runtime code.
+- The old combined-kernel `odedriver` context. It now lives under `.design/tmp/odedriver.cl` as scratch design material rather than active runtime code.
 - The separation between public semantic packages and `_opencl`. That split is still valuable; the issue is not the split itself, but where semantic definitions live.
 
 ## Recommended direction

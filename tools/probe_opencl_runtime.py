@@ -17,8 +17,8 @@ import pyopencl as cl
 import pyopencl._cl as cl_module
 import pyopencl.tools as cl_tools
 
-from clode.observers import ObserverParams
 from clode.observers._definitions import resolve_observer_spec
+from clode.observers.types import EventOutputSettings, ObserverRuntimeSettings
 from clode.problem._core import ProblemInfo
 
 ENV_VARS = (
@@ -203,8 +203,11 @@ def _probe_clode_localmax_struct(
     resolved_spec = resolve_observer_spec(
         problem_info,
         "localmax",
-        ObserverParams(max_event_timestamps=max_event_timestamps),
+        ObserverRuntimeSettings(),
         real_dtype=np.float64,
+        event_output_settings=EventOutputSettings(
+            max_event_timestamps=max_event_timestamps
+        ),
         n_store_events=max_event_timestamps,
     )
     base_dtype = resolved_spec.observer_state_dtype

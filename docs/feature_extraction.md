@@ -27,7 +27,7 @@ This example is also stored as [examples/van_der_pol_periods.py](https://github.
 
 ## Configuring an observer
 
-Observer configuration lives in `ObserverParams` and can be updated through `set_observer_parameters(...)`.
+Most observer updates go through `set_observer_parameters(...)`. The public `ObserverParams` bundle remains available when you want to pass one object through the legacy-compatible surface.
 
 Common options include:
 
@@ -45,7 +45,7 @@ The most directly useful current safeguards for oscillation-oriented observers a
 
 Not every field is active in every built-in observer, so treat observer parameters as mode-specific rather than assuming every knob has the same effect everywhere.
 
-Observer state also stays on the device for the duration of the solve, so its footprint depends on the observer mode, the model size, and `max_event_timestamps`. If you only need counts or summary statistics, keep `max_event_timestamps` as small as practical and prefer the lightest observer that answers the question.
+Persistent observer state also stays on the device for the duration of the solve, so its footprint depends on the observer mode, the model size, and `max_event_timestamps`. That internal state is distinct from the `ObserverOutput` readout object that `features()` returns. If you only need counts or summary statistics, keep `max_event_timestamps` as small as practical and prefer the lightest observer that answers the question.
 
 `threshold_2` stores up/down transition times with inverse-linear interpolation of the active threshold boundary. When a `dx` threshold is zero, that slope gate is ignored; when it is nonzero, the stored transition time is the later of the active `x` and `dx` boundary crossings within the step. `local_max` stores extrema using bounded three-sample quadratic refinement. See [numerical_accuracy.md](numerical_accuracy.md) for empirical tradeoffs and comparisons with alternative interpolation choices.
 
@@ -62,7 +62,7 @@ integrator.set_observer_parameters(
 
 ## Reading results
 
-`features()` returns an `ObserverOutput` object. Common accessors are:
+`features()` returns an `ObserverOutput` readout object. Common accessors are:
 
 - `get_feature_names()`
 - `get_var_mean(name)`
