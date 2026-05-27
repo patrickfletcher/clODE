@@ -1154,6 +1154,225 @@ def test_local_max_observer_kernel_uses_three_sample_extremum_helpers() -> None:
     )
 
 
+@pytest.mark.parametrize(
+    ("event_direction", "expected"),
+    [
+        (1, np.array([math.pi / 2.0, 1.0, 5.0 * math.pi / 2.0, 1.0, 2.0], dtype=np.float32)),
+        (0, np.array([3.0 * math.pi / 2.0, -1.0, 7.0 * math.pi / 2.0, -1.0, 2.0], dtype=np.float32)),
+    ],
+)
+def test_local_extremum_observer_kernel_tracks_selected_polarity(
+    event_direction: int,
+    expected: np.ndarray,
+) -> None:
+    runtime = OpenCLRuntime.create(**_explicit_runtime_kwargs())
+    program = _build_program(
+        runtime,
+        f"""
+        #include \"clODE_utilities.cl\"
+        #include \"observers.cl\"
+
+        __constant struct ObserverRuntimeSettings TEST_PARAMS = {{
+            0,
+            0,
+            4,
+            {event_direction},
+            ZERO,
+            ZERO,
+            ZERO,
+            ZERO,
+            ZERO,
+            ZERO,
+            ZERO,
+            ZERO
+        }};
+
+        __kernel void run_local_extremum_observer(
+            __global const realtype *times,
+            __global const realtype *x_values,
+            __global const realtype *dx_values,
+            __global realtype *out,
+            const uint n_values
+        ) {{
+            realtype ti = times[0];
+            realtype xi[1] = {{x_values[0]}};
+            realtype dxi[1] = {{dx_values[0]}};
+            realtype auxi[1] = {{ZERO}};
+            ObserverState observer_state;
+
+            initializeObserverState(&ti, xi, dxi, auxi, &observer_state, &TEST_PARAMS);
+            for (uint idx = 1; idx < n_values; ++idx) {{
+                ti = times[idx];
+                xi[0] = x_values[idx];
+                dxi[0] = dx_values[idx];
+                updateObserverState(
+                    &ti,
+                    xi,
+                    dxi,
+                    auxi,
+                    times[idx] - times[idx - 1],
+                    &observer_state,
+                    &TEST_PARAMS
+                );
+                if (eventFunction(&ti, xi, dxi, auxi, &observer_state, &TEST_PARAMS)) {{
+                    computeEventFeatures(&ti, xi, dxi, auxi, &observer_state, &TEST_PARAMS);
+                }}
+            }}
+
+            out[0] = observer_state.tEventList[0];
+            out[1] = observer_state.xEventList[0];
+            out[2] = observer_state.tEventList[1];
+            out[3] = observer_state.xEventList[1];
+            out[4] = (realtype)observer_state.eventcount;
+        }}
+        """,
+        extra_options=("-DUSE_OBSERVER_LOCAL_EXTREMUM", "-DN_VAR=1", "-DN_AUX=0", "-DN_STORE_EVENTS=4"),
+    )
+
+    dt = 0.2
+    sample_times = np.arange(0.0, 4.0 * math.pi + dt, dt, dtype=np.float64)
+    x_values = np.sin(sample_times).astype(np.float32)
+    dx_values = np.cos(sample_times).astype(np.float32)
+    out = np.empty(5, dtype=np.float32)
+
+    time_buffer = pyopencl.Buffer(
+        runtime.context,
+        pyopencl.mem_flags.READ_ONLY | pyopencl.mem_flags.COPY_HOST_PTR,
+        hostbuf=sample_times.astype(np.float32),
+    )
+    x_buffer = pyopencl.Buffer(
+        runtime.context,
+        pyopencl.mem_flags.READ_ONLY | pyopencl.mem_flags.COPY_HOST_PTR,
+        hostbuf=x_values,
+    )
+    dx_buffer = pyopencl.Buffer(
+        runtime.context,
+        pyopencl.mem_flags.READ_ONLY | pyopencl.mem_flags.COPY_HOST_PTR,
+        hostbuf=dx_values,
+    )
+    out_buffer = pyopencl.Buffer(runtime.context, pyopencl.mem_flags.WRITE_ONLY, out.nbytes)
+
+    program.run_local_extremum_observer(
+        runtime.queue,
+        (1,),
+        None,
+        time_buffer,
+        x_buffer,
+        dx_buffer,
+        out_buffer,
+        np.uint32(len(sample_times)),
+    )
+    pyopencl.enqueue_copy(runtime.queue, out, out_buffer).wait()
+
+    np.testing.assert_allclose(out, expected, atol=2e-2, rtol=0.0)
+
+
+def test_neighborhood_return_observer_kernel_tracks_exit_events() -> None:
+    runtime = OpenCLRuntime.create(**_explicit_runtime_kwargs())
+    program = _build_program(
+        runtime,
+        """
+        #include \"clODE_utilities.cl\"
+        #include \"observers.cl\"
+
+        __constant struct ObserverRuntimeSettings TEST_PARAMS = {
+            0,
+            0,
+            4,
+            0,
+            ZERO,
+            ZERO,
+            RCONST(0.25),
+            ZERO,
+            RCONST(0.25),
+            ZERO,
+            ZERO,
+            ZERO
+        };
+
+        __kernel void run_neighborhood_return_observer(
+            __global const realtype *times,
+            __global const realtype *x_values,
+            __global realtype *out,
+            const uint n_values
+        ) {
+            realtype ti = times[0];
+            realtype xi[1] = {x_values[0]};
+            realtype dxi[1] = {ZERO};
+            realtype auxi[1] = {ZERO};
+            ObserverState observer_state;
+
+            initializeObserverState(&ti, xi, dxi, auxi, &observer_state, &TEST_PARAMS);
+            for (uint idx = 1; idx < n_values; ++idx) {
+                ti = times[idx];
+                xi[0] = x_values[idx];
+                warmupObserverState(&ti, xi, dxi, auxi, &observer_state, &TEST_PARAMS);
+            }
+
+            ti = times[0];
+            xi[0] = x_values[0];
+            initializeEventDetector(&ti, xi, dxi, auxi, &observer_state, &TEST_PARAMS);
+
+            for (uint idx = 1; idx < n_values; ++idx) {
+                ti = times[idx];
+                xi[0] = x_values[idx];
+                updateObserverState(
+                    &ti,
+                    xi,
+                    dxi,
+                    auxi,
+                    times[idx] - times[idx - 1],
+                    &observer_state,
+                    &TEST_PARAMS
+                );
+                if (eventFunction(&ti, xi, dxi, auxi, &observer_state, &TEST_PARAMS)) {
+                    computeEventFeatures(&ti, xi, dxi, auxi, &observer_state, &TEST_PARAMS);
+                }
+            }
+
+            out[0] = observer_state.tEventList[0];
+            out[1] = observer_state.tEventList[1];
+            out[2] = (realtype)observer_state.eventcount;
+        }
+        """,
+        extra_options=("-DUSE_OBSERVER_NEIGHBORHOOD_RETURN", "-DN_VAR=1", "-DN_AUX=0", "-DN_STORE_EVENTS=4"),
+    )
+
+    sample_times = np.arange(8, dtype=np.float32)
+    x_values = np.array([0.0, -0.2, -0.6, -0.8, 0.0, -0.55, -0.7, 0.1], dtype=np.float32)
+    out = np.empty(3, dtype=np.float32)
+
+    time_buffer = pyopencl.Buffer(
+        runtime.context,
+        pyopencl.mem_flags.READ_ONLY | pyopencl.mem_flags.COPY_HOST_PTR,
+        hostbuf=sample_times,
+    )
+    x_buffer = pyopencl.Buffer(
+        runtime.context,
+        pyopencl.mem_flags.READ_ONLY | pyopencl.mem_flags.COPY_HOST_PTR,
+        hostbuf=x_values,
+    )
+    out_buffer = pyopencl.Buffer(runtime.context, pyopencl.mem_flags.WRITE_ONLY, out.nbytes)
+
+    program.run_neighborhood_return_observer(
+        runtime.queue,
+        (1,),
+        None,
+        time_buffer,
+        x_buffer,
+        out_buffer,
+        np.uint32(len(sample_times)),
+    )
+    pyopencl.enqueue_copy(runtime.queue, out, out_buffer).wait()
+
+    np.testing.assert_allclose(
+        out,
+        np.array([4.0, 7.0, 2.0], dtype=np.float32),
+        atol=1e-6,
+        rtol=0.0,
+    )
+
+
 def test_relative_elapsed_mean_prototype_survives_large_origin_bias() -> None:
     runtime = OpenCLRuntime.create(**_explicit_runtime_kwargs())
     program = _build_program(

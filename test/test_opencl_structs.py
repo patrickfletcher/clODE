@@ -153,6 +153,11 @@ def test_basic_observer_double_formula_underestimates_matched_struct_size() -> N
             ("-DUSE_OBSERVER_BASIC_ALLVAR", "-DN_VAR=2", "-DN_AUX=0", "-DN_STORE_EVENTS=0"),
         ),
         (
+            clode.Observer.local_extremum,
+            {"observer_max_event_timestamps": 4},
+            ("-DUSE_OBSERVER_LOCAL_EXTREMUM", "-DN_VAR=2", "-DN_AUX=0", "-DN_STORE_EVENTS=4"),
+        ),
+        (
             clode.Observer.local_max,
             {"observer_max_event_timestamps": 4},
             ("-DUSE_OBSERVER_LOCAL_MAX", "-DN_VAR=2", "-DN_AUX=0", "-DN_STORE_EVENTS=4"),
@@ -161,6 +166,11 @@ def test_basic_observer_double_formula_underestimates_matched_struct_size() -> N
             clode.Observer.neighbourhood_1,
             {},
             ("-DUSE_OBSERVER_NEIGHBORHOOD_1", "-DN_VAR=2", "-DN_AUX=0", "-DN_STORE_EVENTS=0"),
+        ),
+        (
+            clode.Observer.neighborhood_return,
+            {"observer_max_event_timestamps": 4},
+            ("-DUSE_OBSERVER_NEIGHBORHOOD_RETURN", "-DN_VAR=2", "-DN_AUX=0", "-DN_STORE_EVENTS=4"),
         ),
         (
             clode.Observer.neighbourhood_2,

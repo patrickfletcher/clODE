@@ -724,6 +724,72 @@ def test_feature_simulator_absolute_schmitt_trigger_configuration_round_trips() 
     )
 
 
+def test_feature_simulator_local_extremum_configuration_round_trips() -> None:
+    config = clode.LocalExtremumConfig(
+        variable="y",
+        polarity=clode.ExtremumPolarity.minimum,
+        max_event_count=7,
+        max_event_timestamps=4,
+    )
+    simulator = clode.FeatureSimulator(
+        src_file=model_path("hopf_normal_form.cl"),
+        variables=HOPF_VARIABLES.copy(),
+        parameters=HOPF_PARAMETERS.copy(),
+        aux=HOPF_AUX.copy(),
+        num_noise=0,
+        observer_configuration=config,
+        stepper=clode.Stepper.rk4,
+        dt=FIXED_DT,
+        dtmax=FIXED_DT,
+        t_span=(0.0, 1.0),
+        max_steps=FIXED_MAX_STEPS,
+        single_precision=True,
+        **device_kwargs_for_tests(),
+    )
+
+    assert simulator.get_observer_configuration() == config
+    assert simulator.get_observer_parameters() == clode.ObserverParams(
+        f_var_ix=1,
+        max_event_count=7,
+        event_direction=clode.EventDirection.rising,
+        max_event_timestamps=4,
+    )
+
+
+def test_feature_simulator_neighborhood_return_configuration_round_trips() -> None:
+    config = clode.NeighborhoodReturnConfig(
+        event_var="y",
+        anchor_threshold=0.35,
+        radius=0.2,
+        max_event_count=7,
+        max_event_timestamps=4,
+    )
+    simulator = clode.FeatureSimulator(
+        src_file=model_path("hopf_normal_form.cl"),
+        variables=HOPF_VARIABLES.copy(),
+        parameters=HOPF_PARAMETERS.copy(),
+        aux=HOPF_AUX.copy(),
+        num_noise=0,
+        observer_configuration=config,
+        stepper=clode.Stepper.rk4,
+        dt=FIXED_DT,
+        dtmax=FIXED_DT,
+        t_span=(0.0, 1.0),
+        max_steps=FIXED_MAX_STEPS,
+        single_precision=True,
+        **device_kwargs_for_tests(),
+    )
+
+    assert simulator.get_observer_configuration() == config
+    assert simulator.get_observer_parameters() == clode.ObserverParams(
+        e_var_ix=1,
+        max_event_count=7,
+        max_event_timestamps=4,
+        nhood_radius=0.2,
+        x_down_threshold=0.35,
+    )
+
+
 def test_feature_simulator_requires_explicit_observer_for_shared_observer_configuration() -> None:
     with pytest.raises(ValueError, match="requires an explicit observer"):
         clode.FeatureSimulator(
@@ -930,6 +996,43 @@ def test_feature_max_event_timestamps_rebuild_updates_event_storage() -> None:
     assert result is not None
     feature_names = result.get_feature_names()
     assert len([name for name in feature_names if name.startswith("localmax event time")]) == 3
+    assert "-DN_STORE_EVENTS=3" in simulator._integrator.get_program_string()
+
+
+def test_feature_max_event_timestamps_rebuild_updates_local_extremum_storage() -> None:
+    simulator = clode.FeatureSimulator(
+        src_file=model_path("hopf_normal_form.cl"),
+        variables=HOPF_VARIABLES.copy(),
+        parameters=HOPF_PARAMETERS.copy(),
+        aux=HOPF_AUX.copy(),
+        num_noise=0,
+        observer=clode.Observer.local_extremum,
+        observer_configuration=clode.LocalExtremumConfig(
+            variable="x",
+            polarity=clode.ExtremumPolarity.maximum,
+            max_event_count=8,
+            max_event_timestamps=3,
+        ),
+        stepper=clode.Stepper.rk4,
+        dt=FIXED_DT,
+        dtmax=FIXED_DT,
+        t_span=(0.0, 8.0),
+        max_steps=FIXED_MAX_STEPS,
+        single_precision=True,
+        **device_kwargs_for_tests(),
+    )
+
+    result = simulator.features(update_x0=False)
+
+    assert result is not None
+    feature_names = result.get_feature_names()
+    assert len(
+        [
+            name
+            for name in feature_names
+            if name.startswith("local_extremum event time")
+        ]
+    ) == 3
     assert "-DN_STORE_EVENTS=3" in simulator._integrator.get_program_string()
 
 

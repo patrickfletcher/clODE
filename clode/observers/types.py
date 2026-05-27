@@ -19,6 +19,14 @@ class EventDirection(IntEnum):
     falling = 1
     either = 2
 
+
+class ExtremumPolarity(Enum):
+    """Polarity selector for local-extremum observers."""
+
+    maximum = "maximum"
+    minimum = "minimum"
+    both = "both"
+
 # common observer settings
 _DEFAULT_EVENT_VAR_INDEX = 0
 _DEFAULT_FEATURE_VAR_INDEX = 0
@@ -124,8 +132,10 @@ class Observer(Enum):
     summary = "summary"
     basic = "basic"     # compatibility alias for summmary with one variable
     basic_all_variables = "basicall" # compatibility alias for summary with all variables
+    local_extremum = "local_extremum"
     local_max = "localmax"
     neighbourhood_1 = "nhood1"  # currently not recommended
+    neighborhood_return = "neighborhood_return"
     neighbourhood_2 = "nhood2"
     threshold_crossing = "threshold_crossing"
     normalized_threshold_crossing = "normalized_threshold_crossing"
@@ -296,8 +306,125 @@ class SchmittTriggerConfig:
         )
 
 
+@dataclass(frozen=True, slots=True)
+class LocalExtremumConfig:
+    """Semantic config for the lean local-extremum observer."""
+
+    variable: str = ""
+    polarity: ExtremumPolarity | str = ExtremumPolarity.maximum
+    max_event_count: int = _DEFAULT_MAX_EVENT_COUNT
+    max_event_timestamps: int = _DEFAULT_MAX_EVENT_TIMESTAMPS
+
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self,
+            "variable",
+            _normalize_optional_variable_name(self.variable, parameter_name="variable"),
+        )
+        object.__setattr__(self, "polarity", _normalize_extremum_polarity(self.polarity))
+        object.__setattr__(self, "max_event_count", int(self.max_event_count))
+        object.__setattr__(self, "max_event_timestamps", int(self.max_event_timestamps))
+
+    @property
+    def supported_observers(self) -> tuple[Observer]:
+        return (Observer.local_extremum,)
+
+    def to_observer_params(self, variable_names: Sequence[str]) -> ObserverParams:
+        return ObserverParams(
+            f_var_ix=_resolve_variable_index(
+                variable_names,
+                self.variable or None,
+                default_index=_DEFAULT_FEATURE_VAR_INDEX,
+                parameter_name="variable",
+            ),
+            max_event_count=self.max_event_count,
+            event_direction=_event_direction_from_extremum_polarity(self.polarity),
+            max_event_timestamps=self.max_event_timestamps,
+        )
+
+    @classmethod
+    def from_observer_params(
+        cls,
+        variable_names: Sequence[str],
+        observer_params: ObserverParams,
+    ) -> LocalExtremumConfig:
+        return cls(
+            variable=_resolve_variable_name(
+                variable_names,
+                observer_params.f_var_ix,
+                parameter_name="f_var_ix",
+            ),
+            polarity=_extremum_polarity_from_event_direction(
+                observer_params.event_direction
+            ),
+            max_event_count=observer_params.max_event_count,
+            max_event_timestamps=observer_params.max_event_timestamps,
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class NeighborhoodReturnConfig:
+    """Semantic config for the lean normalized neighborhood-return observer."""
+
+    event_var: str = ""
+    anchor_threshold: float = _DEFAULT_X_DOWN_THRESHOLD
+    radius: float = _DEFAULT_NHOOD_RADIUS
+    max_event_count: int = _DEFAULT_MAX_EVENT_COUNT
+    max_event_timestamps: int = _DEFAULT_MAX_EVENT_TIMESTAMPS
+
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self,
+            "event_var",
+            _normalize_optional_variable_name(self.event_var, parameter_name="event_var"),
+        )
+        object.__setattr__(self, "anchor_threshold", float(self.anchor_threshold))
+        object.__setattr__(self, "radius", float(self.radius))
+        object.__setattr__(self, "max_event_count", int(self.max_event_count))
+        object.__setattr__(self, "max_event_timestamps", int(self.max_event_timestamps))
+
+    @property
+    def supported_observers(self) -> tuple[Observer]:
+        return (Observer.neighborhood_return,)
+
+    def to_observer_params(self, variable_names: Sequence[str]) -> ObserverParams:
+        return ObserverParams(
+            e_var_ix=_resolve_variable_index(
+                variable_names,
+                self.event_var or None,
+                default_index=_DEFAULT_EVENT_VAR_INDEX,
+                parameter_name="event_var",
+            ),
+            max_event_count=self.max_event_count,
+            max_event_timestamps=self.max_event_timestamps,
+            nhood_radius=self.radius,
+            x_down_threshold=self.anchor_threshold,
+        )
+
+    @classmethod
+    def from_observer_params(
+        cls,
+        variable_names: Sequence[str],
+        observer_params: ObserverParams,
+    ) -> NeighborhoodReturnConfig:
+        return cls(
+            event_var=_resolve_variable_name(
+                variable_names,
+                observer_params.e_var_ix,
+                parameter_name="e_var_ix",
+            ),
+            anchor_threshold=observer_params.x_down_threshold,
+            radius=observer_params.nhood_radius,
+            max_event_count=observer_params.max_event_count,
+            max_event_timestamps=observer_params.max_event_timestamps,
+        )
+
+
 ObserverConfiguration = (
-    ThresholdCrossingConfig | SchmittTriggerConfig
+    ThresholdCrossingConfig
+    | SchmittTriggerConfig
+    | LocalExtremumConfig
+    | NeighborhoodReturnConfig
 )
 
 
@@ -519,12 +646,16 @@ def _resolve_observer_configuration(
     observer: Observer | None,
     observer_configuration: ObserverConfiguration,
 ) -> tuple[Observer, ObserverParams]:
+    supported_observers = observer_configuration.supported_observers
     if observer is None or observer is Observer.basic_all_variables:
+        if len(supported_observers) == 1:
+            return supported_observers[0], observer_configuration.to_observer_params(
+                variable_names
+            )
         raise ValueError(
             "observer_configuration requires an explicit observer because the "
             "same config surface is shared across multiple observer variants"
         )
-    supported_observers = observer_configuration.supported_observers
     if observer not in supported_observers:
         supported_names = ", ".join(supported.name for supported in supported_observers)
         raise ValueError(
@@ -554,6 +685,16 @@ def _observer_configuration_from_params(
         Observer.threshold_2,
     ):
         return SchmittTriggerConfig.from_observer_params(
+            variable_names,
+            observer_params,
+        )
+    if observer is Observer.local_extremum:
+        return LocalExtremumConfig.from_observer_params(
+            variable_names,
+            observer_params,
+        )
+    if observer is Observer.neighborhood_return:
+        return NeighborhoodReturnConfig.from_observer_params(
             variable_names,
             observer_params,
         )
@@ -643,6 +784,52 @@ def _normalize_event_direction(
         raise ValueError(
             f"Unsupported event_direction '{event_direction}'. Expected one of: {allowed}"
         ) from error
+
+
+def _normalize_extremum_polarity(
+    polarity: ExtremumPolarity | str,
+) -> ExtremumPolarity:
+    if isinstance(polarity, ExtremumPolarity):
+        return polarity
+
+    if isinstance(polarity, str):
+        normalized = polarity.strip().lower().replace("-", "_").replace(" ", "_")
+        alias_map = {
+            "max": ExtremumPolarity.maximum,
+            "maximum": ExtremumPolarity.maximum,
+            "local_max": ExtremumPolarity.maximum,
+            "min": ExtremumPolarity.minimum,
+            "minimum": ExtremumPolarity.minimum,
+            "local_min": ExtremumPolarity.minimum,
+            "both": ExtremumPolarity.both,
+            "either": ExtremumPolarity.both,
+        }
+        if normalized in alias_map:
+            return alias_map[normalized]
+        raise ValueError(f"Unknown extremum polarity '{polarity}'")
+
+    raise ValueError("polarity must be an ExtremumPolarity or string")
+
+
+def _event_direction_from_extremum_polarity(
+    polarity: ExtremumPolarity,
+) -> EventDirection:
+    if polarity is ExtremumPolarity.maximum:
+        return EventDirection.falling
+    if polarity is ExtremumPolarity.minimum:
+        return EventDirection.rising
+    return EventDirection.either
+
+
+def _extremum_polarity_from_event_direction(
+    event_direction: EventDirection,
+) -> ExtremumPolarity:
+    normalized = _normalize_event_direction(event_direction)
+    if normalized is EventDirection.falling:
+        return ExtremumPolarity.maximum
+    if normalized is EventDirection.rising:
+        return ExtremumPolarity.minimum
+    return ExtremumPolarity.both
 
 
 def _normalize_summary_group(

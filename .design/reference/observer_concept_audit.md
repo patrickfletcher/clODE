@@ -12,6 +12,8 @@ Update when: the observer concept changes materially, a new observer-family decl
 - The first deterministic static-trigger slice is now also landed: `Observer.threshold_crossing` provides one-pass absolute threshold crossings with a lean timestamp-plus-count readout and runtime direction selection.
 - The threshold catalog now spans four public semantic combinations: absolute threshold crossing, warmup-derived fractional threshold crossing, absolute Schmitt hysteresis, and warmup-derived fractional Schmitt hysteresis.
 - The threshold-family semantic config seam is now also landed for the current built-ins: `ThresholdCrossingConfig` is shared by the two one-boundary threshold observers, `SchmittTriggerConfig` is shared by the two Schmitt families, and `ObserverParams` plus the `observer_*` keyword arguments remain compatibility surfaces.
+- `Observer.local_extremum` is now landed as the lean polarity-selectable extremum family, while `Observer.local_max` remains the retained heavier maxima-oriented workflow.
+- `Observer.neighborhood_return` is now landed as the lean two-pass normalized neighborhood-return family, while `Observer.neighbourhood_2` remains the retained heavier periodicity-oriented workflow.
 - The heavier event observers still bundle too many concerns under one built-in mode: trigger semantics, warmup or two-pass behavior, persistent state layout, feature-output schema, and retained event-output policy.
 - That threshold slice confirmed the intended boundary from the opposite side of the summary family: scalar trigger controls such as crossing direction can stay runtime-side when the readout schema remains fixed.
 - That threshold-family follow-on is now also landed: `Observer.normalized_threshold_crossing` provides a lean warmup-derived normalized directional-threshold observer with the same timestamp-plus-count readout shape as `Observer.threshold_crossing`.
@@ -24,13 +26,14 @@ Update when: the observer concept changes materially, a new observer-family decl
 
 - `clode.observers.types.Observer` still selects one built-in family or compatibility preset.
 - The threshold families now expose semantic public names at that surface: `Observer.threshold_crossing` for the current absolute one-boundary threshold observer, `Observer.normalized_threshold_crossing` for the lean warmup-derived one-boundary threshold observer, `Observer.schmitt_trigger` for the absolute hysteresis family, and `Observer.normalized_schmitt_trigger` for the lean warmup-derived hysteresis family. `Observer.threshold_2` remains a retained legacy public name for the heavier fully featured normalized Schmitt path, while `thresh1` and `thresh3` are internal implementation names only.
-- `ThresholdCrossingConfig` and `SchmittTriggerConfig` are now the first observer-family-specific semantic config objects beyond the summary selection surface, and each one is shared by an absolute and a warmup-derived observer pair.
+- `Observer.local_extremum` and `Observer.neighborhood_return` are now also semantic public observer names, while `Observer.local_max` and `Observer.neighbourhood_2` remain retained heavier legacy workflows around the same general trigger families.
+- `ThresholdCrossingConfig`, `SchmittTriggerConfig`, `LocalExtremumConfig`, and `NeighborhoodReturnConfig` are now the observer-family-specific semantic config objects beyond the summary selection surface. The threshold and Schmitt config classes are shared across observer pairs, while the extremum and neighborhood-return configs each resolve to one semantic observer.
 - `Observer.summary` plus `SummaryObserverSelection` are now the first explicit family-specific declaration surface for observer feature selection.
 - `ObserverParams` remains the public compatibility bundle, while `ObserverRuntimeSettings` and `EventOutputSettings` carry the narrower internal runtime settings and retained-event policy.
 - The split between `e_var_ix` and `f_var_ix` is semantically important, not historical residue: users often need to trigger on one variable while measuring features on another, such as a slow calcium-like variable for event geometry and a faster voltage-like variable for amplitudes or peak counts.
 - `ObserverDefinition` in `clode/observers/_definitions.py` still declares a build define, a two-pass flag, feature-name generation, and a matched persistent or event layout.
 - The summary slice added a first family-specific resolved declaration path, but the definition layer still does not model event condition, running reducer family, variable-selection intent, or retained event-output intent as reusable concepts across the heavier event families.
-- `FeatureSimulator` still routes most observer configuration through one observer name plus broad `observer_*` compatibility arguments, with `summary_selection` as the first narrower family-specific override.
+- `FeatureSimulator` now accepts family-specific `observer_configuration` values for the threshold, Schmitt, extremum, and neighborhood-return families, while the broad `observer_*` compatibility arguments remain live.
 
 ### Runtime and build surface
 
@@ -43,8 +46,8 @@ Update when: the observer concept changes materially, a new observer-family decl
 
 - `clode/kernels/observers.cl` still expects one `ObserverState` type and one fixed function family: initialize, optional warmup, update, event test, event-feature computation, finalization, and continuation cleanup.
 - The summary slice moved `basic` and `basicall` behind one `observer_summary.clh` template whose array extents and output schema are specialized by injected preamble macros.
-- `localmax` and `nhood1` remain one-pass event detectors.
-- `thresh2` and `nhood2` remain two-pass event detectors with a warmup solve.
+- `local_extremum`, `localmax`, and `nhood1` remain one-pass event detectors.
+- `neighborhood_return`, `thresh2`, and `nhood2` remain two-pass event detectors with a warmup solve.
 - Heavy event observers still allocate state arrays scaled by `N_VAR`, `N_AUX`, and sometimes `N_STORE_EVENTS`.
 
 ## Current built-in observer matrix
@@ -60,9 +63,11 @@ That distinction matters because it changes what can stay in runtime settings, w
 | Public modes | Trigger class | Pass structure | Internal-parameter source | First warmup pass required? | Retained sparse output | Persistent summary scope today | Design notes |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `Observer.summary`, `Observer.basic`, `Observer.basic_all_variables` | none; online reduction only | one pass | none beyond the resolved declaration and scalar runtime selectors | no | none | selected summary subset for `summary`; preset subset for `basic`; all-state plus all-aux preset for `basic_all_variables` | cleanest family; selection changes layout and schema directly |
-| `Observer.local_max` | local maximum in `fVarIx` via derivative sign change with three-sample refinement | one pass | static runtime selectors only | no | local max/min timestamps and values up to `N_STORE_EVENTS` | all-state plus all-aux summary bundle | clean deterministic event family; a mirrored local-min polarity likely belongs in the same future extremum family |
+| `Observer.local_extremum` | local extremum in the selected variable via derivative sign change with three-sample refinement | one pass | static runtime selectors only; polarity stays in runtime settings | no | local-extremum timestamps and values up to `N_STORE_EVENTS` | lean event stream only | landed semantic extremum family; confirms polarity can stay runtime-side when the readout schema stays fixed |
+| `Observer.local_max` | local maximum in `fVarIx` via derivative sign change with three-sample refinement | one pass | static runtime selectors only | no | local max/min timestamps and values up to `N_STORE_EVENTS` | all-state plus all-aux summary bundle | retained heavier maxima-oriented workflow when IMI, amplitude, and summary outputs are still needed |
 | `Observer.neighbourhood_1` | entry into an `nHoodRadius` ball around `x0` | one pass | `x0` discovered online from the first local minimum in `eVarIx`; normalization range keeps evolving during the same pass | no formal warmup, but yes to live-pass parameter discovery | none beyond event count | all-state plus all-aux summary bundle | awkward family: trigger geometry depends on mutable normalization data during the live pass; weak evidence for keeping it as a future template |
-| `Observer.neighbourhood_2` | exit from an `nHoodRadius` ball around `x0` in normalized state space | two pass | warmup-derived trajectory ranges and threshold; `x0` is then pinned in the live pass as the first threshold-qualified point on `eVarIx` | yes | exit timestamps up to `N_STORE_EVENTS` | all-state plus all-aux summary bundle, plus range and `x0` readout | better behaved than `nhood1`; useful as a specialized periodicity trigger for complex limit cycles because it requires return to a specific ball in full state space |
+| `Observer.neighborhood_return` | exit from an `nHoodRadius` ball around `x0` in normalized state space | two pass | warmup-derived trajectory ranges and threshold; `x0` is then pinned in the live pass as the first threshold-qualified point on `eVarIx` | yes | exit timestamps up to `N_STORE_EVENTS` | lean event stream only | landed semantic neighborhood-return family; keeps the specialized periodicity trigger without the broader legacy readout bundle |
+| `Observer.neighbourhood_2` | exit from an `nHoodRadius` ball around `x0` in normalized state space | two pass | warmup-derived trajectory ranges and threshold; `x0` is then pinned in the live pass as the first threshold-qualified point on `eVarIx` | yes | exit timestamps up to `N_STORE_EVENTS` | all-state plus all-aux summary bundle, plus range and `x0` readout | retained heavier periodicity-oriented workflow when the broader period, peak, and summary outputs are still needed |
 | `Observer.threshold_crossing` | absolute threshold crossing on `eVarIx` with runtime direction selection | one pass | static runtime selectors only | no | one threshold-event timestamp stream up to `N_STORE_EVENTS` | lean event stream only; no all-state summary bundle | confirms that a fixed-schema event family can keep threshold value and direction in runtime settings |
 | `Observer.normalized_threshold_crossing` | warmup-derived normalized threshold crossing on `eVarIx` with runtime direction selection | two pass | warmup-derived fraction of the global `x` range on `eVarIx` | yes | one threshold-event timestamp stream up to `N_STORE_EVENTS` | lean event stream only; no all-state summary bundle | useful when oscillation amplitudes drift across a sweep but the workflow still wants one directional threshold stream rather than Schmitt-state outputs |
 | `Observer.schmitt_trigger` | absolute up/down thresholds on `eVarIx` with Schmitt-style up/down state | one pass | static runtime selectors only | no | up/down transition timestamps up to `N_STORE_EVENTS` | lean up/down event stream plus event count | useful when the hysteresis band has a stable physical scale and only trigger timing is needed |
@@ -76,9 +81,9 @@ That distinction matters because it changes what can stay in runtime settings, w
 | Absolute threshold crossing in state-variable units | now landed as `Observer.threshold_crossing` with a lean event stream and runtime direction selection | landed first proof target | confirms that not every observer-family extension needs schema-changing specialization |
 | Warmup-derived normalized threshold crossing | now landed as `Observer.normalized_threshold_crossing` with a lean one-stream readout and warmup-derived threshold parameterization | landed second threshold proof target | separates threshold parameterization from Schmitt topology without overloading the Schmitt family |
 | Absolute Schmitt trigger | now landed as `Observer.schmitt_trigger` with a lean up/down timestamp readout and thresholds expressed directly in event-variable units | landed follow-on proof target | confirms that trigger topology and threshold parameterization can vary independently while still sharing one public config model |
-| Local extremum family | `localmax` is live, and the shared three-sample extremum helpers already support symmetric max/min geometry | strong adjacent alternative | likely one polarity-selectable family rather than separate ad hoc `localmax` and `localmin` observers |
+| Local extremum family | now landed as `Observer.local_extremum` with `ExtremumPolarity` selection while `Observer.local_max` remains the retained heavier legacy workflow | landed adjacent proof target | confirmed that extremum polarity can stay runtime-side while the lean event schema stays fixed |
 | Generalized hyperplane crossing | conceptually matches the useful part of `solve_ivp`-style scalar events | later | promising long-term trigger umbrella, but it needs a declaration for scalar trigger functions or hyperplane parameters that the current runtime path does not yet package cleanly |
-| Neighborhood return triggers | `nhood1` and `nhood2` are live, and `nhood2` has a substantially better-behaved trigger because warmup pins the normalization before the live pass anchors `x0` below a threshold on `eVarIx` | specialized, not next | keep `nhood2` as a specialized periodicity detector for workflows where simple threshold crossings or local extrema are too permissive; `nhood1` remains the clearest retirement candidate |
+| Neighborhood return triggers | now landed as `Observer.neighborhood_return` for the lean specialized path while `Observer.neighbourhood_2` remains the retained heavier legacy workflow | landed specialized follow-on | keeps `nhood2`'s better-behaved trigger semantics available without forcing the broader periodicity bundle onto the lean path; `nhood1` remains the clearest retirement candidate |
 
 ## Trigger and parameter taxonomy
 
@@ -136,13 +141,13 @@ That distinction matters because it changes what can stay in runtime settings, w
 - The current four-family threshold catalog makes the next boundary clearer: recurring controls such as `min_amp` and `max_event_count` should stay on the active oscillation-oriented family configs until output-bundle work shows a better shared seam.
 - The broad `ObserverParams` bundle and `observer_*` keywords are still useful compatibility layers, but they no longer need to define the preferred semantic vocabulary for threshold families.
 
-### Why `neighbourhood_2` remains valuable even if it is not next
+### Why neighborhood-return triggers remain valuable
 
 - `nhood2` is materially better behaved than `nhood1` because the warmup pass fixes the trajectory ranges first, and the live pass only accepts `x0` after `x[eVarIx]` drops below a threshold derived from that warmup.
 - That matters when `eVarIx` is a slow variable used to identify a meaningful phase of a bursting or otherwise multiscale oscillation.
 - The family is therefore not just a threshold surrogate. Its intended semantics are to define a small neighborhood around a good full-state anchor point and then detect departure after a return to that neighborhood.
 - That can be a more robust periodicity detector than simple threshold crossings or local-extremum triggers when complex limit cycles revisit similar scalar values at several distinct phases.
-- The design conclusion is narrower than “neighborhood triggers are bad.” The current conclusion is that `nhood2` is a plausible specialized family, while `nhood1` is the weak link and should not drive the general observer abstraction.
+- The design conclusion is narrower than “neighborhood triggers are bad.” That read now lands as `Observer.neighborhood_return` for the lean specialized path, with `Observer.neighbourhood_2` retained as the heavier periodicity-oriented workflow and `nhood1` still the weak link that should not drive the general observer abstraction.
 
 ## Design implications from the trigger matrix
 
@@ -158,7 +163,7 @@ That distinction matters because it changes what can stay in runtime settings, w
 - A real workflow is to trigger on a slower or more reliable reference variable while measuring period, amplitude, maxima, or other summaries on a different faster variable.
 - That means future threshold, extremum, and hyperplane-trigger families should preserve separate trigger-variable and feature-variable roles, even if they default to the same variable in simpler use cases.
 
-### Why absolute threshold crossing is the best next counterexample to summary-style specialization
+### Why absolute threshold crossing was the right counterexample to summary-style specialization
 
 - The summary family proved the shape-changing side of the declaration boundary: selected reductions change layout and schema, so they must be build-specialized.
 - An absolute-threshold family is the opposite kind of test: threshold values, hysteresis values, and crossing direction are scalar behavior knobs that should usually stay in runtime settings because they do not inherently change observer-state layout.

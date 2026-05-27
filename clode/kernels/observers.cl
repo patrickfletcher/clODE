@@ -49,6 +49,7 @@
 
 // Local maximum detector
 // - could do local extremum, toggle whether event is on max vs min?
+#include "observers/observer_local_extremum.clh"
 #include "observers/observer_local_maximum.clh"
 
 // Threshold-based event detection with thresholds defined in state-space coordinates
@@ -83,6 +84,7 @@
 
 // Event trigger is the return of the trajectory to small neighborhood of a point Xstart in normalized state-space coordinates
 // - Use a first pass to find a good Xstart (e.g. absolute drop below 0.5*range of slowest variable)
+#include "observers/observer_neighborhood_return.clh"
 #include "observers/observer_neighborhood_2.clh"
 
 

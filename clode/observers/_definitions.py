@@ -380,6 +380,25 @@ def _localmax_feature_names(
     return tuple(names)
 
 
+def _local_extremum_feature_names(
+    problem_info: ProblemInfo,
+    observer_runtime_settings: ObserverRuntimeSettings,
+    n_store_events: int,
+) -> tuple[str, ...]:
+    del problem_info
+    del observer_runtime_settings
+    names: list[str] = []
+    for event_idx in range(n_store_events):
+        names.extend(
+            [
+                f"local_extremum event time {event_idx}",
+                f"local_extremum event value {event_idx}",
+            ]
+        )
+    names.append("event count")
+    return tuple(names)
+
+
 def _nhood1_feature_names(
     problem_info: ProblemInfo,
     observer_runtime_settings: ObserverRuntimeSettings,
@@ -453,6 +472,21 @@ def _nhood2_feature_names(
         )
     for event_idx in range(n_store_events):
         names.append(f"nhood event time {event_idx}")
+    names.append("event count")
+    return tuple(names)
+
+
+def _neighborhood_return_feature_names(
+    problem_info: ProblemInfo,
+    observer_runtime_settings: ObserverRuntimeSettings,
+    n_store_events: int,
+) -> tuple[str, ...]:
+    del problem_info
+    del observer_runtime_settings
+    names = [
+        f"neighborhood_return event time {event_idx}"
+        for event_idx in range(n_store_events)
+    ]
     names.append("event count")
     return tuple(names)
 
@@ -838,6 +872,27 @@ def _localmax_layout(
     )
 
 
+def _local_extremum_layout(
+    problem_info: ProblemInfo,
+    real_dtype: np.dtype,
+    n_store_events: int,
+) -> ResolvedObserverLayout:
+    del problem_info
+    return ResolvedObserverLayout(
+        persistent_fields=(
+            _real_field("tbuffer", real_dtype, 3),
+            _real_field("xbuffer", real_dtype, 3),
+            _real_field("dxbuffer", real_dtype, 3),
+            _uint_field("eventcount"),
+            _uint_field("stepcount"),
+        ),
+        event_output_fields=(
+            _real_field("tEventList", real_dtype, n_store_events),
+            _real_field("xEventList", real_dtype, n_store_events),
+        ),
+    )
+
+
 def _nhood1_layout(
     problem_info: ProblemInfo,
     real_dtype: np.dtype,
@@ -907,6 +962,30 @@ def _nhood2_layout(
             _uint_field("isInNhood"),
             _uint_field("eventcount"),
             _uint_field("stepcount"),
+        ),
+    )
+
+
+def _neighborhood_return_layout(
+    problem_info: ProblemInfo,
+    real_dtype: np.dtype,
+    n_store_events: int,
+) -> ResolvedObserverLayout:
+    return ResolvedObserverLayout(
+        persistent_fields=(
+            _real_field("xbuffer", real_dtype, 2),
+            _real_field("x0", real_dtype, problem_info.num_var),
+            _real_field("xTrajectoryMax", real_dtype, problem_info.num_var),
+            _real_field("xTrajectoryMin", real_dtype, problem_info.num_var),
+            _real_field("xTrajectoryRange", real_dtype, problem_info.num_var),
+            _real_field("xThreshold", real_dtype),
+            _uint_field("foundX0"),
+            _uint_field("isInNhood"),
+            _uint_field("eventcount"),
+            _uint_field("stepcount"),
+        ),
+        event_output_fields=(
+            _real_field("tEventList", real_dtype, n_store_events),
         ),
     )
 
@@ -1096,6 +1175,13 @@ _OBSERVER_DEFINITIONS = {
         feature_name_factory=_summary_placeholder_feature_names,
         layout_factory=_summary_placeholder_layout,
     ),
+    "local_extremum": ObserverDefinition(
+        observer_name="local_extremum",
+        build_define="USE_OBSERVER_LOCAL_EXTREMUM",
+        uses_two_pass=False,
+        feature_name_factory=_local_extremum_feature_names,
+        layout_factory=_local_extremum_layout,
+    ),
     "localmax": ObserverDefinition(
         observer_name="localmax",
         build_define="USE_OBSERVER_LOCAL_MAX",
@@ -1116,6 +1202,13 @@ _OBSERVER_DEFINITIONS = {
         uses_two_pass=True,
         feature_name_factory=_nhood2_feature_names,
         layout_factory=_nhood2_layout,
+    ),
+    "neighborhood_return": ObserverDefinition(
+        observer_name="neighborhood_return",
+        build_define="USE_OBSERVER_NEIGHBORHOOD_RETURN",
+        uses_two_pass=True,
+        feature_name_factory=_neighborhood_return_feature_names,
+        layout_factory=_neighborhood_return_layout,
     ),
     "threshold_crossing": ObserverDefinition(
         observer_name="threshold_crossing",

@@ -7,6 +7,8 @@ import numpy as np
 from .._opencl.executors import OpenCLFeatureExecutor
 from ..observers.types import (
 	EventDirection,
+	LocalExtremumConfig,
+	NeighborhoodReturnConfig,
 	ObserverConfiguration,
 	_DEFAULT_DX_DOWN_THRESHOLD,
 	_DEFAULT_DX_UP_THRESHOLD,
@@ -138,11 +140,11 @@ class FeatureSimulator(Simulator):
 				family. Use this with `Observer.summary` for subset summary workflows,
 				or to override the `basic` and `basic_all_variables` presets.
 			observer_configuration: Optional family-specific observer config.
-				Use this for threshold-family configuration when you want the
-				semantic knob set instead of the broad compatibility bundle.
-				The observer family must still be selected explicitly through
-				`observer=` because some config surfaces are shared across
-				multiple absolute and fractional variants.
+				Use this for threshold, local-extremum, or neighborhood-return
+				configuration when you want the semantic knob set instead of the
+				broad compatibility bundle. The observer family must still be
+				selected explicitly through `observer=` when a config surface is
+				shared across multiple variants.
 		"""
 
 		self._summary_selection = summary_selection
@@ -342,16 +344,22 @@ class FeatureSimulator(Simulator):
 
 	def set_observer_configuration(
 		self,
-		observer_configuration: ThresholdCrossingConfig | SchmittTriggerConfig,
+		observer_configuration: (
+			ThresholdCrossingConfig
+			| SchmittTriggerConfig
+			| LocalExtremumConfig
+			| NeighborhoodReturnConfig
+		),
 		observer: Observer | None = None,
 	) -> None:
 		"""Apply a family-specific observer configuration.
 
-		This is the preferred semantic surface for threshold-family observers.
-		The broader `ObserverParams` bundle remains available as a compatibility
-		layer when a family-specific config is not yet available. When one config
-		type can drive more than one observer variant, use `observer=` to select
-		the target family explicitly; otherwise the current observer is used.
+		This is the preferred semantic surface for threshold, local-extremum,
+		and neighborhood-return observers. The broader `ObserverParams` bundle
+		remains available as a compatibility layer when a family-specific config
+		is not yet available. When one config type can drive more than one
+		observer variant, use `observer=` to select the target family explicitly;
+		otherwise the config can infer the target observer.
 		"""
 		target_observer = self._observer_type if observer is None else observer
 		(
@@ -379,7 +387,12 @@ class FeatureSimulator(Simulator):
 
 	def get_observer_configuration(
 		self,
-	) -> Optional[ThresholdCrossingConfig | SchmittTriggerConfig]:
+	) -> Optional[
+		ThresholdCrossingConfig
+		| SchmittTriggerConfig
+		| LocalExtremumConfig
+		| NeighborhoodReturnConfig
+	]:
 		"""Return the semantic observer configuration when one is available."""
 		return _observer_configuration_from_params(
 			self.variable_names,

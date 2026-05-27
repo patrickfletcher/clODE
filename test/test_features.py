@@ -352,3 +352,56 @@ def test_local_max_coarse_timestamps_use_three_sample_refinement() -> None:
 
     np.testing.assert_allclose(max_times, np.array([pi / 2, 5 * pi / 2]), atol=1e-2, rtol=0.0)
     np.testing.assert_allclose(min_times, np.array([3 * pi / 2, 7 * pi / 2]), atol=1e-2, rtol=0.0)
+
+
+@pytest.mark.parametrize(
+    ("polarity", "expected_times", "expected_values"),
+    [
+        (
+            clode.ExtremumPolarity.maximum,
+            np.array([pi / 2, 5 * pi / 2], dtype=np.float64),
+            np.array([1.0, 1.0], dtype=np.float64),
+        ),
+        (
+            clode.ExtremumPolarity.minimum,
+            np.array([3 * pi / 2, 7 * pi / 2], dtype=np.float64),
+            np.array([-1.0, -1.0], dtype=np.float64),
+        ),
+    ],
+)
+def test_local_extremum_selected_polarity_uses_three_sample_refinement(
+    polarity: clode.ExtremumPolarity,
+    expected_times: np.ndarray,
+    expected_values: np.ndarray,
+) -> None:
+    feature_simulator = clode.FeatureSimulator(
+        rhs_equation=sine_curve,
+        variables={"x": 0.0},
+        parameters={"dilation": 1.0},
+        aux=["dx"],
+        observer=clode.Observer.local_extremum,
+        observer_configuration=clode.LocalExtremumConfig(
+            variable="x",
+            polarity=polarity,
+            max_event_count=4,
+            max_event_timestamps=4,
+        ),
+        stepper=clode.Stepper.rk4,
+        dtmax=0.2,
+        dt=0.2,
+        t_span=(0.0, 4 * pi),
+        **device_kwargs_for_tests(),
+    )
+
+    output = feature_simulator.features()
+
+    assert output is not None
+    event_times = np.asarray(output.get_timestamps("local_extremum"), dtype=np.float64)
+    event_values = np.asarray(
+        output.get_event_data("local_extremum", type="value"),
+        dtype=np.float64,
+    )
+
+    assert int(output.get_var_count("event")) == 2
+    np.testing.assert_allclose(event_times, expected_times, atol=1e-2, rtol=0.0)
+    np.testing.assert_allclose(event_values, expected_values, atol=2e-2, rtol=0.0)
