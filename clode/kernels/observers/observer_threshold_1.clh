@@ -1,115 +1,153 @@
-//Threshold-based event detection with absolute thresholds in a specified variable xi. Three flavors:
-// 1) xup = value of xi. (simple threshold)
-// 2) xup = value of xi, xdown = value of xi < xup (Shmitt trigger)
-// 3) xup, xdown, dxup, dxdown. (Shmitt with slope thresholds)
+// Threshold-based event detection with an absolute threshold in x[eVarIx].
+// This first slice intentionally keeps one event stream and a lean readout:
+// crossing timestamps plus event count, with direction chosen at runtime.
 
 #ifndef OBSERVER_THRESHOLD_1_H
 #define OBSERVER_THRESHOLD_1_H
 
+#ifdef USE_OBSERVER_THRESHOLD_1
 
-struct ObserverState
-{
+// Keep these numeric codes aligned with EventDirection in Python.
+#define CLODE_EVENT_DIRECTION_RISING 0u
+#define CLODE_EVENT_DIRECTION_FALLING 1u
+#define CLODE_EVENT_DIRECTION_EITHER 2u
 
-    //compute using max/min operators
-    realtype xTrajectoryMax[N_VAR];
-    realtype xTrajectoryMin[N_VAR];
-    realtype dxTrajectoryMax[N_VAR];
-    realtype dxTrajectoryMin[N_VAR];
-    realtype auxTrajectoryMax[N_AUX];
-    realtype auxTrajectoryMin[N_AUX];
-
-    //event data, update at event detection
-    realtype tThisEvent;
-    realtype xThisEvent[N_VAR];
-    realtype dxThisEvent[N_VAR];
-    realtype auxThisEvent[N_AUX];
-    // realtype nDistinctEvents[N_DISTINCT_MAX];
-
-    //event data, update after computing event-triggered  features
-    realtype tLastEvent;
-    realtype xLastEvent[N_VAR];
-    realtype dxLastEvent[N_VAR];
-    realtype auxLastEvent[N_AUX];
-
-    //compute using max/min operators, reset after computing event-triggered features
-    realtype xEventMax[N_VAR];
-    realtype xEventMin[N_VAR];
-    realtype dxEventMax[N_VAR];
-    realtype dxEventMin[N_VAR];
-    realtype auxEventMax[N_AUX];
-    realtype auxEventMin[N_AUX];
-
-    //thresholds
-    realtype xUp;
-    realtype xDown;
-    realtype dxUp;
-    realtype dxDown;
-
-    realtype tAtDown;
-    realtype xAtDown[N_VAR];
-    realtype dxAtDown[N_VAR];
-    realtype auxAtDown[N_AUX];
-
-    //local extrema (optionally computed, using sign change in slope)
-    realtype tLastMax;
-    realtype xLastMax[N_VAR];
-    realtype dxLastMax[N_VAR];
-    realtype auxLastMax[N_AUX];
-
-    realtype tLastMin;
-    realtype xLastMin[N_VAR];
-    realtype dxLastMin[N_VAR];
-    realtype auxLastMin[N_AUX];
-
+struct ObserverState_thresh1 {
+    realtype tbuffer[2];
+    realtype xbuffer[2];
+#if N_STORE_EVENTS > 0
+    realtype tEventList[N_STORE_EVENTS];
+#endif
     unsigned int stepcount;
     unsigned int eventcount;
-    bool inUpstate;
 };
 
-typedef struct ObserverState ObserverState;
+typedef struct ObserverState_thresh1 ObserverState;
 
 //set initial values to relevant fields in ObserverState
-static inline void initializeObserverState(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op)
-{
+static inline void initializeObserverState(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op) {
+    (void)dxi;
+    (void)auxi;
+    od->tbuffer[1] = *ti;
+    od->xbuffer[1] = xi[op->eVarIx];
+#if N_STORE_EVENTS > 0
+    for (int j = 0; j < N_STORE_EVENTS; ++j)
+        od->tEventList[j] = ZERO;
+#endif
+    od->stepcount = 0;
+    od->eventcount = 0;
 }
 
 //restricted per-timestep update of observer state for initializing event detector
-static inline void warmupObserverState(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op)
-{
+static inline void warmupObserverState(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op) {
+    (void)ti;
+    (void)xi;
+    (void)dxi;
+    (void)auxi;
+    (void)od;
+    (void)op;
 }
 
 //process warmup data to compute relevant event detector quantities (e.g. thresholds)
-static inline void initializeEventDetector(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op)
-{
+static inline void initializeEventDetector(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op) {
+    (void)ti;
+    (void)xi;
+    (void)dxi;
+    (void)auxi;
+    (void)od;
+    (void)op;
+}
+
+static inline bool threshold1RisingCrossed(const realtype x0, const realtype x1, const realtype threshold) {
+    return x0 <= threshold && x1 > threshold;
+}
+
+static inline bool threshold1FallingCrossed(const realtype x0, const realtype x1, const realtype threshold) {
+    return x0 >= threshold && x1 < threshold;
 }
 
 //per-timestep check for an event.  Option: refine event (t,x,dx,aux) within the timestep with interpolation
-static inline bool eventFunction(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op)
-{
-    return false;
+static inline bool eventFunction(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op) {
+    (void)ti;
+    (void)xi;
+    (void)dxi;
+    (void)auxi;
+
+    if (od->stepcount < 1)
+        return false;
+
+    const realtype threshold = op->xUpThresh;
+    const realtype x0 = od->xbuffer[0];
+    const realtype x1 = od->xbuffer[1];
+    if (op->eventDirection == CLODE_EVENT_DIRECTION_RISING)
+        return threshold1RisingCrossed(x0, x1, threshold);
+    if (op->eventDirection == CLODE_EVENT_DIRECTION_FALLING)
+        return threshold1FallingCrossed(x0, x1, threshold);
+    return threshold1RisingCrossed(x0, x1, threshold) || threshold1FallingCrossed(x0, x1, threshold);
 }
 
 //When an event is detected, computes desired event-based features. returns true if a terminal event was reached
-static inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op)
-{
-    return false;
+static inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op) {
+    (void)ti;
+    (void)xi;
+    (void)dxi;
+    (void)auxi;
+
+    ++od->eventcount;
+    realtype tThisEvent = linearInterpTimeOfValue(
+        od->tbuffer[0],
+        od->tbuffer[1],
+        od->xbuffer[0],
+        od->xbuffer[1],
+        op->xUpThresh
+    );
+
+#if N_STORE_EVENTS > 0
+    if (od->eventcount <= N_STORE_EVENTS)
+        od->tEventList[od->eventcount - 1] = tThisEvent;
+#endif
+
+    return od->eventcount == op->maxEventCount;
 }
 
 //full per-timestep update of observer state. If an event occurred this timestep, event-based observer state is reset. Per-timestep features are computed here.
-static inline void updateObserverState(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op)
-{
+static inline void updateObserverState(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], const realtype stepDt, ObserverState *od, __constant struct ObserverRuntimeSettings *op) {
+    (void)dxi;
+    (void)auxi;
+    (void)stepDt;
     ++od->stepcount;
+    od->tbuffer[0] = od->tbuffer[1];
+    od->tbuffer[1] = *ti;
+    od->xbuffer[0] = od->xbuffer[1];
+    od->xbuffer[1] = xi[op->eVarIx];
 }
 
 //Perform and post-integration cleanup and write desired features into the global array F
-static inline void finalizeFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op, __global realtype *F, int i, int nPts)
-{
-    //Number of features is determined by this function. Must hardcode that number into the host program in order to allocate memory for F...
+static inline void finalizeFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op, __global realtype *F, int i, int nPts) {
+    (void)ti;
+    (void)xi;
+    (void)dxi;
+    (void)auxi;
+    (void)op;
+
+    int ix = 0;
+#if N_STORE_EVENTS > 0
+    for (int j = 0; j < N_STORE_EVENTS; ++j)
+        F[ix++ * nPts + i] = od->tEventList[j];
+#endif
+    F[ix++ * nPts + i] = (realtype)od->eventcount;
 }
 
 //Perform and post-integration cleanup of observer state to ensure it is ready for continuation if needed
-static inline void finalizeObserverState(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op, __constant realtype *tspan)
-{
-    //eg. times of last events need to be shifted left of t0
+static inline void finalizeObserverState(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op, __constant realtype *tspan) {
+    (void)ti;
+    (void)xi;
+    (void)dxi;
+    (void)auxi;
+    (void)od;
+    (void)op;
+    (void)tspan;
 }
+
+#endif // USE_OBSERVER_THRESHOLD_1
 #endif // OBSERVER_THRESHOLD_1_H

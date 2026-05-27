@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from enum import Enum
+from enum import Enum, IntEnum
 
 
 SummaryReductionSpec = str | Sequence[str]
@@ -12,10 +12,19 @@ _SUMMARY_REDUCTION_ORDER = ("max", "min", "mean")
 _SUMMARY_REDUCTION_NAMES = frozenset(_SUMMARY_REDUCTION_ORDER)
 
 
+class EventDirection(IntEnum):
+    """Direction selector for threshold-style event crossings."""
+
+    rising = 0
+    falling = 1
+    either = 2
+
+
 _DEFAULT_EVENT_VAR_INDEX = 0
 _DEFAULT_FEATURE_VAR_INDEX = 0
 _DEFAULT_MAX_EVENT_COUNT = 100
 _DEFAULT_MAX_EVENT_TIMESTAMPS = 0
+_DEFAULT_EVENT_DIRECTION = EventDirection.rising
 _DEFAULT_MIN_AMP = 0.0
 _DEFAULT_MIN_IMI = 0.0
 _DEFAULT_NHOOD_RADIUS = 0.05
@@ -33,6 +42,7 @@ class ObserverRuntimeSettings:
     e_var_ix: int = _DEFAULT_EVENT_VAR_INDEX
     f_var_ix: int = _DEFAULT_FEATURE_VAR_INDEX
     max_event_count: int = _DEFAULT_MAX_EVENT_COUNT
+    event_direction: EventDirection | str | int = _DEFAULT_EVENT_DIRECTION
     min_amp: float = _DEFAULT_MIN_AMP
     min_imi: float = _DEFAULT_MIN_IMI
     nhood_radius: float = _DEFAULT_NHOOD_RADIUS
@@ -46,6 +56,11 @@ class ObserverRuntimeSettings:
         object.__setattr__(self, "e_var_ix", int(self.e_var_ix))
         object.__setattr__(self, "f_var_ix", int(self.f_var_ix))
         object.__setattr__(self, "max_event_count", int(self.max_event_count))
+        object.__setattr__(
+            self,
+            "event_direction",
+            _normalize_event_direction(self.event_direction),
+        )
         object.__setattr__(self, "min_amp", float(self.min_amp))
         object.__setattr__(self, "min_imi", float(self.min_imi))
         object.__setattr__(self, "nhood_radius", float(self.nhood_radius))
@@ -62,6 +77,7 @@ class ObserverRuntimeSettings:
             e_var_ix=self.e_var_ix,
             f_var_ix=self.f_var_ix,
             max_event_count=self.max_event_count,
+            event_direction=self.event_direction,
             max_event_timestamps=event_output_settings.max_event_timestamps,
             min_amp=self.min_amp,
             min_imi=self.min_imi,
@@ -93,6 +109,7 @@ class Observer(Enum):
     local_max = "localmax"
     neighbourhood_1 = "nhood1"
     neighbourhood_2 = "nhood2"
+    threshold_1 = "thresh1"
     threshold_2 = "thresh2"
 
 
@@ -157,6 +174,7 @@ class ObserverParams:
         e_var_ix: Index of the variable used for event detection.
         f_var_ix: Index of the variable used for feature readout.
         max_event_count: Maximum number of events to accumulate.
+        event_direction: Crossing direction used by threshold-style observers.
         max_event_timestamps: Maximum number of event timestamps to retain.
         min_amp: Minimum amplitude threshold for event acceptance.
         min_imi: Minimum inter-event interval.
@@ -171,6 +189,7 @@ class ObserverParams:
     e_var_ix: int = _DEFAULT_EVENT_VAR_INDEX
     f_var_ix: int = _DEFAULT_FEATURE_VAR_INDEX
     max_event_count: int = _DEFAULT_MAX_EVENT_COUNT
+    event_direction: EventDirection | str | int = _DEFAULT_EVENT_DIRECTION
     max_event_timestamps: int = _DEFAULT_MAX_EVENT_TIMESTAMPS
     min_amp: float = _DEFAULT_MIN_AMP
     min_imi: float = _DEFAULT_MIN_IMI
@@ -185,6 +204,7 @@ class ObserverParams:
         self.e_var_ix = int(self.e_var_ix)
         self.f_var_ix = int(self.f_var_ix)
         self.max_event_count = int(self.max_event_count)
+        self.event_direction = _normalize_event_direction(self.event_direction)
         self.max_event_timestamps = int(self.max_event_timestamps)
         self.min_amp = float(self.min_amp)
         self.min_imi = float(self.min_imi)
@@ -201,6 +221,7 @@ class ObserverParams:
             e_var_ix=self.e_var_ix,
             f_var_ix=self.f_var_ix,
             max_event_count=self.max_event_count,
+            event_direction=self.event_direction,
             min_amp=self.min_amp,
             min_imi=self.min_imi,
             nhood_radius=self.nhood_radius,
@@ -223,6 +244,7 @@ def _copy_observer_params(observer_params: ObserverParams) -> ObserverParams:
         e_var_ix=observer_params.e_var_ix,
         f_var_ix=observer_params.f_var_ix,
         max_event_count=observer_params.max_event_count,
+        event_direction=observer_params.event_direction,
         max_event_timestamps=observer_params.max_event_timestamps,
         min_amp=observer_params.min_amp,
         min_imi=observer_params.min_imi,
@@ -243,6 +265,7 @@ def _resolve_observer_params(
     event_var: str | None = None,
     feature_var: str | None = None,
     max_event_count: int | None = None,
+    event_direction: EventDirection | str | int | None = None,
     max_event_timestamps: int | None = None,
     min_amp: float | None = None,
     min_imi: float | None = None,
@@ -271,6 +294,11 @@ def _resolve_observer_params(
             parameter_name="feature_var",
         ),
         max_event_count=current.max_event_count if max_event_count is None else max_event_count,
+        event_direction=(
+            current.event_direction
+            if event_direction is None
+            else _normalize_event_direction(event_direction)
+        ),
         max_event_timestamps=(
             current.max_event_timestamps
             if max_event_timestamps is None
@@ -314,6 +342,40 @@ def _resolve_variable_index(
         available_names = ", ".join(names) if names else "<none>"
         raise ValueError(
             f"Unknown {parameter_name} '{variable_name}'. Expected one of: {available_names}"
+        ) from error
+
+
+def _normalize_event_direction(
+    event_direction: EventDirection | str | int,
+) -> EventDirection:
+    if isinstance(event_direction, EventDirection):
+        return event_direction
+
+    if isinstance(event_direction, str):
+        normalized_direction = event_direction.strip().lower()
+        aliases = {
+            "up": "rising",
+            "increasing": "rising",
+            "down": "falling",
+            "decreasing": "falling",
+            "both": "either",
+            "any": "either",
+        }
+        normalized_direction = aliases.get(normalized_direction, normalized_direction)
+        try:
+            return EventDirection[normalized_direction]
+        except KeyError as error:
+            allowed = ", ".join(direction.name for direction in EventDirection)
+            raise ValueError(
+                f"Unsupported event_direction '{event_direction}'. Expected one of: {allowed}"
+            ) from error
+
+    try:
+        return EventDirection(int(event_direction))
+    except (TypeError, ValueError) as error:
+        allowed = ", ".join(direction.name for direction in EventDirection)
+        raise ValueError(
+            f"Unsupported event_direction '{event_direction}'. Expected one of: {allowed}"
         ) from error
 
 
@@ -369,4 +431,9 @@ def _normalize_reduction_spec(
     return tuple(normalized)
 
 
-__all__ = ["Observer", "ObserverParams", "SummaryObserverSelection"]
+__all__ = [
+    "EventDirection",
+    "Observer",
+    "ObserverParams",
+    "SummaryObserverSelection",
+]

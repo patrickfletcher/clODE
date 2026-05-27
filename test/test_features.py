@@ -2,6 +2,7 @@ from math import cos, exp, pi, sqrt
 from typing import List
 
 import numpy as np
+import pytest
 
 import clode
 from test.core_numerics.helpers import device_kwargs_for_tests
@@ -132,6 +133,51 @@ def test_threshold_2_coarse_timestamps_use_inverse_linear_interpolation() -> Non
         atol=6e-2,
         rtol=0.0,
     )
+
+
+@pytest.mark.parametrize(
+    ("event_direction", "expected_times"),
+    [
+        (clode.EventDirection.rising, np.array([pi / 6], dtype=np.float64)),
+        (clode.EventDirection.falling, np.array([5 * pi / 6], dtype=np.float64)),
+        (
+            clode.EventDirection.either,
+            np.array([pi / 6, 5 * pi / 6], dtype=np.float64),
+        ),
+    ],
+)
+def test_threshold_1_absolute_crossings_respect_direction(
+    event_direction: clode.EventDirection,
+    expected_times: np.ndarray,
+) -> None:
+    feature_simulator = clode.FeatureSimulator(
+        rhs_equation=sine_curve,
+        variables={"x": 0.0},
+        parameters={"dilation": 1.0},
+        observer=clode.Observer.threshold_1,
+        stepper=clode.Stepper.rk4,
+        dtmax=0.05,
+        dt=0.05,
+        t_span=(0.0, 2 * pi),
+        event_var="x",
+        feature_var="x",
+        observer_event_direction=event_direction,
+        observer_x_up_thresh=0.5,
+        observer_max_event_count=8,
+        observer_max_event_timestamps=3,
+        **device_kwargs_for_tests(),
+    )
+
+    output = feature_simulator.features()
+
+    assert output is not None
+    event_count = int(output.get_var_count("event"))
+    threshold_times = np.atleast_1d(
+        np.asarray(output.get_timestamps("threshold"), dtype=np.float64)
+    )
+
+    assert event_count == len(expected_times)
+    np.testing.assert_allclose(threshold_times, expected_times, atol=3e-2, rtol=0.0)
 
 
 def test_local_max_coarse_timestamps_use_three_sample_refinement() -> None:

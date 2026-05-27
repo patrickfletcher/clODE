@@ -6,9 +6,11 @@ Observers are the mechanism behind `FeatureSimulator`. They maintain per-ensembl
 
 The current public observer modes are:
 
+- `clode.Observer.summary`
 - `clode.Observer.basic`
 - `clode.Observer.basic_all_variables`
 - `clode.Observer.local_max`
+- `clode.Observer.threshold_1`
 - `clode.Observer.neighbourhood_1`
 - `clode.Observer.neighbourhood_2`
 - `clode.Observer.threshold_2`
@@ -56,6 +58,13 @@ Not every observer field affects every built-in observer. For the current built-
 See [numerical_accuracy.md](numerical_accuracy.md) for empirical examples and practical tuning guidance.
 
 `threshold_2` stores up/down transition times with inverse-linear interpolation of the active threshold boundary. When a `dx` threshold is zero, that slope gate is ignored; when it is nonzero, the stored transition time is the later of the active `x` and `dx` boundary crossings within the step. `local_max` stores extrema using bounded three-sample quadratic refinement. See [numerical_accuracy.md](numerical_accuracy.md) for empirical tradeoffs and comparisons with alternative interpolation choices.
+
+For threshold-trigger workflows, the current observer catalog is easier to reason about if you keep two ideas separate:
+
+- `threshold_1` is a one-pass directional threshold crossing in absolute units of `event_var`. Use it when the event variable is expected to cross a physically meaningful value such as a voltage level.
+- `threshold_2` is a two-pass warmup-derived fractional Schmitt trigger. Its `x_up_threshold` and `x_down_threshold` inputs are interpreted as fractions of the observed warmup amplitude of `event_var`, so it is often more robust across parameter sweeps where the event-variable range changes.
+- `dx_up_threshold` and `dx_down_threshold` in `threshold_2` are optional extra gates that are most helpful on noisy or stochastic traces.
+- A Schmitt trigger with equal up/down thresholds can degenerate to a simple threshold crossing internally, but treating threshold crossing and Schmitt triggering as separate public concepts keeps configuration and output expectations clearer.
 
 ## Reading observer output
 

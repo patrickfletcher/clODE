@@ -6,9 +6,11 @@ import numpy as np
 
 from .._opencl.executors import OpenCLFeatureExecutor
 from ..observers.types import (
+	EventDirection,
 	_DEFAULT_DX_DOWN_THRESHOLD,
 	_DEFAULT_DX_UP_THRESHOLD,
 	_DEFAULT_EPS_DX,
+	_DEFAULT_EVENT_DIRECTION,
 	_DEFAULT_MAX_EVENT_COUNT,
 	_DEFAULT_MAX_EVENT_TIMESTAMPS,
 	_DEFAULT_MIN_AMP,
@@ -74,6 +76,7 @@ class FeatureSimulator(Simulator):
 		event_var: str = "",
 		feature_var: str = "",
 		observer_max_event_count: int = _DEFAULT_MAX_EVENT_COUNT,
+		observer_event_direction: EventDirection | str = _DEFAULT_EVENT_DIRECTION,
 		observer_max_event_timestamps: int = _DEFAULT_MAX_EVENT_TIMESTAMPS,
 		observer_min_x_amp: float = _DEFAULT_MIN_AMP,
 		observer_min_imi: float = _DEFAULT_MIN_IMI,
@@ -100,6 +103,8 @@ class FeatureSimulator(Simulator):
 				distinguishes detection and measurement variables.
 			observer_max_event_count: Maximum number of events accumulated by the
 				observer.
+			observer_event_direction: Crossing direction for threshold-style
+				observers.
 			observer_max_event_timestamps: Maximum number of event timestamps
 				retained in the output.
 			observer_min_x_amp: Minimum accepted event amplitude.
@@ -134,6 +139,7 @@ class FeatureSimulator(Simulator):
 			event_var=event_var or None,
 			feature_var=feature_var or None,
 			max_event_count=observer_max_event_count,
+			event_direction=observer_event_direction,
 			max_event_timestamps=observer_max_event_timestamps,
 			min_amp=observer_min_x_amp,
 			min_imi=observer_min_imi,
@@ -213,6 +219,7 @@ class FeatureSimulator(Simulator):
 		event_var: Optional[str] = None,
 		feature_var: Optional[str] = None,
 		max_event_count: Optional[int] = None,
+		event_direction: Optional[EventDirection | str] = None,
 		max_event_timestamps: Optional[int] = None,
 		min_amp: Optional[float] = None,
 		min_imi: Optional[float] = None,
@@ -231,6 +238,7 @@ class FeatureSimulator(Simulator):
 			event_var: Variable name used for event detection.
 			feature_var: Variable name used for feature readout.
 			max_event_count: Maximum number of tracked events.
+			event_direction: Crossing direction for threshold-style observers.
 			max_event_timestamps: Maximum number of retained event timestamps.
 			min_amp: Minimum accepted event amplitude.
 			min_imi: Minimum inter-event interval.
@@ -248,6 +256,7 @@ class FeatureSimulator(Simulator):
 			event_var=event_var,
 			feature_var=feature_var,
 			max_event_count=max_event_count,
+			event_direction=event_direction,
 			max_event_timestamps=max_event_timestamps,
 			min_amp=min_amp,
 			min_imi=min_imi,

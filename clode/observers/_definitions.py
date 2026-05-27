@@ -457,6 +457,18 @@ def _nhood2_feature_names(
     return tuple(names)
 
 
+def _thresh1_feature_names(
+    problem_info: ProblemInfo,
+    observer_runtime_settings: ObserverRuntimeSettings,
+    n_store_events: int,
+) -> tuple[str, ...]:
+    del problem_info
+    del observer_runtime_settings
+    names = [f"threshold event time {event_idx}" for event_idx in range(n_store_events)]
+    names.append("event count")
+    return tuple(names)
+
+
 def _thresh2_feature_names(
     problem_info: ProblemInfo,
     observer_runtime_settings: ObserverRuntimeSettings,
@@ -868,6 +880,25 @@ def _nhood2_layout(
     )
 
 
+def _thresh1_layout(
+    problem_info: ProblemInfo,
+    real_dtype: np.dtype,
+    n_store_events: int,
+) -> ResolvedObserverLayout:
+    del problem_info
+    return ResolvedObserverLayout(
+        persistent_fields=(
+            _real_field("tbuffer", real_dtype, 2),
+            _real_field("xbuffer", real_dtype, 2),
+            _uint_field("stepcount"),
+            _uint_field("eventcount"),
+        ),
+        event_output_fields=(
+            _real_field("tEventList", real_dtype, n_store_events),
+        ),
+    )
+
+
 def _thresh2_layout(
     problem_info: ProblemInfo,
     real_dtype: np.dtype,
@@ -1000,6 +1031,13 @@ _OBSERVER_DEFINITIONS = {
         uses_two_pass=True,
         feature_name_factory=_nhood2_feature_names,
         layout_factory=_nhood2_layout,
+    ),
+    "thresh1": ObserverDefinition(
+        observer_name="thresh1",
+        build_define="USE_OBSERVER_THRESHOLD_1",
+        uses_two_pass=False,
+        feature_name_factory=_thresh1_feature_names,
+        layout_factory=_thresh1_layout,
     ),
     "thresh2": ObserverDefinition(
         observer_name="thresh2",

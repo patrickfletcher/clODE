@@ -10,9 +10,10 @@ clODE currently ships the following observer modes through the public `Observer`
 - `Observer.basic`: basic summary statistics for one variable
 - `Observer.basic_all_variables`: compatibility preset for the full summary bundle across all state and auxiliary variables
 - `Observer.local_max`: local-maximum event tracking
+- `Observer.threshold_1`: absolute threshold-crossing event tracking with runtime direction selection
 - `Observer.neighbourhood_1`
 - `Observer.neighbourhood_2`
-- `Observer.threshold_2`: threshold-based event tracking and period-style measurements
+- `Observer.threshold_2`: warmup-derived fractional Schmitt-trigger event tracking and period-style measurements
 
 `Observer.basic` and `Observer.basic_all_variables` remain supported, but they now route through the same summary-observer family as `Observer.summary`.
 
@@ -38,14 +39,24 @@ Common options include:
 
 - `event_var`: which variable is used for event detection
 - `feature_var`: which variable is used for feature readout
+- `event_direction`: which crossing direction to accept in directional threshold-crossing observers such as `threshold_1`
 - `max_event_count`: how many events to accumulate
 - `max_event_timestamps`: how many event timestamps to retain
 - `min_amp`, `min_imi`, `nhood_radius`, `x_up_threshold`, `x_down_threshold`, `dx_up_threshold`, `dx_down_threshold`, `eps_dx`
 
+The current threshold observers intentionally cover different workflows:
+
+- `threshold_1` uses `x_up_threshold` as an absolute value in the units of `event_var`, and `event_direction` chooses rising, falling, or either crossing through that one level.
+- `threshold_2` interprets `x_up_threshold` and `x_down_threshold` as fractions of the warmup-pass amplitude range of `event_var`, so the effective thresholds scale with the observed oscillation range. That is often more robust across parameter sweeps where the absolute event-variable range changes.
+- Treat `threshold_2` as the current Schmitt-style family: separate up/down fractions define the hysteresis band and support period, duty, and active-state measurements. Even though equal up/down fractions collapse to a degenerate single-boundary case internally, keeping threshold crossing and Schmitt triggering separate in the public mental model is clearer for configuration and readout selection.
+- `dx_up_threshold` and `dx_down_threshold` are mainly useful as extra gates on noisy or stochastic traces. Smooth deterministic runs often do not need them.
+
 The most directly useful current safeguards for oscillation-oriented observers are:
 
+- `event_direction` in `threshold_1` to select rising, falling, or either absolute crossing through one threshold value
+- `x_up_threshold` in `threshold_1` to set that absolute crossing value directly in state-variable units
 - `min_amp` to suppress event measurement below a chosen amplitude floor
-- separate `x_up_threshold` and `x_down_threshold` values in `threshold_2` to add Schmitt-trigger-style hysteresis and reduce chatter
+- separate `x_up_threshold` and `x_down_threshold` values in `threshold_2` to add warmup-derived Schmitt-trigger-style hysteresis and reduce chatter
 - `dx_up_threshold` and `dx_down_threshold` in `threshold_2` when noisy shallow crossings need an additional slope gate
 
 Not every field is active in every built-in observer, so treat observer parameters as mode-specific rather than assuming every knob has the same effect everywhere.
@@ -54,16 +65,17 @@ Persistent observer state also stays on the device for the duration of the solve
 
 For summary observers, the persistent state and output schema also scale with the selected summary groups. Changing a custom summary selection rebuilds the specialized OpenCL feature program, but it lets the stored summary state shrink to the requested subset instead of always following a one-variable or all-variable preset.
 
-`threshold_2` stores up/down transition times with inverse-linear interpolation of the active threshold boundary. When a `dx` threshold is zero, that slope gate is ignored; when it is nonzero, the stored transition time is the later of the active `x` and `dx` boundary crossings within the step. `local_max` stores extrema using bounded three-sample quadratic refinement. See [numerical_accuracy.md](numerical_accuracy.md) for empirical tradeoffs and comparisons with alternative interpolation choices.
+`threshold_2` converts its `x_up_threshold` and `x_down_threshold` inputs from warmup-pass fractions of the observed `event_var` amplitude into concrete boundaries, then stores up/down transition times with inverse-linear interpolation of the active boundary. When a `dx` threshold is zero, that slope gate is ignored; when it is nonzero, the stored transition time is the later of the active `x` and `dx` boundary crossings within the step. `local_max` stores extrema using bounded three-sample quadratic refinement. See [numerical_accuracy.md](numerical_accuracy.md) for empirical tradeoffs and comparisons with alternative interpolation choices.
 
-Example:
+For `threshold_1`:
 
 ```python
 integrator.set_observer_parameters(
     event_var="x",
     feature_var="x",
+    event_direction=clode.EventDirection.rising,
+    x_up_threshold=-40.0,
     max_event_timestamps=16,
-    min_amp=0.1,
 )
 ```
 
@@ -94,6 +106,10 @@ simulator = clode.FeatureSimulator(
 - `get_var_mean_slope(name)`, `get_var_min_slope(name)`, `get_var_max_slope(name)`
 - `get_var_count(name)`
 - `get_event_data(name, type="time")`
+
+`Observer.threshold_1` exposes one `threshold` event stream, so `get_timestamps("threshold")` returns the stored absolute crossing times for that observer.
+
+`Observer.threshold_2` exposes separate `up` and `down` streams after converting its warmup-derived fractional thresholds into concrete event-variable boundaries for the live pass.
 
 Solver diagnostics stay on the simulator rather than in `ObserverOutput`:
 

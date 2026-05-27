@@ -52,7 +52,7 @@
 #include "observers/observer_local_maximum.clh"
 
 // Threshold-based event detection with thresholds defined in state-space coordinates
-// #include "observers/observer_threshold_1.clh" //not implemented
+#include "observers/observer_threshold_1.clh"
 
 // Poincaré section, specified as a normal vector and offset in state-space coordinates
 // #include "observers/observer_poincare_1.clh"

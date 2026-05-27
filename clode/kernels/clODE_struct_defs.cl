@@ -26,6 +26,7 @@ struct ObserverRuntimeSettings
 	unsigned int fVarIx; //variable for features
 
 	unsigned int maxEventCount; //time loop limiter
+	unsigned int eventDirection; //0=rising, 1=falling, 2=either
 	// maxEventTimestamps - not here: used as #define N_STORE_EVENTS for fixed-size event timestamp buffer
 	realtype minXamp;  //consider oscillations lower than this to be steady state (return mean X)
 	realtype minIMI;

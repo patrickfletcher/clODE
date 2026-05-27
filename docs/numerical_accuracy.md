@@ -155,6 +155,8 @@ This encodes the smallest oscillation that is physically or scientifically meani
 
 ### Schmitt-trigger-style hysteresis with separate up/down thresholds
 
+In `threshold_2`, `x_up_threshold` and `x_down_threshold` are interpreted as fractions of the warmup-pass amplitude range on `event_var`, not as absolute state-variable values.
+
 On a coarse sine wave with a high-frequency ripple superimposed:
 
 - a single threshold (`x_up = x_down = 0.5` in normalized coordinates) reports 100 up-events
@@ -169,7 +171,7 @@ On a composite waveform where value thresholds alone still overcount crossings:
 - a `threshold_2`-style count with `dx_up = 0` reports 100 up-events
 - adding `dx_up = 0.9` reduces that to 20 up-events
 
-Derivative thresholds can be useful for noisy traces, especially when value hysteresis alone is not selective enough. They are still signal-dependent, so validate them on representative data before launching a large sweep.
+Derivative thresholds can be useful for noisy traces, especially when value hysteresis alone is not selective enough. In practice they are most compelling on noisy or stochastic simulations; smooth deterministic runs often do not need them. They are still signal-dependent, so validate them on representative data before launching a large sweep.
 
 ## Threshold-Crossing Timestamp Alternatives
 
@@ -208,6 +210,7 @@ This comparison shows why `local_max` uses bounded three-sample refinement, but 
 - The stepper time-base issue is a representability problem, not a notation problem.
 - clODE uses the same compensated solve-relative elapsed bookkeeping across fixed-step and adaptive steppers rather than a one-float absolute-time update path. Double precision or shorter windows are still the safer choice when absolute-time fidelity itself is the requirement.
 - The example script compares structured `t0 + step * dt` against Kahan-style updates because that fixed-step reconstruction remains a useful reference baseline alongside the live compensated elapsed-time path.
+- Use `threshold_1` when an absolute event-variable level is scientifically meaningful and reasonably stable across the sweep; use `threshold_2` when a warmup-derived fractional threshold is more portable because the event-variable range shifts with parameters.
 - For `threshold_2`, use a real hysteresis gap when crossings chatter, and consider derivative thresholds when noisy shallow crossings still slip through.
 - `threshold_2` stores threshold-transition times with inverse-linear interpolation; the example script also compares that choice with Hermite interpolation on smooth monotone crossings.
 - Set `min_amp` above the numerical or measurement floor you want to ignore and below the smallest oscillation you still care about.

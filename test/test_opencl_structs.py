@@ -20,6 +20,7 @@ from clode._opencl import (
     pack_trajectory_output_settings,
 )
 from clode.observers.types import ObserverRuntimeSettings
+from clode.observers.types import EventDirection
 from clode.runtime import _clode_root_dir
 from clode.simulation.params import IntegrationSettings, TrajectoryOutputSettings
 from test.core_numerics.helpers import TEST_DEVICE_ID, TEST_PLATFORM_ID
@@ -81,6 +82,7 @@ def test_pack_helpers_preserve_internal_config_values() -> None:
         e_var_ix=1,
         f_var_ix=2,
         max_event_count=30,
+        event_direction=EventDirection.either,
         min_amp=0.2,
         min_imi=0.3,
         nhood_radius=0.4,
@@ -111,6 +113,7 @@ def test_pack_helpers_preserve_internal_config_values() -> None:
     assert int(packed_trajectory_output["max_store"]) == 456
     assert int(packed_trajectory_output["nout"]) == 7
     assert int(packed_observer_runtime["eVarIx"]) == 1
+    assert int(packed_observer_runtime["eventDirection"]) == int(EventDirection.either)
     assert float(packed_observer_runtime["xDownThresh"]) == pytest.approx(0.6)
     assert float(packed_observer_runtime["eps_dx"]) == pytest.approx(0.9)
 
@@ -163,6 +166,11 @@ def test_basic_observer_double_formula_underestimates_matched_struct_size() -> N
             clode.Observer.neighbourhood_2,
             {"observer_max_event_timestamps": 4},
             ("-DUSE_OBSERVER_NEIGHBORHOOD_2", "-DN_VAR=2", "-DN_AUX=0", "-DN_STORE_EVENTS=4"),
+        ),
+        (
+            clode.Observer.threshold_1,
+            {"observer_max_event_timestamps": 4},
+            ("-DUSE_OBSERVER_THRESHOLD_1", "-DN_VAR=2", "-DN_AUX=0", "-DN_STORE_EVENTS=4"),
         ),
         (
             clode.Observer.threshold_2,

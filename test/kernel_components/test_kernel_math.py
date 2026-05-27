@@ -7,6 +7,7 @@ import pytest
 pyopencl = pytest.importorskip("pyopencl")
 
 from clode._opencl import OpenCLRuntime
+from clode.observers.types import EventDirection
 from clode.runtime import _clode_root_dir
 from test.core_numerics.helpers import TEST_DEVICE_ID, TEST_PLATFORM_ID
 
@@ -618,6 +619,113 @@ def test_threshold_2_observer_kernel_ignores_dx_when_dx_thresholds_zero() -> Non
 
     np.testing.assert_allclose(out[:2], np.array([1.5, 3.5], dtype=np.float32), atol=1e-6, rtol=0.0)
     assert out[2] == 1.0
+
+
+@pytest.mark.parametrize(
+    ("event_direction", "expected_times"),
+    [
+        (EventDirection.rising, np.array([1.5, 5.5], dtype=np.float32)),
+        (EventDirection.falling, np.array([2.5], dtype=np.float32)),
+        (EventDirection.either, np.array([1.5, 2.5, 5.5], dtype=np.float32)),
+    ],
+)
+def test_threshold_1_observer_kernel_tracks_absolute_crossings(
+    event_direction: EventDirection,
+    expected_times: np.ndarray,
+) -> None:
+    runtime = OpenCLRuntime.create(**_explicit_runtime_kwargs())
+    program = _build_program(
+        runtime,
+        (
+            """
+        #include \"clODE_utilities.cl\"
+        #include \"observers.cl\"
+
+        __constant struct ObserverRuntimeSettings TEST_PARAMS = {
+            0,
+            0,
+            8,
+            __EVENT_DIRECTION__,
+            ZERO,
+            ZERO,
+            ZERO,
+            RCONST(0.5),
+            ZERO,
+            ZERO,
+            ZERO,
+            ZERO
+        };
+
+        __kernel void run_threshold1_observer(
+            __global const realtype *times,
+            __global const realtype *x_values,
+            __global realtype *out,
+            const uint n_values
+        ) {
+            realtype ti = times[0];
+            realtype xi[1] = {x_values[0]};
+            realtype dxi[1] = {ZERO};
+            realtype auxi[1] = {ZERO};
+            ObserverState observer_state;
+
+            initializeObserverState(&ti, xi, dxi, auxi, &observer_state, &TEST_PARAMS);
+            for (uint idx = 1; idx < n_values; ++idx) {
+                ti = times[idx];
+                xi[0] = x_values[idx];
+                updateObserverState(
+                    &ti,
+                    xi,
+                    dxi,
+                    auxi,
+                    times[idx] - times[idx - 1],
+                    &observer_state,
+                    &TEST_PARAMS
+                );
+                if (eventFunction(&ti, xi, dxi, auxi, &observer_state, &TEST_PARAMS)) {
+                    computeEventFeatures(&ti, xi, dxi, auxi, &observer_state, &TEST_PARAMS);
+                }
+            }
+
+            for (int idx = 0; idx < 4; ++idx)
+                out[idx] = observer_state.tEventList[idx];
+            out[4] = (realtype)observer_state.eventcount;
+        }
+        """
+        ).replace("__EVENT_DIRECTION__", str(int(event_direction))),
+        extra_options=("-DUSE_OBSERVER_THRESHOLD_1", "-DN_VAR=1", "-DN_AUX=0", "-DN_STORE_EVENTS=4"),
+    )
+
+    sample_times = np.array([0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0], dtype=np.float32)
+    x_values = np.array([-1.0, 0.0, 1.0, 0.0, -1.0, 0.0, 1.0], dtype=np.float32)
+    out = np.empty(5, dtype=np.float32)
+
+    time_buffer = pyopencl.Buffer(
+        runtime.context,
+        pyopencl.mem_flags.READ_ONLY | pyopencl.mem_flags.COPY_HOST_PTR,
+        hostbuf=sample_times,
+    )
+    x_buffer = pyopencl.Buffer(
+        runtime.context,
+        pyopencl.mem_flags.READ_ONLY | pyopencl.mem_flags.COPY_HOST_PTR,
+        hostbuf=x_values,
+    )
+    out_buffer = pyopencl.Buffer(runtime.context, pyopencl.mem_flags.WRITE_ONLY, out.nbytes)
+
+    program.run_threshold1_observer(
+        runtime.queue,
+        (1,),
+        None,
+        time_buffer,
+        x_buffer,
+        out_buffer,
+        np.uint32(len(sample_times)),
+    )
+    pyopencl.enqueue_copy(runtime.queue, out, out_buffer).wait()
+
+    observed_times = out[: len(expected_times)]
+    np.testing.assert_allclose(observed_times, expected_times, atol=1e-6, rtol=0.0)
+    assert np.all(out[len(expected_times) : 4] == 0.0)
+    assert out[4] == pytest.approx(float(len(expected_times)))
 
 
 @pytest.mark.parametrize(

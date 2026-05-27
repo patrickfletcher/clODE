@@ -52,12 +52,14 @@ Why first:
 
 Once the owner split is explicit, first audit what clODE observers currently mean, where that model overlaps with standard event-function semantics, and which parts of feature selection or memory-footprint control need separate declaration on the Python side. Then shape a narrower path for adding more built-in observers and, later, composable or user-authored observers from Python-side definitions instead of a hand-wired kernel catalog.
 
-That strongest first proof target is now landed in the summary-observer family: `basic`, `basicall`, and `summary` now share one declaration family with explicit selection policy. The next useful move in the same workstream is to audit what that slice taught about build-specialized declarations versus scalar runtime settings before extending the model to heavier event detectors.
+That strongest first proof target is now landed in the summary-observer family: `basic`, `basicall`, and `summary` now share one declaration family with explicit selection policy. The first deterministic static-trigger counterexample is now landed too: `Observer.threshold_1` proves that a useful threshold event family can keep absolute threshold value and crossing direction in runtime settings while exposing only a lean timestamp-plus-count readout. The follow-on re-audit now points to a more specific next proof target: separate threshold topology from threshold parameterization, keep Schmitt triggering as its own public concept, and add a lean warmup-derived fractional directional-threshold family before broadening heavier event readouts again.
+
+That same audit also suggests that `nhood1` should not guide the next abstraction unless a clearer deterministic workflow emerges. `localmax` remains useful, but the more durable design question there is likely whether max/min extrema should be one polarity-selectable family rather than separate ad hoc observers. `nhood2` remains a specialized periodicity detector rather than a discarded idea, and the threshold re-audit should keep that distinction explicit while also keeping slope-gated Schmitt behavior framed as a narrower noisy-trace tool rather than the generic threshold model.
 
 Why second:
 
 - observers are a first-class clODE concept and one of the clearest ways to differentiate the package in both engineering and publication terms
-- it avoided mixing higher-risk authoring-surface decisions into the lower-level owner-split PR, and the follow-on audit should keep the next event-observer slice evidence-backed instead of speculative
+- it avoided mixing higher-risk authoring-surface decisions into the lower-level owner-split PR, and the follow-on static-trigger slice should keep the next event-observer step evidence-backed instead of speculative
 
 ### 3. Numerical evidence and publication follow-through
 
