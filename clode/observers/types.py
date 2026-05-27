@@ -19,21 +19,32 @@ class EventDirection(IntEnum):
     falling = 1
     either = 2
 
-
+# common observer settings
 _DEFAULT_EVENT_VAR_INDEX = 0
 _DEFAULT_FEATURE_VAR_INDEX = 0
+
+# observers with event detection
 _DEFAULT_MAX_EVENT_COUNT = 100
 _DEFAULT_MAX_EVENT_TIMESTAMPS = 0
+
+# oscillatory limiters for event acceptance
+_DEFAULT_MIN_AMP = 0.0
+_DEFAULT_MIN_IMI = 0.0  # not used? maybe in local extremum to limit events too close together? probably a better way to do it though
+
+# threshold crossing observers
 _DEFAULT_THRESHOLD = 0.0
 _DEFAULT_EVENT_DIRECTION = EventDirection.rising
-_DEFAULT_MIN_AMP = 0.0
-_DEFAULT_MIN_IMI = 0.0
+
+# neighborhood observers
 _DEFAULT_NHOOD_RADIUS = 0.05
+
+# Schmitt trigger observers
 _DEFAULT_X_UP_THRESHOLD = 0.3
 _DEFAULT_X_DOWN_THRESHOLD = 0.2
 _DEFAULT_DX_UP_THRESHOLD = 0.0
 _DEFAULT_DX_DOWN_THRESHOLD = 0.0
-_DEFAULT_EPS_DX = 0.0
+
+_DEFAULT_EPS_DX = 0.0  #unused?
 
 
 @dataclass(frozen=True, slots=True)
@@ -104,30 +115,33 @@ class EventOutputSettings:
 class Observer(Enum):
     """Built-in observer modes available to `FeatureSimulator`.
 
-    Semantic aliases such as `threshold_crossing` and `schmitt_trigger` are
-    preferred for the threshold families. The older pass-count names remain as
-    compatibility spellings.
+    Threshold-family observers use semantic names directly. The legacy
+    `threshold_2` observer remains available as the current fully featured
+    normalized Schmitt-trigger implementation while the semantic families
+    continue to evolve their lean trigger-first layouts and readouts.
     """
 
     summary = "summary"
-    basic = "basic"
-    basic_all_variables = "basicall"
+    basic = "basic"     # compatibility alias for summmary with one variable
+    basic_all_variables = "basicall" # compatibility alias for summary with all variables
     local_max = "localmax"
-    neighbourhood_1 = "nhood1"
+    neighbourhood_1 = "nhood1"  # currently not recommended
     neighbourhood_2 = "nhood2"
-    threshold_crossing = "thresh1"
-    schmitt_trigger = "thresh2"
-    threshold_1 = "thresh1"
-    threshold_2 = "thresh2"
+    threshold_crossing = "threshold_crossing"
+    normalized_threshold_crossing = "normalized_threshold_crossing"
+    schmitt_trigger = "schmitt_trigger"
+    normalized_schmitt_trigger = "normalized_schmitt_trigger"
+    threshold_2 = "threshold_2"
 
 
 @dataclass(frozen=True, slots=True)
 class ThresholdCrossingConfig:
-    """Semantic config for the absolute one-boundary threshold observer."""
+    """Semantic config for absolute and fractional threshold-crossing observers."""
 
     event_var: str = ""
     threshold: float = _DEFAULT_THRESHOLD
     direction: EventDirection | str | int = _DEFAULT_EVENT_DIRECTION
+    min_amp: float = _DEFAULT_MIN_AMP
     max_event_count: int = _DEFAULT_MAX_EVENT_COUNT
     max_event_timestamps: int = _DEFAULT_MAX_EVENT_TIMESTAMPS
 
@@ -139,12 +153,16 @@ class ThresholdCrossingConfig:
         )
         object.__setattr__(self, "threshold", float(self.threshold))
         object.__setattr__(self, "direction", _normalize_event_direction(self.direction))
+        object.__setattr__(self, "min_amp", float(self.min_amp))
         object.__setattr__(self, "max_event_count", int(self.max_event_count))
         object.__setattr__(self, "max_event_timestamps", int(self.max_event_timestamps))
 
     @property
-    def observer(self) -> Observer:
-        return Observer.threshold_crossing
+    def supported_observers(self) -> tuple[Observer, Observer]:
+        return (
+            Observer.threshold_crossing,
+            Observer.normalized_threshold_crossing,
+        )
 
     def to_observer_params(self, variable_names: Sequence[str]) -> ObserverParams:
         threshold = float(self.threshold)
@@ -158,6 +176,7 @@ class ThresholdCrossingConfig:
             max_event_count=self.max_event_count,
             event_direction=self.direction,
             max_event_timestamps=self.max_event_timestamps,
+            min_amp=self.min_amp,
             x_up_threshold=threshold,
             x_down_threshold=threshold,
         )
@@ -176,6 +195,7 @@ class ThresholdCrossingConfig:
             ),
             threshold=observer_params.x_up_threshold,
             direction=observer_params.event_direction,
+            min_amp=observer_params.min_amp,
             max_event_count=observer_params.max_event_count,
             max_event_timestamps=observer_params.max_event_timestamps,
         )
@@ -183,7 +203,7 @@ class ThresholdCrossingConfig:
 
 @dataclass(frozen=True, slots=True)
 class SchmittTriggerConfig:
-    """Semantic config for the warmup-derived Schmitt-trigger observer."""
+    """Semantic config for absolute and fractional Schmitt-trigger observers."""
 
     event_var: str = ""
     feature_var: str = ""
@@ -218,8 +238,12 @@ class SchmittTriggerConfig:
         object.__setattr__(self, "max_event_timestamps", int(self.max_event_timestamps))
 
     @property
-    def observer(self) -> Observer:
-        return Observer.schmitt_trigger
+    def supported_observers(self) -> tuple[Observer, Observer, Observer]:
+        return (
+            Observer.schmitt_trigger,
+            Observer.normalized_schmitt_trigger,
+            Observer.threshold_2,
+        )
 
     def to_observer_params(self, variable_names: Sequence[str]) -> ObserverParams:
         return ObserverParams(
@@ -272,7 +296,9 @@ class SchmittTriggerConfig:
         )
 
 
-ObserverConfiguration = ThresholdCrossingConfig | SchmittTriggerConfig
+ObserverConfiguration = (
+    ThresholdCrossingConfig | SchmittTriggerConfig
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -493,16 +519,19 @@ def _resolve_observer_configuration(
     observer: Observer | None,
     observer_configuration: ObserverConfiguration,
 ) -> tuple[Observer, ObserverParams]:
-    resolved_observer = observer_configuration.observer
-    if observer is not None and observer not in (
-        Observer.basic_all_variables,
-        resolved_observer,
-    ):
+    if observer is None or observer is Observer.basic_all_variables:
+        raise ValueError(
+            "observer_configuration requires an explicit observer because the "
+            "same config surface is shared across multiple observer variants"
+        )
+    supported_observers = observer_configuration.supported_observers
+    if observer not in supported_observers:
+        supported_names = ", ".join(supported.name for supported in supported_observers)
         raise ValueError(
             "observer_configuration does not match the requested observer. "
-            f"Expected '{resolved_observer.name}' but got '{observer.name}'."
+            f"Expected one of: {supported_names}; got '{observer.name}'."
         )
-    return resolved_observer, observer_configuration.to_observer_params(variable_names)
+    return observer, observer_configuration.to_observer_params(variable_names)
 
 
 def _observer_configuration_from_params(
@@ -511,12 +540,19 @@ def _observer_configuration_from_params(
     observer: Observer,
     observer_params: ObserverParams,
 ) -> ObserverConfiguration | None:
-    if observer is Observer.threshold_crossing:
+    if observer in (
+        Observer.threshold_crossing,
+        Observer.normalized_threshold_crossing,
+    ):
         return ThresholdCrossingConfig.from_observer_params(
             variable_names,
             observer_params,
         )
-    if observer is Observer.schmitt_trigger:
+    if observer in (
+        Observer.schmitt_trigger,
+        Observer.normalized_schmitt_trigger,
+        Observer.threshold_2,
+    ):
         return SchmittTriggerConfig.from_observer_params(
             variable_names,
             observer_params,

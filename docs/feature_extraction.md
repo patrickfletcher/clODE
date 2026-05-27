@@ -10,14 +10,17 @@ clODE currently ships the following observer modes through the public `Observer`
 - `Observer.basic`: basic summary statistics for one variable
 - `Observer.basic_all_variables`: compatibility preset for the full summary bundle across all state and auxiliary variables
 - `Observer.local_max`: local-maximum event tracking
-- `Observer.threshold_crossing`: preferred semantic alias for the current absolute threshold-crossing observer with runtime direction selection
+- `Observer.threshold_crossing`: one-pass absolute threshold-crossing observer with runtime direction selection
+- `Observer.normalized_threshold_crossing`: lean warmup-derived threshold-crossing observer with runtime direction selection
+- `Observer.schmitt_trigger`: one-pass absolute Schmitt-trigger observer with retained up/down timestamps
+- `Observer.normalized_schmitt_trigger`: lean warmup-derived Schmitt-trigger observer with retained up/down timestamps
+- `Observer.threshold_2`: retained legacy fully featured normalized Schmitt-trigger observer
 - `Observer.neighbourhood_1`
 - `Observer.neighbourhood_2`
-- `Observer.schmitt_trigger`: preferred semantic alias for the current warmup-derived fractional Schmitt-trigger observer
 
 `Observer.basic` and `Observer.basic_all_variables` remain supported, but they now route through the same summary-observer family as `Observer.summary`.
 
-The older pass-count spellings `Observer.threshold_1` and `Observer.threshold_2` remain supported as compatibility aliases.
+`Observer.threshold_2` remains supported as the retained legacy fully featured normalized Schmitt-trigger path.
 
 The exact feature names depend on the observer. Use `get_feature_names()` on a configured simulator or `get_feature_names()` on the resulting `ObserverOutput` to inspect what is available.
 
@@ -35,21 +38,23 @@ This example is also stored as [examples/van_der_pol_periods.py](https://github.
 
 Threshold-family observers now have a preferred semantic config surface through the `observer_configuration=` constructor argument and `set_observer_configuration(...)`.
 
-Use `ThresholdCrossingConfig` when you want one absolute threshold plus a direction selector:
+Use `ThresholdCrossingConfig` when you want one threshold plus a direction selector. Pair it with `Observer.threshold_crossing` when that threshold should be interpreted in the units of `event_var`, or with `Observer.normalized_threshold_crossing` when the same `threshold` field should be interpreted as a warmup-derived fraction of the observed amplitude range:
 
 ```python
 simulator = clode.FeatureSimulator(
     ...,
+    observer=clode.Observer.normalized_threshold_crossing,
     observer_configuration=clode.ThresholdCrossingConfig(
         event_var="x",
-        threshold=-40.0,
+        threshold=0.75,
         direction=clode.EventDirection.rising,
+        min_amp=0.1,
         max_event_timestamps=16,
     ),
 )
 ```
 
-Use `SchmittTriggerConfig` when you want warmup-derived fractional up/down thresholds and optional slope gates:
+Use `SchmittTriggerConfig` when you want separate up/down boundaries and optional slope gates. Pair it with `Observer.schmitt_trigger` for absolute thresholds or with `Observer.normalized_schmitt_trigger` for warmup-derived fractional thresholds. Use `Observer.threshold_2` when you need the retained legacy fully featured normalized Schmitt readout:
 
 ```python
 simulator.set_observer_configuration(
@@ -62,9 +67,12 @@ simulator.set_observer_configuration(
         dx_down_threshold=0.0,
         min_amp=0.1,
         max_event_timestamps=16,
-    )
+    ),
+    observer=clode.Observer.normalized_schmitt_trigger,
 )
 ```
+
+When you call `set_observer_configuration(...)` with one of the shared config classes, pass `observer=` whenever you are switching families or when the simulator was not already constructed with the desired observer. The config type no longer implies absolute versus warmup-derived semantics on its own.
 
 `set_observer_parameters(...)`, the public `ObserverParams` bundle, and the constructor `observer_*` keyword arguments remain available as compatibility surfaces when you need the older broad bundle or when a family-specific config object does not exist yet.
 
@@ -74,7 +82,7 @@ Common compatibility-surface options include:
 
 - `event_var`: which variable is used for event detection
 - `feature_var`: which variable is used for feature readout
-- `event_direction`: which crossing direction to accept in directional threshold-crossing observers such as `threshold_1`
+- `event_direction`: which crossing direction to accept in directional threshold-crossing observers such as `threshold_crossing` and `normalized_threshold_crossing`
 - `max_event_count`: how many events to accumulate
 - `max_event_timestamps`: how many event timestamps to retain
 - `min_amp`, `min_imi`, `nhood_radius`, `x_up_threshold`, `x_down_threshold`, `dx_up_threshold`, `dx_down_threshold`, `eps_dx`
@@ -82,25 +90,30 @@ Common compatibility-surface options include:
 The current threshold observers intentionally cover different workflows:
 
 - `Observer.threshold_crossing` uses `ThresholdCrossingConfig.threshold` as an absolute value in the units of `event_var`, and `ThresholdCrossingConfig.direction` chooses rising, falling, or either crossing through that one level. On the compatibility path, that same threshold still maps to `x_up_threshold`.
-- `Observer.schmitt_trigger` interprets `SchmittTriggerConfig.x_up_threshold` and `SchmittTriggerConfig.x_down_threshold` as fractions of the warmup-pass amplitude range of `event_var`, so the effective thresholds scale with the observed oscillation range. That is often more robust across parameter sweeps where the absolute event-variable range changes.
-- Treat `Observer.schmitt_trigger` as the current Schmitt-style family: separate up/down fractions define the hysteresis band and support period, duty, and active-state measurements. Even though equal up/down fractions collapse to a degenerate single-boundary case internally, keeping threshold crossing and Schmitt triggering separate in the public mental model is clearer for configuration and readout selection.
+- `Observer.normalized_threshold_crossing` uses the same `ThresholdCrossingConfig` fields, but interprets `threshold` as a fraction of the warmup-pass amplitude range of `event_var`. It keeps the same lean single-stream timestamp-plus-count readout as `Observer.threshold_crossing` while adding warmup-derived scaling and `min_amp` gating.
+- `Observer.schmitt_trigger` uses `SchmittTriggerConfig.x_up_threshold` and `SchmittTriggerConfig.x_down_threshold` as absolute thresholds in the units of `event_var`, and currently retains only up/down transition timestamps plus event count.
+- `Observer.normalized_schmitt_trigger` uses the same `SchmittTriggerConfig` fields, but interprets its `x_*` and optional `dx_*` thresholds as warmup-derived fractions of the observed event-variable range. It keeps the same lean up/down timestamp-plus-count readout as `Observer.schmitt_trigger` while adding warmup-derived scaling and `min_amp` gating.
+- `Observer.threshold_2` remains the legacy fully featured normalized Schmitt workflow. It uses the same warmup-derived threshold semantics as `Observer.normalized_schmitt_trigger`, but it also retains the broader period, duty, active-dip, and trajectory-summary bundle.
+- Keep threshold crossing and Schmitt triggering separate in the public mental model even though equal up/down thresholds can collapse to a degenerate single-boundary case internally. They answer different workflow questions and expose different readout bundles.
 - `dx_up_threshold` and `dx_down_threshold` are mainly useful as extra gates on noisy or stochastic traces. Smooth deterministic runs often do not need them.
 
 The most directly useful current safeguards for oscillation-oriented observers are:
 
 - `ThresholdCrossingConfig.direction` in `Observer.threshold_crossing` to select rising, falling, or either absolute crossing through one threshold value
 - `ThresholdCrossingConfig.threshold` in `Observer.threshold_crossing` to set that absolute crossing value directly in state-variable units
-- `SchmittTriggerConfig.min_amp` to suppress event measurement below a chosen amplitude floor
-- separate `SchmittTriggerConfig.x_up_threshold` and `SchmittTriggerConfig.x_down_threshold` values in `Observer.schmitt_trigger` to add warmup-derived Schmitt-trigger-style hysteresis and reduce chatter
-- `SchmittTriggerConfig.dx_up_threshold` and `SchmittTriggerConfig.dx_down_threshold` in `Observer.schmitt_trigger` when noisy shallow crossings need an additional slope gate
+- `ThresholdCrossingConfig.threshold` in `Observer.normalized_threshold_crossing` to reuse one threshold scalar while letting the live crossing level scale with the warmup-pass amplitude of `event_var`
+- `ThresholdCrossingConfig.min_amp` and `ThresholdCrossingConfig.max_event_count` in either threshold-crossing family to suppress tiny oscillations and cap retained events without changing the observer schema
+- `SchmittTriggerConfig.min_amp` and `SchmittTriggerConfig.max_event_count` in `Observer.schmitt_trigger`, `Observer.normalized_schmitt_trigger`, or `Observer.threshold_2` to suppress small oscillations and bound event processing without changing the observer schema
+- separate `SchmittTriggerConfig.x_up_threshold` and `SchmittTriggerConfig.x_down_threshold` values in the Schmitt families to set the hysteresis band in either absolute units or warmup-derived fractions, depending on the selected observer
+- `SchmittTriggerConfig.dx_up_threshold` and `SchmittTriggerConfig.dx_down_threshold` in the Schmitt families when noisy shallow crossings need an additional slope gate; `dx_down_threshold` is specified as a positive magnitude for the required negative downward slope
 
-Not every field is active in every built-in observer, so treat observer parameters as mode-specific rather than assuming every knob has the same effect everywhere.
+Not every field is active in every built-in observer, so treat observer parameters as mode-specific rather than assuming every knob has the same effect everywhere. Recurring controls such as `min_amp` and `max_event_count` currently live on the family configs where they actively shape oscillation-oriented outputs; clODE does not yet add a separate shared oscillation bundle for them.
 
 Persistent observer state also stays on the device for the duration of the solve, so its footprint depends on the observer mode, the model size, and `max_event_timestamps`. That internal state is distinct from the `ObserverOutput` readout object that `features()` returns. If you only need counts or summary statistics, keep `max_event_timestamps` as small as practical and prefer the lightest observer that answers the question.
 
 For summary observers, the persistent state and output schema also scale with the selected summary groups. Changing a custom summary selection rebuilds the specialized OpenCL feature program, but it lets the stored summary state shrink to the requested subset instead of always following a one-variable or all-variable preset.
 
-`Observer.schmitt_trigger` converts its `x_up_threshold` and `x_down_threshold` inputs from warmup-pass fractions of the observed `event_var` amplitude into concrete boundaries, then stores up/down transition times with inverse-linear interpolation of the active boundary. When a `dx` threshold is zero, that slope gate is ignored; when it is nonzero, the stored transition time is the later of the active `x` and `dx` boundary crossings within the step. `local_max` stores extrema using bounded three-sample quadratic refinement. See [numerical_accuracy.md](numerical_accuracy.md) for empirical tradeoffs and comparisons with alternative interpolation choices.
+`Observer.schmitt_trigger`, `Observer.normalized_schmitt_trigger`, and `Observer.threshold_2` all store up/down transition times with inverse-linear interpolation of the active boundary. The normalized semantic family and `Observer.threshold_2` first convert their `x_*` and `dx_*` fields from warmup-derived fractions of the observed `event_var` range into concrete live-pass thresholds; the absolute family uses the configured values directly. When a `dx` threshold is zero, that slope gate is ignored; when it is nonzero, the stored transition time is the later of the active `x` and `dx` boundary crossings within the step. `Observer.threshold_2` additionally keeps the heavier legacy period, duty, and active-dip bundle. `local_max` stores extrema using bounded three-sample quadratic refinement. See [numerical_accuracy.md](numerical_accuracy.md) for empirical tradeoffs and comparisons with alternative interpolation choices.
 
 Compatibility-surface example for `Observer.threshold_crossing`:
 
@@ -144,7 +157,11 @@ simulator = clode.FeatureSimulator(
 
 `Observer.threshold_crossing` exposes one `threshold` event stream, so `get_timestamps("threshold")` returns the stored absolute crossing times for that observer.
 
-`Observer.schmitt_trigger` exposes separate `up` and `down` streams after converting its warmup-derived fractional thresholds into concrete event-variable boundaries for the live pass.
+`Observer.normalized_threshold_crossing` also exposes one `threshold` event stream, but it converts `ThresholdCrossingConfig.threshold` into one concrete boundary from the warmup-pass amplitude of `event_var` before the live pass starts.
+
+`Observer.schmitt_trigger` and `Observer.normalized_schmitt_trigger` expose separate `up` and `down` streams plus an event count. The normalized family converts its configured thresholds into concrete event-variable boundaries during warmup; the absolute family uses the configured thresholds directly.
+
+`Observer.threshold_2` exposes the same `up` and `down` streams while also retaining the legacy heavier period, duty, active-dip, and trajectory-summary readout bundle.
 
 Solver diagnostics stay on the simulator rather than in `ObserverOutput`:
 

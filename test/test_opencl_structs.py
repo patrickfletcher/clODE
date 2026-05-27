@@ -168,9 +168,24 @@ def test_basic_observer_double_formula_underestimates_matched_struct_size() -> N
             ("-DUSE_OBSERVER_NEIGHBORHOOD_2", "-DN_VAR=2", "-DN_AUX=0", "-DN_STORE_EVENTS=4"),
         ),
         (
-            clode.Observer.threshold_1,
+            clode.Observer.threshold_crossing,
             {"observer_max_event_timestamps": 4},
-            ("-DUSE_OBSERVER_THRESHOLD_1", "-DN_VAR=2", "-DN_AUX=0", "-DN_STORE_EVENTS=4"),
+            ("-DUSE_OBSERVER_THRESHOLD_CROSSING", "-DN_VAR=2", "-DN_AUX=0", "-DN_STORE_EVENTS=4"),
+        ),
+        (
+            clode.Observer.normalized_threshold_crossing,
+            {"observer_max_event_timestamps": 4},
+            ("-DUSE_OBSERVER_NORMALIZED_THRESHOLD_CROSSING", "-DN_VAR=2", "-DN_AUX=0", "-DN_STORE_EVENTS=4"),
+        ),
+        (
+            clode.Observer.schmitt_trigger,
+            {"observer_max_event_count": 50, "observer_max_event_timestamps": 50},
+            ("-DUSE_OBSERVER_SCHMITT_TRIGGER", "-DN_VAR=2", "-DN_AUX=0", "-DN_STORE_EVENTS=50"),
+        ),
+        (
+            clode.Observer.normalized_schmitt_trigger,
+            {"observer_max_event_count": 50, "observer_max_event_timestamps": 50},
+            ("-DUSE_OBSERVER_NORMALIZED_SCHMITT_TRIGGER", "-DN_VAR=2", "-DN_AUX=0", "-DN_STORE_EVENTS=50"),
         ),
         (
             clode.Observer.threshold_2,

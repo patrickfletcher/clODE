@@ -9,12 +9,13 @@ Update when: the observer concept changes materially, a new observer-family decl
 - clODE observers are not just SciPy-style event functions. They are compile-time-selected, stateful, on-device feature pipelines that may detect events, accumulate online statistics, retain sparse event outputs, and emit a structured readout without storing full trajectories.
 - The first declaration-model slice is now landed for summary-only reducers: `Observer.summary` plus `SummaryObserverSelection` resolve to a build-specialized summary variant, while `Observer.basic` and `Observer.basic_all_variables` remain compatibility presets over that family.
 - That landed slice exposed a reusable pattern: a Python-side declaration resolves to one concrete spec that determines feature names, persistent layout, and build identity together, while scalar runtime knobs remain in the runtime-settings path.
-- The first deterministic static-trigger slice is now also landed: `Observer.threshold_1` provides one-pass absolute threshold crossings with a lean timestamp-plus-count readout and runtime direction selection.
-- The current `threshold_2` semantics are more specific than the name suggests: it is the live warmup-derived fractional threshold family, with Schmitt-style up/down state and optional slope gates layered on top.
-- The threshold-family semantic config seam is now also landed for the current built-ins: threshold crossing and Schmitt triggering now have separate Python-side config objects with only the relevant knobs, while `ObserverParams` and the `observer_*` keyword arguments remain compatibility surfaces.
+- The first deterministic static-trigger slice is now also landed: `Observer.threshold_crossing` provides one-pass absolute threshold crossings with a lean timestamp-plus-count readout and runtime direction selection.
+- The threshold catalog now spans four public semantic combinations: absolute threshold crossing, warmup-derived fractional threshold crossing, absolute Schmitt hysteresis, and warmup-derived fractional Schmitt hysteresis.
+- The threshold-family semantic config seam is now also landed for the current built-ins: `ThresholdCrossingConfig` is shared by the two one-boundary threshold observers, `SchmittTriggerConfig` is shared by the two Schmitt families, and `ObserverParams` plus the `observer_*` keyword arguments remain compatibility surfaces.
 - The heavier event observers still bundle too many concerns under one built-in mode: trigger semantics, warmup or two-pass behavior, persistent state layout, feature-output schema, and retained event-output policy.
 - That threshold slice confirmed the intended boundary from the opposite side of the summary family: scalar trigger controls such as crossing direction can stay runtime-side when the readout schema remains fixed.
-- The next useful threshold proof target is therefore no longer the naming or parameter seam itself. That seam is now good enough to carry the next missing family: a lean warmup-derived fractional directional-threshold observer.
+- That threshold-family follow-on is now also landed: `Observer.normalized_threshold_crossing` provides a lean warmup-derived normalized directional-threshold observer with the same timestamp-plus-count readout shape as `Observer.threshold_crossing`.
+- `Observer.schmitt_trigger` and `Observer.normalized_schmitt_trigger` are now landed as lean absolute and warmup-derived Schmitt families, while `Observer.threshold_2` names the retained heavier warmup-derived normalized Schmitt path.
 - `neighbourhood_1` currently looks more like a keep-or-retire case than a good template for future observer generalization unless a more deterministic workflow emerges.
 
 ## Current live model
@@ -22,8 +23,8 @@ Update when: the observer concept changes materially, a new observer-family decl
 ### Python surface
 
 - `clode.observers.types.Observer` still selects one built-in family or compatibility preset.
-- The threshold families now also expose preferred semantic aliases at that surface: `Observer.threshold_crossing` for the current absolute one-boundary threshold observer and `Observer.schmitt_trigger` for the current warmup-derived hysteresis family. The older `threshold_1` and `threshold_2` names remain compatibility spellings.
-- `ThresholdCrossingConfig` and `SchmittTriggerConfig` are now the first observer-family-specific semantic config objects beyond the summary selection surface.
+- The threshold families now expose semantic public names at that surface: `Observer.threshold_crossing` for the current absolute one-boundary threshold observer, `Observer.normalized_threshold_crossing` for the lean warmup-derived one-boundary threshold observer, `Observer.schmitt_trigger` for the absolute hysteresis family, and `Observer.normalized_schmitt_trigger` for the lean warmup-derived hysteresis family. `Observer.threshold_2` remains a retained legacy public name for the heavier fully featured normalized Schmitt path, while `thresh1` and `thresh3` are internal implementation names only.
+- `ThresholdCrossingConfig` and `SchmittTriggerConfig` are now the first observer-family-specific semantic config objects beyond the summary selection surface, and each one is shared by an absolute and a warmup-derived observer pair.
 - `Observer.summary` plus `SummaryObserverSelection` are now the first explicit family-specific declaration surface for observer feature selection.
 - `ObserverParams` remains the public compatibility bundle, while `ObserverRuntimeSettings` and `EventOutputSettings` carry the narrower internal runtime settings and retained-event policy.
 - The split between `e_var_ix` and `f_var_ix` is semantically important, not historical residue: users often need to trigger on one variable while measuring features on another, such as a slow calcium-like variable for event geometry and a faster voltage-like variable for amplitudes or peak counts.
@@ -62,15 +63,19 @@ That distinction matters because it changes what can stay in runtime settings, w
 | `Observer.local_max` | local maximum in `fVarIx` via derivative sign change with three-sample refinement | one pass | static runtime selectors only | no | local max/min timestamps and values up to `N_STORE_EVENTS` | all-state plus all-aux summary bundle | clean deterministic event family; a mirrored local-min polarity likely belongs in the same future extremum family |
 | `Observer.neighbourhood_1` | entry into an `nHoodRadius` ball around `x0` | one pass | `x0` discovered online from the first local minimum in `eVarIx`; normalization range keeps evolving during the same pass | no formal warmup, but yes to live-pass parameter discovery | none beyond event count | all-state plus all-aux summary bundle | awkward family: trigger geometry depends on mutable normalization data during the live pass; weak evidence for keeping it as a future template |
 | `Observer.neighbourhood_2` | exit from an `nHoodRadius` ball around `x0` in normalized state space | two pass | warmup-derived trajectory ranges and threshold; `x0` is then pinned in the live pass as the first threshold-qualified point on `eVarIx` | yes | exit timestamps up to `N_STORE_EVENTS` | all-state plus all-aux summary bundle, plus range and `x0` readout | better behaved than `nhood1`; useful as a specialized periodicity trigger for complex limit cycles because it requires return to a specific ball in full state space |
-| `Observer.threshold_1` | absolute threshold crossing on `eVarIx` with runtime direction selection | one pass | static runtime selectors only | no | one threshold-event timestamp stream up to `N_STORE_EVENTS` | lean event stream only; no all-state summary bundle | confirms that a fixed-schema event family can keep threshold value and direction in runtime settings |
-| `Observer.threshold_2` | warmup-derived fractional up/down thresholds on `eVarIx` with Schmitt-style up/down state; local maxima in `fVarIx` contribute derived summaries | two pass | warmup-derived fractions of global `x` and `dx` ranges on `eVarIx` | yes | up/down transition timestamps up to `N_STORE_EVENTS` | all-state plus all-aux summary bundle, plus period, duty, and active-dip bundle | valuable when oscillation amplitudes change across a sweep; slope gates are mainly a noise-oriented extra filter rather than the defining semantics |
+| `Observer.threshold_crossing` | absolute threshold crossing on `eVarIx` with runtime direction selection | one pass | static runtime selectors only | no | one threshold-event timestamp stream up to `N_STORE_EVENTS` | lean event stream only; no all-state summary bundle | confirms that a fixed-schema event family can keep threshold value and direction in runtime settings |
+| `Observer.normalized_threshold_crossing` | warmup-derived normalized threshold crossing on `eVarIx` with runtime direction selection | two pass | warmup-derived fraction of the global `x` range on `eVarIx` | yes | one threshold-event timestamp stream up to `N_STORE_EVENTS` | lean event stream only; no all-state summary bundle | useful when oscillation amplitudes drift across a sweep but the workflow still wants one directional threshold stream rather than Schmitt-state outputs |
+| `Observer.schmitt_trigger` | absolute up/down thresholds on `eVarIx` with Schmitt-style up/down state | one pass | static runtime selectors only | no | up/down transition timestamps up to `N_STORE_EVENTS` | lean up/down event stream plus event count | useful when the hysteresis band has a stable physical scale and only trigger timing is needed |
+| `Observer.normalized_schmitt_trigger` | warmup-derived normalized up/down thresholds on `eVarIx` with Schmitt-style up/down state | two pass | warmup-derived fractions of global `x` and `dx` ranges on `eVarIx` | yes | up/down transition timestamps up to `N_STORE_EVENTS` | lean up/down event stream plus event count | useful when oscillation amplitudes drift across a sweep but the workflow still wants a lean Schmitt-style readout |
+| `Observer.threshold_2` | warmup-derived normalized up/down thresholds on `eVarIx` with Schmitt-style up/down state; local maxima in `fVarIx` contribute derived summaries | two pass | warmup-derived fractions of global `x` and `dx` ranges on `eVarIx` | yes | up/down transition timestamps up to `N_STORE_EVENTS` | all-state plus all-aux summary bundle, plus period, duty, and active-dip bundle | retained legacy full workflow when the broader oscillation-oriented readout bundle is still needed |
 
 ## Near-term candidate family ranking
 
 | Candidate family | Current evidence | Near-term fit | Design read |
 | --- | --- | --- | --- |
-| Absolute threshold crossing in state-variable units | now landed as `Observer.threshold_1` with a lean event stream and runtime direction selection | landed first proof target | confirms that not every observer-family extension needs schema-changing specialization |
-| Warmup-derived fractional threshold crossing | `threshold_2` already proves the value of warmup-relative thresholds across sweeps, while `threshold_1` proves lean directional threshold semantics | best next proof target | separates threshold parameterization from Schmitt topology instead of bundling both under one family |
+| Absolute threshold crossing in state-variable units | now landed as `Observer.threshold_crossing` with a lean event stream and runtime direction selection | landed first proof target | confirms that not every observer-family extension needs schema-changing specialization |
+| Warmup-derived normalized threshold crossing | now landed as `Observer.normalized_threshold_crossing` with a lean one-stream readout and warmup-derived threshold parameterization | landed second threshold proof target | separates threshold parameterization from Schmitt topology without overloading the Schmitt family |
+| Absolute Schmitt trigger | now landed as `Observer.schmitt_trigger` with a lean up/down timestamp readout and thresholds expressed directly in event-variable units | landed follow-on proof target | confirms that trigger topology and threshold parameterization can vary independently while still sharing one public config model |
 | Local extremum family | `localmax` is live, and the shared three-sample extremum helpers already support symmetric max/min geometry | strong adjacent alternative | likely one polarity-selectable family rather than separate ad hoc `localmax` and `localmin` observers |
 | Generalized hyperplane crossing | conceptually matches the useful part of `solve_ivp`-style scalar events | later | promising long-term trigger umbrella, but it needs a declaration for scalar trigger functions or hyperplane parameters that the current runtime path does not yet package cleanly |
 | Neighborhood return triggers | `nhood1` and `nhood2` are live, and `nhood2` has a substantially better-behaved trigger because warmup pins the normalization before the live pass anchors `x0` below a threshold on `eVarIx` | specialized, not next | keep `nhood2` as a specialized periodicity detector for workflows where simple threshold crossings or local extrema are too permissive; `nhood1` remains the clearest retirement candidate |
@@ -100,10 +105,11 @@ That distinction matters because it changes what can stay in runtime settings, w
 - The current threshold discussion is clearer if it is split along two independent axes instead of treated as one linear family ladder.
 - The first axis is trigger topology: a single-boundary directional crossing versus a two-boundary Schmitt-style state machine.
 - The second axis is threshold parameterization: absolute state-variable units versus warmup-derived fractional position inside the observed event-variable range.
-- `threshold_1` currently occupies the absolute plus single-boundary corner.
-- `threshold_2` currently occupies the warmup-derived plus Schmitt-style corner.
-- The missing obvious corner is a warmup-derived fractional directional threshold crossing with the same lean readout style as `threshold_1`.
-- An absolute Schmitt family is plausible later, but it is not the most informative next proof target because the repo already has one clean absolute threshold family and one warmup-derived hysteresis family.
+- `Observer.threshold_crossing` currently occupies the absolute plus single-boundary corner.
+- `Observer.schmitt_trigger` currently occupies the absolute plus Schmitt-style corner.
+- `Observer.normalized_schmitt_trigger` currently occupies the warmup-derived plus Schmitt-style corner.
+- The warmup-derived normalized directional-threshold corner is now landed as `Observer.normalized_threshold_crossing`, with the same lean readout style as `Observer.threshold_crossing`.
+- Landing the absolute Schmitt corner confirmed that trigger topology and threshold parameterization can stay separate in the public model even when the internal machinery overlaps.
 
 ### Why threshold crossing and Schmitt triggering should stay separate user-facing concepts
 
@@ -120,12 +126,14 @@ That distinction matters because it changes what can stay in runtime settings, w
 - This is also where the current names become awkward. `x_up_threshold` is a tolerable compatibility spelling in a generic bundle, but it is not the right semantic knob name for a downward-only threshold crossing.
 - The architectural implication is that clODE should move toward observer-family-specific config surfaces that show only the relevant knobs for the chosen observer while keeping `ObserverParams` and the `observer_*` constructor keywords as compatibility layers.
 - That config split should be semantic rather than pass-count-driven: threshold-crossing families should expose one `threshold` plus `direction`; Schmitt-style families should expose `x_up_threshold`, `x_down_threshold`, and optional slope gates.
-- Once that semantic config seam exists, the missing warmup-derived directional-threshold family can land without worsening the current naming debt.
+- That semantic config seam was enough to land the full current four-corner threshold catalog without worsening the naming debt, but it also means the selected observer rather than the config class now owns absolute versus warmup-derived interpretation.
 
 ### What the landed threshold-family config seam proved
 
 - Family-specific config objects are enough to improve the UX without changing the executor or kernel contracts. The Python side can adapt semantic configs into the existing normalized runtime settings.
+- Once one config class is shared across an absolute and a warmup-derived pair, the config type can no longer determine the observer family by itself. The selected observer remains the semantic source of truth.
 - Some knobs can still recur across families, such as `min_amp`, without forcing one giant public bundle. The better rule is to surface a knob where it is active for that family, not where it might someday become reusable elsewhere.
+- The current four-family threshold catalog makes the next boundary clearer: recurring controls such as `min_amp` and `max_event_count` should stay on the active oscillation-oriented family configs until output-bundle work shows a better shared seam.
 - The broad `ObserverParams` bundle and `observer_*` keywords are still useful compatibility layers, but they no longer need to define the preferred semantic vocabulary for threshold families.
 
 ### Why `neighbourhood_2` remains valuable even if it is not next
@@ -157,7 +165,7 @@ That distinction matters because it changes what can stay in runtime settings, w
 - That makes a one-pass absolute-threshold family the best next proof target for checking whether the declaration model can stay narrow when the readout schema is fixed.
 - It is also more deterministic and more intuitive to users than the current neighborhood-return ideas.
 
-### What the landed `threshold_1` slice taught
+### What the landed `threshold_crossing` slice taught
 
 - A lean event family can keep a fixed output schema while still exposing a meaningful new runtime control, here `EventDirection`.
 - The first slice did not need build-signature changes beyond selecting the observer family itself: changing absolute threshold values or crossing direction does not rebuild the program.
@@ -166,7 +174,7 @@ That distinction matters because it changes what can stay in runtime settings, w
 
 ## What the minimum absolute-threshold family proved
 
-The landed `threshold_1` slice did not clone `threshold_2`'s full readout bundle into a one-pass shell. That smaller proof target was the right call.
+The landed `threshold_crossing` slice did not clone `threshold_2`'s full readout bundle into a one-pass shell. That smaller proof target was the right call.
 
 ### Landed family shape
 
@@ -183,17 +191,17 @@ The landed `threshold_1` slice did not clone `threshold_2`'s full readout bundle
 - no mandatory all-state event snapshots or copied `xThisEvent`/`dxThisEvent`/`auxThisEvent` arrays
 - no bundled local-extrema side channel unless a concrete readout requires it
 
-## What `threshold_2` still teaches that `threshold_1` does not
+## What `threshold_2` still teaches that `threshold_crossing` and `normalized_threshold_crossing` do not
 
-- Warmup-derived fractional thresholds are genuinely useful when the oscillation amplitude of `eVarIx` changes substantially across parameter sweeps. In those workflows, absolute thresholds can become brittle or require retuning per regime.
-- That utility is conceptually separate from Schmitt hysteresis. A fractional threshold can still be a single-boundary directional crossing.
+- Warmup-derived normalized thresholds are genuinely useful when the oscillation amplitude of `eVarIx` changes substantially across parameter sweeps. In those workflows, absolute thresholds can become brittle or require retuning per regime.
+- That utility is conceptually separate from Schmitt hysteresis. A warmup-derived normalized threshold can still be a single-boundary directional crossing, which is why `Observer.normalized_threshold_crossing` now exists as a separate lean family.
 - The current `threshold_2` implementation combines three ideas at once: warmup-derived fractional placement, Schmitt-style hysteresis, and optional derivative gates.
 - The derivative gates appear most justifiable on noisy or stochastic traces where value thresholds alone still overcount shallow or ripple-driven crossings. They are not the core semantic reason to keep `threshold_2`.
-- This is the clearest evidence that the next threshold follow-on should factor the threshold family more cleanly rather than adding more options to `threshold_1` first.
+- This is the clearest evidence that the threshold family needed to be factored more cleanly rather than adding more options to `Observer.threshold_crossing` first.
 
 ### Constraint from the existing stub
 
-- The current `observer_threshold_1.clh` file is useful as evidence that absolute-threshold observers were already contemplated.
+- The current semantic `observer_threshold_crossing.clh` file is the lean proof target for absolute threshold observers, while the older `observer_threshold_1.clh` file is only historical evidence.
 - It should not be treated as the implementation blueprint for the next slice.
 - As written, it bakes in all-state trajectory extrema, event snapshots, event-window extrema, local-max and local-min side channels, and threshold-state machinery into one monolithic layout.
 - Wiring that stub directly would move clODE away from the cleaner declaration boundary established by the summary slice rather than extending it.
@@ -329,10 +337,11 @@ That pattern is likely reusable across observer families even if the concrete de
 
 ## Recommended next planning pass
 
-- The first deterministic static-trigger slice is now landed, and the threshold re-audit now has a clearer answer than before.
-- The immediate threshold-design question is no longer how to expose the semantic split. That Python-side config seam is now landed for the current threshold families.
-- The next concrete implementation target should be the lean two-pass fractional directional-threshold family, and it should land through the new threshold-family config surface rather than through the old generic parameter bundle.
-- `threshold_2` should be documented as the current warmup-derived Schmitt-style family rather than as the generic threshold baseline.
+- The deterministic static-trigger slice and its adjacent follow-ons are now landed: absolute and warmup-derived threshold crossing plus absolute and warmup-derived Schmitt triggering are all live behind shared semantic config classes.
+- The immediate threshold-design question is no longer how to expose the semantic split or which threshold corner to add next.
+- The next concrete planning target should be documenting the compatibility boundary around `ObserverParams`, the legacy `observer_*` keywords, the retained `threshold_2` observer, and flat compatibility barrels, then using that boundary to decide whether a shared oscillation-oriented bundle seam is justified.
+- `Observer.normalized_schmitt_trigger` should be documented as the lean warmup-derived Schmitt-style family rather than as the generic threshold baseline.
+- `Observer.schmitt_trigger` should be documented as the absolute Schmitt family, with slope gates still framed as a noise-oriented or stochastic-oriented refinement rather than as the core threshold abstraction.
 - Optional slope gates should stay framed as a noise-oriented or stochastic-oriented refinement rather than as the core threshold abstraction.
 - `localmax` should be reconsidered as one half of a likely extremum family with a max/min polarity switch.
 - `nhood2` should remain documented as a specialized periodicity detector for complex limit cycles even though it is not the next proof target.
@@ -354,7 +363,9 @@ That pattern is likely reusable across observer families even if the concrete de
 - `clode/kernels/observers.cl`
 - `clode/kernels/observers/observer_summary.clh`
 - `clode/kernels/observers/observer_local_maximum.clh`
+- `clode/kernels/observers/observer_schmitt_trigger.clh`
 - `clode/kernels/observers/observer_threshold_2.clh`
+- `.design/reference/compatibility_boundary_audit.md`
 - `clode/kernels/features.cl`
 - `clode/kernels/initializeObserver.cl`
 - `docs/feature_extraction.md`

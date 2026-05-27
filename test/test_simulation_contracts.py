@@ -83,11 +83,18 @@ def test_scalar_solver_args_match_explicit_solver_params_bundle() -> None:
     assert scalar.get_solver_parameters() == bundle
 
 
-def test_threshold_observer_semantic_aliases_match_compatibility_names() -> None:
-    assert clode.Observer.threshold_crossing is clode.Observer.threshold_1
-    assert clode.Observer.schmitt_trigger is clode.Observer.threshold_2
+def test_threshold_observer_semantic_names_are_distinct_from_legacy_threshold_2() -> None:
     assert clode.Observer.threshold_crossing.name == "threshold_crossing"
+    assert (
+        clode.Observer.normalized_threshold_crossing.name
+        == "normalized_threshold_crossing"
+    )
     assert clode.Observer.schmitt_trigger.name == "schmitt_trigger"
+    assert (
+        clode.Observer.normalized_schmitt_trigger.name
+        == "normalized_schmitt_trigger"
+    )
+    assert clode.Observer.threshold_2.name == "threshold_2"
 
 
 def test_simulator_copies_solver_parameter_bundles() -> None:
@@ -569,11 +576,15 @@ def test_feature_simulator_threshold_crossing_configuration_round_trips() -> Non
         event_var="y",
         threshold=0.75,
         direction=clode.EventDirection.falling,
+        min_amp=0.125,
         max_event_count=7,
         max_event_timestamps=2,
     )
 
-    simulator.set_observer_configuration(config)
+    simulator.set_observer_configuration(
+        config,
+        observer=clode.Observer.threshold_crossing,
+    )
 
     assert simulator.get_observer_configuration() == config
     assert simulator.get_observer_parameters() == clode.ObserverParams(
@@ -581,12 +592,51 @@ def test_feature_simulator_threshold_crossing_configuration_round_trips() -> Non
         max_event_count=7,
         event_direction=clode.EventDirection.falling,
         max_event_timestamps=2,
+        min_amp=0.125,
         x_up_threshold=0.75,
         x_down_threshold=0.75,
     )
 
 
-def test_feature_simulator_schmitt_trigger_configuration_round_trips() -> None:
+def test_feature_simulator_normalized_threshold_crossing_configuration_round_trips() -> None:
+    config = clode.ThresholdCrossingConfig(
+        event_var="y",
+        threshold=0.6,
+        direction=clode.EventDirection.falling,
+        min_amp=0.125,
+        max_event_count=7,
+        max_event_timestamps=4,
+    )
+    simulator = clode.FeatureSimulator(
+        src_file=model_path("hopf_normal_form.cl"),
+        variables=HOPF_VARIABLES.copy(),
+        parameters=HOPF_PARAMETERS.copy(),
+        aux=HOPF_AUX.copy(),
+        num_noise=0,
+        observer=clode.Observer.normalized_threshold_crossing,
+        observer_configuration=config,
+        stepper=clode.Stepper.rk4,
+        dt=FIXED_DT,
+        dtmax=FIXED_DT,
+        t_span=(0.0, 1.0),
+        max_steps=FIXED_MAX_STEPS,
+        single_precision=True,
+        **device_kwargs_for_tests(),
+    )
+
+    assert simulator.get_observer_configuration() == config
+    assert simulator.get_observer_parameters() == clode.ObserverParams(
+        e_var_ix=1,
+        max_event_count=7,
+        event_direction=clode.EventDirection.falling,
+        max_event_timestamps=4,
+        min_amp=0.125,
+        x_up_threshold=0.6,
+        x_down_threshold=0.6,
+    )
+
+
+def test_feature_simulator_normalized_schmitt_trigger_configuration_round_trips() -> None:
     config = clode.SchmittTriggerConfig(
         event_var="y",
         feature_var="x",
@@ -604,6 +654,7 @@ def test_feature_simulator_schmitt_trigger_configuration_round_trips() -> None:
         parameters=HOPF_PARAMETERS.copy(),
         aux=HOPF_AUX.copy(),
         num_noise=0,
+        observer=clode.Observer.normalized_schmitt_trigger,
         observer_configuration=config,
         stepper=clode.Stepper.rk4,
         dt=FIXED_DT,
@@ -627,6 +678,69 @@ def test_feature_simulator_schmitt_trigger_configuration_round_trips() -> None:
         dx_up_threshold=0.2,
         dx_down_threshold=0.1,
     )
+
+
+def test_feature_simulator_absolute_schmitt_trigger_configuration_round_trips() -> None:
+    config = clode.SchmittTriggerConfig(
+        event_var="y",
+        feature_var="x",
+        x_up_threshold=0.6,
+        x_down_threshold=0.4,
+        dx_up_threshold=0.2,
+        dx_down_threshold=0.1,
+        min_amp=0.125,
+        max_event_count=7,
+        max_event_timestamps=4,
+    )
+    simulator = clode.FeatureSimulator(
+        src_file=model_path("hopf_normal_form.cl"),
+        variables=HOPF_VARIABLES.copy(),
+        parameters=HOPF_PARAMETERS.copy(),
+        aux=HOPF_AUX.copy(),
+        num_noise=0,
+        observer=clode.Observer.schmitt_trigger,
+        observer_configuration=config,
+        stepper=clode.Stepper.rk4,
+        dt=FIXED_DT,
+        dtmax=FIXED_DT,
+        t_span=(0.0, 1.0),
+        max_steps=FIXED_MAX_STEPS,
+        single_precision=True,
+        **device_kwargs_for_tests(),
+    )
+
+    assert simulator.get_observer_configuration() == config
+    assert simulator.get_observer_parameters() == clode.ObserverParams(
+        e_var_ix=1,
+        f_var_ix=0,
+        max_event_count=7,
+        event_direction=clode.EventDirection.either,
+        max_event_timestamps=4,
+        min_amp=0.125,
+        x_up_threshold=0.6,
+        x_down_threshold=0.4,
+        dx_up_threshold=0.2,
+        dx_down_threshold=0.1,
+    )
+
+
+def test_feature_simulator_requires_explicit_observer_for_shared_observer_configuration() -> None:
+    with pytest.raises(ValueError, match="requires an explicit observer"):
+        clode.FeatureSimulator(
+            src_file=model_path("hopf_normal_form.cl"),
+            variables=HOPF_VARIABLES.copy(),
+            parameters=HOPF_PARAMETERS.copy(),
+            aux=HOPF_AUX.copy(),
+            num_noise=0,
+            observer_configuration=clode.ThresholdCrossingConfig(event_var="x"),
+            stepper=clode.Stepper.rk4,
+            dt=FIXED_DT,
+            dtmax=FIXED_DT,
+            t_span=(0.0, 1.0),
+            max_steps=FIXED_MAX_STEPS,
+            single_precision=True,
+            **device_kwargs_for_tests(),
+        )
 
 
 def test_feature_simulator_rejects_mixed_observer_configuration_and_compatibility_args() -> None:

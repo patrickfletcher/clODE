@@ -154,7 +154,7 @@ def test_threshold_1_absolute_crossings_respect_direction(
         rhs_equation=sine_curve,
         variables={"x": 0.0},
         parameters={"dilation": 1.0},
-        observer=clode.Observer.threshold_1,
+        observer=clode.Observer.threshold_crossing,
         stepper=clode.Stepper.rk4,
         dtmax=0.05,
         dt=0.05,
@@ -178,6 +178,152 @@ def test_threshold_1_absolute_crossings_respect_direction(
 
     assert event_count == len(expected_times)
     np.testing.assert_allclose(threshold_times, expected_times, atol=3e-2, rtol=0.0)
+
+
+def test_threshold_1_absolute_crossings_respect_min_amp_gate() -> None:
+    feature_simulator = clode.FeatureSimulator(
+        rhs_equation=sine_curve,
+        variables={"x": 0.0},
+        parameters={"dilation": 1.0},
+        observer=clode.Observer.threshold_crossing,
+        stepper=clode.Stepper.rk4,
+        dtmax=0.05,
+        dt=0.05,
+        t_span=(0.0, 2 * pi),
+        observer_configuration=clode.ThresholdCrossingConfig(
+            event_var="x",
+            threshold=0.5,
+            direction=clode.EventDirection.either,
+            min_amp=3.0,
+            max_event_count=8,
+            max_event_timestamps=3,
+        ),
+        **device_kwargs_for_tests(),
+    )
+
+    output = feature_simulator.features()
+
+    assert output is not None
+    assert int(output.get_var_count("event")) == 0
+
+
+@pytest.mark.parametrize(
+    ("event_direction", "expected_times"),
+    [
+        (clode.EventDirection.rising, np.array([pi / 6], dtype=np.float64)),
+        (clode.EventDirection.falling, np.array([5 * pi / 6], dtype=np.float64)),
+        (
+            clode.EventDirection.either,
+            np.array([pi / 6, 5 * pi / 6], dtype=np.float64),
+        ),
+    ],
+)
+def test_normalized_threshold_crossing_uses_warmup_relative_thresholds(
+    event_direction: clode.EventDirection,
+    expected_times: np.ndarray,
+) -> None:
+    feature_simulator = clode.FeatureSimulator(
+        rhs_equation=sine_curve,
+        variables={"x": 0.0},
+        parameters={"dilation": 1.0},
+        observer=clode.Observer.normalized_threshold_crossing,
+        observer_configuration=clode.ThresholdCrossingConfig(
+            event_var="x",
+            threshold=0.75,
+            direction=event_direction,
+            min_amp=0.5,
+            max_event_count=8,
+            max_event_timestamps=3,
+        ),
+        stepper=clode.Stepper.rk4,
+        dtmax=0.05,
+        dt=0.05,
+        t_span=(0.0, 2 * pi),
+        **device_kwargs_for_tests(),
+    )
+
+    output = feature_simulator.features()
+
+    assert output is not None
+    event_count = int(output.get_var_count("event"))
+    threshold_times = np.atleast_1d(
+        np.asarray(output.get_timestamps("threshold"), dtype=np.float64)
+    )
+
+    assert event_count == len(expected_times)
+    np.testing.assert_allclose(threshold_times, expected_times, atol=3e-2, rtol=0.0)
+
+
+def test_normalized_threshold_crossing_respects_min_amp_gate() -> None:
+    feature_simulator = clode.FeatureSimulator(
+        rhs_equation=sine_curve,
+        variables={"x": 0.0},
+        parameters={"dilation": 1.0},
+        observer=clode.Observer.normalized_threshold_crossing,
+        observer_configuration=clode.ThresholdCrossingConfig(
+            event_var="x",
+            threshold=0.75,
+            direction=clode.EventDirection.either,
+            min_amp=3.0,
+            max_event_count=8,
+            max_event_timestamps=3,
+        ),
+        stepper=clode.Stepper.rk4,
+        dtmax=0.05,
+        dt=0.05,
+        t_span=(0.0, 2 * pi),
+        **device_kwargs_for_tests(),
+    )
+
+    output = feature_simulator.features()
+
+    assert output is not None
+    assert int(output.get_var_count("event")) == 0
+
+
+def test_absolute_schmitt_trigger_uses_absolute_thresholds() -> None:
+    feature_simulator = clode.FeatureSimulator(
+        rhs_equation=sine_curve,
+        variables={"x": 0.0},
+        parameters={"dilation": 1.0},
+        aux=["dx"],
+        observer=clode.Observer.schmitt_trigger,
+        observer_configuration=clode.SchmittTriggerConfig(
+            event_var="x",
+            feature_var="x",
+            x_up_threshold=0.5,
+            x_down_threshold=-0.5,
+            dx_up_threshold=0.0,
+            dx_down_threshold=0.0,
+            min_amp=0.5,
+            max_event_count=8,
+            max_event_timestamps=3,
+        ),
+        stepper=clode.Stepper.rk4,
+        dtmax=0.05,
+        dt=0.05,
+        t_span=(0.0, 4 * pi),
+        **device_kwargs_for_tests(),
+    )
+
+    output = feature_simulator.features()
+
+    assert output is not None
+    up_times = np.asarray(output.get_timestamps("up"), dtype=np.float64)
+    down_times = np.asarray(output.get_timestamps("down"), dtype=np.float64)
+    assert int(output.get_var_count("event")) == 2
+    np.testing.assert_allclose(
+        up_times,
+        np.array([pi / 6, 13 * pi / 6], dtype=np.float64),
+        atol=3e-2,
+        rtol=0.0,
+    )
+    np.testing.assert_allclose(
+        down_times,
+        np.array([7 * pi / 6, 19 * pi / 6], dtype=np.float64),
+        atol=3e-2,
+        rtol=0.0,
+    )
 
 
 def test_local_max_coarse_timestamps_use_three_sample_refinement() -> None:

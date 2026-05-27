@@ -52,7 +52,10 @@
 #include "observers/observer_local_maximum.clh"
 
 // Threshold-based event detection with thresholds defined in state-space coordinates
-#include "observers/observer_threshold_1.clh"
+#include "observers/observer_threshold_crossing.clh"
+
+// Schmitt-trigger event detection with absolute thresholds defined in state-space coordinates
+#include "observers/observer_schmitt_trigger.clh"
 
 // Poincaré section, specified as a normal vector and offset in state-space coordinates
 // #include "observers/observer_poincare_1.clh"
@@ -66,7 +69,13 @@
 ////////////////////////////////////////////////
 // Run a first pass to establish trajectory properties - e.g., extrema for computing normalized state-space coordinates
 
-// Threshold-based event detection with thresholds defined in normalized state-space coordinates
+// Threshold-based event detection with one warmup-derived normalized boundary
+#include "observers/observer_normalized_threshold_crossing.clh"
+
+// Schmitt-trigger event detection with warmup-derived normalized thresholds
+#include "observers/observer_normalized_schmitt_trigger.clh"
+
+// Legacy fully featured normalized Schmitt-trigger observer retained for compatibility
 #include "observers/observer_threshold_2.clh"
 
 // Poincaré section, specified as a normal vector and offset in normalized state-space coordinates

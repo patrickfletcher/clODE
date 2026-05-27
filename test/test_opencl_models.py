@@ -165,7 +165,7 @@ def test_observer_catalog_helpers_expose_feature_names_and_two_pass_flags() -> N
 
     threshold_feature_names = get_observer_feature_names(
         problem_info,
-        "thresh2",
+        "threshold_2",
         ObserverParams(max_event_timestamps=2),
     )
 

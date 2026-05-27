@@ -210,7 +210,7 @@ This comparison shows why `local_max` uses bounded three-sample refinement, but 
 - The stepper time-base issue is a representability problem, not a notation problem.
 - clODE uses the same compensated solve-relative elapsed bookkeeping across fixed-step and adaptive steppers rather than a one-float absolute-time update path. Double precision or shorter windows are still the safer choice when absolute-time fidelity itself is the requirement.
 - The example script compares structured `t0 + step * dt` against Kahan-style updates because that fixed-step reconstruction remains a useful reference baseline alongside the live compensated elapsed-time path.
-- Use `threshold_1` when an absolute event-variable level is scientifically meaningful and reasonably stable across the sweep; use `threshold_2` when a warmup-derived fractional threshold is more portable because the event-variable range shifts with parameters.
+- Use `threshold_crossing` when an absolute event-variable level is scientifically meaningful and reasonably stable across the sweep; use `normalized_threshold_crossing` when the same lean one-boundary workflow should scale with the warmup-pass amplitude; use `threshold_2` when you specifically need the retained legacy fully featured normalized Schmitt readout.
 - For `threshold_2`, use a real hysteresis gap when crossings chatter, and consider derivative thresholds when noisy shallow crossings still slip through.
 - `threshold_2` stores threshold-transition times with inverse-linear interpolation; the example script also compares that choice with Hermite interpolation on smooth monotone crossings.
 - Set `min_amp` above the numerical or measurement floor you want to ignore and below the smallest oscillation you still care about.

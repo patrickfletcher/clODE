@@ -1,18 +1,18 @@
 // Threshold-based event detection with an absolute threshold in x[eVarIx].
-// This first slice intentionally keeps one event stream and a lean readout:
+// This observer intentionally keeps one event stream and a lean readout:
 // crossing timestamps plus event count, with direction chosen at runtime.
 
-#ifndef OBSERVER_THRESHOLD_1_H
-#define OBSERVER_THRESHOLD_1_H
+#ifndef OBSERVER_THRESHOLD_CROSSING_H
+#define OBSERVER_THRESHOLD_CROSSING_H
 
-#ifdef USE_OBSERVER_THRESHOLD_1
+#ifdef USE_OBSERVER_THRESHOLD_CROSSING
 
 // Keep these numeric codes aligned with EventDirection in Python.
 #define CLODE_EVENT_DIRECTION_RISING 0u
 #define CLODE_EVENT_DIRECTION_FALLING 1u
 #define CLODE_EVENT_DIRECTION_EITHER 2u
 
-struct ObserverState_thresh1 {
+struct ObserverState_threshold_crossing {
     realtype tbuffer[2];
     realtype xbuffer[2];
 #if N_STORE_EVENTS > 0
@@ -24,9 +24,8 @@ struct ObserverState_thresh1 {
     unsigned int eventcount;
 };
 
-typedef struct ObserverState_thresh1 ObserverState;
+typedef struct ObserverState_threshold_crossing ObserverState;
 
-//set initial values to relevant fields in ObserverState
 static inline void initializeObserverState(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op) {
     (void)dxi;
     (void)auxi;
@@ -42,7 +41,6 @@ static inline void initializeObserverState(realtype *ti, realtype xi[], realtype
     od->eventcount = 0;
 }
 
-//restricted per-timestep update of observer state for initializing event detector
 static inline void warmupObserverState(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op) {
     (void)ti;
     (void)xi;
@@ -52,7 +50,6 @@ static inline void warmupObserverState(realtype *ti, realtype xi[], realtype dxi
     (void)op;
 }
 
-//process warmup data to compute relevant event detector quantities (e.g. thresholds)
 static inline void initializeEventDetector(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op) {
     (void)ti;
     (void)xi;
@@ -62,15 +59,14 @@ static inline void initializeEventDetector(realtype *ti, realtype xi[], realtype
     (void)op;
 }
 
-static inline bool threshold1RisingCrossed(const realtype x0, const realtype x1, const realtype threshold) {
+static inline bool thresholdCrossingRisingCrossed(const realtype x0, const realtype x1, const realtype threshold) {
     return x0 <= threshold && x1 > threshold;
 }
 
-static inline bool threshold1FallingCrossed(const realtype x0, const realtype x1, const realtype threshold) {
+static inline bool thresholdCrossingFallingCrossed(const realtype x0, const realtype x1, const realtype threshold) {
     return x0 >= threshold && x1 < threshold;
 }
 
-//per-timestep check for an event.  Option: refine event (t,x,dx,aux) within the timestep with interpolation
 static inline bool eventFunction(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op) {
     (void)ti;
     (void)xi;
@@ -87,13 +83,13 @@ static inline bool eventFunction(realtype *ti, realtype xi[], realtype dxi[], re
     const realtype x0 = od->xbuffer[0];
     const realtype x1 = od->xbuffer[1];
     if (op->eventDirection == CLODE_EVENT_DIRECTION_RISING)
-        return threshold1RisingCrossed(x0, x1, threshold);
+        return thresholdCrossingRisingCrossed(x0, x1, threshold);
     if (op->eventDirection == CLODE_EVENT_DIRECTION_FALLING)
-        return threshold1FallingCrossed(x0, x1, threshold);
-    return threshold1RisingCrossed(x0, x1, threshold) || threshold1FallingCrossed(x0, x1, threshold);
+        return thresholdCrossingFallingCrossed(x0, x1, threshold);
+    return thresholdCrossingRisingCrossed(x0, x1, threshold)
+        || thresholdCrossingFallingCrossed(x0, x1, threshold);
 }
 
-//When an event is detected, computes desired event-based features. returns true if a terminal event was reached
 static inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op) {
     (void)ti;
     (void)xi;
@@ -117,7 +113,6 @@ static inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dx
     return od->eventcount == op->maxEventCount;
 }
 
-//full per-timestep update of observer state. If an event occurred this timestep, event-based observer state is reset. Per-timestep features are computed here.
 static inline void updateObserverState(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], const realtype stepDt, ObserverState *od, __constant struct ObserverRuntimeSettings *op) {
     (void)dxi;
     (void)auxi;
@@ -131,7 +126,6 @@ static inline void updateObserverState(realtype *ti, realtype xi[], realtype dxi
     od->xGlobalMin = fmin(od->xGlobalMin, xi[op->eVarIx]);
 }
 
-//Perform and post-integration cleanup and write desired features into the global array F
 static inline void finalizeFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op, __global realtype *F, int i, int nPts) {
     (void)ti;
     (void)xi;
@@ -147,7 +141,6 @@ static inline void finalizeFeatures(realtype *ti, realtype xi[], realtype dxi[],
     F[ix++ * nPts + i] = (realtype)od->eventcount;
 }
 
-//Perform and post-integration cleanup of observer state to ensure it is ready for continuation if needed
 static inline void finalizeObserverState(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op, __constant realtype *tspan) {
     (void)ti;
     (void)xi;
@@ -158,5 +151,5 @@ static inline void finalizeObserverState(realtype *ti, realtype xi[], realtype d
     (void)tspan;
 }
 
-#endif // USE_OBSERVER_THRESHOLD_1
-#endif // OBSERVER_THRESHOLD_1_H
+#endif // USE_OBSERVER_THRESHOLD_CROSSING
+#endif // OBSERVER_THRESHOLD_CROSSING_H

@@ -457,7 +457,7 @@ def _nhood2_feature_names(
     return tuple(names)
 
 
-def _thresh1_feature_names(
+def _threshold_crossing_feature_names(
     problem_info: ProblemInfo,
     observer_runtime_settings: ObserverRuntimeSettings,
     n_store_events: int,
@@ -469,7 +469,38 @@ def _thresh1_feature_names(
     return tuple(names)
 
 
-def _thresh2_feature_names(
+def _normalized_threshold_crossing_feature_names(
+    problem_info: ProblemInfo,
+    observer_runtime_settings: ObserverRuntimeSettings,
+    n_store_events: int,
+) -> tuple[str, ...]:
+    del problem_info
+    del observer_runtime_settings
+    names = [f"threshold event time {event_idx}" for event_idx in range(n_store_events)]
+    names.append("event count")
+    return tuple(names)
+
+
+def _schmitt_trigger_feature_names(
+    problem_info: ProblemInfo,
+    observer_runtime_settings: ObserverRuntimeSettings,
+    n_store_events: int,
+) -> tuple[str, ...]:
+    del problem_info
+    del observer_runtime_settings
+    names: list[str] = []
+    for event_idx in range(n_store_events):
+        names.extend(
+            [
+                f"up event time {event_idx}",
+                f"down event time {event_idx}",
+            ]
+        )
+    names.append("event count")
+    return tuple(names)
+
+
+def _threshold_2_feature_names(
     problem_info: ProblemInfo,
     observer_runtime_settings: ObserverRuntimeSettings,
     n_store_events: int,
@@ -880,7 +911,7 @@ def _nhood2_layout(
     )
 
 
-def _thresh1_layout(
+def _threshold_crossing_layout(
     problem_info: ProblemInfo,
     real_dtype: np.dtype,
     n_store_events: int,
@@ -890,6 +921,8 @@ def _thresh1_layout(
         persistent_fields=(
             _real_field("tbuffer", real_dtype, 2),
             _real_field("xbuffer", real_dtype, 2),
+            _real_field("xGlobalMax", real_dtype),
+            _real_field("xGlobalMin", real_dtype),
             _uint_field("stepcount"),
             _uint_field("eventcount"),
         ),
@@ -899,7 +932,59 @@ def _thresh1_layout(
     )
 
 
-def _thresh2_layout(
+def _normalized_threshold_crossing_layout(
+    problem_info: ProblemInfo,
+    real_dtype: np.dtype,
+    n_store_events: int,
+) -> ResolvedObserverLayout:
+    del problem_info
+    return ResolvedObserverLayout(
+        persistent_fields=(
+            _real_field("tbuffer", real_dtype, 2),
+            _real_field("xbuffer", real_dtype, 2),
+            _real_field("xGlobalMax", real_dtype),
+            _real_field("xGlobalMin", real_dtype),
+            _real_field("xThreshold", real_dtype),
+            _uint_field("stepcount"),
+            _uint_field("eventcount"),
+        ),
+        event_output_fields=(
+            _real_field("tEventList", real_dtype, n_store_events),
+        ),
+    )
+
+
+def _schmitt_trigger_layout(
+    problem_info: ProblemInfo,
+    real_dtype: np.dtype,
+    n_store_events: int,
+) -> ResolvedObserverLayout:
+    del problem_info
+    return ResolvedObserverLayout(
+        persistent_fields=(
+            _real_field("tbuffer", real_dtype, 2),
+            _real_field("xbuffer", real_dtype, 2),
+            _real_field("dxbuffer", real_dtype, 2),
+            _real_field("xGlobalMax", real_dtype),
+            _real_field("xGlobalMin", real_dtype),
+            _real_field("dxGlobalMax", real_dtype),
+            _real_field("dxGlobalMin", real_dtype),
+            _real_field("xUp", real_dtype),
+            _real_field("xDown", real_dtype),
+            _real_field("dxUp", real_dtype),
+            _real_field("dxDown", real_dtype),
+            _uint_field("stepcount"),
+            _uint_field("eventcount"),
+            _uint_field("inUpstate"),
+        ),
+        event_output_fields=(
+            _real_field("tUpTransition", real_dtype, n_store_events),
+            _real_field("tDownTransition", real_dtype, n_store_events),
+        ),
+    )
+
+
+def _threshold_2_layout(
     problem_info: ProblemInfo,
     real_dtype: np.dtype,
     n_store_events: int,
@@ -1032,19 +1117,40 @@ _OBSERVER_DEFINITIONS = {
         feature_name_factory=_nhood2_feature_names,
         layout_factory=_nhood2_layout,
     ),
-    "thresh1": ObserverDefinition(
-        observer_name="thresh1",
-        build_define="USE_OBSERVER_THRESHOLD_1",
+    "threshold_crossing": ObserverDefinition(
+        observer_name="threshold_crossing",
+        build_define="USE_OBSERVER_THRESHOLD_CROSSING",
         uses_two_pass=False,
-        feature_name_factory=_thresh1_feature_names,
-        layout_factory=_thresh1_layout,
+        feature_name_factory=_threshold_crossing_feature_names,
+        layout_factory=_threshold_crossing_layout,
     ),
-    "thresh2": ObserverDefinition(
-        observer_name="thresh2",
+    "normalized_threshold_crossing": ObserverDefinition(
+        observer_name="normalized_threshold_crossing",
+        build_define="USE_OBSERVER_NORMALIZED_THRESHOLD_CROSSING",
+        uses_two_pass=True,
+        feature_name_factory=_normalized_threshold_crossing_feature_names,
+        layout_factory=_normalized_threshold_crossing_layout,
+    ),
+    "schmitt_trigger": ObserverDefinition(
+        observer_name="schmitt_trigger",
+        build_define="USE_OBSERVER_SCHMITT_TRIGGER",
+        uses_two_pass=False,
+        feature_name_factory=_schmitt_trigger_feature_names,
+        layout_factory=_schmitt_trigger_layout,
+    ),
+    "normalized_schmitt_trigger": ObserverDefinition(
+        observer_name="normalized_schmitt_trigger",
+        build_define="USE_OBSERVER_NORMALIZED_SCHMITT_TRIGGER",
+        uses_two_pass=True,
+        feature_name_factory=_schmitt_trigger_feature_names,
+        layout_factory=_schmitt_trigger_layout,
+    ),
+    "threshold_2": ObserverDefinition(
+        observer_name="threshold_2",
         build_define="USE_OBSERVER_THRESHOLD_2",
         uses_two_pass=True,
-        feature_name_factory=_thresh2_feature_names,
-        layout_factory=_thresh2_layout,
+        feature_name_factory=_threshold_2_feature_names,
+        layout_factory=_threshold_2_layout,
     ),
 }
 

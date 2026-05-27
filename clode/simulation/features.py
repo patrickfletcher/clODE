@@ -104,9 +104,12 @@ class FeatureSimulator(Simulator):
 		Args:
 			observer: Built-in observer mode used during feature extraction.
 				Prefer semantic threshold-family spellings such as
-				`Observer.threshold_crossing` and `Observer.schmitt_trigger`.
-				The older `threshold_1` and `threshold_2` names remain supported as
-				compatibility aliases.
+				`Observer.threshold_crossing`,
+				`Observer.normalized_threshold_crossing`,
+				`Observer.schmitt_trigger`, and
+				`Observer.normalized_schmitt_trigger`.
+				`Observer.threshold_2` remains available as the current legacy
+				fully featured normalized Schmitt-trigger path.
 			event_var: Variable name used for event detection when the observer
 				requires one.
 			feature_var: Variable name used for feature readout when the observer
@@ -137,6 +140,9 @@ class FeatureSimulator(Simulator):
 			observer_configuration: Optional family-specific observer config.
 				Use this for threshold-family configuration when you want the
 				semantic knob set instead of the broad compatibility bundle.
+				The observer family must still be selected explicitly through
+				`observer=` because some config surfaces are shared across
+				multiple absolute and fractional variants.
 		"""
 
 		self._summary_selection = summary_selection
@@ -337,19 +343,23 @@ class FeatureSimulator(Simulator):
 	def set_observer_configuration(
 		self,
 		observer_configuration: ThresholdCrossingConfig | SchmittTriggerConfig,
+		observer: Observer | None = None,
 	) -> None:
 		"""Apply a family-specific observer configuration.
 
 		This is the preferred semantic surface for threshold-family observers.
 		The broader `ObserverParams` bundle remains available as a compatibility
-		layer when a family-specific config is not yet available.
+		layer when a family-specific config is not yet available. When one config
+		type can drive more than one observer variant, use `observer=` to select
+		the target family explicitly; otherwise the current observer is used.
 		"""
+		target_observer = self._observer_type if observer is None else observer
 		(
 			resolved_observer_type,
 			resolved_observer_params,
 		) = _resolve_observer_configuration(
 			self.variable_names,
-			observer=None,
+			observer=target_observer,
 			observer_configuration=observer_configuration,
 		)
 		if resolved_observer_type != self._observer_type:

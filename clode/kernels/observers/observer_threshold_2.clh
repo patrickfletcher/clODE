@@ -1,6 +1,7 @@
 #ifndef OBSERVER_THRESHOLD_2_H
 #define OBSERVER_THRESHOLD_2_H
 
+// legacy named observer - this is actually a normalized Schmitt trigger with warmup-derived thresholds
 #ifdef USE_OBSERVER_THRESHOLD_2
 #define TWO_PASS_EVENT_DETECTOR
 
