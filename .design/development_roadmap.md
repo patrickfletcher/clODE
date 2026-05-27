@@ -48,14 +48,16 @@ Why first:
 - it gives the codebase one legible answer to what solver state, observer state, and outputs mean on the Python side versus the OpenCL side
 - it makes later observer authoring/composition, output ergonomics, and public narrative work easier to explain and safer to extend
 
-### 2. Observer authoring and composition follow-through
+### 2. Observer concept audit and authoring follow-through
 
-Once the owner split is explicit, shape a narrower path for adding more built-in observers and eventually supporting composable or user-authored observers from Python-side definitions instead of a hand-wired kernel catalog.
+Once the owner split is explicit, first audit what clODE observers currently mean, where that model overlaps with standard event-function semantics, and which parts of feature selection or memory-footprint control need separate declaration on the Python side. Then shape a narrower path for adding more built-in observers and, later, composable or user-authored observers from Python-side definitions instead of a hand-wired kernel catalog.
+
+The strongest first proof target is the summary-observer family: `basic` and `basicall` already share one-pass online reduction semantics, and turning them into one declaration family with explicit selection policy is the clearest low-risk way to validate the observer model before touching heavier event detectors.
 
 Why second:
 
 - observers are a first-class clODE concept and one of the clearest ways to differentiate the package in both engineering and publication terms
-- it avoids mixing higher-risk authoring-surface decisions into the lower-level owner-split PR
+- it avoids mixing higher-risk authoring-surface decisions into the lower-level owner-split PR and makes the first implementation slice evidence-backed instead of speculative
 
 ### 3. Numerical evidence and publication follow-through
 

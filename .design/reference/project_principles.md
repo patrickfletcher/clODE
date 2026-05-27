@@ -26,6 +26,7 @@ This note is not a backlog and does not override the root `.design` docs.
 
 - Optimize for large ensembles, parameter sweeps, repeated stochastic realizations, and online feature extraction from Python.
 - Center the public narrative on large-ensemble workflows where the desired output is a final state or an on-device feature or event summary; full trajectory output stays supported, but it is not the defining center of the package.
+- Lean capability growth, docs, and examples toward dynamical-systems and bifurcation-analysis workflows when that strengthens clODE's large-ensemble niche without weakening the numerical story.
 - Support multiple model-ingestion paths when they serve the same core workflow: typed Python RHS functions, OpenCL source files, and XPP models.
 - Keep the package narrative workflow-shaped rather than trying to present clODE as the broadest general-purpose ODE ecosystem.
 - Position clODE as a pragmatic niche between CPU-first general-purpose integrators, broader Julia solver ecosystems, XPPAUT-style model-authoring workflows, and ML-oriented differentiable ODE stacks.

@@ -11,6 +11,7 @@ Read the root `.design` docs first. This directory is not default reading.
 ### Package architecture and execution
 
 - `project_principles.md`: settled project principles and open cross-cutting design questions.
+- `observer_concept_audit.md`: current observer semantics, comparison to `solve_ivp`-style events, and implementation-path guidance for observer authoring and memory-footprint control.
 - `semantic_layout_audit.md`: package-layout guidance for IVP-first batch semantics, simulator orchestration, solver state, stepper definitions, and observer definitions.
 - `solver_state_implementation_plan.md`: current solver-state boundary and what the landed first pass deferred.
 - `continuation_timebase_note.md`: solver-owned time-base semantics and attained-`tf` continuation guidance.
