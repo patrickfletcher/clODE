@@ -83,6 +83,13 @@ def test_scalar_solver_args_match_explicit_solver_params_bundle() -> None:
     assert scalar.get_solver_parameters() == bundle
 
 
+def test_threshold_observer_semantic_aliases_match_compatibility_names() -> None:
+    assert clode.Observer.threshold_crossing is clode.Observer.threshold_1
+    assert clode.Observer.schmitt_trigger is clode.Observer.threshold_2
+    assert clode.Observer.threshold_crossing.name == "threshold_crossing"
+    assert clode.Observer.schmitt_trigger.name == "schmitt_trigger"
+
+
 def test_simulator_copies_solver_parameter_bundles() -> None:
     initial = clode.SolverParams(dt=0.2, dtmax=0.3, max_steps=128)
     replacement = clode.SolverParams(dt=0.05, dtmax=0.06, max_steps=64)
@@ -540,6 +547,106 @@ def test_feature_simulator_constructor_defaults_match_observer_params() -> None:
     )
 
     assert simulator.get_observer_parameters() == clode.ObserverParams()
+
+
+def test_feature_simulator_threshold_crossing_configuration_round_trips() -> None:
+    simulator = clode.FeatureSimulator(
+        src_file=model_path("hopf_normal_form.cl"),
+        variables=HOPF_VARIABLES.copy(),
+        parameters=HOPF_PARAMETERS.copy(),
+        aux=HOPF_AUX.copy(),
+        num_noise=0,
+        observer=clode.Observer.basic,
+        stepper=clode.Stepper.rk4,
+        dt=FIXED_DT,
+        dtmax=FIXED_DT,
+        t_span=(0.0, 1.0),
+        max_steps=FIXED_MAX_STEPS,
+        single_precision=True,
+        **device_kwargs_for_tests(),
+    )
+    config = clode.ThresholdCrossingConfig(
+        event_var="y",
+        threshold=0.75,
+        direction=clode.EventDirection.falling,
+        max_event_count=7,
+        max_event_timestamps=2,
+    )
+
+    simulator.set_observer_configuration(config)
+
+    assert simulator.get_observer_configuration() == config
+    assert simulator.get_observer_parameters() == clode.ObserverParams(
+        e_var_ix=1,
+        max_event_count=7,
+        event_direction=clode.EventDirection.falling,
+        max_event_timestamps=2,
+        x_up_threshold=0.75,
+        x_down_threshold=0.75,
+    )
+
+
+def test_feature_simulator_schmitt_trigger_configuration_round_trips() -> None:
+    config = clode.SchmittTriggerConfig(
+        event_var="y",
+        feature_var="x",
+        x_up_threshold=0.6,
+        x_down_threshold=0.4,
+        dx_up_threshold=0.2,
+        dx_down_threshold=0.1,
+        min_amp=0.125,
+        max_event_count=7,
+        max_event_timestamps=4,
+    )
+    simulator = clode.FeatureSimulator(
+        src_file=model_path("hopf_normal_form.cl"),
+        variables=HOPF_VARIABLES.copy(),
+        parameters=HOPF_PARAMETERS.copy(),
+        aux=HOPF_AUX.copy(),
+        num_noise=0,
+        observer_configuration=config,
+        stepper=clode.Stepper.rk4,
+        dt=FIXED_DT,
+        dtmax=FIXED_DT,
+        t_span=(0.0, 1.0),
+        max_steps=FIXED_MAX_STEPS,
+        single_precision=True,
+        **device_kwargs_for_tests(),
+    )
+
+    assert simulator.get_observer_configuration() == config
+    assert simulator.get_observer_parameters() == clode.ObserverParams(
+        e_var_ix=1,
+        f_var_ix=0,
+        max_event_count=7,
+        event_direction=clode.EventDirection.either,
+        max_event_timestamps=4,
+        min_amp=0.125,
+        x_up_threshold=0.6,
+        x_down_threshold=0.4,
+        dx_up_threshold=0.2,
+        dx_down_threshold=0.1,
+    )
+
+
+def test_feature_simulator_rejects_mixed_observer_configuration_and_compatibility_args() -> None:
+    with pytest.raises(ValueError, match="observer_configuration cannot be combined"):
+        clode.FeatureSimulator(
+            src_file=model_path("hopf_normal_form.cl"),
+            variables=HOPF_VARIABLES.copy(),
+            parameters=HOPF_PARAMETERS.copy(),
+            aux=HOPF_AUX.copy(),
+            num_noise=0,
+            observer_configuration=clode.ThresholdCrossingConfig(event_var="x"),
+            event_var="x",
+            stepper=clode.Stepper.rk4,
+            dt=FIXED_DT,
+            dtmax=FIXED_DT,
+            t_span=(0.0, 1.0),
+            max_steps=FIXED_MAX_STEPS,
+            single_precision=True,
+            **device_kwargs_for_tests(),
+        )
 
 
 def test_feature_simulator_copies_observer_parameter_bundles() -> None:

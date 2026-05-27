@@ -7,6 +7,7 @@ import numpy as np
 from .._opencl.executors import OpenCLFeatureExecutor
 from ..observers.types import (
 	EventDirection,
+	ObserverConfiguration,
 	_DEFAULT_DX_DOWN_THRESHOLD,
 	_DEFAULT_DX_UP_THRESHOLD,
 	_DEFAULT_EPS_DX,
@@ -22,7 +23,11 @@ from ..observers.types import (
 	Observer,
 	ObserverParams,
 	ObserverRuntimeSettings,
+	SchmittTriggerConfig,
 	SummaryObserverSelection,
+	ThresholdCrossingConfig,
+	_observer_configuration_from_params,
+	_resolve_observer_configuration,
 	_resolve_observer_params,
 )
 from ..problem.ivp import InitialValueProblem
@@ -88,6 +93,7 @@ class FeatureSimulator(Simulator):
 		observer_eps_dx: float = _DEFAULT_EPS_DX,
 		observer_parameters: Optional[ObserverParams] = None,
 		summary_selection: Optional[SummaryObserverSelection] = None,
+		observer_configuration: Optional[ObserverConfiguration] = None,
 	) -> None:
 		"""Create a feature-extraction simulator.
 
@@ -97,6 +103,10 @@ class FeatureSimulator(Simulator):
 
 		Args:
 			observer: Built-in observer mode used during feature extraction.
+				Prefer semantic threshold-family spellings such as
+				`Observer.threshold_crossing` and `Observer.schmitt_trigger`.
+				The older `threshold_1` and `threshold_2` names remain supported as
+				compatibility aliases.
 			event_var: Variable name used for event detection when the observer
 				requires one.
 			feature_var: Variable name used for feature readout when the observer
@@ -124,32 +134,68 @@ class FeatureSimulator(Simulator):
 			summary_selection: Optional explicit selection for the summary observer
 				family. Use this with `Observer.summary` for subset summary workflows,
 				or to override the `basic` and `basic_all_variables` presets.
+			observer_configuration: Optional family-specific observer config.
+				Use this for threshold-family configuration when you want the
+				semantic knob set instead of the broad compatibility bundle.
 		"""
 
-		self._observer_type = observer
 		self._summary_selection = summary_selection
 		self._feature_cache = FeatureCache()
 		problem_variable_names = (
 			ivp.variable_names if ivp is not None else list((variables or {}).keys())
 		)
-
-		resolved_observer_params = _resolve_observer_params(
-			problem_variable_names,
-			observer_params=observer_parameters,
-			event_var=event_var or None,
-			feature_var=feature_var or None,
-			max_event_count=observer_max_event_count,
-			event_direction=observer_event_direction,
-			max_event_timestamps=observer_max_event_timestamps,
-			min_amp=observer_min_x_amp,
-			min_imi=observer_min_imi,
-			nhood_radius=observer_neighbourhood_radius,
-			x_up_threshold=observer_x_up_thresh,
-			x_down_threshold=observer_x_down_thresh,
-			dx_up_threshold=observer_dx_up_thresh,
-			dx_down_threshold=observer_dx_down_thresh,
-			eps_dx=observer_eps_dx,
+		compatibility_observer_kwargs_used = (
+			observer_parameters is not None
+			or event_var != ""
+			or feature_var != ""
+			or observer_max_event_count != _DEFAULT_MAX_EVENT_COUNT
+			or observer_event_direction != _DEFAULT_EVENT_DIRECTION
+			or observer_max_event_timestamps != _DEFAULT_MAX_EVENT_TIMESTAMPS
+			or observer_min_x_amp != _DEFAULT_MIN_AMP
+			or observer_min_imi != _DEFAULT_MIN_IMI
+			or observer_neighbourhood_radius != _DEFAULT_NHOOD_RADIUS
+			or observer_x_up_thresh != _DEFAULT_X_UP_THRESHOLD
+			or observer_x_down_thresh != _DEFAULT_X_DOWN_THRESHOLD
+			or observer_dx_up_thresh != _DEFAULT_DX_UP_THRESHOLD
+			or observer_dx_down_thresh != _DEFAULT_DX_DOWN_THRESHOLD
+			or observer_eps_dx != _DEFAULT_EPS_DX
 		)
+		if observer_configuration is not None and compatibility_observer_kwargs_used:
+			raise ValueError(
+				"observer_configuration cannot be combined with observer_parameters or "
+				"legacy observer_* compatibility arguments"
+			)
+
+		resolved_observer_type = observer
+		if observer_configuration is not None:
+			(
+				resolved_observer_type,
+				resolved_observer_params,
+			) = _resolve_observer_configuration(
+				problem_variable_names,
+				observer=observer,
+				observer_configuration=observer_configuration,
+			)
+		else:
+			resolved_observer_params = _resolve_observer_params(
+				problem_variable_names,
+				observer_params=observer_parameters,
+				event_var=event_var or None,
+				feature_var=feature_var or None,
+				max_event_count=observer_max_event_count,
+				event_direction=observer_event_direction,
+				max_event_timestamps=observer_max_event_timestamps,
+				min_amp=observer_min_x_amp,
+				min_imi=observer_min_imi,
+				nhood_radius=observer_neighbourhood_radius,
+				x_up_threshold=observer_x_up_thresh,
+				x_down_threshold=observer_x_down_thresh,
+				dx_up_threshold=observer_dx_up_thresh,
+				dx_down_threshold=observer_dx_down_thresh,
+				eps_dx=observer_eps_dx,
+			)
+
+		self._observer_type = resolved_observer_type
 		self._observer_runtime_settings = resolved_observer_params.runtime_settings
 		self._event_output_settings = resolved_observer_params.event_output_settings
 
@@ -235,6 +281,8 @@ class FeatureSimulator(Simulator):
 		Args:
 			op: Optional public compatibility bundle. When provided, it replaces
 				the current observer settings.
+				Family-specific config objects are not yet public here, so these
+				keyword arguments still act as the broad compatibility surface.
 			event_var: Variable name used for event detection.
 			feature_var: Variable name used for feature readout.
 			max_event_count: Maximum number of tracked events.
@@ -284,6 +332,49 @@ class FeatureSimulator(Simulator):
 		"""Return the current public compatibility bundle for observer settings."""
 		return self._observer_runtime_settings.to_observer_params(
 			self._event_output_settings
+		)
+
+	def set_observer_configuration(
+		self,
+		observer_configuration: ThresholdCrossingConfig | SchmittTriggerConfig,
+	) -> None:
+		"""Apply a family-specific observer configuration.
+
+		This is the preferred semantic surface for threshold-family observers.
+		The broader `ObserverParams` bundle remains available as a compatibility
+		layer when a family-specific config is not yet available.
+		"""
+		(
+			resolved_observer_type,
+			resolved_observer_params,
+		) = _resolve_observer_configuration(
+			self.variable_names,
+			observer=None,
+			observer_configuration=observer_configuration,
+		)
+		if resolved_observer_type != self._observer_type:
+			self._integrator.set_observer(resolved_observer_type.value)
+			self._observer_type = resolved_observer_type
+			self._cl_program_is_valid = False
+
+		self._observer_runtime_settings = resolved_observer_params.runtime_settings
+		self._event_output_settings = resolved_observer_params.event_output_settings
+		build_changed = self._integrator.set_observer_settings(
+			self._observer_runtime_settings,
+			self._event_output_settings,
+		)
+		if build_changed:
+			self._cl_program_is_valid = False
+		self._invalidate_feature_cache()
+
+	def get_observer_configuration(
+		self,
+	) -> Optional[ThresholdCrossingConfig | SchmittTriggerConfig]:
+		"""Return the semantic observer configuration when one is available."""
+		return _observer_configuration_from_params(
+			self.variable_names,
+			observer=self._observer_type,
+			observer_params=self.get_observer_parameters(),
 		)
 
 	def set_summary_selection(

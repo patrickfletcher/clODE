@@ -11,9 +11,10 @@ Update when: the observer concept changes materially, a new observer-family decl
 - That landed slice exposed a reusable pattern: a Python-side declaration resolves to one concrete spec that determines feature names, persistent layout, and build identity together, while scalar runtime knobs remain in the runtime-settings path.
 - The first deterministic static-trigger slice is now also landed: `Observer.threshold_1` provides one-pass absolute threshold crossings with a lean timestamp-plus-count readout and runtime direction selection.
 - The current `threshold_2` semantics are more specific than the name suggests: it is the live warmup-derived fractional threshold family, with Schmitt-style up/down state and optional slope gates layered on top.
+- The threshold-family semantic config seam is now also landed for the current built-ins: threshold crossing and Schmitt triggering now have separate Python-side config objects with only the relevant knobs, while `ObserverParams` and the `observer_*` keyword arguments remain compatibility surfaces.
 - The heavier event observers still bundle too many concerns under one built-in mode: trigger semantics, warmup or two-pass behavior, persistent state layout, feature-output schema, and retained event-output policy.
 - That threshold slice confirmed the intended boundary from the opposite side of the summary family: scalar trigger controls such as crossing direction can stay runtime-side when the readout schema remains fixed.
-- The next useful threshold proof target is therefore not “add hysteresis to `threshold_1`.” It is to separate threshold topology from threshold parameterization explicitly and fill the missing corner with a lean warmup-derived fractional directional-threshold family.
+- The next useful threshold proof target is therefore no longer the naming or parameter seam itself. That seam is now good enough to carry the next missing family: a lean warmup-derived fractional directional-threshold observer.
 - `neighbourhood_1` currently looks more like a keep-or-retire case than a good template for future observer generalization unless a more deterministic workflow emerges.
 
 ## Current live model
@@ -21,6 +22,8 @@ Update when: the observer concept changes materially, a new observer-family decl
 ### Python surface
 
 - `clode.observers.types.Observer` still selects one built-in family or compatibility preset.
+- The threshold families now also expose preferred semantic aliases at that surface: `Observer.threshold_crossing` for the current absolute one-boundary threshold observer and `Observer.schmitt_trigger` for the current warmup-derived hysteresis family. The older `threshold_1` and `threshold_2` names remain compatibility spellings.
+- `ThresholdCrossingConfig` and `SchmittTriggerConfig` are now the first observer-family-specific semantic config objects beyond the summary selection surface.
 - `Observer.summary` plus `SummaryObserverSelection` are now the first explicit family-specific declaration surface for observer feature selection.
 - `ObserverParams` remains the public compatibility bundle, while `ObserverRuntimeSettings` and `EventOutputSettings` carry the narrower internal runtime settings and retained-event policy.
 - The split between `e_var_ix` and `f_var_ix` is semantically important, not historical residue: users often need to trigger on one variable while measuring features on another, such as a slow calcium-like variable for event geometry and a faster voltage-like variable for amplitudes or peak counts.
@@ -109,6 +112,21 @@ That distinction matters because it changes what can stay in runtime settings, w
 - It is true that a Schmitt trigger with `xUp == xDown` and both directions collapses to a degenerate single-boundary case, but that equivalence is better treated as an implementation detail than as the public UX model.
 - Separate public concepts keep the docs legible, reduce inert parameters on the simple path, and make it easier to explain why a lean threshold family and a heavier hysteresis family naturally want different default readouts.
 - Internal helper sharing is still compatible with this separation. clODE can reuse trigger machinery without forcing users to think in Schmitt-state terms when they only want a directional crossing.
+
+### Why parameter packaging now matters more than one more threshold kernel
+
+- The current public compatibility surfaces still expose one broad observer bundle and one broad set of `observer_*` keyword arguments.
+- That surface is now the most obvious UX mismatch in the threshold family: a one-boundary threshold crossing only needs one threshold scalar plus direction, while a Schmitt trigger naturally wants two value thresholds and optionally two slope thresholds.
+- This is also where the current names become awkward. `x_up_threshold` is a tolerable compatibility spelling in a generic bundle, but it is not the right semantic knob name for a downward-only threshold crossing.
+- The architectural implication is that clODE should move toward observer-family-specific config surfaces that show only the relevant knobs for the chosen observer while keeping `ObserverParams` and the `observer_*` constructor keywords as compatibility layers.
+- That config split should be semantic rather than pass-count-driven: threshold-crossing families should expose one `threshold` plus `direction`; Schmitt-style families should expose `x_up_threshold`, `x_down_threshold`, and optional slope gates.
+- Once that semantic config seam exists, the missing warmup-derived directional-threshold family can land without worsening the current naming debt.
+
+### What the landed threshold-family config seam proved
+
+- Family-specific config objects are enough to improve the UX without changing the executor or kernel contracts. The Python side can adapt semantic configs into the existing normalized runtime settings.
+- Some knobs can still recur across families, such as `min_amp`, without forcing one giant public bundle. The better rule is to surface a knob where it is active for that family, not where it might someday become reusable elsewhere.
+- The broad `ObserverParams` bundle and `observer_*` keywords are still useful compatibility layers, but they no longer need to define the preferred semantic vocabulary for threshold families.
 
 ### Why `neighbourhood_2` remains valuable even if it is not next
 
@@ -312,8 +330,8 @@ That pattern is likely reusable across observer families even if the concrete de
 ## Recommended next planning pass
 
 - The first deterministic static-trigger slice is now landed, and the threshold re-audit now has a clearer answer than before.
-- The immediate threshold-design question is not whether hysteresis should be bolted onto `threshold_1`. It is how to keep trigger topology and threshold parameterization separate in the public model.
-- The next concrete implementation target should be a lean two-pass fractional directional-threshold family so the repo covers both absolute and warmup-derived threshold placement without forcing Schmitt semantics onto both.
+- The immediate threshold-design question is no longer how to expose the semantic split. That Python-side config seam is now landed for the current threshold families.
+- The next concrete implementation target should be the lean two-pass fractional directional-threshold family, and it should land through the new threshold-family config surface rather than through the old generic parameter bundle.
 - `threshold_2` should be documented as the current warmup-derived Schmitt-style family rather than as the generic threshold baseline.
 - Optional slope gates should stay framed as a noise-oriented or stochastic-oriented refinement rather than as the core threshold abstraction.
 - `localmax` should be reconsidered as one half of a likely extremum family with a max/min polarity switch.

@@ -24,6 +24,7 @@ _DEFAULT_EVENT_VAR_INDEX = 0
 _DEFAULT_FEATURE_VAR_INDEX = 0
 _DEFAULT_MAX_EVENT_COUNT = 100
 _DEFAULT_MAX_EVENT_TIMESTAMPS = 0
+_DEFAULT_THRESHOLD = 0.0
 _DEFAULT_EVENT_DIRECTION = EventDirection.rising
 _DEFAULT_MIN_AMP = 0.0
 _DEFAULT_MIN_IMI = 0.0
@@ -101,7 +102,12 @@ class EventOutputSettings:
 
 
 class Observer(Enum):
-    """Built-in observer modes available to `FeatureSimulator`."""
+    """Built-in observer modes available to `FeatureSimulator`.
+
+    Semantic aliases such as `threshold_crossing` and `schmitt_trigger` are
+    preferred for the threshold families. The older pass-count names remain as
+    compatibility spellings.
+    """
 
     summary = "summary"
     basic = "basic"
@@ -109,8 +115,164 @@ class Observer(Enum):
     local_max = "localmax"
     neighbourhood_1 = "nhood1"
     neighbourhood_2 = "nhood2"
+    threshold_crossing = "thresh1"
+    schmitt_trigger = "thresh2"
     threshold_1 = "thresh1"
     threshold_2 = "thresh2"
+
+
+@dataclass(frozen=True, slots=True)
+class ThresholdCrossingConfig:
+    """Semantic config for the absolute one-boundary threshold observer."""
+
+    event_var: str = ""
+    threshold: float = _DEFAULT_THRESHOLD
+    direction: EventDirection | str | int = _DEFAULT_EVENT_DIRECTION
+    max_event_count: int = _DEFAULT_MAX_EVENT_COUNT
+    max_event_timestamps: int = _DEFAULT_MAX_EVENT_TIMESTAMPS
+
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self,
+            "event_var",
+            _normalize_optional_variable_name(self.event_var, parameter_name="event_var"),
+        )
+        object.__setattr__(self, "threshold", float(self.threshold))
+        object.__setattr__(self, "direction", _normalize_event_direction(self.direction))
+        object.__setattr__(self, "max_event_count", int(self.max_event_count))
+        object.__setattr__(self, "max_event_timestamps", int(self.max_event_timestamps))
+
+    @property
+    def observer(self) -> Observer:
+        return Observer.threshold_crossing
+
+    def to_observer_params(self, variable_names: Sequence[str]) -> ObserverParams:
+        threshold = float(self.threshold)
+        return ObserverParams(
+            e_var_ix=_resolve_variable_index(
+                variable_names,
+                self.event_var or None,
+                default_index=_DEFAULT_EVENT_VAR_INDEX,
+                parameter_name="event_var",
+            ),
+            max_event_count=self.max_event_count,
+            event_direction=self.direction,
+            max_event_timestamps=self.max_event_timestamps,
+            x_up_threshold=threshold,
+            x_down_threshold=threshold,
+        )
+
+    @classmethod
+    def from_observer_params(
+        cls,
+        variable_names: Sequence[str],
+        observer_params: ObserverParams,
+    ) -> ThresholdCrossingConfig:
+        return cls(
+            event_var=_resolve_variable_name(
+                variable_names,
+                observer_params.e_var_ix,
+                parameter_name="e_var_ix",
+            ),
+            threshold=observer_params.x_up_threshold,
+            direction=observer_params.event_direction,
+            max_event_count=observer_params.max_event_count,
+            max_event_timestamps=observer_params.max_event_timestamps,
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class SchmittTriggerConfig:
+    """Semantic config for the warmup-derived Schmitt-trigger observer."""
+
+    event_var: str = ""
+    feature_var: str = ""
+    x_up_threshold: float = _DEFAULT_X_UP_THRESHOLD
+    x_down_threshold: float = _DEFAULT_X_DOWN_THRESHOLD
+    dx_up_threshold: float = _DEFAULT_DX_UP_THRESHOLD
+    dx_down_threshold: float = _DEFAULT_DX_DOWN_THRESHOLD
+    min_amp: float = _DEFAULT_MIN_AMP
+    max_event_count: int = _DEFAULT_MAX_EVENT_COUNT
+    max_event_timestamps: int = _DEFAULT_MAX_EVENT_TIMESTAMPS
+
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self,
+            "event_var",
+            _normalize_optional_variable_name(self.event_var, parameter_name="event_var"),
+        )
+        object.__setattr__(
+            self,
+            "feature_var",
+            _normalize_optional_variable_name(
+                self.feature_var,
+                parameter_name="feature_var",
+            ),
+        )
+        object.__setattr__(self, "x_up_threshold", float(self.x_up_threshold))
+        object.__setattr__(self, "x_down_threshold", float(self.x_down_threshold))
+        object.__setattr__(self, "dx_up_threshold", float(self.dx_up_threshold))
+        object.__setattr__(self, "dx_down_threshold", float(self.dx_down_threshold))
+        object.__setattr__(self, "min_amp", float(self.min_amp))
+        object.__setattr__(self, "max_event_count", int(self.max_event_count))
+        object.__setattr__(self, "max_event_timestamps", int(self.max_event_timestamps))
+
+    @property
+    def observer(self) -> Observer:
+        return Observer.schmitt_trigger
+
+    def to_observer_params(self, variable_names: Sequence[str]) -> ObserverParams:
+        return ObserverParams(
+            e_var_ix=_resolve_variable_index(
+                variable_names,
+                self.event_var or None,
+                default_index=_DEFAULT_EVENT_VAR_INDEX,
+                parameter_name="event_var",
+            ),
+            f_var_ix=_resolve_variable_index(
+                variable_names,
+                self.feature_var or None,
+                default_index=_DEFAULT_FEATURE_VAR_INDEX,
+                parameter_name="feature_var",
+            ),
+            max_event_count=self.max_event_count,
+            event_direction=EventDirection.either,
+            max_event_timestamps=self.max_event_timestamps,
+            min_amp=self.min_amp,
+            x_up_threshold=self.x_up_threshold,
+            x_down_threshold=self.x_down_threshold,
+            dx_up_threshold=self.dx_up_threshold,
+            dx_down_threshold=self.dx_down_threshold,
+        )
+
+    @classmethod
+    def from_observer_params(
+        cls,
+        variable_names: Sequence[str],
+        observer_params: ObserverParams,
+    ) -> SchmittTriggerConfig:
+        return cls(
+            event_var=_resolve_variable_name(
+                variable_names,
+                observer_params.e_var_ix,
+                parameter_name="e_var_ix",
+            ),
+            feature_var=_resolve_variable_name(
+                variable_names,
+                observer_params.f_var_ix,
+                parameter_name="f_var_ix",
+            ),
+            x_up_threshold=observer_params.x_up_threshold,
+            x_down_threshold=observer_params.x_down_threshold,
+            dx_up_threshold=observer_params.dx_up_threshold,
+            dx_down_threshold=observer_params.dx_down_threshold,
+            min_amp=observer_params.min_amp,
+            max_event_count=observer_params.max_event_count,
+            max_event_timestamps=observer_params.max_event_timestamps,
+        )
+
+
+ObserverConfiguration = ThresholdCrossingConfig | SchmittTriggerConfig
 
 
 @dataclass(frozen=True, slots=True)
@@ -325,6 +487,43 @@ def _resolve_observer_params(
     )
 
 
+def _resolve_observer_configuration(
+    variable_names: Sequence[str],
+    *,
+    observer: Observer | None,
+    observer_configuration: ObserverConfiguration,
+) -> tuple[Observer, ObserverParams]:
+    resolved_observer = observer_configuration.observer
+    if observer is not None and observer not in (
+        Observer.basic_all_variables,
+        resolved_observer,
+    ):
+        raise ValueError(
+            "observer_configuration does not match the requested observer. "
+            f"Expected '{resolved_observer.name}' but got '{observer.name}'."
+        )
+    return resolved_observer, observer_configuration.to_observer_params(variable_names)
+
+
+def _observer_configuration_from_params(
+    variable_names: Sequence[str],
+    *,
+    observer: Observer,
+    observer_params: ObserverParams,
+) -> ObserverConfiguration | None:
+    if observer is Observer.threshold_crossing:
+        return ThresholdCrossingConfig.from_observer_params(
+            variable_names,
+            observer_params,
+        )
+    if observer is Observer.schmitt_trigger:
+        return SchmittTriggerConfig.from_observer_params(
+            variable_names,
+            observer_params,
+        )
+    return None
+
+
 def _resolve_variable_index(
     variable_names: Sequence[str],
     variable_name: str | None,
@@ -343,6 +542,37 @@ def _resolve_variable_index(
         raise ValueError(
             f"Unknown {parameter_name} '{variable_name}'. Expected one of: {available_names}"
         ) from error
+
+
+def _resolve_variable_name(
+    variable_names: Sequence[str],
+    index: int,
+    *,
+    parameter_name: str,
+) -> str:
+    names = tuple(variable_names)
+    if not names:
+        return ""
+    if not 0 <= int(index) < len(names):
+        raise ValueError(
+            f"{parameter_name} index {index} is out of range for variables: {', '.join(names)}"
+        )
+    return names[int(index)]
+
+
+def _normalize_optional_variable_name(
+    variable_name: str | None,
+    *,
+    parameter_name: str,
+) -> str:
+    if variable_name in (None, ""):
+        return ""
+    if not isinstance(variable_name, str):
+        raise ValueError(f"{parameter_name} must be a string when provided")
+    normalized_name = variable_name.strip()
+    if not normalized_name:
+        return ""
+    return normalized_name
 
 
 def _normalize_event_direction(
@@ -435,5 +665,7 @@ __all__ = [
     "EventDirection",
     "Observer",
     "ObserverParams",
+    "SchmittTriggerConfig",
     "SummaryObserverSelection",
+    "ThresholdCrossingConfig",
 ]

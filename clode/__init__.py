@@ -1,4 +1,11 @@
-from clode.observers import EventDirection, Observer, ObserverParams, SummaryObserverSelection
+from clode.observers import (
+    EventDirection,
+    Observer,
+    ObserverParams,
+    SchmittTriggerConfig,
+    SummaryObserverSelection,
+    ThresholdCrossingConfig,
+)
 from clode.problem import (
     InitialValueProblem,
     OpenCLConverter,
@@ -108,7 +115,9 @@ __all__ = [
     "EventDirection",
     "Observer",
     "ObserverParams",
+    "SchmittTriggerConfig",
     "SummaryObserverSelection",
+    "ThresholdCrossingConfig",
     "ObserverOutput",
     "TrajectorySimulator",
     "TrajectoryOutput",
