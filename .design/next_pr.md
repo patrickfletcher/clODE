@@ -36,6 +36,8 @@ A utilities-only PR would mostly reorganize private helpers without answering th
 - Which observer families really share the same accepted-step geometry, and which only look similar from a distance?
 - Would a shared `K`-sample buffer concept clarify later observer-state and observer-output bundles enough to justify itself now?
 - What is the smallest useful abstraction: a conceptual layout contract, shared update helpers, or a concrete kernel-side struct and helper surface?
+- Does the `K`-sample accepted step solution buffer construct along with its dedicated update helper make observer OpenCL code cleaner and easier to reason about?
+- Does guaranteeing the presence of previous `K` state and slope values (or a variant thereof) offer opportunities for high-accuracy interpolation helpers that can be used in refining event times and/or state value outputs, local extrema times/values, or other derived observer outputs?
 - Which utilities are still better treated as private caller-side helpers even after that decision?
 - If no shared buffer concept lands next, is the oscillation-oriented readout seam still the best immediate follow-on?
 

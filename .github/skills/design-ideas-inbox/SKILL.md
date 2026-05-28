@@ -39,6 +39,7 @@ Use the [placement guide](./references/placement-guide.md) when an item could pl
 - Do not create a new doc for a one-line backlog item.
 - Do not update `package_state.md` with speculative proposals.
 - Do not rewrite `next_pr.md` unless the user is clearly reprioritizing the active target.
+- If an inbox item clearly describes already-landed work, update the smallest live doc only if needed and avoid turning it back into an open backlog line.
 - Use `design-doc-audit` instead if the user wants repo-wide stale-item cleanup, priority verification, or blocker auditing.
 
 ## Procedure

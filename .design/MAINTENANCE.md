@@ -1,6 +1,8 @@
 # .design Maintenance
 
 Purpose: keep maintainer docs fast to scan, current, and worth reading for both humans and coding assistants.
+Read when: you are changing root `.design` docs, routing rules, or the structure of the design tree.
+Update when: file roles, maintenance rules, or assistant workflow expectations change.
 
 ## Goals
 
@@ -30,9 +32,16 @@ Purpose: keep maintainer docs fast to scan, current, and worth reading for both 
 - `README.md`: routing only. Keep it short and explicit about where to stop reading.
 - `package_state.md`: factual current-state map and contributor routing. No speculative backlog.
 - `next_pr.md`: one active implementation target with a narrow scope and explicit acceptance criteria.
-- `ideas.md`: terse backlog. Keep items to one line when possible.
+- `ideas.md`: terse open backlog only. Keep items to one line when possible, and move completed lines out once their durable outcome is reflected elsewhere.
 - `development_roadmap.md`: medium-lived rationale and ordering, not a task tracker or closeout log.
 - `reference/README.md`: index of deep dives with clear "read when" guidance.
+
+## Completed Backlog Items
+
+- When an `ideas.md` item lands, first update the smallest live doc that should carry the durable result: usually `package_state.md`, `next_pr.md`, `development_roadmap.md`, or the relevant reference note.
+- After that live-doc update, remove the completed line from `ideas.md` and move its original wording into a dated archive cluster under `.design/archived/`.
+- Keep the archive entry historical. Do not let archived completed items become the only place that current contributors have to learn a still-relevant package fact.
+- Prefer one dated closeout cluster per cleanup pass over sprinkling completed-item history across multiple root docs.
 
 ## Inbox Processing
 
@@ -81,8 +90,14 @@ If the note is narrow and temporary, use `.design/tmp/` instead.
 
 ## Reference Notes
 
+- Treat each reference note as one of three types and make that obvious near the top: stable guardrail, current design audit, or public-surface plan.
+- Stable guardrail notes should capture durable boundaries, constraints, or workflows and should avoid carrying active `next_pr.md` sequencing once the root docs already cover it.
+- Current design audits may name the live design question, but once a rollout lands, move the proof-path history, earlier family rankings, or superseded sequencing into `.design/archived/`.
 - Keep each reference doc single-topic.
 - Put recurring task keywords near the top so assistants can route quickly.
+- If a reference note grows past ordinary scan length, add a first-screen `## Fast path` or equivalent stop-guidance block near the top.
+- If a reference doc grows past roughly 200 lines, split it or archive stale landed-history sections unless nearly every section is still active decision support.
+- When updating a long reference note, refresh the summary or fast-path section first and move stale comparative or landed-history material to `.design/archived/` instead of letting the opening screen grow.
 - If a reference doc grows broad enough to answer multiple unrelated questions, split it.
 - If a reference doc becomes stale because the live package changed, update it or archive it. Do not let it silently rot.
 
@@ -96,6 +111,7 @@ If the note is narrow and temporary, use `.design/tmp/` instead.
 
 - Does the root `.design/` still contain only live docs?
 - Did you update the smallest authoritative doc instead of adding a near-duplicate?
+- Did newly completed `ideas.md` lines move to an archive cluster after the live docs were updated?
 - Are moved docs discoverable from `README.md` or `reference/README.md`?
 - Are broken links or stale file paths fixed in the same pass?
 - Did you clean up `.design/tmp/` if you used it?

@@ -11,8 +11,18 @@ Update when: the recommended layout direction changes, a major semantic model la
 - Do not start with a bulk kernel-file move.
 - The first-pass `InitialValueProblem`, solver-state, observer-definition, stepper-definition, and output-policy cleanup has landed.
 - Keep compile-time build specification separate from runtime state so program-cache keys and rebuild triggers stay explicit rather than leaking through host-side cache invalidation.
-- Treat narrower simulator orchestration, clearer continuation-state semantics, and any shared kernel-math helper layer as the next internal follow-ons that should build on those landed semantic catalogs.
+- Treat this note as stable layout guidance rather than active sequencing. Use the root `.design` docs for current priorities.
 - `_opencl` should stay focused on runtime/build/buffer/dispatch concerns and consume those semantic definitions, rather than continuing to define core concepts through strings, registries, and struct builders.
+
+## Fast path
+
+Stop after this section unless the task needs the full friction inventory or older layout rationale.
+
+- For current package facts, use `.design/package_state.md` first.
+- For active delivery scope, use `.design/next_pr.md` and `.design/ideas.md`; this note is not the current task tracker.
+- For ordinary package-placement or ownership questions, read `## Bottom line` and `## Recommended direction` and stop there unless a concrete friction point still needs evidence.
+- Read `## Current layout audit` only when you need the detailed reasons behind a layout recommendation.
+- Historical peer-library comparisons already live in `../archived/reference_cleanup_2026_05_13/semantic_layout_background.md`.
 
 Historical peer-library comparisons and broader layout-option analysis from the earlier, longer version of this note now live in `../archived/reference_cleanup_2026_05_13/semantic_layout_background.md`.
 
@@ -253,13 +263,13 @@ This is the key sequencing choice.
 
 The useful first move is not “put the `.clh` files next to some new Python files”. The useful first move is “create Python-side concept definitions that make the kernels easier to understand and assemble”. Once those exist, the project can revisit whether physical co-location of kernel assets would simplify or just reshuffle the include tree.
 
-## Productive near-term follow-on order
+## Stable implications for future layout work
 
-1. Keep the landed solver-state and output-policy boundary as the contract for follow-on work.
-2. Treat the landed execution-setting defaults and compatibility resolution path as stable enough to build on.
-3. Add a shared kernel-math helper layer and component-test spine so observer and stepper internals are easier to reason about.
-4. Revisit continuation-state semantics and whether IVP-owned batch helpers are enough or whether a dedicated ensemble type adds real value.
-5. Revisit kernel relocation only after those semantic models exist.
+- Keep the landed solver-state and output-policy boundary as the contract for future layout changes; see `.design/reference/solver_state_implementation_plan.md` for the current boundary record.
+- Build on the current execution-setting and observer-definition boundaries rather than reopening the top-level package split.
+- Prefer IVP-owned batch helpers, narrower simulator orchestration, and explicit build/runtime separation over inventing new top-level semantic containers prematurely.
+- Revisit continuation-state modeling, kernel-math helper sharing, or any future kernel relocation only when a concrete owner-model need justifies it.
+- For the current active sequencing and PR target, use `.design/next_pr.md` and `.design/ideas.md`.
 
 ## Guidance for future package moves
 

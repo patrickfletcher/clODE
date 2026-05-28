@@ -4,6 +4,17 @@ Purpose: float32 numerics guidance for sensitive solver and kernel work.
 Read when: editing `clode/kernels/*`, solver numerics, reductions, tolerances, scaling, or mixed-precision behavior.
 Update when: float32 guardrails, kernel numerics guidance, or recommended implementation patterns change.
 
+## Fast path for kernel edits
+
+Stop after this section unless the task needs the underlying float32 rationale in more detail.
+
+- Scale state variables and important parameters toward `O(1)` before chasing subtler numerical fixes.
+- Prefer numerically stable algebra and compensated or pairwise reductions over mathematically equivalent but cancellation-prone rewrites.
+- Keep especially sensitive controller state, elapsed-time reconstruction, norms, and long accumulations in higher precision when the cost is small.
+- Avoid pretending pure float32 can justify very tight tolerances; `~1e-6` to `1e-7` is usually the lower practical floor unless conditioning is unusually favorable.
+- Watch for vanished updates, timestep collapse, NaN/Inf, and obviously ill-conditioned intermediate expressions.
+- If you change a delicate numerical path, add or update the smallest focused component or numerics test that can catch the regression.
+
 ## IEEE-754 `float32` essentials
 
 - A `float32` has 1 sign bit, 8 exponent bits, and 23 explicit mantissa bits, or about 24 bits of effective precision with the hidden leading 1.

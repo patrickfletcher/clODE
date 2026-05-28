@@ -30,7 +30,7 @@ Use this file as a router, not as background reading. Load the smallest relevant
 
 - `package_state.md`: factual current package map, constraints, and contributor routing.
 - `next_pr.md`: one active implementation target with acceptance criteria.
-- `ideas.md`: terse backlog and dependency board.
+- `ideas.md`: terse open backlog and dependency board; completed lines belong in `.design/archived/` after the live docs reflect the landed result.
 - `development_roadmap.md`: medium-lived rationale and sequencing.
 - `MAINTENANCE.md`: rules for keeping this tree small and current.
 
@@ -39,7 +39,7 @@ Use this file as a router, not as background reading. Load the smallest relevant
 - Update the smallest authoritative doc instead of creating a near-duplicate.
 - Keep the root small. New deep dives should usually live under `.design/reference/`.
 - Promote enduring facts into `package_state.md`; keep `next_pr.md` narrow and current.
-- Move completed or stale notes into `.design/archived/` rather than leaving them at the root.
+- Move completed or stale notes into `.design/archived/` rather than leaving them at the root; `ideas.md` should not be used as completion history.
 - Keep scratch reproductions in `.design/tmp/`, then delete, promote, or archive them before the PR is done.
 - When the package layout, active target, or the meaning of a reference note changes, update the relevant `.design` doc in the same PR.
 - Read `.design/MAINTENANCE.md` before reshaping this tree or adding a new design note.

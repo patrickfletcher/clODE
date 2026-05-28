@@ -36,11 +36,11 @@ Always read:
 
 Then branch by scope:
 
-- whole-tree or root-surface audit: `.design/package_state.md`, `.design/next_pr.md`, `.design/ideas.md`, `.design/development_roadmap.md`, and `.design/reference/README.md`
+- whole-tree or root-surface audit: `.design/package_state.md`, `.design/next_pr.md`, `.design/ideas.md`, and `.design/reference/README.md`; add `.design/development_roadmap.md` only when sequencing or broader rationale is part of the audit
 - targeted root-doc audit: the target doc plus only the smallest neighboring root docs needed to confirm facts, scope, or priority
 - targeted reference-note audit: `.design/reference/README.md`, the target note, and only the smallest supporting root docs needed for current-state validation, usually `.design/package_state.md`
 
-Then read only the focused reference notes, archived notes, or code files needed to evaluate the claimed issue.
+Then read only the focused reference notes, archived notes, or code files needed to evaluate the claimed issue. If a long reference note offers `## Fast path`, read that first and stop there unless deeper detail is needed.
 
 Use the [audit checklist](./references/audit-checklist.md) when deciding what to verify and what can be cleaned automatically.
 
@@ -56,6 +56,7 @@ Use the [audit checklist](./references/audit-checklist.md) when deciding what to
 
 - Prefer targeted audits and minimum-path reads over full-tree sweeps when the user names a specific doc or topic.
 - Prefer conservative cleanup.
+- Treat completed lines in `.design/ideas.md` as archive candidates once the relevant live docs already reflect the landed result.
 - Auto-fix only low-risk issues: duplicates, clearly completed items, obviously removed blockers, broken internal paths, stale wording that conflicts with current live docs, or reference notes that now point to moved files.
 - For priority changes, `next_pr.md` changes, or broader roadmap reshaping, report the recommendation unless the user explicitly asked for reprioritization.
 
@@ -64,9 +65,9 @@ Use the [audit checklist](./references/audit-checklist.md) when deciding what to
 1. Identify the audit scope: whole `.design`, one file, one section, or one reference note.
 2. Load the minimum evidence set that can actually answer that scope.
 3. Compare live planning docs against `package_state.md`, `next_pr.md`, current code, and any directly relevant reference notes.
-4. Check for duplicates, stale `depends:` or `blocks:` relationships, completed items left open, stale reference-note headers, and contradictions between the live docs.
+4. Check for duplicates, stale `depends:` or `blocks:` relationships, completed items left open, stale reference-note headers or fast-path blocks, and contradictions between the live docs.
 5. Distinguish low-risk cleanup from high-risk judgment:
-   - low-risk: duplicate backlog entries, resolved blockers with direct evidence, stale paths, outdated references, obviously completed cleanup items
+   - low-risk: duplicate backlog entries, resolved blockers with direct evidence, stale paths, outdated references, obviously completed cleanup items, completed `ideas.md` lines whose durable outcome already lives in the current docs
    - high-risk: reprioritizing whole workstreams, replacing the active target, or removing items that are still conceptually valid but merely delayed
 6. In `report-only` mode, return findings first, ordered by severity or confidence.
 7. In `apply-cleanup` mode, make only the low-risk edits automatically, then report any remaining judgment calls.
@@ -77,5 +78,6 @@ Use the [audit checklist](./references/audit-checklist.md) when deciding what to
 - The audit clearly separates facts, low-risk cleanup, and recommendation-level judgment.
 - Targeted audits stay small and focused instead of reloading the whole planning tree unnecessarily.
 - `.design` docs become more internally consistent and less stale.
+- Completed backlog items no longer linger on the live open board once their outcome is captured elsewhere.
 - The inbox skill remains focused on routing rough new ideas, not repo-wide planning audits.
 - The root `.design/` surface stays small and authoritative.

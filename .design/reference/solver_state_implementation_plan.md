@@ -50,8 +50,9 @@ Update when: the solver-state boundary changes materially or this note becomes h
 - a read-only bundled solver stats surface and later work metrics such as RHS evaluation counts, Jacobian evaluations, or linear-solver work once those quantities are semantically stable across steppers
 - deeper observer-state cleanup beyond retiring public observer-owned step-count and `dt` summary outputs
 
-## Handoff to the next PR
+## Stable follow-on guardrails
 
+- Use the root `.design` docs for the active PR sequence. This note is the solver-state boundary record, not the current task tracker.
 - Treat the landed solver-state boundary as stable enough to build on, not as something to reopen wholesale.
 - The deterministic solver-owned `NO_PROGRESS` policy for the currently adopted in-loop time-stall cases is now covered by maintained public-contract tests, so any later follow-through should revisit deeper current-time modeling only if a concrete continuation or work-metric need justifies it.
 - Keep observer public outputs free of solver-owned step or time diagnostics while leaving observer-specific interpolation geometry and any private sample counters intact.

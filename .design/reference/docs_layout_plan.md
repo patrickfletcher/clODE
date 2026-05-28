@@ -6,6 +6,14 @@ Update when: docs IA, example-execution policy, or API-reference curation strate
 
 Use `public_surfaces_plan.md` for README, paper, contributor-doc, and broader public-surface ownership. This note is specifically about the docs site.
 
+## Fast path
+
+Stop after this section unless the task is specifically about docs IA, mkdocs configuration, or API-reference cleanup.
+
+- For current docs policy, read `## Goals`, `## Current iteration target`, and `## Recommendation`.
+- Treat `## Working nav direction` as the current IA target, not a frozen promise.
+- Read `## API reference recommendations` only when you are editing the reference page or the mkdocstrings presentation.
+
 ## Goals
 
 - Keep the docs slim, task-oriented, and easy to scan.

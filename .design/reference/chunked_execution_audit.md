@@ -8,8 +8,16 @@ Update when: continuation semantics, output-policy boundaries, batching strategy
 
 - Treat time chunking and ensemble batching as two orthogonal execution-tiling policies layered on one semantic problem definition, not as new semantic owners.
 - The current runtime already has the right low-level execution atom for a first implementation: repeated solves with explicit continuation of `x0`, `dt`, attained `tf`, RNG state, and observer state where applicable.
-- The landed first-pass solver-state cleanup now makes that execution atom explicit and stable. Chunking still should not ship yet, but follow-on work should avoid re-coupling cache or buffer ownership in ways that would force another rewrite.
+- The landed solver-state and output/storage cleanups now make that execution atom explicit and stable. Chunking remains future work, but follow-on work should avoid re-coupling cache or buffer ownership in ways that would force another rewrite.
 - The landed output/storage split is now the enabling layer that makes chunked trajectory reads and device-capacity batching straightforward rather than ad hoc.
+
+## Fast path
+
+Stop after this section unless the task is specifically about chunking or device-capacity batching.
+
+- For current package facts and active scope, use the root `.design` docs first; chunking is not the active target.
+- Read `## Bottom line`, `## Recommended mental model`, and `## Current guardrails while chunking is off the active path` for the durable guidance this note still provides.
+- Read the workflow-specific sections only when designing a future chunked transient, feature, or trajectory path.
 
 ## Current live capability
 
@@ -116,11 +124,11 @@ Recommended rule:
 
 - do not introduce a second top-level public ensemble owner just to make device batching possible.
 
-## Implications for the current next PR
+## Current guardrails while chunking is off the active path
 
-The next PR still should not implement chunking, but it should preserve the landed solver-state and output-policy contract.
+Chunking is not the active target, but future chunking work still depends on the following guardrails.
 
-### Decisions that help later chunking
+### Decisions that still help later chunking
 
 - Give solver state one explicit internal home distinct from IVP-owned problem data, observer state, and fetched outputs.
 - Include per-work-item `t0` in that solver-state model even if the first pass keeps it Python-owned rather than immediately threading it through every kernel.
@@ -138,7 +146,7 @@ The next PR still should not implement chunking, but it should preserve the land
 - Letting simulator-side `_device_*` caches continue to stand in for explicit solver state.
 - Tying observer persistence too tightly to feature-output allocation details.
 
-## Recommended follow-on order
+## Suggested activation order when chunking becomes active again
 
 1. Keep the landed solver-state and output-policy cleanup as the contract.
 2. Clean up observer definitions so feature chunking does not have to fight ambiguous observer state/layout boundaries.
