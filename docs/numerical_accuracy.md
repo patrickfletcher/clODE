@@ -202,6 +202,12 @@ On a coarsely sampled sine wave:
 
 This comparison shows why `local_max` uses bounded three-sample refinement, but local-extremum detection is still an accuracy hotspot. If peak timing matters strongly, the safe user-side choices are still a smaller `dt` or double precision.
 
+## Neighborhood-Return Exit Times
+
+The neighborhood-return triggers use different geometry from the threshold families, so a one-variable threshold inversion is not the right timestamp model. The live `Observer.neighborhood_return` and `Observer.neighbourhood_2` paths keep their existing sampled anchors `x0`, but when a step leaves the normalized neighborhood they linearly interpolate the full normalized state between the last inside sample and the first outside sample and solve for the boundary hit on that segment.
+
+That reduces coarse-step bias in the stored exit times without changing the sampled-anchor contract. If the anchor location itself is the dominant source of error for a workflow, a smaller `dt` or double precision is still the safer fix than trying to infer too much from one coarse threshold-qualified step.
+
 ## User Recommendations
 
 - The compensated integral helper used by `basic` and `basic_all_variables` has a clear empirical justification.
@@ -213,6 +219,7 @@ This comparison shows why `local_max` uses bounded three-sample refinement, but 
 - Use `threshold_crossing` when an absolute event-variable level is scientifically meaningful and reasonably stable across the sweep; use `normalized_threshold_crossing` when the same lean one-boundary workflow should scale with the warmup-pass amplitude; use `threshold_2` when you specifically need the retained legacy fully featured normalized Schmitt readout.
 - For `threshold_2`, use a real hysteresis gap when crossings chatter, and consider derivative thresholds when noisy shallow crossings still slip through.
 - `threshold_2` stores threshold-transition times with inverse-linear interpolation; the example script also compares that choice with Hermite interpolation on smooth monotone crossings.
+- `neighborhood_return` and `neighbourhood_2` keep sampled anchors and store exit times from the normalized ball with full-state linear segment interpolation.
 - Set `min_amp` above the numerical or measurement floor you want to ignore and below the smallest oscillation you still care about.
 - `local_max` uses bounded three-sample quadratic refinement, but a smaller `dt` or double precision is still the safer choice when peak timing matters strongly.
 - Validate event-sensitive settings on one representative trajectory before launching a large ensemble sweep.

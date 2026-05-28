@@ -29,19 +29,64 @@ struct ObserverState_nhood2
     realtype period[3]; 
 
     realtype elapsedTotal;
+    realtype lastStepDt;
     realtype tLastEvent;
     realtype elapsedLastEvent;
     realtype xThreshold;
 
     unsigned int thisNMaxima;
     unsigned int foundX0;
-    unsigned int isInNhood;
     unsigned int eventcount;
     unsigned int stepcount;
 
 };
 
 typedef struct ObserverState_nhood2 ObserverState;
+
+static inline realtype neighborhood2NormSqAtSample(const ObserverState *od, const int sampleIndex) {
+    realtype normSq = ZERO;
+    for (int j = 0; j < N_VAR; ++j) {
+        realtype range = od->xTrajectoryRange[j];
+        if (range > ZERO) {
+            realtype normalizedDiff = (od->xbuffer[j * 3 + sampleIndex] - od->x0[j]) / range;
+            normSq += normalizedDiff * normalizedDiff;
+        }
+    }
+    return normSq;
+}
+
+static inline realtype neighborhood2ExitFraction(
+    const ObserverState *od,
+    __constant struct ObserverRuntimeSettings *op
+) {
+    realtype a = ZERO;
+    realtype b = ZERO;
+    realtype c = -op->nHoodRadius * op->nHoodRadius;
+    for (int j = 0; j < N_VAR; ++j) {
+        realtype range = od->xTrajectoryRange[j];
+        if (range <= ZERO)
+            continue;
+
+        realtype normalizedStart = (od->xbuffer[j * 3 + 1] - od->x0[j]) / range;
+        realtype normalizedDelta = (od->xbuffer[j * 3 + 2] - od->xbuffer[j * 3 + 1]) / range;
+        a += normalizedDelta * normalizedDelta;
+        b += RCONST(2.0) * normalizedStart * normalizedDelta;
+        c += normalizedStart * normalizedStart;
+    }
+
+    realtype alpha = ONE;
+    if (a > UNIT_ROUNDOFF)
+    {
+        realtype discriminant = fmax(b * b - RCONST(4.0) * a * c, ZERO);
+        alpha = (-b + sqrt(discriminant)) / (RCONST(2.0) * a);
+    }
+    else if (fabs(b) > UNIT_ROUNDOFF)
+    {
+        alpha = -c / b;
+    }
+
+    return clamp(alpha, ZERO, ONE);
+}
 
 //set initial values to relevant fields in ObserverState
 static inline void initializeObserverState(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op) {
@@ -79,6 +124,7 @@ static inline void initializeObserverState(realtype *ti, realtype xi[], realtype
     od->period[2] = ZERO;
 
     od->elapsedTotal = ZERO;
+    od->lastStepDt = ZERO;
     od->tLastEvent=ZERO;
     od->elapsedLastEvent=ZERO;
 
@@ -86,7 +132,6 @@ static inline void initializeObserverState(realtype *ti, realtype xi[], realtype
 
     od->thisNMaxima = 0;
     od->foundX0 = 0;
-    od->isInNhood = 0;
     od->eventcount = 0;
     od->stepcount = 0;
 }
@@ -109,34 +154,32 @@ static inline void initializeEventDetector(realtype *ti, realtype xi[], realtype
 
 //check for exit from "epsilon ball" surrounding od->x0
 static inline bool eventFunction(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op) {
+    (void)ti;
+    (void)xi;
+    (void)dxi;
+    (void)auxi;
+
     if (od->stepcount < 2 || !od->foundX0)
         return false;
 
-    // how far are we from x0 in normalized state-space?
-    // - instead of storing x0 normalized, do: (xi-xmin)/(xmax-xmin) - (x0-xmin)/(xmax-xmin) = (xi-x0)/(xmax-xmin)
-    realtype normSq = ZERO;
-    for (int j = 0; j < N_VAR; ++j) {
-        realtype normalizedDiff = (xi[j] - od->x0[j]) / od->xTrajectoryRange[j];
-        normSq += normalizedDiff * normalizedDiff;
-    }
-
-    unsigned int lastInNhood = od->isInNhood;
-    od->isInNhood = sqrt(normSq) < op->nHoodRadius; //L-2 norm ball
-    
-    // event on exit from nhood
-    if (lastInNhood && !od->isInNhood)
-        return true;
-
-    return false;
+    realtype radiusSq = op->nHoodRadius * op->nHoodRadius;
+    realtype previousNormSq = neighborhood2NormSqAtSample(od, 1);
+    realtype currentNormSq = neighborhood2NormSqAtSample(od, 2);
+    return previousNormSq < radiusSq && currentNormSq >= radiusSq;
 }
 
 //When an event is detected, computes desired event-based features. returns true if a terminal event was reached
 static inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op) {
+    (void)ti;
+    (void)xi;
+    (void)dxi;
+    (void)auxi;
+
     ++od->eventcount;
     
-    //simplest: time and state of trajectory point on exit of nhood
-    realtype tThisEvent=*ti;
-    realtype elapsedThisEvent = od->elapsedTotal;
+    realtype alpha = neighborhood2ExitFraction(od, op);
+    realtype tThisEvent = od->tbuffer[1] + alpha * (od->tbuffer[2] - od->tbuffer[1]);
+    realtype elapsedThisEvent = od->elapsedTotal - (ONE - alpha) * od->lastStepDt;
 
     if (od->eventcount > 1) { 
         od->nMaxima[0] = fmax((realtype)od->thisNMaxima, od->nMaxima[0]); //cast to realtype (for mean)
@@ -166,6 +209,7 @@ static inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dx
 static inline void updateObserverState(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], const realtype stepDt, ObserverState *od, __constant struct ObserverRuntimeSettings *op) {
     ++od->stepcount;
     od->elapsedTotal += stepDt;
+    od->lastStepDt = stepDt;
 
     // advance solution buffer
     od->tbuffer[0] = od->tbuffer[1];
@@ -210,7 +254,6 @@ static inline void updateObserverState(realtype *ti, realtype xi[], realtype dxi
     // - define x0 as first time dropping below threshold in x[eVarIx]
     if (od->xbuffer[op->eVarIx * 3 + 1] > od->xThreshold && od->xbuffer[op->eVarIx * 3 + 2] < od->xThreshold) {
         od->foundX0 = 1;
-        od->isInNhood = 1;
         //record x0
         for (int j = 0; j < N_VAR; ++j)
             od->x0[j] = xi[j];

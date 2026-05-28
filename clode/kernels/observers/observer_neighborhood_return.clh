@@ -8,7 +8,8 @@
 #define TWO_PASS_EVENT_DETECTOR
 
 struct ObserverState_neighborhood_return {
-    realtype xbuffer[2];
+    realtype tbuffer[2];
+    realtype xbuffer[2 * N_VAR];
     realtype x0[N_VAR];
     realtype xTrajectoryMax[N_VAR];
     realtype xTrajectoryMin[N_VAR];
@@ -18,19 +19,65 @@ struct ObserverState_neighborhood_return {
 #endif
     realtype xThreshold;
     unsigned int foundX0;
-    unsigned int isInNhood;
     unsigned int eventcount;
     unsigned int stepcount;
 };
 
 typedef struct ObserverState_neighborhood_return ObserverState;
 
+static inline realtype neighborhoodReturnNormSqAtSample(const ObserverState *od, const int sampleIndex) {
+    realtype normSq = ZERO;
+    for (int j = 0; j < N_VAR; ++j) {
+        realtype range = od->xTrajectoryRange[j];
+        if (range > ZERO) {
+            realtype normalizedDiff = (od->xbuffer[j * 2 + sampleIndex] - od->x0[j]) / range;
+            normSq += normalizedDiff * normalizedDiff;
+        }
+    }
+    return normSq;
+}
+
+static inline realtype neighborhoodReturnExitFraction(
+    const ObserverState *od,
+    __constant struct ObserverRuntimeSettings *op
+) {
+    realtype a = ZERO;
+    realtype b = ZERO;
+    realtype c = -op->nHoodRadius * op->nHoodRadius;
+    for (int j = 0; j < N_VAR; ++j) {
+        realtype range = od->xTrajectoryRange[j];
+        if (range <= ZERO)
+            continue;
+
+        realtype normalizedStart = (od->xbuffer[j * 2 + 0] - od->x0[j]) / range;
+        realtype normalizedDelta = (od->xbuffer[j * 2 + 1] - od->xbuffer[j * 2 + 0]) / range;
+        a += normalizedDelta * normalizedDelta;
+        b += RCONST(2.0) * normalizedStart * normalizedDelta;
+        c += normalizedStart * normalizedStart;
+    }
+
+    realtype alpha = ONE;
+    if (a > UNIT_ROUNDOFF)
+    {
+        realtype discriminant = fmax(b * b - RCONST(4.0) * a * c, ZERO);
+        alpha = (-b + sqrt(discriminant)) / (RCONST(2.0) * a);
+    }
+    else if (fabs(b) > UNIT_ROUNDOFF)
+    {
+        alpha = -c / b;
+    }
+
+    return clamp(alpha, ZERO, ONE);
+}
+
 static inline void initializeObserverState(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op) {
-    (void)ti;
     (void)dxi;
     (void)auxi;
-    od->xbuffer[1] = xi[op->eVarIx];
+    od->tbuffer[0] = *ti;
+    od->tbuffer[1] = *ti;
     for (int j = 0; j < N_VAR; ++j) {
+        od->xbuffer[j * 2 + 0] = xi[j];
+        od->xbuffer[j * 2 + 1] = xi[j];
         od->x0[j] = xi[j];
         od->xTrajectoryMax[j] = -BIG_REAL;
         od->xTrajectoryMin[j] = BIG_REAL;
@@ -42,7 +89,6 @@ static inline void initializeObserverState(realtype *ti, realtype xi[], realtype
 #endif
     od->xThreshold = ZERO;
     od->foundX0 = 0;
-    od->isInNhood = 0;
     od->eventcount = 0;
     od->stepcount = 0;
 }
@@ -59,69 +105,71 @@ static inline void warmupObserverState(realtype *ti, realtype xi[], realtype dxi
 }
 
 static inline void initializeEventDetector(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op) {
-    (void)ti;
-    (void)xi;
     (void)dxi;
     (void)auxi;
     for (int j = 0; j < N_VAR; ++j)
         od->xTrajectoryRange[j] = od->xTrajectoryMax[j] - od->xTrajectoryMin[j];
     od->xThreshold = od->xTrajectoryMin[op->eVarIx] + op->xDownThresh * od->xTrajectoryRange[op->eVarIx];
+    od->tbuffer[0] = *ti;
+    od->tbuffer[1] = *ti;
+    for (int j = 0; j < N_VAR; ++j) {
+        od->xbuffer[j * 2 + 0] = xi[j];
+        od->xbuffer[j * 2 + 1] = xi[j];
+    }
+    od->foundX0 = 0;
+    od->eventcount = 0;
+    od->stepcount = 0;
 }
 
 static inline bool eventFunction(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op) {
     (void)ti;
+    (void)xi;
     (void)dxi;
     (void)auxi;
 
     if (od->stepcount < 1 || !od->foundX0)
         return false;
 
-    realtype normSq = ZERO;
-    for (int j = 0; j < N_VAR; ++j) {
-        realtype range = od->xTrajectoryRange[j];
-        if (range > ZERO) {
-            realtype normalizedDiff = (xi[j] - od->x0[j]) / range;
-            normSq += normalizedDiff * normalizedDiff;
-        }
-    }
-
-    unsigned int lastInNhood = od->isInNhood;
     realtype radiusSq = op->nHoodRadius * op->nHoodRadius;
-    od->isInNhood = normSq < radiusSq;
-    return lastInNhood && !od->isInNhood;
+    realtype previousNormSq = neighborhoodReturnNormSqAtSample(od, 0);
+    realtype currentNormSq = neighborhoodReturnNormSqAtSample(od, 1);
+    return previousNormSq < radiusSq && currentNormSq >= radiusSq;
 }
 
 static inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op) {
+    (void)ti;
     (void)xi;
     (void)dxi;
     (void)auxi;
 
     ++od->eventcount;
+    realtype alpha = neighborhoodReturnExitFraction(od, op);
+    realtype tThisEvent = od->tbuffer[0] + alpha * (od->tbuffer[1] - od->tbuffer[0]);
 #if N_STORE_EVENTS > 0
     if (od->eventcount <= N_STORE_EVENTS)
-        od->tEventList[od->eventcount - 1] = *ti;
+        od->tEventList[od->eventcount - 1] = tThisEvent;
 #endif
 
     return od->eventcount == op->maxEventCount;
 }
 
 static inline void updateObserverState(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], const realtype stepDt, ObserverState *od, __constant struct ObserverRuntimeSettings *op) {
-    (void)ti;
     (void)dxi;
     (void)auxi;
     (void)stepDt;
     ++od->stepcount;
-    od->xbuffer[0] = od->xbuffer[1];
-    od->xbuffer[1] = xi[op->eVarIx];
 
-    if (od->foundX0)
-        return;
+    od->tbuffer[0] = od->tbuffer[1];
+    od->tbuffer[1] = *ti;
+    for (int j = 0; j < N_VAR; ++j) {
+        od->xbuffer[j * 2 + 0] = od->xbuffer[j * 2 + 1];
+        od->xbuffer[j * 2 + 1] = xi[j];
+    }
 
-    if (od->xbuffer[0] > od->xThreshold && od->xbuffer[1] < od->xThreshold) {
+    if (!od->foundX0 && od->xbuffer[op->eVarIx * 2 + 0] > od->xThreshold && od->xbuffer[op->eVarIx * 2 + 1] < od->xThreshold) {
         od->foundX0 = 1;
-        od->isInNhood = 1;
         for (int j = 0; j < N_VAR; ++j)
-            od->x0[j] = xi[j];
+            od->x0[j] = od->xbuffer[j * 2 + 1];
     }
 }
 

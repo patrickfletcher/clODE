@@ -159,12 +159,15 @@ y = center_n + range_n * nhood_radius * np.sin(phi) * np.sin(theta)
 z = center_v + range_v * nhood_radius * np.cos(phi)
 
 # Plot trajectory with event markers in state space
-event0_idx = np.argmax(t>=event_times[0])
-event1_idx = np.argmax(t>=event_times[1])
+event0_idx = np.searchsorted(t, event_times[0], side="left")
+event1_idx = np.searchsorted(t, event_times[1], side="left")
+event_c = np.interp(event_times, t, c)
+event_n = np.interp(event_times, t, n)
+event_v = np.interp(event_times, t, v)
 
 ax = plt.subplot(1, 1, 1, projection='3d')
 ax.plot(c[event0_idx-1:event1_idx], n[event0_idx-1:event1_idx], v[event0_idx-1:event1_idx],'.-')
-ax.plot(c[event0_idx], n[event0_idx], v[event0_idx],'r>')
+ax.plot(event_c, event_n, event_v, 'r>', markersize=8)
 ax.plot(center_c, center_n, center_v, 'ko')
 ax.plot_surface(x, y, z, color='linen', alpha=0.5)
 

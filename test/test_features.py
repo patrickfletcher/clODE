@@ -293,8 +293,6 @@ def test_absolute_schmitt_trigger_uses_absolute_thresholds() -> None:
             feature_var="x",
             x_up_threshold=0.5,
             x_down_threshold=-0.5,
-            dx_up_threshold=0.0,
-            dx_down_threshold=0.0,
             min_amp=0.5,
             max_event_count=8,
             max_event_timestamps=3,

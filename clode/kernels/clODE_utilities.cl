@@ -8,6 +8,14 @@
 // TODO: expand interpolation routines [use slope info to provide better accuracy]
 // - DEFINE to swap in method alternatives [none, linear, quad, etc]
 
+// NOTES:
+// - work-item-local arrays and struct members are __private in OpenCL C.
+// - array helpers here are currently intended for caller-owned private state or
+//   scratch storage unless documented otherwise.
+// - if a shared helper needs buffer-backed data, prefer an explicit named
+//   address-space signature (__global/__local/__constant) instead of relying on
+//   __generic or implementation-specific defaults.
+// - can pass in N_VAR as a parameter if needed, see for example norm_inf.
 
 #ifndef CL_UTILITIES_H_
 #define CL_UTILITIES_H_

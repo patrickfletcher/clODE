@@ -19,20 +19,26 @@ static inline void initializeObserverState(realtype *ti, realtype xi[], realtype
     od->stepcount = 0;
 }
 
-//restricted per-timestep update of observer state for initializing event detector
+// Restricted per-timestep update for two-pass warmup collection. Only gather
+// the trajectory geometry needed to initialize the live event detector.
 static inline void warmupObserverState(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op) {
 }
 
-//process warmup data to compute relevant event detector quantities (e.g. thresholds)
+// Process warmup data and the rewound initial live-pass sample to finalize the
+// detector geometry.
 static inline void initializeEventDetector(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op) {
 }
 
-//per-timestep check for an event.  Option: refine event (t,x,dx,aux) within the timestep with interpolation
+// Per-step event test on the updated history buffers. Prefer keeping the public
+// event decision and any per-event interpolation geometry here or in
+// computeEventFeatures instead of using updateObserverState as a proxy event
+// detector.
 static inline bool eventFunction(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op) {
     return false;
 }
 
-//When an event is detected, computes desired event-based features. returns true if a terminal event was reached
+// When an event is detected, compute per-event outputs and update eventwise
+// aggregates such as counts or periods. Return true on terminal-event stop.
 static inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op) {
     ++od->eventcount;
     if (od->eventcount > op->maxEventCount){
@@ -41,7 +47,9 @@ static inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dx
     return false;
 }
 
-//full per-timestep update of observer state. If an event occurred this timestep, event-based observer state is reset. Per-timestep features are computed here.
+// Accepted-step state update before eventFunction runs. This is the place to
+// advance rolling history buffers and continuous per-step reducers, not the
+// primary place to decide that the observer's public event fired.
 static inline void updateObserverState(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op) {
     ++od->stepcount;
 }

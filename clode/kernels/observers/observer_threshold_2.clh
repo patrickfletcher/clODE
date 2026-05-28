@@ -174,7 +174,10 @@ static inline void initializeEventDetector(realtype *ti, realtype xi[], realtype
 
 //per-timestep check for an event.  Option: refine event (t,x,dx,aux) within the timestep with interpolation
 static inline bool eventFunction(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op) {
-    bool useDxUp = op->dxUpThresh > ZERO;
+    (void)ti;
+    (void)xi;
+    (void)dxi;
+    (void)auxi;
 
     if (od->stepcount < 2)
         return false;
@@ -182,11 +185,19 @@ static inline bool eventFunction(realtype *ti, realtype xi[], realtype dxi[], re
     if (od->xGlobalMax - od->xGlobalMin < op->minXamp)
         return false;
 
-    if (od->inUpstate)
-        return false;
+    if (od->inUpstate) {
+        bool useDxDown = op->dxDownThresh > ZERO;
+        return (
+            od->xbuffer[op->eVarIx * 3 + 2] < od->xDown
+            && (!useDxDown || od->dxbuffer[op->eVarIx * 3 + 2] < od->dxDown)
+        );
+    }
 
-    //event is marked by upward threshold crossing #TODO - user-specified direction option?
-    return (xi[op->eVarIx] > od->xUp && (!useDxUp || dxi[op->eVarIx] > od->dxUp));
+    bool useDxUp = op->dxUpThresh > ZERO;
+    return (
+        od->xbuffer[op->eVarIx * 3 + 2] > od->xUp
+        && (!useDxUp || od->dxbuffer[op->eVarIx * 3 + 2] > od->dxUp)
+    );
     
 }
 
@@ -203,19 +214,60 @@ static inline realtype thresholdTransitionTime(
     const realtype dxThreshold
 ) {
     bool crossedX = rising ? (x0 <= xThreshold && x1 > xThreshold) : (x0 >= xThreshold && x1 < xThreshold);
-    realtype tX = crossedX ? linearInterpTimeOfValue(t0, t1, x0, x1, xThreshold) : t1;
+    bool xAlreadyActive = rising ? (x0 >= xThreshold) : (x0 <= xThreshold);
+    realtype tX = crossedX ? linearInterpTimeOfValue(t0, t1, x0, x1, xThreshold) : (xAlreadyActive ? t0 : t1);
 
     if (!useDx)
         return tX;
 
     bool crossedDx = rising ? (dx0 <= dxThreshold && dx1 > dxThreshold) : (dx0 >= dxThreshold && dx1 < dxThreshold);
-    realtype tDx = crossedDx ? linearInterpTimeOfValue(t0, t1, dx0, dx1, dxThreshold) : t1;
+    bool dxAlreadyActive = rising ? (dx0 >= dxThreshold) : (dx0 <= dxThreshold);
+    realtype tDx = crossedDx ? linearInterpTimeOfValue(t0, t1, dx0, dx1, dxThreshold) : (dxAlreadyActive ? t0 : t1);
 
-    return crossedX && crossedDx ? fmax(tX, tDx) : (crossedX ? tX : (crossedDx ? tDx : t1));
+    return fmax(tX, tDx);
 }
 
 //When an event is detected, computes desired event-based features. returns true if a terminal event was reached
 static inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op) {
+    (void)ti;
+    (void)dxi;
+    (void)auxi;
+
+    if (od->inUpstate) {
+        bool useDxDown = op->dxDownThresh > ZERO;
+        od->tThisDown = thresholdTransitionTime(
+            useDxDown,
+            false,
+            od->tbuffer[1],
+            od->tbuffer[2],
+            od->xbuffer[op->eVarIx * 3 + 1],
+            od->xbuffer[op->eVarIx * 3 + 2],
+            od->dxbuffer[op->eVarIx * 3 + 1],
+            od->dxbuffer[op->eVarIx * 3 + 2],
+            od->xDown,
+            od->dxDown
+        );
+        od->elapsedThisDown = thresholdTransitionTime(
+            useDxDown,
+            false,
+            od->elapsedbuffer[1],
+            od->elapsedbuffer[2],
+            od->xbuffer[op->eVarIx * 3 + 1],
+            od->xbuffer[op->eVarIx * 3 + 2],
+            od->dxbuffer[op->eVarIx * 3 + 1],
+            od->dxbuffer[op->eVarIx * 3 + 2],
+            od->xDown,
+            od->dxDown
+        );
+        od->inUpstate = 0;
+
+        if (od->eventcount > 0 && od->eventcount <= N_STORE_EVENTS)
+            od->tDownTransition[od->eventcount - 1] = od->tThisDown;
+
+        od->fVarDownstateMean = xi[op->fVarIx];
+        return false;
+    }
+
     realtype tThisEvent;
     realtype elapsedThisEvent;
     bool useDxUp = op->dxUpThresh > ZERO;
@@ -380,44 +432,7 @@ static inline void updateObserverState(realtype *ti, realtype xi[], realtype dxi
             localMinimumFromThreeSamples(thisTbuffer, thisXbuffer, &od->tLastMin, &od->xLastMin); //actually not used...
         }
 
-        if (od->inUpstate) {
-            bool useDxDown = op->dxDownThresh > ZERO;
-
-            //Check for downward threshold crossing
-            if (xi[op->eVarIx] < od->xDown && (!useDxDown || dxi[op->eVarIx] < od->dxDown)) {
-                od->tThisDown = thresholdTransitionTime(
-                    useDxDown,
-                    false,
-                    od->tbuffer[1],
-                    od->tbuffer[2],
-                    od->xbuffer[op->eVarIx * 3 + 1],
-                    od->xbuffer[op->eVarIx * 3 + 2],
-                    od->dxbuffer[op->eVarIx * 3 + 1],
-                    od->dxbuffer[op->eVarIx * 3 + 2],
-                    od->xDown,
-                    od->dxDown
-                );
-                od->elapsedThisDown = thresholdTransitionTime(
-                    useDxDown,
-                    false,
-                    od->elapsedbuffer[1],
-                    od->elapsedbuffer[2],
-                    od->xbuffer[op->eVarIx * 3 + 1],
-                    od->xbuffer[op->eVarIx * 3 + 2],
-                    od->dxbuffer[op->eVarIx * 3 + 1],
-                    od->dxbuffer[op->eVarIx * 3 + 2],
-                    od->xDown,
-                    od->dxDown
-                );
-                od->inUpstate = 0;
-                
-                if (od->eventcount > 0 && od->eventcount <= N_STORE_EVENTS)
-                    od->tDownTransition[od->eventcount-1] = od->tThisDown;
-                
-                od->fVarDownstateMean = xi[op->fVarIx];
-            }
-        }
-        else {
+        if (!od->inUpstate) {
             // Compute running mean of the down state
 			realtype elapsedDownTime = od->elapsedTotal - od->elapsedThisDown;
 			if (elapsedDownTime > 0.0)

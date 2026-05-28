@@ -31,6 +31,7 @@ from ..observers.types import (
 	_observer_configuration_from_params,
 	_resolve_observer_configuration,
 	_resolve_observer_params,
+	_validate_observer_params_for_observer,
 )
 from ..problem.ivp import InitialValueProblem
 from ..problem.python import OpenCLRhsEquation
@@ -128,10 +129,10 @@ class FeatureSimulator(Simulator):
 				observers.
 			observer_x_up_thresh: Rising value threshold for threshold observers.
 			observer_x_down_thresh: Falling value threshold for threshold observers.
-			observer_dx_up_thresh: Rising derivative threshold for threshold
-				observers.
-			observer_dx_down_thresh: Falling derivative threshold for threshold
-				observers.
+			observer_dx_up_thresh: Compatibility derivative threshold used by the
+				legacy `Observer.threshold_2` workflow.
+			observer_dx_down_thresh: Compatibility derivative threshold used by the
+				legacy `Observer.threshold_2` workflow.
 			observer_eps_dx: Derivative tolerance used near threshold crossings.
 			observer_parameters: Optional public compatibility bundle. When
 				provided, it overrides the individual `observer_*` compatibility
@@ -201,6 +202,10 @@ class FeatureSimulator(Simulator):
 				dx_up_threshold=observer_dx_up_thresh,
 				dx_down_threshold=observer_dx_down_thresh,
 				eps_dx=observer_eps_dx,
+			)
+			_validate_observer_params_for_observer(
+				resolved_observer_type,
+				resolved_observer_params,
 			)
 
 		self._observer_type = resolved_observer_type
@@ -301,8 +306,10 @@ class FeatureSimulator(Simulator):
 			nhood_radius: Neighborhood radius for neighborhood-based observers.
 			x_up_threshold: Rising value threshold for threshold observers.
 			x_down_threshold: Falling value threshold for threshold observers.
-			dx_up_threshold: Rising derivative threshold for threshold observers.
-			dx_down_threshold: Falling derivative threshold for threshold observers.
+			dx_up_threshold: Compatibility derivative threshold used by the
+				legacy `Observer.threshold_2` workflow.
+			dx_down_threshold: Compatibility derivative threshold used by the
+				legacy `Observer.threshold_2` workflow.
 			eps_dx: Derivative tolerance used near threshold crossings.
 		"""
 		resolved_observer_params = _resolve_observer_params(
@@ -322,6 +329,10 @@ class FeatureSimulator(Simulator):
 			dx_up_threshold=dx_up_threshold,
 			dx_down_threshold=dx_down_threshold,
 			eps_dx=eps_dx,
+		)
+		_validate_observer_params_for_observer(
+			self._observer_type,
+			resolved_observer_params,
 		)
 		updated_runtime_settings = resolved_observer_params.runtime_settings
 		updated_event_output_settings = resolved_observer_params.event_output_settings
@@ -357,7 +368,9 @@ class FeatureSimulator(Simulator):
 		This is the preferred semantic surface for threshold, local-extremum,
 		and neighborhood-return observers. The broader `ObserverParams` bundle
 		remains available as a compatibility layer when a family-specific config
-		is not yet available. When one config type can drive more than one
+		is not yet available. `Observer.threshold_2` currently stays on that
+		compatibility surface because its broader legacy control set still
+		includes derivative gates. When one config type can drive more than one
 		observer variant, use `observer=` to select the target family explicitly;
 		otherwise the config can infer the target observer.
 		"""

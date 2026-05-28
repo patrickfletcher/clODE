@@ -26,6 +26,7 @@ Update when: the demonstration scripts change, helper adoption broadens, or the 
 - The current public example also shows that threshold-crossing timestamps have a clear alternative hierarchy on smooth coarse crossings: sampled endpoint times are crude, inverse-linear interpolation is already much better, and slope-aware Hermite interpolation can be dramatically more accurate when the crossing is monotone.
 - A follow-up ripple-heavy crossing check shows why Hermite should stay prototype-only for now: when a coarse timestep contains multiple threshold crossings, the interpolation target is ambiguous and inverse-linear interpolation can be more robust than a higher-order single-crossing model.
 - The current public example also includes a three-sample local-extremum prototype showing that quadratic-vertex fitting on the existing buffer geometry can materially outperform sample-argmax localization on coarse data.
+- The live `neighborhood_return` and `nhood2` observers now keep their sampled anchors `x0` but refine stored exit times by linearly interpolating the full normalized state between the last inside sample and the first outside sample of the neighborhood ball.
 - `clode/kernels/clODE_utilities.cl` now includes tested compensated-time helpers plus inverse-linear threshold timestamps, slope-aware Hermite threshold timestamps, and bounded three-sample max/min helpers. The public example still includes structured `t0 + step * dt` as a comparison baseline, `threshold_2` now uses inverse-linear timestamps for stored up/down threshold transitions, and `local_max` now uses the bounded three-sample extremum helpers, but broader helper adoption is still selective and incomplete.
 - `min_imi` and `eps_dx` are still exposed on `ObserverParams`, but they are not yet wired into the current built-in observer kernels strongly enough to recommend as primary safeguards in public docs.
 
@@ -36,7 +37,7 @@ Public docs should be explicit about three things:
 - where compensated mean accumulation demonstrably helps
 - where feature-window origin still matters because float32 absolute timestamps remain quantized even after elapsed-time bookkeeping is separated from them
 - where time compensation or structured time helps only with drift and endpoint accuracy
-- where current observer timestamps are sample-based and what inverse-linear or slope-aware interpolation alternatives buy on smooth crossings
+- where current observer timestamps are sample-based, where neighborhood-based timestamps now use sampled anchors plus full-state exit interpolation, and what inverse-linear or slope-aware interpolation alternatives buy on smooth crossings
 - where a stronger fix likely needs a richer time representation than one float32 absolute-time value
 - public package docs should describe current supported behavior and compare it to alternative algorithms, not to the package's development history
 
@@ -74,6 +75,7 @@ Avoid public wording that implies notation cleanup alone mitigates the time-base
 - `observer_threshold_2.clh` now uses inverse-linear timestamps for stored up/down threshold transitions in the live kernel, using the later active boundary when both `x` and `dx` gates participate. Slope-aware Hermite interpolation should still stay prototype-only until its robustness on noisy crossings is better characterized.
 - `observer_local_maximum.clh` now uses the shared bounded three-sample max/min helpers, but extrema on coarse or noisy traces remain a hotspot worth watching.
 - Neighborhood observers normalize by trajectory ranges in `observer_neighborhood_1.clh` and `observer_neighborhood_2.clh`; tiny or poorly resolved ranges can amplify noise or push the computation toward division by a very small number.
+- `observer_neighborhood_return.clh` and `observer_neighborhood_2.clh` now refine normalized-ball exit times from the last inside and first outside samples, but their anchors `x0` still come from the first sampled point below the anchor threshold, so coarse anchor steps remain a live accuracy limit.
 - Interpolation helpers in `clode/kernels/clODE_utilities.cl` divide by `t1 - t0` and related expressions, so closely spaced or quantized time buffers are a natural place to watch for loss of significance.
 - A leaner observer-time architecture may still be possible for `threshold_2` and `local_max`, for example by carrying elapsed-only or local-`dt` sample geometry and reconstructing absolute timestamps only when needed, but that should stay a measured design exercise because the current dual absolute/elapsed bookkeeping is what prevents large-origin subtraction from corrupting periods and durations.
 - Any future variance, covariance, or higher-moment features should avoid naive subtract-large-sums formulas; the same catastrophic-cancellation pattern that motivated compensated means will matter there too.

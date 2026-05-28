@@ -642,8 +642,6 @@ def test_feature_simulator_normalized_schmitt_trigger_configuration_round_trips(
         feature_var="x",
         x_up_threshold=0.6,
         x_down_threshold=0.4,
-        dx_up_threshold=0.2,
-        dx_down_threshold=0.1,
         min_amp=0.125,
         max_event_count=7,
         max_event_timestamps=4,
@@ -675,8 +673,6 @@ def test_feature_simulator_normalized_schmitt_trigger_configuration_round_trips(
         min_amp=0.125,
         x_up_threshold=0.6,
         x_down_threshold=0.4,
-        dx_up_threshold=0.2,
-        dx_down_threshold=0.1,
     )
 
 
@@ -686,8 +682,6 @@ def test_feature_simulator_absolute_schmitt_trigger_configuration_round_trips() 
         feature_var="x",
         x_up_threshold=0.6,
         x_down_threshold=0.4,
-        dx_up_threshold=0.2,
-        dx_down_threshold=0.1,
         min_amp=0.125,
         max_event_count=7,
         max_event_timestamps=4,
@@ -719,9 +713,156 @@ def test_feature_simulator_absolute_schmitt_trigger_configuration_round_trips() 
         min_amp=0.125,
         x_up_threshold=0.6,
         x_down_threshold=0.4,
-        dx_up_threshold=0.2,
-        dx_down_threshold=0.1,
     )
+
+
+def test_schmitt_trigger_config_allows_equal_thresholds() -> None:
+    config = clode.SchmittTriggerConfig(
+        event_var="x",
+        x_up_threshold=0.4,
+        x_down_threshold=0.4,
+    )
+
+    assert config.x_up_threshold == pytest.approx(0.4)
+    assert config.x_down_threshold == pytest.approx(0.4)
+
+
+def test_schmitt_trigger_config_rejects_inverted_thresholds() -> None:
+    with pytest.raises(ValueError, match="x_up_threshold >= x_down_threshold"):
+        clode.SchmittTriggerConfig(
+            event_var="x",
+            x_up_threshold=0.3,
+            x_down_threshold=0.4,
+        )
+
+
+def test_feature_simulator_rejects_dx_thresholds_for_semantic_schmitt() -> None:
+    with pytest.raises(ValueError, match="do not support dx thresholds"):
+        clode.FeatureSimulator(
+            src_file=model_path("hopf_normal_form.cl"),
+            variables=HOPF_VARIABLES.copy(),
+            parameters=HOPF_PARAMETERS.copy(),
+            aux=HOPF_AUX.copy(),
+            num_noise=0,
+            observer=clode.Observer.schmitt_trigger,
+            event_var="y",
+            feature_var="x",
+            observer_x_up_thresh=0.6,
+            observer_x_down_thresh=0.4,
+            observer_dx_up_thresh=0.2,
+            stepper=clode.Stepper.rk4,
+            dt=FIXED_DT,
+            dtmax=FIXED_DT,
+            t_span=(0.0, 1.0),
+            max_steps=FIXED_MAX_STEPS,
+            single_precision=True,
+            **device_kwargs_for_tests(),
+        )
+
+
+def test_feature_simulator_rejects_out_of_range_normalized_thresholds() -> None:
+    with pytest.raises(ValueError, match="x_up_threshold must be between 0.0 and 1.0 inclusive"):
+        clode.FeatureSimulator(
+            src_file=model_path("hopf_normal_form.cl"),
+            variables=HOPF_VARIABLES.copy(),
+            parameters=HOPF_PARAMETERS.copy(),
+            aux=HOPF_AUX.copy(),
+            num_noise=0,
+            observer=clode.Observer.normalized_schmitt_trigger,
+            observer_configuration=clode.SchmittTriggerConfig(
+                event_var="y",
+                feature_var="x",
+                x_up_threshold=1.1,
+                x_down_threshold=0.4,
+            ),
+            stepper=clode.Stepper.rk4,
+            dt=FIXED_DT,
+            dtmax=FIXED_DT,
+            t_span=(0.0, 1.0),
+            max_steps=FIXED_MAX_STEPS,
+            single_precision=True,
+            **device_kwargs_for_tests(),
+        )
+
+    with pytest.raises(ValueError, match="threshold must be between 0.0 and 1.0 inclusive"):
+        clode.FeatureSimulator(
+            src_file=model_path("hopf_normal_form.cl"),
+            variables=HOPF_VARIABLES.copy(),
+            parameters=HOPF_PARAMETERS.copy(),
+            aux=HOPF_AUX.copy(),
+            num_noise=0,
+            observer=clode.Observer.normalized_threshold_crossing,
+            observer_configuration=clode.ThresholdCrossingConfig(
+                event_var="y",
+                threshold=1.1,
+            ),
+            stepper=clode.Stepper.rk4,
+            dt=FIXED_DT,
+            dtmax=FIXED_DT,
+            t_span=(0.0, 1.0),
+            max_steps=FIXED_MAX_STEPS,
+            single_precision=True,
+            **device_kwargs_for_tests(),
+        )
+
+
+def test_neighborhood_return_config_rejects_invalid_normalized_inputs() -> None:
+    with pytest.raises(ValueError, match="anchor_threshold must be between 0.0 and 1.0 inclusive"):
+        clode.NeighborhoodReturnConfig(anchor_threshold=1.1)
+
+    with pytest.raises(ValueError, match="radius must be greater than 0.0"):
+        clode.NeighborhoodReturnConfig(radius=0.0)
+
+
+def test_threshold_2_requires_compatibility_surface_for_dx_controls() -> None:
+    with pytest.raises(ValueError, match="does not match the requested observer"):
+        clode.FeatureSimulator(
+            src_file=model_path("hopf_normal_form.cl"),
+            variables=HOPF_VARIABLES.copy(),
+            parameters=HOPF_PARAMETERS.copy(),
+            aux=HOPF_AUX.copy(),
+            num_noise=0,
+            observer=clode.Observer.threshold_2,
+            observer_configuration=clode.SchmittTriggerConfig(
+                event_var="y",
+                feature_var="x",
+                x_up_threshold=0.6,
+                x_down_threshold=0.4,
+            ),
+            stepper=clode.Stepper.rk4,
+            dt=FIXED_DT,
+            dtmax=FIXED_DT,
+            t_span=(0.0, 1.0),
+            max_steps=FIXED_MAX_STEPS,
+            single_precision=True,
+            **device_kwargs_for_tests(),
+        )
+
+
+def test_threshold_2_get_observer_configuration_returns_none() -> None:
+    simulator = clode.FeatureSimulator(
+        src_file=model_path("stable_linear_aux.cl"),
+        variables=STABLE_LINEAR_VARIABLES.copy(),
+        parameters=STABLE_LINEAR_PARAMETERS.copy(),
+        aux=STABLE_LINEAR_AUX.copy(),
+        num_noise=0,
+        observer=clode.Observer.threshold_2,
+        event_var="y",
+        feature_var="x",
+        observer_x_up_thresh=0.6,
+        observer_x_down_thresh=0.4,
+        observer_dx_up_thresh=0.2,
+        observer_dx_down_thresh=0.1,
+        stepper=clode.Stepper.rk4,
+        dt=FIXED_DT,
+        dtmax=FIXED_DT,
+        t_span=(0.0, 1.0),
+        max_steps=FIXED_MAX_STEPS,
+        single_precision=True,
+        **device_kwargs_for_tests(),
+    )
+
+    assert simulator.get_observer_configuration() is None
 
 
 def test_feature_simulator_local_extremum_configuration_round_trips() -> None:

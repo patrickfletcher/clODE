@@ -10,7 +10,7 @@ Update when: a compatibility alias is added, removed, deprecated, promoted to ca
 
 - `Observer.threshold_crossing`, `Observer.normalized_threshold_crossing`, `Observer.schmitt_trigger`, and `Observer.normalized_schmitt_trigger` are the preferred public observer names for the current threshold catalog.
 - `ThresholdCrossingConfig` is the preferred semantic config surface for the two one-boundary threshold observers.
-- `SchmittTriggerConfig` is the preferred semantic config surface for the two Schmitt families.
+- `SchmittTriggerConfig` is the preferred semantic config surface for the two lean Schmitt families.
 - `Observer.local_extremum` is the preferred public observer name for the lean polarity-selectable extremum family, and `LocalExtremumConfig` is its preferred semantic config surface.
 - `Observer.neighborhood_return` is the preferred public observer name for the lean two-pass normalized neighborhood-return family, and `NeighborhoodReturnConfig` is its preferred semantic config surface.
 - The selected observer, not the config class alone, determines whether a shared config is interpreted in absolute units or as warmup-derived fractions.
@@ -18,6 +18,7 @@ Update when: a compatibility alias is added, removed, deprecated, promoted to ca
 ### Supported compatibility and legacy surfaces
 
 - `Observer.threshold_2` remains a supported legacy-named public observer for the fully featured warmup-derived normalized Schmitt workflow.
+- `Observer.threshold_2` keeps derivative-gate controls on the compatibility surface; those controls are no longer part of `SchmittTriggerConfig`.
 - `Observer.local_max` remains a supported legacy public observer for the heavier maxima-oriented extremum workflow.
 - `Observer.neighbourhood_2` remains a supported legacy public observer for the heavier normalized neighborhood-return workflow.
 - `ObserverParams` remains the broad compatibility bundle for observer settings.
@@ -39,6 +40,7 @@ Update when: a compatibility alias is added, removed, deprecated, promoted to ca
 - User docs should prefer semantic names and shared config classes, and should mention compatibility aliases only when that helps users translate older code.
 - Public docs should describe `ObserverParams` and `observer_*` keyword arguments as compatibility surfaces rather than as the preferred observer UX.
 - Future observer-family work should treat the compatibility bundle as an adapter boundary, not as the vocabulary source for new semantic config objects.
+- `SchmittTriggerConfig` no longer round-trips `Observer.threshold_2`; `get_observer_configuration()` is intentionally `None` for that retained legacy observer.
 
 ## Questions for follow-through
 

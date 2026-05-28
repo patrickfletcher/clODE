@@ -49,6 +49,9 @@ _DEFAULT_NHOOD_RADIUS = 0.05
 # Schmitt trigger observers
 _DEFAULT_X_UP_THRESHOLD = 0.3
 _DEFAULT_X_DOWN_THRESHOLD = 0.2
+# derivative thresholds stay on the broad compatibility surface and the
+# retained legacy threshold_2 observer; the semantic Schmitt families no longer
+# use them.
 _DEFAULT_DX_UP_THRESHOLD = 0.0
 _DEFAULT_DX_DOWN_THRESHOLD = 0.0
 
@@ -213,14 +216,12 @@ class ThresholdCrossingConfig:
 
 @dataclass(frozen=True, slots=True)
 class SchmittTriggerConfig:
-    """Semantic config for absolute and fractional Schmitt-trigger observers."""
+    """Semantic config for the lean absolute and normalized Schmitt families."""
 
     event_var: str = ""
     feature_var: str = ""
     x_up_threshold: float = _DEFAULT_X_UP_THRESHOLD
     x_down_threshold: float = _DEFAULT_X_DOWN_THRESHOLD
-    dx_up_threshold: float = _DEFAULT_DX_UP_THRESHOLD
-    dx_down_threshold: float = _DEFAULT_DX_DOWN_THRESHOLD
     min_amp: float = _DEFAULT_MIN_AMP
     max_event_count: int = _DEFAULT_MAX_EVENT_COUNT
     max_event_timestamps: int = _DEFAULT_MAX_EVENT_TIMESTAMPS
@@ -241,18 +242,19 @@ class SchmittTriggerConfig:
         )
         object.__setattr__(self, "x_up_threshold", float(self.x_up_threshold))
         object.__setattr__(self, "x_down_threshold", float(self.x_down_threshold))
-        object.__setattr__(self, "dx_up_threshold", float(self.dx_up_threshold))
-        object.__setattr__(self, "dx_down_threshold", float(self.dx_down_threshold))
         object.__setattr__(self, "min_amp", float(self.min_amp))
         object.__setattr__(self, "max_event_count", int(self.max_event_count))
         object.__setattr__(self, "max_event_timestamps", int(self.max_event_timestamps))
+        if self.x_up_threshold < self.x_down_threshold:
+            raise ValueError(
+                "SchmittTriggerConfig requires x_up_threshold >= x_down_threshold"
+            )
 
     @property
-    def supported_observers(self) -> tuple[Observer, Observer, Observer]:
+    def supported_observers(self) -> tuple[Observer, Observer]:
         return (
             Observer.schmitt_trigger,
             Observer.normalized_schmitt_trigger,
-            Observer.threshold_2,
         )
 
     def to_observer_params(self, variable_names: Sequence[str]) -> ObserverParams:
@@ -275,8 +277,8 @@ class SchmittTriggerConfig:
             min_amp=self.min_amp,
             x_up_threshold=self.x_up_threshold,
             x_down_threshold=self.x_down_threshold,
-            dx_up_threshold=self.dx_up_threshold,
-            dx_down_threshold=self.dx_down_threshold,
+            dx_up_threshold=_DEFAULT_DX_UP_THRESHOLD,
+            dx_down_threshold=_DEFAULT_DX_DOWN_THRESHOLD,
         )
 
     @classmethod
@@ -298,8 +300,6 @@ class SchmittTriggerConfig:
             ),
             x_up_threshold=observer_params.x_up_threshold,
             x_down_threshold=observer_params.x_down_threshold,
-            dx_up_threshold=observer_params.dx_up_threshold,
-            dx_down_threshold=observer_params.dx_down_threshold,
             min_amp=observer_params.min_amp,
             max_event_count=observer_params.max_event_count,
             max_event_timestamps=observer_params.max_event_timestamps,
@@ -382,6 +382,11 @@ class NeighborhoodReturnConfig:
         object.__setattr__(self, "radius", float(self.radius))
         object.__setattr__(self, "max_event_count", int(self.max_event_count))
         object.__setattr__(self, "max_event_timestamps", int(self.max_event_timestamps))
+        _require_unit_interval(
+            self.anchor_threshold,
+            parameter_name="anchor_threshold",
+        )
+        _require_positive_float(self.radius, parameter_name="radius")
 
     @property
     def supported_observers(self) -> tuple[Observer]:
@@ -649,9 +654,10 @@ def _resolve_observer_configuration(
     supported_observers = observer_configuration.supported_observers
     if observer is None or observer is Observer.basic_all_variables:
         if len(supported_observers) == 1:
-            return supported_observers[0], observer_configuration.to_observer_params(
-                variable_names
-            )
+            resolved_observer = supported_observers[0]
+            resolved_params = observer_configuration.to_observer_params(variable_names)
+            _validate_observer_params_for_observer(resolved_observer, resolved_params)
+            return resolved_observer, resolved_params
         raise ValueError(
             "observer_configuration requires an explicit observer because the "
             "same config surface is shared across multiple observer variants"
@@ -662,7 +668,9 @@ def _resolve_observer_configuration(
             "observer_configuration does not match the requested observer. "
             f"Expected one of: {supported_names}; got '{observer.name}'."
         )
-    return observer, observer_configuration.to_observer_params(variable_names)
+    resolved_params = observer_configuration.to_observer_params(variable_names)
+    _validate_observer_params_for_observer(observer, resolved_params)
+    return observer, resolved_params
 
 
 def _observer_configuration_from_params(
@@ -682,7 +690,6 @@ def _observer_configuration_from_params(
     if observer in (
         Observer.schmitt_trigger,
         Observer.normalized_schmitt_trigger,
-        Observer.threshold_2,
     ):
         return SchmittTriggerConfig.from_observer_params(
             variable_names,
@@ -784,6 +791,62 @@ def _normalize_event_direction(
         raise ValueError(
             f"Unsupported event_direction '{event_direction}'. Expected one of: {allowed}"
         ) from error
+
+
+def _validate_observer_params_for_observer(
+    observer: Observer,
+    observer_params: ObserverParams,
+) -> None:
+    if observer is Observer.normalized_threshold_crossing:
+        _require_unit_interval(
+            observer_params.x_up_threshold,
+            parameter_name="threshold",
+        )
+        return
+
+    if observer in (Observer.schmitt_trigger, Observer.normalized_schmitt_trigger):
+        if (
+            observer_params.dx_up_threshold != _DEFAULT_DX_UP_THRESHOLD
+            or observer_params.dx_down_threshold != _DEFAULT_DX_DOWN_THRESHOLD
+        ):
+            raise ValueError(
+                "Semantic Schmitt observers do not support dx thresholds. "
+                "Use Observer.threshold_2 for derivative-gated legacy behavior."
+            )
+        if observer_params.x_up_threshold < observer_params.x_down_threshold:
+            raise ValueError(
+                "Schmitt observers require x_up_threshold >= x_down_threshold"
+            )
+        if observer is Observer.normalized_schmitt_trigger:
+            _require_unit_interval(
+                observer_params.x_up_threshold,
+                parameter_name="x_up_threshold",
+            )
+            _require_unit_interval(
+                observer_params.x_down_threshold,
+                parameter_name="x_down_threshold",
+            )
+        return
+
+    if observer is Observer.neighborhood_return:
+        _require_unit_interval(
+            observer_params.x_down_threshold,
+            parameter_name="anchor_threshold",
+        )
+        _require_positive_float(
+            observer_params.nhood_radius,
+            parameter_name="radius",
+        )
+
+
+def _require_unit_interval(value: float, *, parameter_name: str) -> None:
+    if not 0.0 <= float(value) <= 1.0:
+        raise ValueError(f"{parameter_name} must be between 0.0 and 1.0 inclusive")
+
+
+def _require_positive_float(value: float, *, parameter_name: str) -> None:
+    if float(value) <= 0.0:
+        raise ValueError(f"{parameter_name} must be greater than 0.0")
 
 
 def _normalize_extremum_polarity(

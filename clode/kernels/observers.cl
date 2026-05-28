@@ -4,12 +4,12 @@
 /* "Observer" measures features of the ODE solution as it is being integrated
  * The observer consists of a persistent state structure and several functions:
  * 
- * - initializeObserverState: set up the observer state to sensible values
- * - warmupObserverState: for two-pass event detectors - restricted data collection about trajectory during a first pass ODE solve
- * - updateObserverState: per-timestep update of observer state
- * - initializeEventDetector: set any values needed to do selected type of event detection (possibly using warmup data)
- * - eventFunction: check for an event. Optionally refine location of event within timestep. Compute event-based quantities
- * - computeEventFeatures: when event is detected, compute desired per-event features
+ * - initializeObserverState: seed persistent state and retained event/output buffers
+ * - warmupObserverState: for two-pass detectors, collect only warmup-pass geometry
+ * - updateObserverState: advance accepted-step history buffers and continuous per-step reducers
+ * - initializeEventDetector: finalize live-pass detector geometry using warmup data and the rewound initial sample
+ * - eventFunction: decide whether the observer's public event fired on the updated history, optionally refining event geometry within the step
+ * - computeEventFeatures: when an event is detected, update retained outputs and eventwise aggregates such as counts or periods
  * - finalizeFeatures: post-integration cleanup and write to global feature array
  */
 

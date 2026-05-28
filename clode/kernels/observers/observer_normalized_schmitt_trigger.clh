@@ -12,19 +12,14 @@
 struct ObserverState_normalized_schmitt_trigger {
     realtype tbuffer[2];
     realtype xbuffer[2];
-    realtype dxbuffer[2];
 #if N_STORE_EVENTS > 0
     realtype tUpTransition[N_STORE_EVENTS];
     realtype tDownTransition[N_STORE_EVENTS];
 #endif
     realtype xGlobalMax;
     realtype xGlobalMin;
-    realtype dxGlobalMax;
-    realtype dxGlobalMin;
     realtype xUp;
     realtype xDown;
-    realtype dxUp;
-    realtype dxDown;
     unsigned int stepcount;
     unsigned int eventcount;
     unsigned int inUpstate;
@@ -33,10 +28,10 @@ struct ObserverState_normalized_schmitt_trigger {
 typedef struct ObserverState_normalized_schmitt_trigger ObserverState;
 
 static inline void initializeObserverState(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op) {
+    (void)dxi;
     (void)auxi;
     od->tbuffer[1] = *ti;
     od->xbuffer[1] = xi[op->eVarIx];
-    od->dxbuffer[1] = dxi[op->eVarIx];
 #if N_STORE_EVENTS > 0
     for (int j = 0; j < N_STORE_EVENTS; ++j) {
         od->tUpTransition[j] = ZERO;
@@ -45,12 +40,8 @@ static inline void initializeObserverState(realtype *ti, realtype xi[], realtype
 #endif
     od->xGlobalMax = -BIG_REAL;
     od->xGlobalMin = BIG_REAL;
-    od->dxGlobalMax = -BIG_REAL;
-    od->dxGlobalMin = BIG_REAL;
     od->xUp = ZERO;
     od->xDown = ZERO;
-    od->dxUp = ZERO;
-    od->dxDown = ZERO;
     od->stepcount = 0;
     od->eventcount = 0;
     od->inUpstate = 0;
@@ -58,48 +49,21 @@ static inline void initializeObserverState(realtype *ti, realtype xi[], realtype
 
 static inline void warmupObserverState(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op) {
     (void)ti;
+    (void)dxi;
     (void)auxi;
     od->xGlobalMax = fmax(od->xGlobalMax, xi[op->eVarIx]);
     od->xGlobalMin = fmin(od->xGlobalMin, xi[op->eVarIx]);
-    od->dxGlobalMax = fmax(od->dxGlobalMax, dxi[op->eVarIx]);
-    od->dxGlobalMin = fmin(od->dxGlobalMin, dxi[op->eVarIx]);
 }
 
 static inline void initializeEventDetector(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op) {
     (void)ti;
+    (void)dxi;
     (void)auxi;
     realtype xTrajectoryAmp = od->xGlobalMax - od->xGlobalMin;
     od->xUp = od->xGlobalMin + op->xUpThresh * xTrajectoryAmp;
-    od->xDown = op->xDownThresh > ZERO ? od->xGlobalMin + op->xDownThresh * xTrajectoryAmp : od->xUp;
-    od->dxUp = op->dxUpThresh > ZERO ? op->dxUpThresh * od->dxGlobalMax : ZERO;
-    od->dxDown = op->dxDownThresh > ZERO ? op->dxDownThresh * od->dxGlobalMin : ZERO;
+    od->xDown = od->xGlobalMin + op->xDownThresh * xTrajectoryAmp;
     od->inUpstate = xi[op->eVarIx] > od->xUp ? 1 : 0;
     od->xbuffer[1] = xi[op->eVarIx];
-    od->dxbuffer[1] = dxi[op->eVarIx];
-}
-
-static inline realtype thresholdTransitionTime(
-    const bool useDx,
-    const bool rising,
-    const realtype t0,
-    const realtype t1,
-    const realtype x0,
-    const realtype x1,
-    const realtype dx0,
-    const realtype dx1,
-    const realtype xThreshold,
-    const realtype dxThreshold
-) {
-    bool crossedX = rising ? (x0 <= xThreshold && x1 > xThreshold) : (x0 >= xThreshold && x1 < xThreshold);
-    realtype tX = crossedX ? linearInterpTimeOfValue(t0, t1, x0, x1, xThreshold) : t1;
-
-    if (!useDx)
-        return tX;
-
-    bool crossedDx = rising ? (dx0 <= dxThreshold && dx1 > dxThreshold) : (dx0 >= dxThreshold && dx1 < dxThreshold);
-    realtype tDx = crossedDx ? linearInterpTimeOfValue(t0, t1, dx0, dx1, dxThreshold) : t1;
-
-    return crossedX && crossedDx ? fmax(tX, tDx) : (crossedX ? tX : (crossedDx ? tDx : t1));
 }
 
 static inline bool eventFunction(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op) {
@@ -115,12 +79,9 @@ static inline bool eventFunction(realtype *ti, realtype xi[], realtype dxi[], re
         return false;
 
     if (od->inUpstate)
-        return false;
+        return od->xbuffer[0] >= od->xDown && od->xbuffer[1] < od->xDown;
 
-    bool useDxUp = od->dxUp > ZERO;
-    bool crossedX = od->xbuffer[0] <= od->xUp && od->xbuffer[1] > od->xUp;
-    bool crossedDx = !useDxUp || (od->dxbuffer[0] <= od->dxUp && od->dxbuffer[1] > od->dxUp);
-    return crossedX && crossedDx;
+    return od->xbuffer[0] <= od->xUp && od->xbuffer[1] > od->xUp;
 }
 
 static inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op) {
@@ -129,21 +90,31 @@ static inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dx
     (void)dxi;
     (void)auxi;
 
-    bool useDxUp = od->dxUp > ZERO;
+    if (od->inUpstate) {
+        realtype tThisDown = linearInterpTimeOfValue(
+            od->tbuffer[0],
+            od->tbuffer[1],
+            od->xbuffer[0],
+            od->xbuffer[1],
+            od->xDown
+        );
+        od->inUpstate = 0;
+#if N_STORE_EVENTS > 0
+        if (od->eventcount > 0 && od->eventcount <= N_STORE_EVENTS)
+            od->tDownTransition[od->eventcount - 1] = tThisDown;
+#endif
+        return false;
+    }
+
     ++od->eventcount;
     od->inUpstate = 1;
 
-    realtype tThisEvent = thresholdTransitionTime(
-        useDxUp,
-        true,
+    realtype tThisEvent = linearInterpTimeOfValue(
         od->tbuffer[0],
         od->tbuffer[1],
         od->xbuffer[0],
         od->xbuffer[1],
-        od->dxbuffer[0],
-        od->dxbuffer[1],
-        od->xUp,
-        od->dxUp
+        od->xUp
     );
 
 #if N_STORE_EVENTS > 0
@@ -155,6 +126,7 @@ static inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dx
 }
 
 static inline void updateObserverState(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], const realtype stepDt, ObserverState *od, __constant struct ObserverRuntimeSettings *op) {
+    (void)dxi;
     (void)auxi;
     (void)stepDt;
 
@@ -163,33 +135,6 @@ static inline void updateObserverState(realtype *ti, realtype xi[], realtype dxi
     od->tbuffer[1] = *ti;
     od->xbuffer[0] = od->xbuffer[1];
     od->xbuffer[1] = xi[op->eVarIx];
-    od->dxbuffer[0] = od->dxbuffer[1];
-    od->dxbuffer[1] = dxi[op->eVarIx];
-
-    if (od->inUpstate) {
-        bool useDxDown = od->dxDown < ZERO;
-        bool crossedX = od->xbuffer[0] >= od->xDown && od->xbuffer[1] < od->xDown;
-        bool crossedDx = !useDxDown || (od->dxbuffer[0] >= od->dxDown && od->dxbuffer[1] < od->dxDown);
-        if (crossedX && crossedDx) {
-            realtype tThisDown = thresholdTransitionTime(
-                useDxDown,
-                false,
-                od->tbuffer[0],
-                od->tbuffer[1],
-                od->xbuffer[0],
-                od->xbuffer[1],
-                od->dxbuffer[0],
-                od->dxbuffer[1],
-                od->xDown,
-                od->dxDown
-            );
-            od->inUpstate = 0;
-#if N_STORE_EVENTS > 0
-            if (od->eventcount > 0 && od->eventcount <= N_STORE_EVENTS)
-                od->tDownTransition[od->eventcount - 1] = tThisDown;
-#endif
-        }
-    }
 }
 
 static inline void finalizeFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op, __global realtype *F, int i, int nPts) {
