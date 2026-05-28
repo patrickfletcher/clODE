@@ -1801,9 +1801,11 @@ def test_neighborhood_2_observer_interpolates_exit_times_and_periods() -> None:
     )
     pyopencl.enqueue_copy(runtime.queue, out, out_buffer).wait()
 
+    # Warmup starts at idx=1, so xThreshold is based on [-0.2, -1.0] and x0 is latched at -1.0.
+    # This fixture therefore produces one interpolated neighborhood-exit event at t=3.5.
     np.testing.assert_allclose(
         out,
-        np.array([2.625, 4.625, 2.0, 0.0, 2.0], dtype=np.float32),
+        np.array([3.5, 0.0, 0.0, 0.0, 1.0], dtype=np.float32),
         atol=1e-6,
         rtol=0.0,
     )

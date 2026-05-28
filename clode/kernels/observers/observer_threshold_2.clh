@@ -359,24 +359,13 @@ static inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dx
 //full per-timestep update of observer state. If an event occurred this timestep, event-based observer state is reset. Per-timestep features are computed here.
 static inline void updateObserverState(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], const realtype stepDt, ObserverState *od, __constant struct ObserverRuntimeSettings *op) {
     ++od->stepcount;
-    od->elapsedTotal += stepDt;
+    od->elapsedTotal += stepDt;  //TODO: should this use compensated time??
 
     // advance solution buffer
-    od->tbuffer[0] = od->tbuffer[1];
-    od->tbuffer[1] = od->tbuffer[2];
-    od->tbuffer[2] = *ti;
-    od->elapsedbuffer[0] = od->elapsedbuffer[1];
-    od->elapsedbuffer[1] = od->elapsedbuffer[2];
-    od->elapsedbuffer[2] = od->elapsedTotal;
-
-    for (int j = 0; j < N_VAR; ++j) {
-        od->xbuffer[j * 3 + 0] = od->xbuffer[j * 3 + 1];
-        od->xbuffer[j * 3 + 1] = od->xbuffer[j * 3 + 2];
-        od->xbuffer[j * 3 + 2] = xi[j];
-        od->dxbuffer[j * 3 + 0] = od->dxbuffer[j * 3 + 1];
-        od->dxbuffer[j * 3 + 1] = od->dxbuffer[j * 3 + 2];
-        od->dxbuffer[j * 3 + 2] = dxi[j];
-    }
+    advanceAcceptedStepHistory3(od->tbuffer, *ti);
+    advanceAcceptedStepHistory3(od->elapsedbuffer, od->elapsedTotal);
+    advanceAcceptedStepHistory3ByVariable(od->xbuffer, xi, N_VAR);
+    advanceAcceptedStepHistory3ByVariable(od->dxbuffer, dxi, N_VAR);
 
     //global extent of all vars, var slopes, and aux vars
     for (int j = 0; j < N_VAR; ++j) {

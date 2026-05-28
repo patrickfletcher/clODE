@@ -15,6 +15,7 @@ Long notes should be read in layers: start with `## Bottom line` and any `## Fas
 - `project_principles.md`: settled project principles and open cross-cutting design questions.
 - `compatibility_boundary_audit.md`: current canonical versus compatibility-only observer surfaces and the follow-on cleanup questions they create.
 - `observer_concept_audit.md`: current observer semantics, current state/bundle question, and implementation-path guidance for observer authoring and memory-footprint control.
+- `observer_solution_buffer_audit.md`: accepted-step `K`-sample buffer audit, current prerequisite decision, and smallest follow-on proof target.
 - `semantic_layout_audit.md`: stable package-layout and ownership guidance. Use for durable placement principles, not the active PR sequence.
 - `solver_state_implementation_plan.md`: current solver-state boundary and the durable guardrails it leaves in place.
 - `continuation_timebase_note.md`: solver-owned time-base semantics and attained-`tf` continuation guidance.
@@ -25,6 +26,7 @@ Long notes should be read in layers: start with `## Bottom line` and any `## Fas
 
 - `single_precision_numerics_note.md`: verified float32 failure modes, current demos, and mitigation guardrails.
 - `single_precision_ode_solver_guide.md`: compact float32 arithmetic, scaling, conditioning, and mixed-precision guidance for sensitive ODE and kernel work. Read when editing `clode/kernels/*` or other float32-sensitive solver math.
+- `ode_event_interpolation_note.md`: interpolation and event-refinement tradeoffs for threshold and extremum outputs; use when choosing event-time or event-state refinement methods.
 - `testing_audit.md`: test taxonomy, evidence strategy, and component-test direction.
 
 ### Public-surface plans

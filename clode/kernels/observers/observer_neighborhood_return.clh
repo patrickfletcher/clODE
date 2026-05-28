@@ -159,12 +159,8 @@ static inline void updateObserverState(realtype *ti, realtype xi[], realtype dxi
     (void)stepDt;
     ++od->stepcount;
 
-    od->tbuffer[0] = od->tbuffer[1];
-    od->tbuffer[1] = *ti;
-    for (int j = 0; j < N_VAR; ++j) {
-        od->xbuffer[j * 2 + 0] = od->xbuffer[j * 2 + 1];
-        od->xbuffer[j * 2 + 1] = xi[j];
-    }
+    advanceAcceptedStepHistory2(od->tbuffer, *ti);
+    advanceAcceptedStepHistory2ByVariable(od->xbuffer, xi, N_VAR);
 
     if (!od->foundX0 && od->xbuffer[op->eVarIx * 2 + 0] > od->xThreshold && od->xbuffer[op->eVarIx * 2 + 1] < od->xThreshold) {
         od->foundX0 = 1;

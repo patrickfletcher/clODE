@@ -118,10 +118,8 @@ static inline void updateObserverState(realtype *ti, realtype xi[], realtype dxi
     (void)auxi;
     (void)stepDt;
     ++od->stepcount;
-    od->tbuffer[0] = od->tbuffer[1];
-    od->tbuffer[1] = *ti;
-    od->xbuffer[0] = od->xbuffer[1];
-    od->xbuffer[1] = xi[op->eVarIx];
+    advanceAcceptedStepHistory2(od->tbuffer, *ti);
+    advanceAcceptedStepHistory2(od->xbuffer, xi[op->eVarIx]);
     od->xGlobalMax = fmax(od->xGlobalMax, xi[op->eVarIx]);
     od->xGlobalMin = fmin(od->xGlobalMin, xi[op->eVarIx]);
 }

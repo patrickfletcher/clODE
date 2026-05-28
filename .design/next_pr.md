@@ -29,6 +29,8 @@ A utilities-only PR would mostly reorganize private helpers without answering th
 - inventory accepted-step history layouts, buffer-update patterns, and event-local scratch across the observer families that currently depend on recent-step geometry
 - decide whether one shared accepted-step `K`-sample solution-buffer concept should precede more observer bundle work
 - identify which helper or update patterns should stay family-local even if a shared buffer concept lands
+- decide where the work-item-local accepted-step solution buffer contract should live in kernel scope and why
+- record interpolation and refinement guidance for threshold and extremum event outputs without widening behavior in this PR
 - state whether the oscillation-oriented readout seam should follow immediately after this audit or can proceed without a shared buffer abstraction
 
 ## Key Questions
@@ -39,6 +41,8 @@ A utilities-only PR would mostly reorganize private helpers without answering th
 - Does the `K`-sample accepted step solution buffer construct along with its dedicated update helper make observer OpenCL code cleaner and easier to reason about?
 - Does guaranteeing the presence of previous `K` state and slope values (or a variant thereof) offer opportunities for high-accuracy interpolation helpers that can be used in refining event times and/or state value outputs, local extrema times/values, or other derived observer outputs?
 - Which utilities are still better treated as private caller-side helpers even after that decision?
+- Should the shared accepted-step buffer contract live in observer-owned state and observer helpers (called from `features.cl`), or in kernel-level orchestration scope?
+- Which interpolation/refinement methods are slice-2 defaults versus explicit future upgrades?
 - If no shared buffer concept lands next, is the oscillation-oriented readout seam still the best immediate follow-on?
 
 ## Design Constraints
@@ -65,17 +69,21 @@ A utilities-only PR would mostly reorganize private helpers without answering th
 3. If yes, name the smallest follow-on proof target and the families it should cover first.
 4. If no, document why and re-promote the oscillation-oriented readout seam as the next implementation PR.
 
+Current audit record: `.design/reference/observer_solution_buffer_audit.md` is the authoritative decision note for this PR's core question.
+
 ## Code-Facing Checklist
 
 - `clode/kernels/observers/*.clh`: inventory accepted-step history, event-local scratch, and duplicated buffer updates without widening behavior in the audit PR
 - `clode/kernels/clODE_utilities.cl`: treat helper placement as secondary to the solution-buffer decision; avoid turning private-use helpers into a premature public kernel abstraction
-- `.design/reference/observer_concept_audit.md`, `.design/reference/semantic_layout_audit.md`, `.design/reference/compatibility_boundary_audit.md`: keep the trigger-story, state/bundle question, and compatibility boundary aligned
+- `.design/reference/observer_solution_buffer_audit.md`, `.design/reference/observer_concept_audit.md`, `.design/reference/semantic_layout_audit.md`, `.design/reference/compatibility_boundary_audit.md`: keep the accepted-step-buffer decision, trigger-story, state/bundle question, and compatibility boundary aligned
 - `.design/package_state.md`, `.design/ideas.md`: keep the active target and dependency ordering explicit
 
 ## Acceptance Criteria
 
-- one authoritative design note states whether a shared accepted-step solution-buffer concept is a prerequisite for clearer observer bundle work
+- one authoritative design note (`.design/reference/observer_solution_buffer_audit.md`) states whether a shared accepted-step solution-buffer concept is a prerequisite for clearer observer bundle work
+- that note also states where the work-item-local accepted-step buffer contract should reside and why
 - root planning docs agree that utilities alone are not the next proof target
+- interpolation and event-refinement guidance is explicit enough that slice 2 can avoid accidental behavior expansion
 - the dependency between solution-buffer work and oscillation-oriented bundles is explicit in `ideas.md` and `next_pr.md`
 - the first follow-on implementation target after the audit is named clearly
 

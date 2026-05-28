@@ -19,6 +19,42 @@
 
 #include "clODE_struct_defs.cl"
 
+// Shared accepted-step history helpers for observer-local solution buffers.
+// Keep scalar K=2/K=3 helpers unrolled for the per-step hot path.
+static inline void advanceAcceptedStepHistory2(realtype *history, const realtype newestSample) {
+	history[0] = history[1];
+	history[1] = newestSample;
+}
+
+// Update a packed per-variable K=2 history laid out as [var0_k0, var0_k1, var1_k0, ...].
+static inline void advanceAcceptedStepHistory2ByVariable(realtype *packedHistory, const realtype latestValues[], const int valueCount) {
+	for (int j = 0; j < valueCount; ++j) {
+		realtype *history = &packedHistory[j * 2];
+		advanceAcceptedStepHistory2(history, latestValues[j]);
+	}
+}
+
+static inline void advanceAcceptedStepHistory3(realtype *history, const realtype newestSample) {
+	history[0] = history[1];
+	history[1] = history[2];
+	history[2] = newestSample;
+}
+
+// Update a packed per-variable K=3 history laid out as [var0_k0, var0_k1, var0_k2, var1_k0, ...].
+// The loop-based form keeps call sites compact when advancing N_VAR-sized buffers.
+static inline void advanceAcceptedStepHistory3ByVariable(realtype *packedHistory, const realtype latestValues[], const int valueCount) {
+	for (int j = 0; j < valueCount; ++j) {
+		realtype *history = &packedHistory[j * 3];
+		advanceAcceptedStepHistory3(history, latestValues[j]);
+	}
+}
+
+// should replicate:
+// for (int j = 0; j < N_VAR; ++j) {
+// 	od->xbuffer[j * 3 + 0] = od->xbuffer[j * 3 + 1];
+// 	od->xbuffer[j * 3 + 1] = od->xbuffer[j * 3 + 2];
+// 	od->xbuffer[j * 3 + 2] = xi[j];}
+
 
 // Design criteria
 // - use online algorithms for features such as mean, median, etc.

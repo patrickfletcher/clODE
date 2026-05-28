@@ -10,7 +10,7 @@ Update when: the observer concept changes materially, a new observer-family decl
 - The semantic observer catalog is now much clearer than it was before the threshold-family cleanup: summary-only reducers, lean threshold and Schmitt families, `local_extremum`, and `neighborhood_return` all have explicit semantic homes, while `threshold_2`, `local_max`, and `neighbourhood_2` remain retained heavier legacy workflows.
 - The current declaration boundary is also clearer: build-specialized observer choices belong in the resolved observer spec, while scalar runtime knobs stay in runtime settings when they do not change layout or feature schema.
 - The heavier event observers still bundle too many concerns under one built-in mode: trigger semantics, warmup or two-pass behavior, persistent state layout, feature-output schema, and retained event-output policy.
-- The active design question is no longer which threshold-family corner to add next. It is whether a shared accepted-step solution-buffer concept should precede observer bundle work, or whether the current family-local buffers are already the right level of duplication.
+- The active design question is no longer which threshold-family corner to add next. A first-pass answer now lives in `observer_solution_buffer_audit.md`: treat a shared accepted-step solution-buffer concept as a prerequisite for further observer bundle work, while keeping event semantics and heavy bundle logic family-local.
 - `neighbourhood_1` still looks more like a keep-or-retire case than a good template for future observer generalization unless a more deterministic workflow emerges.
 
 ## Fast path
