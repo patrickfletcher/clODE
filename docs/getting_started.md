@@ -82,7 +82,7 @@ integrator = clode.FeatureSimulator(
     rhs_equation=van_der_pol,
     variables={"x": 1.0, "y": 1.0},
     parameters={"mu": 0.1},
-    observer=clode.Observer.threshold_2,
+    observer=clode.Observer.normalized_schmitt_trigger,
     stepper=clode.Stepper.dormand_prince,
     t_span=t_span,
 )

@@ -116,18 +116,30 @@ class ObserverOutput:
 
     def get_var_max(self, var: str) -> np.ndarray[Any, np.dtype[np.float64]]:
         """Return the tracked maximum for one variable or derived quantity."""
-
-        return self._get_var(" ".join(["max", var]))
+        primary = " ".join(["max", var])
+        fallback = " ".join([var, "max"])
+        try:
+            return self._get_var(primary)
+        except NotImplementedError:
+            return self._get_var(fallback)
 
     def get_var_min(self, var: str) -> np.ndarray[Any, np.dtype[np.float64]]:
         """Return the tracked minimum for one variable or derived quantity."""
-
-        return self._get_var(" ".join(["min", var]))
+        primary = " ".join(["min", var])
+        fallback = " ".join([var, "min"])
+        try:
+            return self._get_var(primary)
+        except NotImplementedError:
+            return self._get_var(fallback)
 
     def get_var_mean(self, var: str) -> np.ndarray[Any, np.dtype[np.float64]]:
         """Return the tracked mean for one variable or derived quantity."""
-
-        return self._get_var(" ".join(["mean", var]))
+        primary = " ".join(["mean", var])
+        fallback = " ".join([var, "mean"])
+        try:
+            return self._get_var(primary)
+        except NotImplementedError:
+            return self._get_var(fallback)
 
     def get_var_max_slope(self, var: str) -> np.ndarray[Any, np.dtype[np.float64]]:
         return self.get_var_max(f"d{var}/dt")
@@ -153,11 +165,12 @@ class ObserverOutput:
             type: Event field to read, typically `"time"`.
         """
 
+        normalized_name = self._normalize_event_stream_name(name)
         field_type = "time" if type is None else str(type)
         event_features = [
             feature_name
             for feature_name in self._feature_names
-            if name in feature_name and field_type in feature_name and "count" not in feature_name
+            if normalized_name in feature_name and field_type in feature_name and "count" not in feature_name
         ]
         if len(event_features) == 0:
             raise NotImplementedError(
@@ -165,9 +178,9 @@ class ObserverOutput:
             )
 
         key_patterns = (
-            f"{name} event {field_type} {{idx}}",
-            f"{name} transition {field_type} {{idx}}",
-            f"{name} {field_type} {{idx}}",
+            f"{normalized_name} event {field_type} {{idx}}",
+            f"{normalized_name} transition {field_type} {{idx}}",
+            f"{normalized_name} {field_type} {{idx}}",
         )
         data = []
         for event_idx in range(0, self._event_output_settings.max_event_timestamps):
@@ -189,10 +202,12 @@ class ObserverOutput:
     ) -> np.ndarray[Any, np.dtype[np.float64]]:
         """Return tracked event timestamps for one event family."""
 
+        normalized_var = self._normalize_event_stream_name(var)
+
         key_patterns = (
-            f"{var} event time {{idx}}",
-            f"{var} transition time {{idx}}",
-            f"{var} time {{idx}}",
+            f"{normalized_var} event time {{idx}}",
+            f"{normalized_var} transition time {{idx}}",
+            f"{normalized_var} time {{idx}}",
         )
         first_key_matches = [
             key_pattern.format(idx=0)
@@ -225,6 +240,15 @@ class ObserverOutput:
         if data:
             return np.stack(data, axis=1).squeeze()
         return np.array([], dtype=np.float64)
+
+    @staticmethod
+    def _normalize_event_stream_name(name: str) -> str:
+        normalized = str(name).strip().lower()
+        aliases = {
+            "local maximum": "localmax",
+            "local minimum": "localmin",
+        }
+        return aliases.get(normalized, normalized)
 
 
 __all__ = ["ObserverOutput", "TrajectoryOutput"]

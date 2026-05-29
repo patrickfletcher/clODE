@@ -43,7 +43,7 @@ become unreliable once $\Delta t$ is small relative to $\operatorname{ulp}(t_n)$
 
 ## Compensated Mean Accumulation
 
-The `basic` and `basic_all_variables` observers accumulate
+The summary observer accumulates
 
 $$
 I_n = \sum_{k=1}^{n} \Delta t_k x_k
@@ -63,7 +63,7 @@ With the default script parameters:
 - the compensated integral path returns about `1.00005007`, keeping the error near $7 \times 10^{-8}$
 - on the smooth oscillation, `runningMeanTime` drifts by about $7.1 \times 10^{-6}$ while the compensated integral path stays near $7.5 \times 10^{-8}$
 
-This is the clearest current empirical justification for the compensated helper already used in `basic` and `basic_all_variables`.
+This is the clearest current empirical justification for the compensated helper used in `summary`.
 
 ## Feature Windows and Elapsed-Time Origin
 
@@ -148,14 +148,14 @@ Some observer modes are intentionally tuned for oscillatory behavior. In those w
 
 On a tiny sinusoid with total range about $10^{-3}$:
 
-- a `threshold_2`-style event count with `min_amp = 0` reports 20 up-events across the sampled window
+- a `normalized_schmitt_trigger`-style event count with `min_amp = 0` reports 20 up-events across the sampled window
 - the same trace with `min_amp = 2 \times 10^{-3}` reports 0 events
 
 This encodes the smallest oscillation that is physically or scientifically meaningful for the workflow.
 
 ### Schmitt-trigger-style hysteresis with separate up/down thresholds
 
-In `threshold_2`, `x_up_threshold` and `x_down_threshold` are interpreted as fractions of the warmup-pass amplitude range on `event_var`, not as absolute state-variable values.
+In `normalized_schmitt_trigger`, `x_up_threshold` and `x_down_threshold` are interpreted as fractions of the warmup-pass amplitude range on `event_var`, not as absolute state-variable values.
 
 On a coarse sine wave with a high-frequency ripple superimposed:
 
@@ -164,21 +164,14 @@ On a coarse sine wave with a high-frequency ripple superimposed:
 
 Using `x_up > x_down` is intentional here. It is the same basic idea as a Schmitt trigger: do not treat every ripple near the boundary as a new event.
 
-### Derivative thresholds as a slope gate
-
-On a composite waveform where value thresholds alone still overcount crossings:
-
-- a `threshold_2`-style count with `dx_up = 0` reports 100 up-events
-- adding `dx_up = 0.9` reduces that to 20 up-events
-
-Derivative thresholds can be useful for noisy traces, especially when value hysteresis alone is not selective enough. In practice they are most compelling on noisy or stochastic simulations; smooth deterministic runs often do not need them. They are still signal-dependent, so validate them on representative data before launching a large sweep.
+Semantic Schmitt families do not expose derivative thresholds. Use hysteresis (`x_up_threshold > x_down_threshold`) and `min_amp` for event-selection robustness.
 
 ## Threshold-Crossing Timestamp Alternatives
 
 The example script compares three threshold-timestamp choices on a coarse smooth crossing:
 
 - sampled crossing time
-- inverse-linear interpolation between the two bracketing samples, which is the method `threshold_2` uses for stored threshold transitions
+- inverse-linear interpolation between the two bracketing samples, which is the method used for stored Schmitt-trigger transitions
 - cubic Hermite interpolation using the same endpoint values and endpoint slopes
 
 On an upward threshold crossing of a coarsely sampled sine wave:
@@ -204,22 +197,22 @@ This comparison shows why `local_max` uses bounded three-sample refinement, but 
 
 ## Neighborhood-Return Exit Times
 
-The neighborhood-return triggers use different geometry from the threshold families, so a one-variable threshold inversion is not the right timestamp model. The live `Observer.neighborhood_return` and `Observer.neighbourhood_2` paths keep their existing sampled anchors `x0`, but when a step leaves the normalized neighborhood they linearly interpolate the full normalized state between the last inside sample and the first outside sample and solve for the boundary hit on that segment.
+The neighborhood-return triggers use different geometry from the threshold families, so a one-variable threshold inversion is not the right timestamp model. The live `Observer.normalized_neighborhood_return` and `Observer.normalized_neighborhood_return` paths keep their existing sampled anchors `x0`, but when a step leaves the normalized neighborhood they linearly interpolate the full normalized state between the last inside sample and the first outside sample and solve for the boundary hit on that segment.
 
 That reduces coarse-step bias in the stored exit times without changing the sampled-anchor contract. If the anchor location itself is the dominant source of error for a workflow, a smaller `dt` or double precision is still the safer fix than trying to infer too much from one coarse threshold-qualified step.
 
 ## User Recommendations
 
-- The compensated integral helper used by `basic` and `basic_all_variables` has a clear empirical justification.
+- The compensated integral helper used by `summary` has a clear empirical justification.
 - For autonomous feature extraction, the observers keep elapsed-time bookkeeping separate from large absolute timestamps, so means, periods, and durations are much more robust at large origins. If you also need high-fidelity absolute event timestamps, starting near `t = 0` is still the simpler float32 setup.
 - For non-autonomous systems where absolute time matters semantically, prefer double precision or shorter windows when the timestamp itself must be resolved more finely than `ulp(t)`.
 - The stepper time-base issue is a representability problem, not a notation problem.
 - clODE uses the same compensated solve-relative elapsed bookkeeping across fixed-step and adaptive steppers rather than a one-float absolute-time update path. Double precision or shorter windows are still the safer choice when absolute-time fidelity itself is the requirement.
 - The example script compares structured `t0 + step * dt` against Kahan-style updates because that fixed-step reconstruction remains a useful reference baseline alongside the live compensated elapsed-time path.
-- Use `threshold_crossing` when an absolute event-variable level is scientifically meaningful and reasonably stable across the sweep; use `normalized_threshold_crossing` when the same lean one-boundary workflow should scale with the warmup-pass amplitude; use `threshold_2` when you specifically need the retained legacy fully featured normalized Schmitt readout.
-- For `threshold_2`, use a real hysteresis gap when crossings chatter, and consider derivative thresholds when noisy shallow crossings still slip through.
-- `threshold_2` stores threshold-transition times with inverse-linear interpolation; the example script also compares that choice with Hermite interpolation on smooth monotone crossings.
-- `neighborhood_return` and `neighbourhood_2` keep sampled anchors and store exit times from the normalized ball with full-state linear segment interpolation.
+- Use `threshold_crossing` when an absolute event-variable level is scientifically meaningful and reasonably stable across the sweep; use `normalized_threshold_crossing` when the same lean one-boundary workflow should scale with the warmup-pass amplitude; use `schmitt_trigger` or `normalized_schmitt_trigger` for explicit hysteresis workflows.
+- Use a real hysteresis gap (`x_up_threshold > x_down_threshold`) when crossings chatter.
+- Schmitt-trigger families store threshold-transition times with inverse-linear interpolation; the example script also compares that choice with Hermite interpolation on smooth monotone crossings.
+- `normalized_neighborhood_return` keeps sampled anchors and stores exit times from the normalized ball with full-state linear segment interpolation.
 - Set `min_amp` above the numerical or measurement floor you want to ignore and below the smallest oscillation you still care about.
 - `local_max` uses bounded three-sample quadratic refinement, but a smaller `dt` or double precision is still the safer choice when peak timing matters strongly.
 - Validate event-sensitive settings on one representative trajectory before launching a large ensemble sweep.

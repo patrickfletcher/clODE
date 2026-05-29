@@ -102,9 +102,9 @@ feature_simulator.transient()
 output = feature_simulator.features()
 
 localmax_times = output.get_event_data("localmax","time")
-localmax_evars = output.get_event_data("localmax","evar")
+localmax_evars = output.get_event_data("localmax","value")
 localmin_times = output.get_event_data("localmin","time")
-localmin_evars = output.get_event_data("localmin","evar")
+localmin_evars = output.get_event_data("localmin","value")
 
 # Get the trajectory
 trajectory_integrator = clode.TrajectorySimulator(

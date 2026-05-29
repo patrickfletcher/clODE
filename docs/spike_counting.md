@@ -71,7 +71,7 @@ integrator = clode.FeatureSimulator(
     reltol=1e-5,
     event_var="v",
     feature_var="v",
-    observer=clode.Observer.threshold_2,
+    observer=clode.Observer.normalized_schmitt_trigger,
     observer_x_up_thresh=0.5,
     observer_x_down_thresh=0.05,
     observer_min_x_amp=1.0,
@@ -98,7 +98,7 @@ integrator.features()
 
 features = integrator.get_observer_results()
 
-feature = features.get_var_max("peaks")
+feature = features.get_var_max("n maxima")
 feature = np.reshape(feature, (nx, ny))
 
 plt.pcolormesh(px, py, feature, shading='nearest', vmax=12)

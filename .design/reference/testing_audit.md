@@ -6,14 +6,14 @@ Update when: the bundle taxonomy, component-test strategy, or release-gate philo
 
 ## Bottom line
 
-The current bundle and marker taxonomy is a good base. The new `test/kernel_components/` layer now provides the missing middle layer between full end-to-end simulator tests and the small host-side `_opencl` support tests, but its current coverage is still intentionally narrow even after adding direct `basic`, `basicall`, `threshold_2`, and `local_max` observer contracts.
+The current bundle and marker taxonomy is a good base. The new `test/kernel_components/` layer now provides the missing middle layer between full end-to-end simulator tests and the small host-side `_opencl` support tests, but its current coverage is still intentionally narrow even after adding direct `summary`, `normalized_schmitt_trigger`, and `local_max` observer contracts.
 
 ## What is already working well
 
 - `tools/run_test_bundle.py` already gives the suite a useful domain taxonomy: `smoke`, `frontend`, `runtime_api`, `numerics`, `kernel_components`, and `opencl_internal`.
 - `test/conftest.py` centrally injects markers by file and path, which keeps selection logic out of individual test modules.
 - `test/core_numerics/` already has the right shape for authoritative numerical regressions: small models, exact references, and reusable helpers.
-- `test/kernel_components/` now directly covers helper-kernel behavior plus `basic`, `basicall`, `threshold_2`, and `local_max` observer contracts without going through the full simulator stack.
+- `test/kernel_components/` now directly covers helper-kernel behavior plus `summary`, `normalized_schmitt_trigger`, and `local_max` observer contracts without going through the full simulator stack.
 - CI already separates a broad cross-platform smoke matrix from a narrower OpenCL-backed release gate.
 
 ## Current weaknesses

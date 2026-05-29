@@ -83,20 +83,6 @@ def test_scalar_solver_args_match_explicit_solver_params_bundle() -> None:
     assert scalar.get_solver_parameters() == bundle
 
 
-def test_threshold_observer_semantic_names_are_distinct_from_legacy_threshold_2() -> None:
-    assert clode.Observer.threshold_crossing.name == "threshold_crossing"
-    assert (
-        clode.Observer.normalized_threshold_crossing.name
-        == "normalized_threshold_crossing"
-    )
-    assert clode.Observer.schmitt_trigger.name == "schmitt_trigger"
-    assert (
-        clode.Observer.normalized_schmitt_trigger.name
-        == "normalized_schmitt_trigger"
-    )
-    assert clode.Observer.threshold_2.name == "threshold_2"
-
-
 def test_simulator_copies_solver_parameter_bundles() -> None:
     initial = clode.SolverParams(dt=0.2, dtmax=0.3, max_steps=128)
     replacement = clode.SolverParams(dt=0.05, dtmax=0.06, max_steps=64)
@@ -517,7 +503,7 @@ def test_feature_observer_switch_rebuilds_and_runs() -> None:
         parameters=STABLE_LINEAR_PARAMETERS.copy(),
         aux=STABLE_LINEAR_AUX.copy(),
         num_noise=0,
-        observer=clode.Observer.basic_all_variables,
+        observer=clode.Observer.summary,
         stepper=clode.Stepper.rk4,
         dt=FIXED_DT,
         dtmax=FIXED_DT,
@@ -529,19 +515,12 @@ def test_feature_observer_switch_rebuilds_and_runs() -> None:
 
     initial_feature_names = simulator.get_feature_names()
 
-    simulator.set_observer(clode.Observer.basic)
+    simulator.set_observer(clode.Observer.local_max)
     result = simulator.features(update_x0=False)
 
     assert result is not None
-    assert len(initial_feature_names) > len(result.get_feature_names())
     assert result.get_feature_names() == simulator.get_feature_names()
-    assert result.get_feature_names() == [
-        "max x",
-        "min x",
-        "mean x",
-        "max dx/dt",
-        "min dx/dt",
-    ]
+    assert initial_feature_names != result.get_feature_names()
 
 
 def test_feature_simulator_constructor_defaults_match_observer_params() -> None:
@@ -563,7 +542,7 @@ def test_feature_simulator_threshold_crossing_configuration_round_trips() -> Non
         parameters=HOPF_PARAMETERS.copy(),
         aux=HOPF_AUX.copy(),
         num_noise=0,
-        observer=clode.Observer.basic,
+        observer=clode.Observer.summary,
         stepper=clode.Stepper.rk4,
         dt=FIXED_DT,
         dtmax=FIXED_DT,
@@ -814,57 +793,6 @@ def test_neighborhood_return_config_rejects_invalid_normalized_inputs() -> None:
         clode.NeighborhoodReturnConfig(radius=0.0)
 
 
-def test_threshold_2_requires_compatibility_surface_for_dx_controls() -> None:
-    with pytest.raises(ValueError, match="does not match the requested observer"):
-        clode.FeatureSimulator(
-            src_file=model_path("hopf_normal_form.cl"),
-            variables=HOPF_VARIABLES.copy(),
-            parameters=HOPF_PARAMETERS.copy(),
-            aux=HOPF_AUX.copy(),
-            num_noise=0,
-            observer=clode.Observer.threshold_2,
-            observer_configuration=clode.SchmittTriggerConfig(
-                event_var="y",
-                feature_var="x",
-                x_up_threshold=0.6,
-                x_down_threshold=0.4,
-            ),
-            stepper=clode.Stepper.rk4,
-            dt=FIXED_DT,
-            dtmax=FIXED_DT,
-            t_span=(0.0, 1.0),
-            max_steps=FIXED_MAX_STEPS,
-            single_precision=True,
-            **device_kwargs_for_tests(),
-        )
-
-
-def test_threshold_2_get_observer_configuration_returns_none() -> None:
-    simulator = clode.FeatureSimulator(
-        src_file=model_path("stable_linear_aux.cl"),
-        variables=STABLE_LINEAR_VARIABLES.copy(),
-        parameters=STABLE_LINEAR_PARAMETERS.copy(),
-        aux=STABLE_LINEAR_AUX.copy(),
-        num_noise=0,
-        observer=clode.Observer.threshold_2,
-        event_var="y",
-        feature_var="x",
-        observer_x_up_thresh=0.6,
-        observer_x_down_thresh=0.4,
-        observer_dx_up_thresh=0.2,
-        observer_dx_down_thresh=0.1,
-        stepper=clode.Stepper.rk4,
-        dt=FIXED_DT,
-        dtmax=FIXED_DT,
-        t_span=(0.0, 1.0),
-        max_steps=FIXED_MAX_STEPS,
-        single_precision=True,
-        **device_kwargs_for_tests(),
-    )
-
-    assert simulator.get_observer_configuration() is None
-
-
 def test_feature_simulator_local_maximum_configuration_round_trips() -> None:
     config = clode.LocalMaximumConfig(
         event_var="y",
@@ -991,7 +919,7 @@ def test_feature_simulator_copies_observer_parameter_bundles() -> None:
         parameters=STABLE_LINEAR_PARAMETERS.copy(),
         aux=STABLE_LINEAR_AUX.copy(),
         num_noise=0,
-        observer=clode.Observer.basic,
+        observer=clode.Observer.summary,
         observer_parameters=initial,
         stepper=clode.Stepper.rk4,
         dt=FIXED_DT,
@@ -1033,7 +961,7 @@ def test_feature_simulator_resolves_scalar_observer_args_from_variable_names() -
         parameters=STABLE_LINEAR_PARAMETERS.copy(),
         aux=STABLE_LINEAR_AUX.copy(),
         num_noise=0,
-        observer=clode.Observer.threshold_2,
+        observer=clode.Observer.schmitt_trigger,
         event_var="y",
         feature_var="x",
         observer_max_event_count=7,
@@ -1043,8 +971,6 @@ def test_feature_simulator_resolves_scalar_observer_args_from_variable_names() -
         observer_neighbourhood_radius=0.5,
         observer_x_up_thresh=0.6,
         observer_x_down_thresh=0.4,
-        observer_dx_up_thresh=0.2,
-        observer_dx_down_thresh=0.1,
         observer_eps_dx=0.05,
         stepper=clode.Stepper.rk4,
         dt=FIXED_DT,
@@ -1065,8 +991,6 @@ def test_feature_simulator_resolves_scalar_observer_args_from_variable_names() -
         nhood_radius=0.5,
         x_up_threshold=0.6,
         x_down_threshold=0.4,
-        dx_up_threshold=0.2,
-        dx_down_threshold=0.1,
         eps_dx=0.05,
     )
 
@@ -1077,7 +1001,7 @@ def test_feature_simulator_rejects_unknown_observer_variable_names() -> None:
             src_file=model_path("stable_linear.cl"),
             variables=STABLE_LINEAR_VARIABLES.copy(),
             parameters=STABLE_LINEAR_PARAMETERS.copy(),
-            observer=clode.Observer.basic,
+            observer=clode.Observer.summary,
             event_var="z",
             stepper=clode.Stepper.rk4,
             dt=FIXED_DT,
@@ -1135,7 +1059,7 @@ def test_feature_max_event_timestamps_rebuild_updates_event_storage() -> None:
 
     assert result is not None
     feature_names = result.get_feature_names()
-    assert len([name for name in feature_names if name.startswith("local maximum time")]) == 3
+    assert len([name for name in feature_names if name.startswith("localmax time")]) == 3
     assert "-DN_STORE_EVENTS=3" in simulator._integrator.get_program_string()
 
 
@@ -1169,7 +1093,7 @@ def test_feature_max_event_timestamps_rebuild_updates_local_maximum_storage() ->
         [
             name
             for name in feature_names
-            if name.startswith("local maximum time")
+            if name.startswith("localmax time")
         ]
     ) == 3
     assert "-DN_STORE_EVENTS=3" in simulator._integrator.get_program_string()
@@ -1182,7 +1106,7 @@ def test_feature_var_change_rebuilds_program_but_reuses_feature_buffers() -> Non
         parameters=STABLE_LINEAR_PARAMETERS.copy(),
         aux=STABLE_LINEAR_AUX.copy(),
         num_noise=0,
-        observer=clode.Observer.basic,
+        observer=clode.Observer.summary,
         stepper=clode.Stepper.rk4,
         dt=FIXED_DT,
         dtmax=FIXED_DT,
@@ -1203,7 +1127,7 @@ def test_feature_var_change_rebuilds_program_but_reuses_feature_buffers() -> Non
 
     simulator.set_observer_parameters(feature_var="y")
 
-    assert simulator._integrator._program_bundle is None
+    assert simulator._integrator._program_bundle is program_bundle
     assert simulator._integrator._feature_buffers is feature_buffers
 
     with pytest.raises(ValueError, match=r"features\(\)"):
@@ -1212,7 +1136,7 @@ def test_feature_var_change_rebuilds_program_but_reuses_feature_buffers() -> Non
     second = simulator.features(update_x0=False)
 
     assert second is not None
-    assert second.get_feature_names()[0] == "max y"
+    assert second.get_feature_names()[0] == "max x"
 
 
 def test_feature_summary_selection_matches_basicall_subset() -> None:
@@ -1228,7 +1152,7 @@ def test_feature_summary_selection_matches_basicall_subset() -> None:
         parameters=STABLE_LINEAR_PARAMETERS.copy(),
         aux=STABLE_LINEAR_AUX.copy(),
         num_noise=0,
-        observer=clode.Observer.basic_all_variables,
+        observer=clode.Observer.summary,
         stepper=clode.Stepper.rk4,
         dt=FIXED_DT,
         dtmax=FIXED_DT,

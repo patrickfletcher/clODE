@@ -38,7 +38,7 @@ def test_kernel_registry_exposes_current_cpp_defines_and_entrypoints() -> None:
         "dopri5",
         "seuler",
     )
-    assert registry.get_observer_define("basicall") == "USE_OBSERVER_SUMMARY"
+    assert registry.get_observer_define("summary") == "USE_OBSERVER_SUMMARY"
     assert tuple(path.name for path in registry.get_entrypoint_paths(KernelKind.FEATURES)) == (
         "transient.cl",
         "initializeObserver.cl",
@@ -96,7 +96,7 @@ def test_source_builder_features_include_observer_options_and_build_key_changes(
     problem_info = ProblemInfo("model.cl", ["x", "y"], ["k"], ["aux0"], 0)
     resolved_spec = resolve_observer_spec(
         problem_info,
-        "basicall",
+        "summary",
         ObserverRuntimeSettings(),
         real_dtype=np.dtype(np.float64),
         event_output_settings=EventOutputSettings(max_event_timestamps=7),
@@ -141,7 +141,7 @@ def test_source_builder_accepts_resolved_observer_spec_for_feature_builds() -> N
     rhs = create_rhs_source("rhs.cl", "void getRHS() {}\n")
     resolved_spec = resolve_observer_spec(
         ProblemInfo("model.cl", ["x", "y"], ["k"], ["aux0"], 0),
-        "nhood2",
+        "normalized_neighborhood_return",
         ObserverRuntimeSettings(),
         real_dtype=np.dtype(np.float32),
         event_output_settings=EventOutputSettings(max_event_timestamps=4),
@@ -156,8 +156,8 @@ def test_source_builder_accepts_resolved_observer_spec_for_feature_builds() -> N
         resolved_observer_spec=resolved_spec,
     )
 
-    assert bundle.build_key.observer_define == "USE_OBSERVER_NEIGHBORHOOD_2"
-    assert "-DUSE_OBSERVER_NEIGHBORHOOD_2" in bundle.build_options
+    assert bundle.build_key.observer_define == "USE_OBSERVER_NORMALIZED_NEIGHBORHOOD_RETURN"
+    assert "-DUSE_OBSERVER_NORMALIZED_NEIGHBORHOOD_RETURN" in bundle.build_options
     assert "-DN_STORE_EVENTS=4" in bundle.build_options
 
 
@@ -182,12 +182,12 @@ def test_source_builder_validates_rhs_and_feature_configuration() -> None:
             rhs=create_rhs_source("valid_rhs.cl", "void getRHS() {}\n"),
         )
 
-    with pytest.raises(ValueError, match="observer_name"):
+    with pytest.raises(ValueError, match="resolved_observer_spec"):
         builder.build(
             kernel_kind=KernelKind.TRANSIENT,
             precision=Precision.SINGLE,
             stepper_name="rk4",
             problem_shape=ProblemShape(n_var=1, n_par=0, n_aux=0, n_wiener=0),
             rhs=create_rhs_source("valid_rhs.cl", "void getRHS() {}\n"),
-            observer_name="basic",
+            observer_name="summary",
         )

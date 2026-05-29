@@ -88,7 +88,7 @@ def _make_feature_executor() -> OpenCLFeatureExecutor:
         ProblemInfo("stable_linear.cl", ["x", "y"], ["a", "b"], [], 0),
         load_rhs_source(model_path("stable_linear.cl")),
         "rk4",
-        "basic",
+        "summary",
         ObserverRuntimeSettings(f_var_ix=0),
         EventOutputSettings(),
         None,
@@ -279,8 +279,8 @@ def test_feature_runtime_setting_change_preserves_program_and_buffers() -> None:
     executor.set_observer_params(updated_params)
 
     assert executor._feature_buffers is feature_buffers
-    assert executor._program_bundle is None
-    assert executor.get_feature_names()[0] == "max y"
+    assert executor._program_bundle is program_bundle
+    assert executor.get_feature_names()[0] == "max x"
     assert executor.get_f() == []
 
 

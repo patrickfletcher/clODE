@@ -86,7 +86,7 @@ stepper = clode.Stepper.dormand_prince
 solver_kwargs = dict(dt=0.1, dtmax=10.0, abstol=1.0e-6, reltol=1.0e-4)
 t_span=(0., 2000.)
 
-observer=clode.Observer.neighbourhood_2
+observer=clode.Observer.normalized_neighborhood_return
 
 # create the integrator
 feature_simulator = clode.FeatureSimulator(
@@ -111,7 +111,7 @@ feature_simulator.set_observer_parameters(
 feature_simulator.transient(t_span=t_span)
 output = feature_simulator.features()
 
-event_times = output.get_event_data("nhood","time")
+event_times = output.get_event_data("event", "time")
 print(event_times)
 
 # Get the trajectory
@@ -145,9 +145,9 @@ plt.ylabel("v")
 plt.show()
 
 # Parametric equations for unit sphere, scale each axis and translate to nhood center
-center_v = output.F["nhood center v"]
-center_n = output.F["nhood center n"]
-center_c = output.F["nhood center c"]
+center_v = output.F["v0"]
+center_n = output.F["n0"]
+center_c = output.F["c0"]
 range_v = output.F["range v"]
 range_n = output.F["range n"]
 range_c = output.F["range c"]

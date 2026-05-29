@@ -8,8 +8,8 @@ Historical debugging detail from the earlier observer-time rebase investigation 
 
 ## Current verified state
 
-- The split-window continuation regressions now live in `test/core_numerics/test_features_basicall.py` and `test/core_numerics/test_stochastic.py` and pass on the stable workspace runtime.
-- The live model is solver-owned absolute time. The observer no longer owns time rebasing; `finalizeObserverState` in `observer_basic_allVar.clh` is intentionally empty.
+- The split-window continuation regressions now live in `test/core_numerics/test_features_summary.py` and `test/core_numerics/test_stochastic.py` and pass on the stable workspace runtime.
+- The live model is solver-owned absolute time. The observer no longer owns time rebasing; `finalizeObserverState` in `observer_summary.clh` is intentionally empty.
 - `_opencl/buffers.py` and `_opencl/executors.py` now persist RNG state, the Box-Muller spare normal, and the prepared next-step Wiener sample across `shift_x0()` plus `set_tspan()` continuation, while clearing the prepared Wiener state on explicit `x0` or problem or solver resets.
 - Exact absolute-time continuation still requires caller-managed `t_span`. For fixed-step runs, the robust handoff point is the attained `tf` returned by `get_final_time()`, not the requested endpoint.
 - Exact shared-window continuation is only representable when the ensemble agrees on one attained final time. Once work-items diverge in `tf`, there is no single correct next shared `t_span` update.

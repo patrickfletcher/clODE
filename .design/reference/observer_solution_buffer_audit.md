@@ -33,19 +33,18 @@ Stop after this section unless you are implementing the follow-on helper proof o
 - `observer_normalized_threshold_crossing.clh`: same `K=2` core as absolute threshold crossing.
 - `observer_schmitt_trigger.clh`: `K=2` with `tbuffer[2]` and event-variable `xbuffer[2]` plus Schmitt state.
 - `observer_normalized_schmitt_trigger.clh`: same `K=2` core with warmup-derived thresholds.
-- `observer_neighborhood_return.clh`: `K=2` with `tbuffer[2]` and full-state `xbuffer[2 * N_VAR]` for normalized distance checks.
-- `observer_local_extremum.clh`: `K=3` with `tbuffer[3]`, `xbuffer[3]`, and `dxbuffer[3]` for three-sample extremum refinement.
+- `observer_normalized_neighborhood_return.clh`: `K=3` with `tbuffer[3]`, elapsed buffers, and full-state history for normalized distance checks and exit interpolation.
+- `observer_local_maximum.clh`: `K=3` with `tbuffer[3]`, `xbuffer[3]`, and `dxbuffer[3]` for three-sample extremum refinement.
 
 ### Families that share history mechanics but carry larger legacy bundles
 
-- `observer_threshold_2.clh`: `K=3` over full state and slope (`xbuffer[3 * N_VAR]`, `dxbuffer[3 * N_VAR]`) plus elapsed-time buffers, periodic summaries, and wide trajectory/aux outputs.
-- `observer_local_maximum.clh`: `K=3` over full state and slope plus elapsed-time buffers and heavier summary/event lists.
-- `observer_neighborhood_2.clh`: `K=3` over full state and slope plus warmup ranges, center-point state, and broader period/summary bundles.
-- `observer_neighborhood_1.clh`: `K=3` over full state and slope with mutable normalization and broader legacy summary state.
+- `observer_normalized_schmitt_trigger.clh`: `K=3` over full state and slope plus elapsed-time buffers and broader period/summary bundle behavior.
+- `observer_local_maximum.clh`: `K=3` over full state and slope plus elapsed-time buffers and broader summary/event lists.
+- `observer_normalized_neighborhood_return.clh`: `K=3` over full state and slope plus warmup ranges, center-point state, and broader period/summary bundles.
 
 ### Families where a `K`-sample event-history concept is not the main abstraction
 
-- `observer_summary.clh`, `observer_basic.clh`, `observer_basic_allVar.clh`: online reducers with no event detector history window; they should remain outside the shared accepted-step history proof.
+- `observer_summary.clh`: online reducers with no event detector history window; they should remain outside the shared accepted-step history proof.
 
 ## What is shared versus local
 
@@ -98,6 +97,6 @@ The contract should state:
 
 ## Follow-on proof — LANDED
 
-The K=2 and K=3 shared accepted-step history update helpers (`advanceAcceptedStepHistory2`, `advanceAcceptedStepHistory2ByVariable`, `advanceAcceptedStepHistory3`, `advanceAcceptedStepHistory3ByVariable`) are now live in `clode/kernels/observers.cl` and have been adopted by all lean observer families: `threshold_crossing`, `normalized_threshold_crossing`, `schmitt_trigger`, `normalized_schmitt_trigger`, `neighborhood_return`, and `neighborhood_2`. Family event semantics and bundle accumulation remain local.
+The K=2 and K=3 shared accepted-step history update helpers (`advanceAcceptedStepHistory2`, `advanceAcceptedStepHistory2ByVariable`, `advanceAcceptedStepHistory3`, `advanceAcceptedStepHistory3ByVariable`) are now live in `clode/kernels/observers.cl` and have been adopted by the semantic observer families: `threshold_crossing`, `normalized_threshold_crossing`, `schmitt_trigger`, `normalized_schmitt_trigger`, `local_max`, and `normalized_neighborhood_return`. Family event semantics and bundle accumulation remain local.
 
 The next planning target is the oscillation-oriented bundle seam: see `next_pr.md` and `.design/ideas.md`.

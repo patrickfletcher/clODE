@@ -50,7 +50,7 @@ def make_feature_simulator(t_span: tuple[float, float]) -> clode.FeatureSimulato
         rhs_equation=stable_linear,
         variables={"x": 2.0, "y": -1.5},
         parameters={"a": 0.5, "b": 1.25},
-        observer=clode.Observer.basic_all_variables,
+        observer=clode.Observer.summary,
         stepper=clode.Stepper.rk4,
         t_span=t_span,
         dt=DT,

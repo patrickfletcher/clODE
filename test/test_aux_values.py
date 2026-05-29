@@ -25,11 +25,7 @@ def sine_curve(
 
 
 @pytest.mark.parametrize("observer",
-                         [clode.Observer.basic_all_variables,
-                          clode.Observer.local_max,
-                          clode.Observer.neighbourhood_1,
-                          clode.Observer.neighbourhood_2,
-                          clode.Observer.threshold_2]
+                         [clode.Observer.local_max]
 )
 def test_sine_curve_timestamps(observer: clode.Observer):
     "Test that the active timestamps of a sine curve are correct"

@@ -62,7 +62,7 @@ def vdp_dormand_prince(
         rhs_equation=input_eq,
         variables={"x": 1.0, "y": 1.0},
         parameters={"mu": 1.0},
-        observer=clode.Observer.threshold_2,
+        observer=clode.Observer.schmitt_trigger,
         stepper=clode.Stepper.dormand_prince,
         t_span=t_span,
         max_store=20000,

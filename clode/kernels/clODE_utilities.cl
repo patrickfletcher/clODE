@@ -269,6 +269,7 @@ static inline void runningMeanVar(realtype *mean, realtype *variance, realtype n
 
 
 // Interpolation routines
+// TODO: try quadratic interp using 3 points for threshold crossings too.
 
 //estimate yi at specified ti, using linear interpolation of two values
 static inline realtype linearInterp(realtype t0, realtype t1, realtype y0, realtype y1, realtype ti) {
@@ -373,6 +374,7 @@ static inline realtype cubicHermiteInterpTimeOfValue(
 }
 
 //compute vertex of a quadratic interpolant of three values
+// TODO: consider detection of extrema using 3 x values is better than dx sign change?
 // - store result in tv, yv
 static inline void quadraticInterpVertex(realtype t[], realtype y[], realtype *tv, realtype *yv) {
 	realtype b0, b1, b2;

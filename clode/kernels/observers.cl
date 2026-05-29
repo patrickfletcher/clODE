@@ -98,7 +98,7 @@ static inline void advanceAcceptedStepHistory3ByVariable(realtype *packedHistory
 
 // Event trigger is the return of the trajectory to small neighborhood of a point Xstart in state-space coordinates
 // - define a sensible Xstart, found in one pass: e.g., local min of a slow variable 
-#include "observers/observer_neighborhood_1.clh"
+// #include "observers/observer_neighborhood_1.clh"
 
 ////////////////////////////////////////////////
 // two-pass detectors
@@ -111,16 +111,11 @@ static inline void advanceAcceptedStepHistory3ByVariable(realtype *packedHistory
 // Schmitt-trigger event detection with warmup-derived normalized thresholds
 #include "observers/observer_normalized_schmitt_trigger.clh"
 
-// Legacy fully featured normalized Schmitt-trigger observer retained for compatibility
-#include "observers/observer_threshold_2.clh"
-
 // Poincaré section, specified as a normal vector and offset in normalized state-space coordinates
 // #include "observers/observer_poincare_2.clh"
 
-// Event trigger is the return of the trajectory to small neighborhood of a point Xstart in normalized state-space coordinates
-// - Use a first pass to find a good Xstart (e.g. absolute drop below 0.5*range of slowest variable)
-#include "observers/observer_neighborhood_return.clh"
-#include "observers/observer_neighborhood_2.clh"
+// Event trigger is the return of the trajectory to a small normalized neighborhood of a warmup-derived anchor point
+#include "observers/observer_normalized_neighborhood_return.clh"
 
 
 #endif //OBSERVERS_H_

@@ -148,27 +148,11 @@ def test_basic_observer_double_formula_underestimates_matched_struct_size() -> N
     ("observer", "observer_kwargs"),
     [
         (
-            clode.Observer.basic_all_variables,
-            {},
-        ),
-        (
-            clode.Observer.local_extremum,
-            {"observer_max_event_timestamps": 4},
-        ),
-        (
             clode.Observer.local_max,
             {"observer_max_event_timestamps": 4},
         ),
         (
-            clode.Observer.neighbourhood_1,
-            {},
-        ),
-        (
-            clode.Observer.neighborhood_return,
-            {"observer_max_event_timestamps": 4},
-        ),
-        (
-            clode.Observer.neighbourhood_2,
+            clode.Observer.normalized_neighborhood_return,
             {"observer_max_event_timestamps": 4},
         ),
         (
@@ -185,10 +169,6 @@ def test_basic_observer_double_formula_underestimates_matched_struct_size() -> N
         ),
         (
             clode.Observer.normalized_schmitt_trigger,
-            {"observer_max_event_count": 50, "observer_max_event_timestamps": 50},
-        ),
-        (
-            clode.Observer.threshold_2,
             {"observer_max_event_count": 50, "observer_max_event_timestamps": 50},
         ),
     ],

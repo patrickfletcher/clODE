@@ -164,7 +164,7 @@ def make_feature_simulator(
         parameters=problem["parameters"],
         aux=problem["aux"],
         num_noise=problem["num_noise"],
-        observer=clode.Observer.basic_all_variables,
+        observer=clode.Observer.summary,
         stepper=stepper,
         dt=dt,
         dtmax=dt if dtmax is None else dtmax,

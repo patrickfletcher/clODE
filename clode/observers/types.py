@@ -41,9 +41,8 @@ _DEFAULT_NHOOD_RADIUS = 0.05
 # Schmitt trigger observers
 _DEFAULT_X_UP_THRESHOLD = 0.3
 _DEFAULT_X_DOWN_THRESHOLD = 0.2
-# derivative thresholds stay on the broad compatibility surface and the
-# retained legacy threshold_2 observer; the semantic Schmitt families no longer
-# use them.
+# Derivative thresholds remain part of ObserverParams for compatibility plumbing,
+# but semantic Schmitt observers do not use them.
 _DEFAULT_DX_UP_THRESHOLD = 0.0
 _DEFAULT_DX_DOWN_THRESHOLD = 0.0
 
@@ -118,25 +117,17 @@ class EventOutputSettings:
 class Observer(Enum):
     """Built-in observer modes available to `FeatureSimulator`.
 
-    Threshold-family observers use semantic names directly. The legacy
-    `threshold_2` observer remains available as the current fully featured
-    normalized Schmitt-trigger implementation while the semantic families
-    continue to evolve their lean trigger-first layouts and readouts.
+    Each entry names a distinct semantic observer family. There are no
+    compatibility aliases — use the canonical names directly.
     """
 
     summary = "summary"
-    basic = "basic"     # compatibility alias for summmary with one variable
-    basic_all_variables = "basicall" # compatibility alias for summary with all variables
     local_max = "localmax"
-    local_extremum = "localmax"  # compatibility alias; use local_max
-    neighbourhood_1 = "nhood1"  # currently not recommended
-    neighborhood_return = "neighborhood_return"
-    neighbourhood_2 = "nhood2"
     threshold_crossing = "threshold_crossing"
     normalized_threshold_crossing = "normalized_threshold_crossing"
     schmitt_trigger = "schmitt_trigger"
     normalized_schmitt_trigger = "normalized_schmitt_trigger"
-    threshold_2 = "threshold_2"
+    normalized_neighborhood_return = "normalized_neighborhood_return"
 
 
 @dataclass(frozen=True, slots=True)
@@ -382,7 +373,7 @@ class NeighborhoodReturnConfig:
 
     @property
     def supported_observers(self) -> tuple[Observer]:
-        return (Observer.neighborhood_return,)
+        return (Observer.normalized_neighborhood_return,)
 
     def to_observer_params(self, variable_names: Sequence[str]) -> ObserverParams:
         return ObserverParams(
@@ -644,7 +635,7 @@ def _resolve_observer_configuration(
     observer_configuration: ObserverConfiguration,
 ) -> tuple[Observer, ObserverParams]:
     supported_observers = observer_configuration.supported_observers
-    if observer is None or observer is Observer.basic_all_variables:
+    if observer is None:
         if len(supported_observers) == 1:
             resolved_observer = supported_observers[0]
             resolved_params = observer_configuration.to_observer_params(variable_names)
@@ -692,7 +683,7 @@ def _observer_configuration_from_params(
             variable_names,
             observer_params,
         )
-    if observer is Observer.neighborhood_return:
+    if observer is Observer.normalized_neighborhood_return:
         return NeighborhoodReturnConfig.from_observer_params(
             variable_names,
             observer_params,
@@ -803,7 +794,7 @@ def _validate_observer_params_for_observer(
         ):
             raise ValueError(
                 "Semantic Schmitt observers do not support dx thresholds. "
-                "Use Observer.threshold_2 for derivative-gated legacy behavior."
+                "Use value thresholds only for semantic Schmitt observers."
             )
         if observer_params.x_up_threshold < observer_params.x_down_threshold:
             raise ValueError(
@@ -820,7 +811,7 @@ def _validate_observer_params_for_observer(
             )
         return
 
-    if observer is Observer.neighborhood_return:
+    if observer is Observer.normalized_neighborhood_return:
         _require_unit_interval(
             observer_params.x_down_threshold,
             parameter_name="anchor_threshold",

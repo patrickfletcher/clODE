@@ -38,7 +38,7 @@ Update when: the solver-state boundary changes materially or this note becomes h
 
 - `test/test_simulation_contracts.py` covers on-demand IVP sync plus stale-result invalidation.
 - `test/test_opencl_executors.py` covers executor-side `dt` reset versus continuation-preserve semantics.
-- `test/core_numerics/test_transient.py`, `test/core_numerics/test_features_basicall.py`, and `test/core_numerics/test_stochastic.py` remain the continuation regression gate.
+- `test/core_numerics/test_transient.py`, `test/core_numerics/test_features_summary.py`, and `test/core_numerics/test_stochastic.py` remain the continuation regression gate.
 
 ## Intentionally deferred
 

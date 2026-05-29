@@ -80,7 +80,7 @@ class FeatureSimulator(Simulator):
 		platform_id: Optional[int] = None,
 		device_id: Optional[int] = None,
 		ivp: Optional[InitialValueProblem] = None,
-		observer: Observer = Observer.basic_all_variables,
+		observer: Observer = Observer.summary,
 		event_var: str = "",
 		feature_var: str = "",
 		observer_max_event_count: int = _DEFAULT_MAX_EVENT_COUNT,
@@ -111,8 +111,6 @@ class FeatureSimulator(Simulator):
 				`Observer.normalized_threshold_crossing`,
 				`Observer.schmitt_trigger`, and
 				`Observer.normalized_schmitt_trigger`.
-				`Observer.threshold_2` remains available as the current legacy
-				fully featured normalized Schmitt-trigger path.
 			event_var: Variable name used for event detection when the observer
 				requires one.
 			feature_var: Variable name used for feature readout when the observer
@@ -130,18 +128,17 @@ class FeatureSimulator(Simulator):
 			observer_x_up_thresh: Rising value threshold for threshold observers.
 			observer_x_down_thresh: Falling value threshold for threshold observers.
 			observer_dx_up_thresh: Compatibility derivative threshold used by the
-				legacy `Observer.threshold_2` workflow.
+				legacy compatibility observer parameters surface.
 			observer_dx_down_thresh: Compatibility derivative threshold used by the
-				legacy `Observer.threshold_2` workflow.
+				legacy compatibility observer parameters surface.
 			observer_eps_dx: Derivative tolerance used near threshold crossings.
 			observer_parameters: Optional public compatibility bundle. When
 				provided, it overrides the individual `observer_*` compatibility
 				arguments above.
 			summary_selection: Optional explicit selection for the summary observer
-				family. Use this with `Observer.summary` for subset summary workflows,
-				or to override the `basic` and `basic_all_variables` presets.
+				family. Use this with `Observer.summary` for subset summary workflows.
 			observer_configuration: Optional family-specific observer config.
-				Use this for threshold, local-extremum, or neighborhood-return
+				Use this for threshold, local-maximum, or neighborhood-return
 				configuration when you want the semantic knob set instead of the
 				broad compatibility bundle. The observer family must still be
 				selected explicitly through `observer=` when a config surface is
@@ -177,12 +174,15 @@ class FeatureSimulator(Simulator):
 
 		resolved_observer_type = observer
 		if observer_configuration is not None:
+			observer_for_configuration = (
+				None if observer is Observer.summary else observer
+			)
 			(
 				resolved_observer_type,
 				resolved_observer_params,
 			) = _resolve_observer_configuration(
 				problem_variable_names,
-				observer=observer,
+				observer=observer_for_configuration,
 				observer_configuration=observer_configuration,
 			)
 		else:
@@ -307,9 +307,9 @@ class FeatureSimulator(Simulator):
 			x_up_threshold: Rising value threshold for threshold observers.
 			x_down_threshold: Falling value threshold for threshold observers.
 			dx_up_threshold: Compatibility derivative threshold used by the
-				legacy `Observer.threshold_2` workflow.
+				legacy compatibility observer parameters surface.
 			dx_down_threshold: Compatibility derivative threshold used by the
-				legacy `Observer.threshold_2` workflow.
+				legacy compatibility observer parameters surface.
 			eps_dx: Derivative tolerance used near threshold crossings.
 		"""
 		resolved_observer_params = _resolve_observer_params(
@@ -365,12 +365,10 @@ class FeatureSimulator(Simulator):
 	) -> None:
 		"""Apply a family-specific observer configuration.
 
-		This is the preferred semantic surface for threshold, local-extremum,
+		This is the preferred semantic surface for threshold, local-maximum,
 		and neighborhood-return observers. The broader `ObserverParams` bundle
 		remains available as a compatibility layer when a family-specific config
-		is not yet available. `Observer.threshold_2` currently stays on that
-		compatibility surface because its broader legacy control set still
-		includes derivative gates. When one config type can drive more than one
+		is not yet available. When one config type can drive more than one
 		observer variant, use `observer=` to select the target family explicitly;
 		otherwise the config can infer the target observer.
 		"""

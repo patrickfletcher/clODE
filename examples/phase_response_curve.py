@@ -51,7 +51,7 @@ feature_simulator = clode.FeatureSimulator(
     stepper=clode.Stepper.rk4,
     t_span=(0.0, tend),
     dt=0.01,
-    observer=clode.Observer.neighbourhood_2,
+    observer=clode.Observer.normalized_neighborhood_return,
     observer_max_event_count = 4,
     observer_max_event_timestamps = 4,
     feature_var="v",
@@ -76,7 +76,7 @@ feature_simulator.set_ensemble(parameters = {"t_on": on_times, "strength": stren
 
 output = feature_simulator.features(t_span=(0.0, 5*period))
 
-event_times = output.get_event_data("nhood","time")
+event_times = output.get_event_data("event", "time")
 
 periods_perturb = np.diff(event_times, axis=1)
 stim_phase = (on_times - period)/period 

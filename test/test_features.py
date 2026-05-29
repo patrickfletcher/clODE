@@ -22,118 +22,6 @@ def sine_curve(
     dx_[0] = dx
 
 
-def test_sine_curve_timestamps():
-    "Test that the active timestamps of a sine curve are correct"
-
-    # Define the parameters
-    parameters = {
-        "dilation": 1,
-    }
-
-    # Define the initial state
-    variables = {
-        "x": 0,
-    }
-
-    # Activate at t=pi/4, deactivate on the descending x_down threshold crossing.
-    feature_simulator = clode.FeatureSimulator(
-        rhs_equation=sine_curve,
-        variables=variables,
-        parameters=parameters,
-        aux=["dx"],
-        observer=clode.Observer.threshold_2,
-        stepper=clode.Stepper.rk4,
-        dtmax=0.001,
-        dt=0.001,
-        t_span=(0.0, 4 * pi),
-        event_var="x",
-        feature_var="x",
-        observer_min_x_amp=0.5,
-        observer_x_up_thresh=(2 + sqrt(2)) / 4,
-        observer_x_down_thresh=0.001,
-        observer_dx_down_thresh=0.001,
-        observer_dx_up_thresh=0.001,
-        observer_max_event_count=100,
-        observer_max_event_timestamps=3,
-        **device_kwargs_for_tests(),
-    )
-
-    # Run the simulation
-    output = feature_simulator.features()
-
-    assert output is not None
-    event_count = int(output.get_var_count("event"))
-
-    up_times = output.get_event_data("up")
-    down_times = output.get_event_data("down")
-
-    assert len(up_times) == 2
-    assert len(down_times) == 2
-    assert event_count == 2
-
-    assert np.isclose(up_times[0], pi / 4, atol=2e-3)
-    assert np.isclose(up_times[1], 9 * pi / 4, atol=2e-3)
-
-    x_down = -1.0 + 2.0e-3
-    assert np.isclose(down_times[0], pi - np.arcsin(x_down), atol=2e-3)
-    assert np.isclose(down_times[1], 3 * pi - np.arcsin(x_down), atol=2e-3)
-
-    up_times_timestamps = output.get_timestamps("up")
-    down_times_timestamps = output.get_timestamps("down")
-
-    assert len(up_times_timestamps) == len(up_times)
-    assert len(down_times_timestamps) == len(down_times)
-
-    for index in range(len(up_times)):
-        assert up_times_timestamps[index] == up_times[index]
-
-    for index in range(len(down_times)):
-        assert down_times_timestamps[index] == down_times[index]
-
-
-def test_threshold_2_coarse_timestamps_use_inverse_linear_interpolation() -> None:
-    coarse_dt = pi / 6
-    coarse_x_down_thresh = 0.25
-
-    feature_simulator = clode.FeatureSimulator(
-        rhs_equation=sine_curve,
-        variables={"x": 0},
-        parameters={"dilation": 1},
-        aux=["dx"],
-        observer=clode.Observer.threshold_2,
-        stepper=clode.Stepper.rk4,
-        dtmax=coarse_dt,
-        dt=coarse_dt,
-        t_span=(0.0, 4 * pi),
-        event_var="x",
-        feature_var="x",
-        observer_min_x_amp=0.5,
-        observer_x_up_thresh=(2 + sqrt(2)) / 4,
-        observer_x_down_thresh=coarse_x_down_thresh,
-        observer_dx_down_thresh=0.001,
-        observer_dx_up_thresh=0.001,
-        observer_max_event_count=100,
-        observer_max_event_timestamps=3,
-        **device_kwargs_for_tests(),
-    )
-
-    output = feature_simulator.features()
-
-    assert output is not None
-    event_count = int(output.get_var_count("event"))
-    up_times = np.asarray(output.get_timestamps("up"), dtype=np.float64)
-    down_times = np.asarray(output.get_timestamps("down"), dtype=np.float64)
-
-    assert event_count == 2
-    np.testing.assert_allclose(up_times, np.array([pi / 4, 9 * pi / 4]), atol=5e-2, rtol=0.0)
-    x_down = -1.0 + 2.0 * coarse_x_down_thresh
-    np.testing.assert_allclose(
-        down_times,
-        np.array([pi - np.arcsin(x_down), 3 * pi - np.arcsin(x_down)]),
-        atol=6e-2,
-        rtol=0.0,
-    )
-
 
 @pytest.mark.parametrize(
     ("event_direction", "expected_times"),
@@ -319,11 +207,11 @@ def test_threshold_crossing_exposes_event_times_and_event_count() -> None:
         "amplitude max",
         "amplitude min",
         "amplitude mean",
-        "x0 max",
-        "x0 min",
-        "x0 mean",
-        "dx0 max",
-        "dx0 min",
+        "max x",
+        "min x",
+        "mean x",
+        "max dx/dt",
+        "min dx/dt",
     ]
     assert int(output.get_var_count("event")) == 2
 

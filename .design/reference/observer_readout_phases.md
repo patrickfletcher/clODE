@@ -43,20 +43,20 @@ This document lays out the planned phases for expanding observer readout-selecti
 **Rationale**:
 - **Trajectory statistics** (extrema, means) are independent of event-detection mechanism and are universally useful
 - **Period** ("inter-event interval") is meaningful for all event detectors with clear, consistent computation
-- **Maxima counting** is used for non-extremum semantic triggers and intentionally omitted for `local_extremum` to reduce overlap with the canonical `local_maximum` oscillation contract
+- **Maxima counting** is used for non-extremum semantic triggers and intentionally omitted for `local_max` to reduce overlap with the canonical `local_maximum` oscillation contract
 
 **Scope**:
 - Add `xTrajectoryMax[N_VAR]`, `xTrajectoryMin[N_VAR]`, `xTrajectoryMean[N_VAR]` to all semantic families
 - Add `dxTrajectoryMax[N_VAR]`, `dxTrajectoryMin[N_VAR]` to all semantic families
 - Add `auxTrajectoryMax[N_AUX]`, `auxTrajectoryMin[N_AUX]`, `auxTrajectoryMean[N_AUX]` to all semantic families
 - Add `period[3]` (max/min/mean inter-event interval, using elapsed time) to all semantic families
-- Add `nMaxima[3]` (max/min/mean local maxima count) to all semantic families **except** `local_extremum`
+- Add `nMaxima[3]` (max/min/mean local maxima count) to all semantic families **except** `local_max`
 
 **Families Affected**:
 - `threshold_crossing`, `normalized_threshold_crossing`
 - `schmitt_trigger`, `normalized_schmitt_trigger`
-- `local_extremum` (no maxima count)
-- `neighborhood_return`
+- `local_max` (no maxima count)
+- `normalized_neighborhood_return`
 
 **Implementation Notes**:
 - Use **compensated elapsed time** (not wallclock `t`) for period and time-integrated means
@@ -71,8 +71,8 @@ This document lays out the planned phases for expanding observer readout-selecti
 **Code Changes**:
 - `clode/kernels/observers/observer_threshold_crossing.clh`, `observer_normalized_threshold_crossing.clh`: Add fields and tracking
 - `clode/kernels/observers/observer_schmitt_trigger.clh`, `observer_normalized_schmitt_trigger.clh`: Add fields and tracking
-- `clode/kernels/observers/observer_local_extremum.clh`: Add trajectory stats, period (NOT maxima count)
-- `clode/kernels/observers/observer_neighborhood_return.clh`: Add trajectory stats, period, maxima count
+- `clode/kernels/observers/observer_local_maximum.clh`: Add trajectory stats, period (NOT maxima count)
+- `clode/kernels/observers/observer_normalized_neighborhood_return.clh`: Add trajectory stats, period, maxima count
 - `clode/observers/_definitions.py`: Update feature-name lists to include new readouts
 - Tests: Validate new readouts per family; no behavior change to event detection
 
@@ -97,11 +97,11 @@ This document lays out the planned phases for expanding observer readout-selecti
 **Strategic Context**: After Phase 2, all semantic families have trajectory stats and period, and most have maxima counting. Phase 3 adds amplitude tracking as a universal oscillation statistic for event observers, computed in `fVarIx` via local extrema bookkeeping independent of trigger geometry. To reduce drift and bloat, no new local-extremum-only readout behavior should be introduced while this phase lands.
 
 **Delivered scope**:
-- Add amplitude computation to `threshold_crossing`, `normalized_threshold_crossing`, `schmitt_trigger`, `normalized_schmitt_trigger`, `local_extremum`, and `neighborhood_return`
+- Add amplitude computation to `threshold_crossing`, `normalized_threshold_crossing`, `schmitt_trigger`, `normalized_schmitt_trigger`, `local_max`, and `normalized_neighborhood_return`
 - Add `amplitude[3]` (max/min/mean) to semantic family storage and output schema
 - Keep `period[3]` semantics from Phase 2 unchanged
-- **Intentional omission remains**: `nMaxima[3]` is NOT computed for `local_extremum`
-- Compatibility decision for `local_extremum` is deferred to Phase 4
+- **Intentional omission remains**: `nMaxima[3]` is NOT computed for `local_max`
+- Compatibility decision for `local_max` is deferred to Phase 4
 
 **Code changes**:
 - `clode/kernels/observers/observer_*.clh` (semantic event families): Add opposite-polarity extrema tracking and amplitude computation
@@ -117,9 +117,9 @@ This document lays out the planned phases for expanding observer readout-selecti
 
 **Acceptance criteria status**:
 - ✅ All semantic event families emit `max/min/mean amplitude`
-- ✅ Maxima counting remains absent for `local_extremum` (by simplification policy)
+- ✅ Maxima counting remains absent for `local_max` (by simplification policy)
 - ✅ Focused regressions pass with unchanged event-detection contracts
-- ⏳ Remaining: document final compatibility direction for `local_extremum`
+- ⏳ Remaining: document final compatibility direction for `local_max`
 
 **Blocking Dependencies**: Phase 2 ✅ (for trajectory stats and period; Phase 3 built on them)
 
@@ -133,17 +133,17 @@ This document lays out the planned phases for expanding observer readout-selecti
 
 **Strategic Context**: After phases 2-3, we have:
 - Universal trajectory stats, period, and maxima counting (except local-extremum)
-- Enhanced `local_extremum` with amplitude (no maxima counting by design)
+- Enhanced `local_max` with amplitude (no maxima counting by design)
 - Clear architectural seams for core readouts
 
 Phase 4 addresses remaining questions about edge cases and optional enhancements:
 
 **Questions to Decide**:
-1. Should semantic Schmitt families compute up/down durations and duty cycle (for feature parity with legacy `threshold_2`)?
-   - Current: only legacy `threshold_2` computes these
+1. Should semantic Schmitt families compute up/down durations and duty cycle (for feature parity with legacy `normalized_schmitt_trigger`)?
+   - Current: only legacy `normalized_schmitt_trigger` computes these
    - Option A: Add to semantic Schmitt in Phase 5
    - Option B: Keep as legacy-only; document as such
-2. Should `local_extremum` remain first-class, alias to canonical `local_maximum` oscillation semantics, or move to a compatibility/deprecation path?
+2. Should `local_max` remain first-class, alias to canonical `local_maximum` oscillation semantics, or move to a compatibility/deprecation path?
    - Current: both surfaces coexist and can drift
    - Question: which option preserves clarity and minimizes maintenance cost?
 3. Are there other edge cases or family-specific readouts not yet covered?
@@ -189,7 +189,7 @@ Phase 4 addresses remaining questions about edge cases and optional enhancements
 1. **Consolidate helpers** in new or updated `clODE_observer_helpers.clh`:
    - Formalize `updateTrajectoryStats()`, `updatePeriodStats()`, `updateAmplitudeStats()`, `updateMaximaCountStats()`
    - Leverage compensated-time and best interpolation routines
-   - Reduce code duplication across `observer_threshold_crossing.clh`, `observer_schmitt_trigger.clh`, `observer_local_extremum.clh`, `observer_neighborhood_return.clh`
+   - Reduce code duplication across `observer_threshold_crossing.clh`, `observer_schmitt_trigger.clh`, `observer_local_maximum.clh`, `observer_normalized_neighborhood_return.clh`
 
 2. **Implement readout-selection types** for families with optional readouts:
    - `ThresholdCrossingReadoutSelection` (already exists; may be generalized)
@@ -298,14 +298,14 @@ Phase 6 (Event State Values) — independent, lower priority
 After phases 2-3, the following **already decided** by strategic audit (not open decisions):
 - ✅ Trajectory statistics are universal (all families)
 - ✅ Period ("inter-event interval") is universal (all families, context-dependent meaning)
-- ✅ Maxima counting is implemented on non-extremum semantic families; `local_extremum` omits it by simplification policy
+- ✅ Maxima counting is implemented on non-extremum semantic families; `local_max` omits it by simplification policy
 - ✅ Amplitude is universal across event observers (computed in `fVarIx` via extrema tracking)
 - ✅ `local_maximum` semantics are the canonical oscillation reference model
 
 **Open Decision**: Additional optional enhancements beyond core Phase 2-3 implementation:
 
 **If Phase 4 approves additional Schmitt enhancement**:
-- Compute up/down durations and duty cycle in semantic Schmitt families (for feature parity with legacy `threshold_2`)
+- Compute up/down durations and duty cycle in semantic Schmitt families (for feature parity with legacy `normalized_schmitt_trigger`)
 - Proceed to Phase 5 with broader selective-readout expansion
 
 **If Phase 4 decides defer Schmitt enhancement**:
@@ -324,7 +324,7 @@ After phases 2-3, the following **already decided** by strategic audit (not open
 **After Phases 1-3** (core readouts implemented):
 - All semantic event-detector families emit trajectory statistics (max/min/mean per variable)
 - All families compute period as "inter-event interval" with consistent naming
-- Non-extremum semantic families compute maxima count per period; `local_extremum` omits it by simplification policy
+- Non-extremum semantic families compute maxima count per period; `local_max` omits it by simplification policy
 - All semantic event families compute amplitude (opposite-polarity extrema tracking)
 - `min_amp` semantics documented clearly per family type
 - Regression tests pass: existing event-detection behavior unchanged
@@ -355,14 +355,14 @@ After phases 2-3, the following **already decided** by strategic audit (not open
 ### Already Decided (From Phase 1 Audit):
 - Semantic families are **intentionally lean shells** designed to have readouts added consistently in phases 2-3
 - "Period" = "inter-event interval" universally; meaning is context-dependent by trigger geometry
-- Maxima counting is kept on non-extremum semantic families; `local_extremum` omits it to avoid duplicating the canonical `local_maximum` oscillation contract
+- Maxima counting is kept on non-extremum semantic families; `local_max` omits it to avoid duplicating the canonical `local_maximum` oscillation contract
 - Amplitude should be available for **all event observers** with consistent semantics
 - `min_amp` semantics are defensible but context-dependent (1-pass vs. 2-pass); documentation is sufficient
 - Use compensated elapsed time, bounded three-sample refinement, and best available helpers for consistency
 
 ### Conditional / Open (For Phase 4 Decision):
-- Whether semantic Schmitt families should compute up/down durations and duty cycle (for feature parity with legacy `threshold_2`)
-- Whether `local_extremum` should be retained, aliased, or deprecated as a compatibility surface
+- Whether semantic Schmitt families should compute up/down durations and duty cycle (for feature parity with legacy `normalized_schmitt_trigger`)
+- Whether `local_max` should be retained, aliased, or deprecated as a compatibility surface
 - Whether to consolidate helpers in Phase 5 or defer
 - Whether selective-readout surfaces should expand beyond `ThresholdCrossingReadoutSelection` pilot
 

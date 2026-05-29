@@ -41,7 +41,7 @@ def _feature_matrix(output: clode.ObserverOutput) -> np.ndarray:
     return np.asarray(output.to_ndarray(), dtype=np.float64)
 
 
-def test_rk4_basicall_linear_state_statistics_match_exact_values() -> None:
+def test_rk4_summary_linear_state_statistics_match_exact_values() -> None:
     simulator = _settled_feature_simulator("stable_linear")
     output = simulator.features()
 
@@ -121,7 +121,7 @@ def test_rk4_basicall_linear_state_statistics_match_exact_values() -> None:
     )
 
 
-def test_rk4_basicall_linear_aux_statistics_match_exact_values() -> None:
+def test_rk4_summary_linear_aux_statistics_match_exact_values() -> None:
     output = _settled_feature_simulator("stable_linear_aux").features()
 
     assert output is not None
@@ -170,7 +170,7 @@ def test_rk4_basicall_linear_aux_statistics_match_exact_values() -> None:
     )
 
 
-def test_dormand_prince_basicall_hopf_cycle_statistics_match_exact_values() -> None:
+def test_dormand_prince_summary_hopf_cycle_statistics_match_exact_values() -> None:
     output = make_feature_simulator(
         "hopf_normal_form",
         stepper=clode.Stepper.dormand_prince,
@@ -199,7 +199,7 @@ def test_dormand_prince_basicall_hopf_cycle_statistics_match_exact_values() -> N
     np.testing.assert_allclose(output.get_var_mean("r2"), 1.0, atol=ADAPTIVE_ATOL, rtol=0.0)
 
 
-def test_dormand_prince_basicall_large_origin_matches_zero_origin_statistics() -> None:
+def test_dormand_prince_summary_large_origin_matches_zero_origin_statistics() -> None:
     duration = 4.0 * hopf_cycle_period()
     kwargs = dict(
         model_name="hopf_normal_form",
@@ -239,7 +239,7 @@ def test_dormand_prince_basicall_large_origin_matches_zero_origin_statistics() -
     )
 
 
-def test_rk4_basicall_continuation_matches_single_run() -> None:
+def test_rk4_summary_continuation_matches_single_run() -> None:
     full = make_feature_simulator(
         "stable_linear_aux",
         stepper=clode.Stepper.rk4,

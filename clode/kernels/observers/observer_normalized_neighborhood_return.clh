@@ -1,13 +1,13 @@
 // Normalized neighborhood-return event detection with warmup-derived
 // normalization and expanded trajectory/period/maxima readouts.
 
-#ifndef OBSERVER_NEIGHBORHOOD_RETURN_H
-#define OBSERVER_NEIGHBORHOOD_RETURN_H
+#ifndef OBSERVER_NORMALIZED_NEIGHBORHOOD_RETURN_H
+#define OBSERVER_NORMALIZED_NEIGHBORHOOD_RETURN_H
 
-#ifdef USE_OBSERVER_NEIGHBORHOOD_RETURN
+#ifdef USE_OBSERVER_NORMALIZED_NEIGHBORHOOD_RETURN
 #define TWO_PASS_EVENT_DETECTOR
 
-struct ObserverState_neighborhood_return {
+struct ObserverState_normalized_neighborhood_return {
     realtype tbuffer[3];
     realtype elapsedbuffer[3];
     realtype xbuffer[3 * N_VAR];
@@ -52,7 +52,7 @@ struct ObserverState_neighborhood_return {
     unsigned int stepcount;
 };
 
-typedef struct ObserverState_neighborhood_return ObserverState;
+typedef struct ObserverState_normalized_neighborhood_return ObserverState;
 
 static inline realtype neighborhoodReturnNormSqAtSample(const ObserverState *od, const int sampleIndex) {
     realtype normSq = ZERO;
@@ -376,6 +376,8 @@ static inline void finalizeFeatures(realtype *ti, realtype xi[], realtype dxi[],
         F[ix++ * nPts + i] = od->xTrajectoryMean[j];
         F[ix++ * nPts + i] = od->dxTrajectoryMax[j];
         F[ix++ * nPts + i] = od->dxTrajectoryMin[j];
+        F[ix++ * nPts + i] = od->xTrajectoryRange[j];
+        F[ix++ * nPts + i] = od->x0[j];
     }
 
     for (int j = 0; j < N_AUX; ++j) {
@@ -395,5 +397,5 @@ static inline void finalizeObserverState(realtype *ti, realtype xi[], realtype d
     (void)tspan;
 }
 
-#endif // USE_OBSERVER_NEIGHBORHOOD_RETURN
-#endif // OBSERVER_NEIGHBORHOOD_RETURN_H
+#endif // USE_OBSERVER_NORMALIZED_NEIGHBORHOOD_RETURN
+#endif // OBSERVER_NORMALIZED_NEIGHBORHOOD_RETURN_H

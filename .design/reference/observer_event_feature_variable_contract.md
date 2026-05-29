@@ -35,7 +35,7 @@ Users can opt into advanced configurations without cluttering the default case.
 
 ### 3. Local Extrema Observers
 
-**local_maximum** and **local_extremum** (now maxima-only) both use fVarIx to specify the variable on which to detect and measure extrema:
+**local_maximum** and **local_max** (now maxima-only) both use fVarIx to specify the variable on which to detect and measure extrema:
 - `local_maximum(fVarIx=0)`: Trigger and measure in $x_0$
 - `local_maximum(fVarIx=1)`: Trigger and measure in $x_1$
 
@@ -43,7 +43,7 @@ These observers do not currently use eVarIx (it is ignored), but the configurati
 
 ### 4. Neighborhood Observers
 
-**neighborhood_return** is unique: it uses all state variables to determine entry and exit from a neighborhood ball, so fVarIx specifies the variable used to detect the anchor point (downward threshold crossing) and is independent of the multi-variable neighborhood geometry.
+**normalized_neighborhood_return** is unique: it uses all state variables to determine entry and exit from a neighborhood ball, so fVarIx specifies the variable used to detect the anchor point (downward threshold crossing) and is independent of the multi-variable neighborhood geometry.
 
 ## Default Resolution
 
@@ -104,7 +104,7 @@ When converting to `ObserverRuntimeSettings`:
 
 ### Current Implementation
 
-As of Phase 4 (local_extremum/local_maximum merge):
+As of Phase 4 (local_max/local_maximum merge):
 - All semantic event observers accept `f_var_ix` (feature/feature variable index) at the kernel level
 - Python config types map `variable` → `f_var_ix` and `event_direction` appropriately
 - eVarIx is currently always set to 0 or derived from compatibility surfaces (ObserverParams); it is not actively used in threshold or extremum families yet

@@ -5,8 +5,8 @@ This document analyzes the readout families across legacy and semantic observers
 ## Fast path
 
 - Treat `local_maximum` semantics as the canonical oscillation contract (`period`, `amplitude`, optional max/min event streams).
-- Avoid adding new `local_extremum`-specific readout complexity while this contract is being standardized.
-- Keep `local_extremum` as a compatibility surface for now, then decide alias/deprecation or retention after Phase 3 validation.
+- Avoid adding new `local_max`-specific readout complexity while this contract is being standardized.
+- Keep `local_max` as a compatibility surface for now, then decide alias/deprecation or retention after Phase 3 validation.
 - Keep helper-hardening work (compensated time/mean, interpolation variants) as non-blocking backlog.
 
 ## Readout Categorization
@@ -40,11 +40,8 @@ These readouts are available for **any** observer that detects events (has non-n
 - `normalized_threshold_crossing` (2-pass, warmup-derived)
 - `schmitt_trigger` (1-pass, absolute)
 - `normalized_schmitt_trigger` (2-pass, warmup-derived)
-- `local_extremum` (1-pass)
-- `local_maximum` (legacy, 1-pass)
-- `neighborhood_return` (2-pass)
-- `neighbourhood_2` (legacy, 2-pass)
-- `threshold_2` (legacy, 2-pass Schmitt with extras)
+- `local_max` (1-pass)
+- `normalized_neighborhood_return` (2-pass)
 
 **Current storage**: Timestamps only; event state/value extraction is not yet standardized across families.
 
@@ -61,15 +58,12 @@ The meaning of "period" varies by event trigger geometry, but the name and compu
 
 | Observer | Period Meaning | Computation |
 |----------|---------------|------------|
-| `local_extremum` | Inter-extremum interval (time between consecutive maxima or minima) | Elapsed time between events |
-| `local_maximum` | Inter-maxima interval (IMI) | Elapsed time between events |
+| `local_max` | Inter-extremum interval (time between consecutive maxima or minima) | Elapsed time between events |
 | `threshold_crossing` | Inter-crossing interval (time between consecutive threshold crossings) | Elapsed time between events |
 | `normalized_threshold_crossing` | Inter-crossing interval (time between consecutive crossings) | Elapsed time between events |
 | `schmitt_trigger` | Inter-transition interval (time between consecutive up-transitions, typically) | Elapsed time between events |
 | `normalized_schmitt_trigger` | Inter-transition interval (time between consecutive up-transitions) | Elapsed time between events |
-| `neighbourhood_2` | Inter-exit interval (time between consecutive neighborhood exits) | Elapsed time between events |
-| `threshold_2` | Inter-transition interval (time between up-transitions for Schmitt) | Elapsed time between events |
-| `neighborhood_return` | Inter-exit interval (time between neighborhood exits) | Elapsed time between events |
+| `normalized_neighborhood_return` | Inter-exit interval (time between consecutive neighborhood exits) | Elapsed time between events |
 
 **Strategic Notes**:
 - "Period" = "inter-event interval" universally; exact meaning depends on what the event trigger detects
@@ -88,7 +82,7 @@ Available for any observer with events, by tracking local maxima and minima in t
   - Measured in one variable specified by `fVarIx`
 
 **Current observers with this**:
-- `local_maximum` (legacy) - computes amplitude
+- `local_max` - computes amplitude
 
 **Strategic Direction**: Amplitude should be standardized across event-observer families. Event detectors already maintain step history for period and maxima counting, so tracking opposite-polarity extrema is feasible and does not require coupling amplitude semantics to event polarity. This includes threshold, Schmitt, neighborhood, and local-extremum families.
 
@@ -100,19 +94,17 @@ Available for observers where it is meaningful: **all event detectors EXCEPT loc
   - Counts local maxima between consecutive events
   - Measured in one variable specified by `fVarIx`
 
-**Strategic Rationale**: We omit maxima counting from `local_extremum` to keep one canonical oscillation contract centered on `local_maximum` and avoid duplicate near-equivalent surfaces. Threshold, Schmitt, and neighborhood triggers still benefit from maxima counts because those event geometries are not already an extremum-stream abstraction.
+**Strategic Rationale**: We omit maxima counting from `local_max` to keep one canonical oscillation contract centered on `local_maximum` and avoid duplicate near-equivalent surfaces. Threshold, Schmitt, and neighborhood triggers still benefit from maxima counts because those event geometries are not already an extremum-stream abstraction.
 
 **Current observers with this**:
-- `local_maximum` (legacy) - computes peak counts
-- `neighbourhood_2` (legacy) - computes peak counts
-- `threshold_2` (legacy) - computes peak counts
+- `threshold_crossing`, `normalized_threshold_crossing`, `schmitt_trigger`, `normalized_schmitt_trigger`, and `normalized_neighborhood_return` compute peak-count statistics where applicable.
 
 **Planned (Phase 2+)**:
 - Threshold and Schmitt semantic families will compute peak counts in Phase 2
 - Neighborhood families (both semantic and legacy) may compute peak counts (Phase 2+, separate validation)
 
 **Intentional Omission**:
-- `local_extremum` will **NOT** compute peak counts (by simplification policy to avoid local_maximum/local_extremum overlap)
+- `local_max` does not compute peak-count statistics.
 
 ### Category 5: Schmitt-Specific Readouts (Schmitt Trigger Families Only)
 
@@ -126,13 +118,11 @@ Available only for Schmitt-style observers:
   - `upDuration / period`
 
 **Current observers**:
-- `schmitt_trigger` (semantic, 1-pass) - does NOT compute these; only stores up/down transition times
-- `normalized_schmitt_trigger` (semantic, 2-pass) - does NOT compute these; only stores up/down transition times
-- `threshold_2` (legacy, 2-pass) - computes these statistics
+- `schmitt_trigger` and `normalized_schmitt_trigger` currently expose up/down transition timing streams and event count.
 
 **Note**: These are heavily tied to the Schmitt state machine and are not applicable to threshold-crossing or extremum families.
 
-### Category 6: Schmitt Legacy Extras (threshold_2 Only)
+### Category 6: Schmitt Legacy Extras (normalized_schmitt_trigger Only)
 
 - **Active dip**: `max activeDip`, `min activeDip`, `mean activeDip`
   - Feature-variable value during down-state minus last recorded feature-variable minimum
@@ -156,7 +146,7 @@ Used to refine event detection from sampled to interpolated times:
 - `localMaximumFromThreeSamples()`
 - `localMinimumFromThreeSamples()`
 
-Already in shared helpers; used by `local_maximum`, `neighbourhood_2`, and semantic threshold families.
+Already in shared helpers; used by `local_max`, `normalized_neighborhood_return`, and threshold/Schmitt families.
 
 ### Pattern 3: Time-Integrated Trajectory Statistics
 
@@ -261,15 +251,15 @@ Use short, consistent names across families. Meaning is disambiguated by **conte
 
 **Avoid in public API**:
 - `IMI` (use "period" and document as "inter-maxima interval" for `local_maximum`)
-- `activeDip` (too niche for legacy `threshold_2`)
+- `activeDip` (too niche for legacy `normalized_schmitt_trigger`)
 - `nhood center` (internal state; use structured variable selection instead)
-- `neighbourhood_2` / `neighbourhood_1` renamed to use consistent American spelling or qualified names
+- `normalized_neighborhood_return` / `neighbourhood_1` renamed to use consistent American spelling or qualified names
 
 ---
 
 ## Current Observer Readout Inventory
 
-**Important Context**: Semantic families (`threshold_crossing`, `normalized_threshold_crossing`, `schmitt_trigger`, `normalized_schmitt_trigger`, `local_extremum`, `neighborhood_return`) are **intentionally lean shells** designed to have feature readouts added consistently during planned phases. The gaps documented below are strategic, not oversights.
+**Important Context**: Semantic families (`threshold_crossing`, `normalized_threshold_crossing`, `schmitt_trigger`, `normalized_schmitt_trigger`, `local_max`, `normalized_neighborhood_return`) are **intentionally lean shells** designed to have feature readouts added consistently during planned phases. The gaps documented below are strategic, not oversights.
 
 ### `local_maximum` (Legacy, 1-Pass Extremum Detection)
 
@@ -284,7 +274,7 @@ Use short, consistent names across families. Meaning is disambiguated by **conte
 
 ---
 
-### `threshold_2` (Legacy, 2-Pass Normalized Schmitt + Extras)
+### `normalized_schmitt_trigger` (Legacy, 2-Pass Normalized Schmitt + Extras)
 
 **Available Readouts**:
 - Summary trajectory stats: `max/min/mean {var}`, `max/min d{var}/dt`, `max/min/mean {aux}`
@@ -300,7 +290,7 @@ Use short, consistent names across families. Meaning is disambiguated by **conte
 
 ---
 
-### `neighbourhood_2` (Legacy, 2-Pass Neighborhood Return)
+### `normalized_neighborhood_return` (Legacy, 2-Pass Neighborhood Return)
 
 **Available Readouts**:
 - Summary trajectory stats: `max/min/mean {var}`, `min/max/range {var}`, `max/min d{var}/dt`, `max/min/mean {aux}`
@@ -341,7 +331,7 @@ Use short, consistent names across families. Meaning is disambiguated by **conte
 - Period statistics: `max/min/mean period` (inter-transition intervals)
 - Maxima count: `max/min/mean peak count` (local maxima between transitions)
 - **Planned (Phase 3)**: Amplitude statistics `max/min/mean amplitude`
-- **Future (Phase 4+)**: Up/down duration and duty cycle statistics (if feature parity with legacy `threshold_2` is desired)
+- **Future (Phase 4+)**: Up/down duration and duty cycle statistics (if feature parity with legacy `normalized_schmitt_trigger` is desired)
 
 **Intentional Omissions** (by design as lean shell):
 - None beyond Schmitt-specific extras deferred to later phase
@@ -350,23 +340,23 @@ Use short, consistent names across families. Meaning is disambiguated by **conte
 
 ---
 
-### Semantic Extremum Families (`local_extremum`, `neighborhood_return`)
+### Semantic Extremum Families (`local_max`, `normalized_neighborhood_return`)
 
 **Currently Available Readouts**:
-- Event streams: event times (and values for `local_extremum`), event count
+- Event streams: event times (and values for `local_max`), event count
 
 **Planned (Phase 2)**:
 - Summary trajectory stats: `max/min/mean {var}`, `max/min d{var}/dt`, `max/min/mean {aux}` (universal addition)
 - Period statistics: `max/min/mean period` (inter-event intervals)
 
 **Planned (Phase 3)**:
-- `local_extremum`: Amplitude `max/min/mean amplitude` (local extremum value - last opposite-polarity extremum value)
-- `neighborhood_return`: Amplitude `max/min/mean amplitude` (local oscillation amplitude in `fVarIx`, independent of trigger geometry)
-- `local_extremum` still **omits maxima counting** (strategic decision: alternating extrema makes count uninformative)
+- `local_max`: Amplitude `max/min/mean amplitude` (local extremum value - last opposite-polarity extremum value)
+- `normalized_neighborhood_return`: Amplitude `max/min/mean amplitude` (local oscillation amplitude in `fVarIx`, independent of trigger geometry)
+- `local_max` still **omits maxima counting** (strategic decision: alternating extrema makes count uninformative)
 
 **Intentional Omissions** (by design):
 - Schmitt-specific readouts (not applicable to extremum or neighborhood triggers)
-- Maxima counting for `local_extremum` (meaningless given trigger geometry)
+- Maxima counting for `local_max` (meaningless given trigger geometry)
 
 **Layout Complexity**: Very low currently (4-8 persistent fields + event arrays); will expand modestly in Phase 2-3
 
@@ -401,7 +391,7 @@ Use short, consistent names across families. Meaning is disambiguated by **conte
 
 **Strategic Finding**: Maxima counting is most useful where event geometry is not itself a direct extremum stream.
 
-**Strategic Decision**: Compute `nMaxima[3]` (max/min/mean count of local maxima per event) for threshold, Schmitt, and neighborhood families. Keep it out of `local_extremum` while the local_maximum-first simplification path is active.
+**Strategic Decision**: Compute `nMaxima[3]` (max/min/mean count of local maxima per event) for threshold, Schmitt, and neighborhood families. Keep it out of `local_max` while the local_maximum-first simplification path is active.
 
 **Implementation Approach**: Add maxima-counting logic to non-extremum families where triggered events are not themselves extrema detections.
 
@@ -417,9 +407,9 @@ Use short, consistent names across families. Meaning is disambiguated by **conte
 
 **Strategic Finding**: These statistics are specific to the Schmitt state machine and not generalizable to other trigger types.
 
-**Strategic Decision**: Keep these as Schmitt-family-specific. Semantic Schmitt families may compute these in future work for feature parity with legacy `threshold_2`, but they are not required for all event detectors.
+**Strategic Decision**: Keep these as Schmitt-family-specific. Semantic Schmitt families may compute these in future work for feature parity with legacy `normalized_schmitt_trigger`, but they are not required for all event detectors.
 
-**Implementation Approach**: Currently only legacy `threshold_2` computes these. Defer semantic Schmitt family enhancement until phase 3-4 when period/amplitude decisions stabilize.
+**Implementation Approach**: Currently only legacy `normalized_schmitt_trigger` computes these. Defer semantic Schmitt family enhancement until phase 3-4 when period/amplitude decisions stabilize.
 
 ### 6. `min_amp` Semantics Are Defensible and Context-Dependent
 
@@ -442,9 +432,9 @@ This is not a bug; it's a consequence of the detection strategy.
 
 ### 8. Active Dip Is Too Niche for Standardization
 
-**Strategic Finding**: Only `threshold_2` computes `activeDip`; it is specific to Schmitt down-state dynamics.
+**Strategic Finding**: Only `normalized_schmitt_trigger` computes `activeDip`; it is specific to Schmitt down-state dynamics.
 
-**Strategic Decision**: Keep as `threshold_2`-specific legacy feature. Do not generalize.
+**Strategic Decision**: Keep as `normalized_schmitt_trigger`-specific legacy feature. Do not generalize.
 
 ### 9. Event State Value Selection Is a Separate Future Concern
 
@@ -456,7 +446,7 @@ This is not a bug; it's a consequence of the detection strategy.
 
 **Strategic Finding**: If oscillation statistics are the primary target, `local_maximum` can serve as a canonical base flow with optional storage of max/min event streams.
 
-**Strategic Decision**: Use this as the default simplification direction for near-term observer-readout work. Keep `local_extremum` compatibility behavior stable, but avoid new local-extremum-specific surface growth until we decide whether it is retained as first-class or aliased/deprecated in favor of the canonical `local_maximum` contract.
+**Strategic Decision**: Use this as the default simplification direction for near-term observer-readout work. Keep `local_max` compatibility behavior stable, but avoid new local-extremum-specific surface growth until we decide whether it is retained as first-class or aliased/deprecated in favor of the canonical `local_maximum` contract.
 
 ### 11. Helper Evaluation and Interpolation Cleanup Should Be A Separate Backlog Stream
 
@@ -483,8 +473,8 @@ This is not a bug; it's a consequence of the detection strategy.
 **Families to update**:
 - `threshold_crossing`, `normalized_threshold_crossing`: Add trajectory stats, period, maxima count
 - `schmitt_trigger`, `normalized_schmitt_trigger`: Add trajectory stats, period, maxima count
-- `local_extremum`: Add trajectory stats, period (maxima count intentionally omitted)
-- `neighborhood_return`: Add trajectory stats, period (maxima count validation needed separately)
+- `local_max`: Add trajectory stats, period (maxima count intentionally omitted)
+- `normalized_neighborhood_return`: Add trajectory stats, period (maxima count validation needed separately)
 
 **Readouts to add** (to all semantic families except as noted):
 1. **Trajectory extrema** (universal): `max {var}`, `min {var}` per state variable
@@ -492,7 +482,7 @@ This is not a bug; it's a consequence of the detection strategy.
 3. **Trajectory mean** (universal): `mean {var}` per state variable (time-integrated with compensated time)
 4. **Auxiliary trajectory statistics** (universal): `max {aux}`, `min {aux}`, `mean {aux}` per auxiliary variable
 5. **Period** (universal): `max period`, `min period`, `mean period` (inter-event intervals, using elapsed time)
-6. **Maxima count** (all except `local_extremum`): `max peak count`, `min peak count`, `mean peak count`
+6. **Maxima count** (all except `local_max`): `max peak count`, `min peak count`, `mean peak count`
 
 **Implementation approach**:
 - Use best available compensated-time helpers for elapsed-time tracking
@@ -512,8 +502,8 @@ This is not a bug; it's a consequence of the detection strategy.
 **Scope**: Add amplitude statistics consistently to semantic event observers while converging oscillation semantics on the `local_maximum` contract.
 
 **Readouts to add**:
-1. **Amplitude**: `max amplitude`, `min amplitude`, `mean amplitude` for `threshold_crossing`, `normalized_threshold_crossing`, `schmitt_trigger`, `normalized_schmitt_trigger`, `local_extremum`, and `neighborhood_return`
-2. **Retain existing period/maxima decisions** from Phase 2 (including no maxima count for `local_extremum`)
+1. **Amplitude**: `max amplitude`, `min amplitude`, `mean amplitude` for `threshold_crossing`, `normalized_threshold_crossing`, `schmitt_trigger`, `normalized_schmitt_trigger`, `local_max`, and `normalized_neighborhood_return`
+2. **Retain existing period/maxima decisions** from Phase 2 (including no maxima count for `local_max`)
 3. **Compatibility rule**: do not add new local-extremum-only readout concepts while this phase is in flight
 
 **Implementation approach**:
@@ -536,8 +526,8 @@ This is not a bug; it's a consequence of the detection strategy.
 **Scope**: Decide whether remaining gaps (Schmitt-specific readouts, local-extremum compatibility cleanup) warrant further expansion.
 
 **Questions to resolve**:
-- Should semantic Schmitt families compute up/down durations and duty cycle for feature parity with `threshold_2`?
-- Should `local_extremum` remain first-class, alias to `local_maximum` semantics, or move to compatibility/deprecation path?
+- Should semantic Schmitt families compute up/down durations and duty cycle for feature parity with `normalized_schmitt_trigger`?
+- Should `local_max` remain first-class, alias to `local_maximum` semantics, or move to compatibility/deprecation path?
 
 **Decision output**: Update design notes; may proceed to partial Phase 5 or defer extremum/neighborhood enhancement to future work.
 
@@ -571,7 +561,7 @@ This is not a bug; it's a consequence of the detection strategy.
 - [ ] Add opposite-polarity extrema bookkeeping for robust amplitude updates
 - [ ] Update feature-name resolution for amplitude outputs
 - [ ] Validate output consistency with `local_maximum` on test models
-- [ ] Decide and document `local_extremum` compatibility path (`retain` vs `alias` vs `deprecate`)
+- [ ] Decide and document `local_max` compatibility path (`retain` vs `alias` vs `deprecate`)
 
 **Ongoing**:
 - [ ] Preserve `ThresholdCrossingReadoutSelection` as proof-of-concept; do not expand until Phase 2-4 complete

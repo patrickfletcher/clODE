@@ -97,7 +97,7 @@ feature_simulator = clode.FeatureSimulator(
     dtmax=1.0,
     abstol=1.0e-6,
     reltol=1.0e-4,
-    observer=clode.Observer.threshold_2,
+    observer=clode.Observer.normalized_schmitt_trigger,
     event_var="v",
     feature_var="v",
     observer_x_up_thresh=x_up_thresh,
@@ -166,11 +166,11 @@ plt.ylabel(f"d{var}/dt")
 plt.axhline(y=0.0, color="gray", linestyle="-")
 
 # now plot v and dvdt actual thresholds
-min_v = output.F["min v"]
-max_v = output.F["max v"]
+min_v = output.get_var_min("v")
+max_v = output.get_var_max("v")
 range_v = max_v - min_v
-min_dvdt = output.F["min dv/dt"]
-max_dvdt = output.F["max dv/dt"]
+min_dvdt = output.get_var_min_slope("v")
+max_dvdt = output.get_var_max_slope("v")
 
 up_v = min_v + x_up_thresh * range_v
 down_v = min_v + x_down_thresh * range_v if x_down_thresh>0 else up_v
