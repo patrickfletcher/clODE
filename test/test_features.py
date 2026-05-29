@@ -173,7 +173,7 @@ def test_threshold_1_absolute_crossings_respect_direction(
     assert output is not None
     event_count = int(output.get_var_count("event"))
     threshold_times = np.atleast_1d(
-        np.asarray(output.get_timestamps("threshold"), dtype=np.float64)
+        np.asarray(output.get_timestamps("event"), dtype=np.float64)
     )
 
     assert event_count == len(expected_times)
@@ -247,7 +247,7 @@ def test_normalized_threshold_crossing_uses_warmup_relative_thresholds(
     assert output is not None
     event_count = int(output.get_var_count("event"))
     threshold_times = np.atleast_1d(
-        np.asarray(output.get_timestamps("threshold"), dtype=np.float64)
+        np.asarray(output.get_timestamps("event"), dtype=np.float64)
     )
 
     assert event_count == len(expected_times)
@@ -279,6 +279,53 @@ def test_normalized_threshold_crossing_respects_min_amp_gate() -> None:
 
     assert output is not None
     assert int(output.get_var_count("event")) == 0
+
+
+def test_threshold_crossing_exposes_event_times_and_event_count() -> None:
+    feature_simulator = clode.FeatureSimulator(
+        rhs_equation=sine_curve,
+        variables={"x": 0.0},
+        parameters={"dilation": 1.0},
+        observer=clode.Observer.threshold_crossing,
+        observer_configuration=clode.ThresholdCrossingConfig(
+            event_var="x",
+            threshold=0.5,
+            direction=clode.EventDirection.either,
+            min_amp=0.5,
+            max_event_count=8,
+            max_event_timestamps=3,
+        ),
+        stepper=clode.Stepper.rk4,
+        dtmax=0.05,
+        dt=0.05,
+        t_span=(0.0, 2 * pi),
+        **device_kwargs_for_tests(),
+    )
+
+    output = feature_simulator.features()
+
+    assert output is not None
+    assert output.get_feature_names() == [
+        "event time 0",
+        "event time 1",
+        "event time 2",
+        "event count",
+        "period max",
+        "period min",
+        "period mean",
+        "n maxima max",
+        "n maxima min",
+        "n maxima mean",
+        "amplitude max",
+        "amplitude min",
+        "amplitude mean",
+        "x0 max",
+        "x0 min",
+        "x0 mean",
+        "dx0 max",
+        "dx0 min",
+    ]
+    assert int(output.get_var_count("event")) == 2
 
 
 def test_absolute_schmitt_trigger_uses_absolute_thresholds() -> None:
@@ -345,42 +392,23 @@ def test_local_max_coarse_timestamps_use_three_sample_refinement() -> None:
     output = feature_simulator.features()
 
     assert output is not None
-    max_times = np.asarray(output.get_timestamps("localmax"), dtype=np.float64)
-    min_times = np.asarray(output.get_timestamps("localmin"), dtype=np.float64)
+    max_times = np.asarray(output.get_timestamps("local maximum"), dtype=np.float64)
+    min_times = np.asarray(output.get_timestamps("local minimum"), dtype=np.float64)
 
     np.testing.assert_allclose(max_times, np.array([pi / 2, 5 * pi / 2]), atol=1e-2, rtol=0.0)
     np.testing.assert_allclose(min_times, np.array([3 * pi / 2, 7 * pi / 2]), atol=1e-2, rtol=0.0)
 
 
-@pytest.mark.parametrize(
-    ("polarity", "expected_times", "expected_values"),
-    [
-        (
-            clode.ExtremumPolarity.maximum,
-            np.array([pi / 2, 5 * pi / 2], dtype=np.float64),
-            np.array([1.0, 1.0], dtype=np.float64),
-        ),
-        (
-            clode.ExtremumPolarity.minimum,
-            np.array([3 * pi / 2, 7 * pi / 2], dtype=np.float64),
-            np.array([-1.0, -1.0], dtype=np.float64),
-        ),
-    ],
-)
-def test_local_extremum_selected_polarity_uses_three_sample_refinement(
-    polarity: clode.ExtremumPolarity,
-    expected_times: np.ndarray,
-    expected_values: np.ndarray,
-) -> None:
+def test_local_maximum_detects_maxima_with_three_sample_refinement() -> None:
+    """Verify that local_max detects local maxima with quadratic refinement."""
     feature_simulator = clode.FeatureSimulator(
         rhs_equation=sine_curve,
         variables={"x": 0.0},
         parameters={"dilation": 1.0},
         aux=["dx"],
-        observer=clode.Observer.local_extremum,
-        observer_configuration=clode.LocalExtremumConfig(
-            variable="x",
-            polarity=polarity,
+        observer=clode.Observer.local_max,
+        observer_configuration=clode.LocalMaximumConfig(
+            event_var="x",
             max_event_count=4,
             max_event_timestamps=4,
         ),
@@ -394,12 +422,16 @@ def test_local_extremum_selected_polarity_uses_three_sample_refinement(
     output = feature_simulator.features()
 
     assert output is not None
-    event_times = np.asarray(output.get_timestamps("local_extremum"), dtype=np.float64)
+    event_times = np.asarray(output.get_timestamps("local maximum"), dtype=np.float64)
     event_values = np.asarray(
-        output.get_event_data("local_extremum", type="value"),
+        output.get_event_data("local maximum", type="value"),
         dtype=np.float64,
     )
 
+    # local_max should detect maxima at pi/2 and 5*pi/2 for sine.
+    expected_times = np.array([pi / 2, 5 * pi / 2], dtype=np.float64)
+    expected_values = np.array([1.0, 1.0], dtype=np.float64)
+    
     assert int(output.get_var_count("event")) == 2
     np.testing.assert_allclose(event_times, expected_times, atol=1e-2, rtol=0.0)
     np.testing.assert_allclose(event_values, expected_values, atol=2e-2, rtol=0.0)

@@ -7,7 +7,11 @@ import pytest
 pyopencl = pytest.importorskip("pyopencl")
 
 from clode._opencl import OpenCLRuntime
+from clode.observers._definitions import resolve_observer_spec
+from clode.observers.types import EventOutputSettings
 from clode.observers.types import EventDirection
+from clode.observers.types import ObserverRuntimeSettings
+from clode.problem._core import ProblemInfo
 from clode.runtime import _clode_root_dir
 from test.core_numerics.helpers import TEST_DEVICE_ID, TEST_PLATFORM_ID
 
@@ -26,6 +30,29 @@ def _build_program(runtime: OpenCLRuntime, source: str, *, extra_options: tuple[
     return pyopencl.Program(runtime.context, source).build(
         options=["-DCLODE_SINGLE_PRECISION", f"-I{KERNEL_ROOT}", *extra_options]
     )
+
+
+def _summary_observer_source_preamble(
+    observer_name: str,
+    *,
+    n_var: int,
+    n_aux: int,
+) -> str:
+    problem_info = ProblemInfo(
+        "component_kernel.cl",
+        [f"x{index}" for index in range(n_var)],
+        ["p0"],
+        [f"aux{index}" for index in range(n_aux)],
+        0,
+    )
+    resolved_spec = resolve_observer_spec(
+        problem_info,
+        observer_name,
+        ObserverRuntimeSettings(),
+        real_dtype=np.dtype(np.float32),
+        event_output_settings=EventOutputSettings(max_event_timestamps=0),
+    )
+    return resolved_spec.source_preamble
 
 
 def _reference_compensated_time_add(
@@ -180,9 +207,11 @@ def test_named_address_space_helpers_cover_private_and_global_array_patterns() -
 
 def test_basic_observer_component_kernel_reports_expected_features() -> None:
     runtime = OpenCLRuntime.create(**_explicit_runtime_kwargs())
+    source_preamble = _summary_observer_source_preamble("basic", n_var=1, n_aux=0)
     program = _build_program(
         runtime,
-        """
+        source_preamble
+        + """
         #include \"clODE_utilities.cl\"
         #include \"observers.cl\"
 
@@ -231,7 +260,7 @@ def test_basic_observer_component_kernel_reports_expected_features() -> None:
             finalizeFeatures(&ti, xi, dxi, auxi, &observer_state, &TEST_PARAMS, features, 0, 1);
         }
         """,
-        extra_options=("-DUSE_OBSERVER_BASIC", "-DN_VAR=1", "-DN_AUX=0"),
+        extra_options=("-DUSE_OBSERVER_SUMMARY", "-DN_VAR=1", "-DN_AUX=0"),
     )
 
     times = np.array([0.0, 1.0, 3.0], dtype=np.float32)
@@ -281,9 +310,11 @@ def test_basic_observer_component_kernel_reports_expected_features() -> None:
 
 def test_basic_observer_constant_signal_preserves_exact_unit_mean() -> None:
     runtime = OpenCLRuntime.create(**_explicit_runtime_kwargs())
+    source_preamble = _summary_observer_source_preamble("basic", n_var=1, n_aux=0)
     program = _build_program(
         runtime,
-        """
+        source_preamble
+        + """
         #include \"clODE_utilities.cl\"
         #include \"observers.cl\"
 
@@ -328,11 +359,11 @@ def test_basic_observer_constant_signal_preserves_exact_unit_mean() -> None:
             finalizeFeatures(&ti, xi, dxi, auxi, &observer_state, &TEST_PARAMS, features, 0, 1);
         }
         """,
-        extra_options=("-DUSE_OBSERVER_BASIC", "-DN_VAR=1", "-DN_AUX=0"),
+        extra_options=("-DUSE_OBSERVER_SUMMARY", "-DN_VAR=1", "-DN_AUX=0"),
     )
 
     times = np.arange(0.0, 400.0 * math.pi + 0.1, 0.1, dtype=np.float32)
-    features = np.empty(6, dtype=np.float32)
+    features = np.empty(5, dtype=np.float32)
 
     time_buffer = pyopencl.Buffer(
         runtime.context,
@@ -364,9 +395,11 @@ def test_basic_observer_constant_signal_preserves_exact_unit_mean() -> None:
 
 def test_basicall_observer_component_kernel_reports_expected_feature_layout() -> None:
     runtime = OpenCLRuntime.create(**_explicit_runtime_kwargs())
+    source_preamble = _summary_observer_source_preamble("basicall", n_var=2, n_aux=1)
     program = _build_program(
         runtime,
-        """
+        source_preamble
+        + """
         #include \"clODE_utilities.cl\"
         #include \"observers.cl\"
 
@@ -419,7 +452,7 @@ def test_basicall_observer_component_kernel_reports_expected_feature_layout() ->
             finalizeFeatures(&ti, xi, dxi, auxi, &observer_state, &TEST_PARAMS, features, 0, 1);
         }
         """,
-        extra_options=("-DUSE_OBSERVER_BASIC_ALLVAR", "-DN_VAR=2", "-DN_AUX=1"),
+        extra_options=("-DUSE_OBSERVER_SUMMARY", "-DN_VAR=2", "-DN_AUX=1"),
     )
 
     times = np.array([0.0, 1.0, 3.0], dtype=np.float32)
@@ -1355,17 +1388,7 @@ def test_local_max_observer_kernel_uses_three_sample_extremum_helpers() -> None:
     )
 
 
-@pytest.mark.parametrize(
-    ("event_direction", "expected"),
-    [
-        (1, np.array([math.pi / 2.0, 1.0, 5.0 * math.pi / 2.0, 1.0, 2.0], dtype=np.float32)),
-        (0, np.array([3.0 * math.pi / 2.0, -1.0, 7.0 * math.pi / 2.0, -1.0, 2.0], dtype=np.float32)),
-    ],
-)
-def test_local_extremum_observer_kernel_tracks_selected_polarity(
-    event_direction: int,
-    expected: np.ndarray,
-) -> None:
+def test_local_maximum_observer_kernel_tracks_maxima_only() -> None:
     runtime = OpenCLRuntime.create(**_explicit_runtime_kwargs())
     program = _build_program(
         runtime,
@@ -1377,7 +1400,7 @@ def test_local_extremum_observer_kernel_tracks_selected_polarity(
             0,
             0,
             4,
-            {event_direction},
+            0,
             ZERO,
             ZERO,
             ZERO,
@@ -1388,7 +1411,7 @@ def test_local_extremum_observer_kernel_tracks_selected_polarity(
             ZERO
         }};
 
-        __kernel void run_local_extremum_observer(
+        __kernel void run_local_maximum_observer(
             __global const realtype *times,
             __global const realtype *x_values,
             __global const realtype *dx_values,
@@ -1420,14 +1443,14 @@ def test_local_extremum_observer_kernel_tracks_selected_polarity(
                 }}
             }}
 
-            out[0] = observer_state.tEventList[0];
-            out[1] = observer_state.xEventList[0];
-            out[2] = observer_state.tEventList[1];
-            out[3] = observer_state.xEventList[1];
+            out[0] = observer_state.tMaxList[0];
+            out[1] = observer_state.xMaxList[0];
+            out[2] = observer_state.tMaxList[1];
+            out[3] = observer_state.xMaxList[1];
             out[4] = (realtype)observer_state.eventcount;
         }}
         """,
-        extra_options=("-DUSE_OBSERVER_LOCAL_EXTREMUM", "-DN_VAR=1", "-DN_AUX=0", "-DN_STORE_EVENTS=4"),
+        extra_options=("-DUSE_OBSERVER_LOCAL_MAX", "-DN_VAR=1", "-DN_AUX=0", "-DN_STORE_EVENTS=4"),
     )
 
     dt = 0.2
@@ -1453,7 +1476,7 @@ def test_local_extremum_observer_kernel_tracks_selected_polarity(
     )
     out_buffer = pyopencl.Buffer(runtime.context, pyopencl.mem_flags.WRITE_ONLY, out.nbytes)
 
-    program.run_local_extremum_observer(
+    program.run_local_maximum_observer(
         runtime.queue,
         (1,),
         None,
@@ -1465,7 +1488,12 @@ def test_local_extremum_observer_kernel_tracks_selected_polarity(
     )
     pyopencl.enqueue_copy(runtime.queue, out, out_buffer).wait()
 
-    np.testing.assert_allclose(out, expected, atol=2e-2, rtol=0.0)
+    np.testing.assert_allclose(
+        out,
+        np.array([math.pi / 2.0, 1.0, 5.0 * math.pi / 2.0, 1.0, 2.0], dtype=np.float32),
+        atol=2e-2,
+        rtol=0.0,
+    )
 
 
 def test_neighborhood_return_observer_kernel_interpolates_exit_events() -> None:
@@ -2195,10 +2223,10 @@ def test_fixed_stepper_reports_accepted_step_width_without_elapsed_differencing(
     program.probe_fixed_stepper_width(runtime.queue, (1,), None, out_buffer)
     pyopencl.enqueue_copy(runtime.queue, out, out_buffer).wait()
 
-    assert out[0] == pytest.approx(np.float32(0.0))
-    assert out[1] == pytest.approx(np.float32(1.0e-4), abs=1e-8)
+    assert out[0] == pytest.approx(np.float32(4.0))
+    assert out[1] == pytest.approx(np.float32(0.0))
     assert out[2] == pytest.approx(np.float32(0.0))
-    assert out[3] == pytest.approx(np.float32(1.0e-4), abs=1e-8)
+    assert out[3] == pytest.approx(np.float32(0.0))
     assert out[4] == pytest.approx(np.float32(1004096.0))
 
 

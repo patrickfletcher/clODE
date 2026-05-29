@@ -39,25 +39,15 @@ Use `.design/ideas.md` as the short living board. This file is the longer ration
 
 Keep the next planning pass centered on one product story: clODE's differentiator is not just solving ODEs on OpenCL, but supporting first-class on-device observers and output workflows from Python with a model that remains inspectable and extensible.
 
-### 1. Observer solution-buffer and state/output bundle audit
+### 1. Oscillation-oriented observer bundles
 
-The next design decision should stay narrow and evidence-backed: inventory the accepted-step buffers, update patterns, and observer-private state/output layouts used by the live observer families, then decide whether a shared accepted-step `K`-sample solution-buffer concept should precede more observer bundle work.
+The solution-buffer audit is complete: a shared `K`-sample solution-buffer concept was confirmed as a prerequisite, K=2/K=3 shared accepted-step history update helpers are now live and adopted by all lean observer families, and family event semantics remain local. The remaining near-term observer question is whether recurring oscillation-oriented controls and readouts (`min_amp`, `max_event_count`, and future oscillation-targeted outputs) should be factored through a shared seam or kept family-local.
 
-Why first:
+Why next:
 
-- it answers the current structural question named in `next_pr.md` without reopening the already-landed owner split
-- it determines whether the next observer-facing implementation step should be a small shared-buffer proof or a direct return to oscillation-oriented bundle work
-
-### 2. Observer bundle follow-through after the audit
-
-The major observer-concept proof slices are already landed: the summary family now shares one declaration path, the threshold and Schmitt families have matching semantic config objects, and the lean extremum and neighborhood-return observers now sit beside their retained heavier legacy counterparts. The remaining near-term observer choice is not another trigger family; it is whether the solution-buffer audit justifies a shared buffer abstraction before oscillation-oriented bundle work, or whether that bundle seam can proceed directly with the current family-local buffers.
-
-That same observer work still suggests that `nhood1` should not guide the next abstraction unless a clearer deterministic workflow emerges. The retained heavy observers remain useful evidence for the bundle question, while slope-gated Schmitt behavior should still be framed as a narrower noisy-trace tool rather than the generic threshold model.
-
-Why second:
-
-- observers are a first-class clODE concept and one of the clearest ways to differentiate the package in both engineering and publication terms
-- the audit result should determine whether the next implementation PR is a small shared-buffer proof or a return to oscillation-oriented bundle design
+- observers are a first-class clODE concept and one of the clearest ways to differentiate the package in engineering and publication terms
+- `min_amp` already has a subtle semantic difference between one-pass and warmup-derived families; naming and documenting that seam will clarify both user docs and future observer authoring
+- the retained heavy observers (`threshold_2`, `local_max`, `neighbourhood_2`) all carry a version of this oscillation-oriented readout bundle, so a clear shared seam would also improve the path toward leaner legacy-observer replacements
 
 ### 3. Numerical evidence and publication follow-through
 

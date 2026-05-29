@@ -1,8 +1,7 @@
 from .metadata import get_observer_feature_names, is_two_pass_observer
 from .types import (
 	EventDirection,
-	ExtremumPolarity,
-	LocalExtremumConfig,
+	LocalMaximumConfig,
 	NeighborhoodReturnConfig,
 	Observer,
 	ObserverParams,
@@ -13,8 +12,7 @@ from .types import (
 
 __all__ = [
 	"EventDirection",
-	"ExtremumPolarity",
-	"LocalExtremumConfig",
+	"LocalMaximumConfig",
 	"NeighborhoodReturnConfig",
 	"Observer",
 	"ObserverParams",

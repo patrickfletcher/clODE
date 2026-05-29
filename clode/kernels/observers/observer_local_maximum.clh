@@ -10,7 +10,7 @@ struct ObserverState_localmax
 {
     realtype tbuffer[3];
     realtype elapsedbuffer[3];
-    realtype xbuffer[3 * N_VAR]; // just keep fVar? conceptually simplest
+    realtype xbuffer[3 * N_VAR];
     realtype dxbuffer[3 * N_VAR];
 
     realtype xTrajectoryMax[N_VAR];

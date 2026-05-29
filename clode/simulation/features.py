@@ -7,7 +7,7 @@ import numpy as np
 from .._opencl.executors import OpenCLFeatureExecutor
 from ..observers.types import (
 	EventDirection,
-	LocalExtremumConfig,
+	LocalMaximumConfig,
 	NeighborhoodReturnConfig,
 	ObserverConfiguration,
 	_DEFAULT_DX_DOWN_THRESHOLD,
@@ -358,7 +358,7 @@ class FeatureSimulator(Simulator):
 		observer_configuration: (
 			ThresholdCrossingConfig
 			| SchmittTriggerConfig
-			| LocalExtremumConfig
+			| LocalMaximumConfig
 			| NeighborhoodReturnConfig
 		),
 		observer: Observer | None = None,
@@ -403,7 +403,7 @@ class FeatureSimulator(Simulator):
 	) -> Optional[
 		ThresholdCrossingConfig
 		| SchmittTriggerConfig
-		| LocalExtremumConfig
+		| LocalMaximumConfig
 		| NeighborhoodReturnConfig
 	]:
 		"""Return the semantic observer configuration when one is available."""

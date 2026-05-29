@@ -85,7 +85,6 @@ static inline void advanceAcceptedStepHistory3ByVariable(realtype *packedHistory
 
 // Local maximum detector
 // - could do local extremum, toggle whether event is on max vs min?
-#include "observers/observer_local_extremum.clh"
 #include "observers/observer_local_maximum.clh"
 
 // Threshold-based event detection with thresholds defined in state-space coordinates

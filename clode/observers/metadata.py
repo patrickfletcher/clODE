@@ -2,7 +2,11 @@ from __future__ import annotations
 
 from ..problem._core import ProblemInfo
 from ._definitions import get_observer_definition
-from .types import Observer, ObserverParams, SummaryObserverSelection
+from .types import (
+    Observer,
+    ObserverParams,
+    SummaryObserverSelection,
+)
 
 
 def is_two_pass_observer(observer: Observer | str) -> bool:

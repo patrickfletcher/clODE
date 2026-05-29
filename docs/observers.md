@@ -9,7 +9,6 @@ The current public observer modes are:
 - `clode.Observer.summary`
 - `clode.Observer.basic`
 - `clode.Observer.basic_all_variables`
-- `clode.Observer.local_extremum`
 - `clode.Observer.local_max`
 - `clode.Observer.threshold_crossing`
 - `clode.Observer.normalized_threshold_crossing`
@@ -20,7 +19,7 @@ The current public observer modes are:
 - `clode.Observer.neighbourhood_1`
 - `clode.Observer.neighbourhood_2`
 
-`clode.Observer.local_extremum` and `clode.Observer.neighborhood_return` are the preferred semantic observers for lean extremum and normalized neighborhood-return workflows. `clode.Observer.local_max`, `clode.Observer.threshold_2`, and `clode.Observer.neighbourhood_2` remain retained legacy full-featured observers when you need their broader readout bundles.
+`clode.Observer.local_max` is the canonical extrema observer (with `clode.Observer.local_extremum` retained as a compatibility alias). `clode.Observer.threshold_2` and `clode.Observer.neighbourhood_2` remain retained legacy full-featured observers when you need their broader readout bundles.
 
 Choose an observer when constructing a `FeatureSimulator`:
 
@@ -52,8 +51,7 @@ Threshold crossing and Schmitt triggering stay separate user-facing concepts eve
 
 ## Choosing an extremum or neighborhood workflow
 
-- `clode.Observer.local_extremum`: lean local-extremum detector on one variable. `clode.LocalExtremumConfig.polarity` selects maxima, minima, or both, and the readout keeps event times, event values, and event count.
-- `clode.Observer.local_max`: retained legacy maxima-oriented workflow when you still need IMI, amplitude, all-state summaries, and separate `localmax` and `localmin` event streams.
+- `clode.Observer.local_max`: canonical maxima-oriented workflow with IMI, amplitude, all-state summaries, and separate local-maximum/local-minimum event streams.
 - `clode.Observer.neighborhood_return`: lean two-pass normalized neighborhood-return detector. Warmup fixes the normalization range, the live pass anchors on the first sampled point where `event_var` drops below `anchor_threshold`, and the observer stores linearly refined neighborhood-exit times plus event count.
 - `clode.Observer.neighbourhood_2`: retained legacy fully featured normalized neighborhood-return workflow when you also need period, peak, and broader summary outputs. It now shares the same sampled-anchor plus interpolated normalized-ball exit timing as the lean semantic family.
 
@@ -96,16 +94,15 @@ integrator.set_observer_configuration(
 
 `x_up_threshold` must be greater than or equal to `x_down_threshold`. Equality is allowed and collapses the hysteresis band to one shared boundary while keeping the Schmitt-style up/down readout streams. If you need derivative-gated crossings, stay on the legacy `clode.Observer.threshold_2` compatibility surface.
 
-Use `clode.LocalExtremumConfig` with `clode.Observer.local_extremum` when you want a polarity-selectable lean extremum stream:
+Use `clode.LocalMaximumConfig` with `clode.Observer.local_max` for maxima-triggered extrema tracking:
 
 ```python
 integrator.set_observer_configuration(
-    clode.LocalExtremumConfig(
-        variable="x",
-        polarity=clode.ExtremumPolarity.maximum,
+    clode.LocalMaximumConfig(
+        event_var="x",
         max_event_timestamps=16,
     ),
-    observer=clode.Observer.local_extremum,
+    observer=clode.Observer.local_max,
 )
 ```
 
@@ -127,7 +124,9 @@ integrator.set_observer_configuration(
 
 When you call `set_observer_configuration(...)` with one of the shared config classes, pass `observer=` whenever you are switching families or when the simulator was not already constructed with the desired observer. The config class alone does not determine absolute versus warmup-derived interpretation.
 
-Single-observer configs such as `clode.LocalExtremumConfig` and `clode.NeighborhoodReturnConfig` are unambiguous, so clODE can infer their observer when you construct a simulator from the config alone. Passing `observer=` explicitly is still useful when you want the selection to be obvious at the call site.
+Single-observer configs such as `clode.LocalMaximumConfig` and `clode.NeighborhoodReturnConfig` are unambiguous, so clODE can infer their observer when you construct a simulator from the config alone. Passing `observer=` explicitly is still useful when you want the selection to be obvious at the call site.
+
+`clode.Observer.threshold_crossing` and `clode.Observer.normalized_threshold_crossing` always expose retained event times and event count. Readout-selection surfaces are intentionally removed until a broader cross-family observer UX is standardized.
 
 Tune observer behavior with `set_observer_parameters(...)` when you want the older compatibility surface or need to pass the broad `ObserverParams` bundle.
 
@@ -154,13 +153,59 @@ Not every observer field affects every built-in observer. For the current thresh
 
 See [numerical_accuracy.md](numerical_accuracy.md) for empirical examples and practical tuning guidance.
 
-`clode.Observer.schmitt_trigger` and `clode.Observer.normalized_schmitt_trigger` store up/down transition times with inverse-linear interpolation of the active `x` boundary only. The normalized semantic family converts its configured thresholds into concrete live-pass values after warmup; the absolute family uses the configured values directly. `clode.Observer.threshold_2` keeps the heavier legacy period, duty, and active-state readout bundle and still supports derivative gates on the compatibility surface. `clode.Observer.local_extremum` and `clode.Observer.local_max` store extrema using bounded three-sample quadratic refinement. `clode.Observer.neighborhood_return` and `clode.Observer.neighbourhood_2` keep sampled anchors `x0`, but now refine each stored exit time by linearly interpolating the full normalized state between the last inside sample and the first outside sample of the radius ball. See [numerical_accuracy.md](numerical_accuracy.md) for empirical tradeoffs and comparisons with alternative interpolation choices.
+`clode.Observer.schmitt_trigger` and `clode.Observer.normalized_schmitt_trigger` store up/down transition times with inverse-linear interpolation of the active `x` boundary only. The normalized semantic family converts its configured thresholds into concrete live-pass values after warmup; the absolute family uses the configured values directly. `clode.Observer.threshold_2` keeps the heavier legacy period, duty, and active-state readout bundle and still supports derivative gates on the compatibility surface. `clode.Observer.local_max` stores extrema using bounded three-sample quadratic refinement. `clode.Observer.neighborhood_return` and `clode.Observer.neighbourhood_2` keep sampled anchors `x0`, but now refine each stored exit time by linearly interpolating the full normalized state between the last inside sample and the first outside sample of the radius ball. See [numerical_accuracy.md](numerical_accuracy.md) for empirical tradeoffs and comparisons with alternative interpolation choices.
 
-`min_amp` is intentionally not one identical concept across all threshold-style families. In the one-pass absolute threshold and Schmitt observers it acts as a live-pass range gate on `event_var`. In the normalized threshold and normalized Schmitt families it is compared against the warmup-derived amplitude used to define the normalized thresholds. That difference is usually fine for steady-state workflows after a transient, but it is worth keeping in mind when you compare one-pass and two-pass event counts directly.
+`min_amp` is intentionally not one identical concept across all threshold-style families. 
 
-The trigger-geometry examples now live in `examples/visualize_events_threshold_crossing.py`, `examples/visualize_events_schmitt_trigger.py`, `examples/visualize_events_local_extremum.py`, and `examples/visualize_events_neighborhood_return.py`. The neighborhood-return example mirrors the live sampled-anchor plus interpolated-exit geometry directly. The older `threshold_2`, `local_max`, and `neighbourhood_2` visualizations remain useful legacy comparisons.
+- **One-pass absolute families** (`threshold_crossing`, `schmitt_trigger`): `min_amp` acts as a live-pass range gate on `event_var`. The threshold is compared directly against `min_amp` to suppress events from oscillations below that amplitude.
+- **Two-pass normalized families** (`normalized_threshold_crossing`, `normalized_schmitt_trigger`): `min_amp` is compared against the warmup-derived amplitude used to define the normalized thresholds. This means the effective amplitude floor adapts to your warmup trajectory.
+- **Legacy `threshold_2`**: Follows the two-pass semantics (warmup-derived amplitude floor).
 
-Recurring controls such as `min_amp`, `max_event_count`, and `max_event_timestamps` currently stay on the family configs where they are active rather than moving into a separate shared oscillation bundle.
+That difference is usually fine for steady-state workflows after a transient, but it is worth keeping in mind when you compare one-pass and two-pass event counts directly. If you need consistent amplitude semantics across a comparison, either normalize your thresholds explicitly or stick to one family.
+
+The trigger-geometry examples now live in `examples/visualize_events_threshold_crossing.py`, `examples/visualize_events_schmitt_trigger.py`, `examples/visualize_events_localmax.py`, and `examples/visualize_events_neighborhood_return.py`. The neighborhood-return example mirrors the live sampled-anchor plus interpolated-exit geometry directly. The older `threshold_2`, `local_max`, and `neighbourhood_2` visualizations remain useful legacy comparisons.
+
+Recurring controls such as `min_amp`, `max_event_count`, and `max_event_timestamps` still stay on the family configs where they are active rather than moving into a separate shared oscillation bundle. The threshold-crossing readout-selection surface is a narrower pilot toward the longer-term goal of letting users choose specific readout subsets per observer family.
+
+## Observer readout inventory
+
+The following table shows which readouts are available for each observer family:
+
+| Readout Type | `threshold_crossing` | `normalized_threshold_crossing` | `schmitt_trigger` | `normalized_schmitt_trigger` | `local_max` | `neighborhood_return` | `neighbourhood_2` (legacy) | `summary` |
+|--------------|:----:|:----:|:----:|:----:|:----:|:----:|:----:|:----:|:----:|
+| **Event timestamps** | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | — |
+| **Event values** | — | — | — | — | ✓ | — | — | — |
+| **Event count** | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | — |
+| **Period** (time between events) | — | — | — | — | ✓ | ✓ | ✓ | — |
+| **Amplitude** (extrema tracking) | — | — | — | — | ✓ | — | — | — |
+| **Peak count** (maxima per period) | — | — | — | — | — | ✓ | ✓ | — |
+| **Up duration** (Schmitt-specific) | — | — | — | — | — | — | — | — |
+| **Down duration** (Schmitt-specific) | — | — | — | — | — | — | — | — |
+| **Duty cycle** (Schmitt-specific) | — | — | — | — | — | — | — | — |
+| **Trajectory max/min/mean per variable** | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| **Derivative extrema per variable** | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | — |
+| **Auxiliary extrema** | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+
+**Notes on specific readout types**:
+
+- **Event timestamps**: Refined to sub-timestep precision with interpolation.
+- **Event count**: Total number of events detected during integration. Always available for event-detector families; never available for `summary`.
+- **Period**: Time between consecutive events. Meaning varies by family (inter-maxima interval for `local_max`, inter-exit time for `neighbourhood_2`, etc.). Documented per family below. Accuracy depends on event-detection strategy and oscillation regularity.
+- **Amplitude**: Measured as `local_max_value - last_local_min_value` in the variable specified by `feature_var`. Only available for extrema-tracking families.
+- **Peak count**: Number of local maxima detected between consecutive events. Only available for observers that track local extrema.
+- **Schmitt-specific readouts** (up/down duration, duty cycle): Only available for Schmitt trigger families. Currently only `threshold_2` (legacy) computes these; semantic Schmitt families store transition times but not the per-period statistics.
+- **Trajectory summary statistics**: Observed extrema (`max`, `min`) and time-integrated mean for each state variable and auxiliary. Not yet available for semantic extremum families; current only on legacy and summary observers. Future work: add to all event-detector families for consistency.
+
+**Semantic families** (lean, preferred):
+- `threshold_crossing`, `normalized_threshold_crossing`: Narrow event-stream readouts (timestamps ± count). Minimal state footprint.
+- `schmitt_trigger`, `normalized_schmitt_trigger`: Up/down transition times ± count. Minimal state footprint.
+- `neighborhood_return`: Neighborhood-exit times, count. Minimal state footprint.
+- `summary`: Trajectory statistics (extrema and means) without event detection.
+
+**Legacy families** (retained, full-featured):
+- `threshold_2`: Normalized Schmitt with period, duty, peak counts, and trajectory summaries. Heavier state footprint.
+- `local_max`: Local-extremum detection with period, amplitude, peak counts, and trajectory summaries. Heavier state footprint.
+- `neighbourhood_2`: Normalized neighborhood-return with period, peak counts, and trajectory summaries. Heavier state footprint.
 
 ## Reading observer output
 
@@ -171,7 +216,7 @@ print(observer_output.get_var_mean("period"))
 print(observer_output.get_event_data("up", type="time"))
 ```
 
-The available names depend on the selected observer. The threshold-crossing families expose one `threshold` event stream. `clode.Observer.local_extremum` exposes one `local_extremum` event stream with timestamps and event values, while `clode.Observer.local_max` keeps separate `localmax` and `localmin` streams plus the heavier legacy summaries. `clode.Observer.schmitt_trigger` and `clode.Observer.normalized_schmitt_trigger` expose separate `up` and `down` streams plus an event count, while `clode.Observer.threshold_2` keeps those streams and also retains the heavier legacy period, duty, and active-state readouts. `clode.Observer.neighborhood_return` exposes one `neighborhood_return` stream of interpolated normalized-ball exit times, while `clode.Observer.neighbourhood_2` retains the broader legacy periodicity bundle around the same sampled-anchor plus interpolated-exit trigger.
+The available names depend on the selected observer. Threshold-crossing families expose one `event` stream with `event time {index}` plus count. `clode.Observer.local_max` exposes two extrema streams (`local maximum time/value` and `local minimum time/value`) plus event count and summary readouts. `clode.Observer.schmitt_trigger` and `clode.Observer.normalized_schmitt_trigger` expose separate `up transition` and `down transition` streams plus an event count, while `clode.Observer.threshold_2` keeps those streams and also retains the heavier legacy period, duty, and active-state readouts. `clode.Observer.neighborhood_return` exposes one `event` stream of interpolated normalized-ball exit times, while `clode.Observer.neighbourhood_2` retains the broader legacy periodicity bundle around the same sampled-anchor plus interpolated-exit trigger.
 
 ## Custom observers
 

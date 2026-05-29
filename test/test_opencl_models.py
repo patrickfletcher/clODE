@@ -207,6 +207,29 @@ def test_summary_feature_name_helper_supports_custom_selection() -> None:
     )
 
 
+def test_threshold_feature_name_helper_always_includes_event_times_and_count() -> None:
+    problem_info = ProblemInfo(
+        "stable_linear_aux.cl",
+        ["x", "y"],
+        ["k"],
+        ["aux0"],
+        0,
+    )
+
+    feature_names = get_observer_feature_names(
+        problem_info,
+        "threshold_crossing",
+        ObserverParams(max_event_timestamps=3),
+    )
+
+    assert feature_names[:4] == (
+        "event time 0",
+        "event time 1",
+        "event time 2",
+        "event count",
+    )
+
+
 def test_stepper_catalog_exposes_traits_and_build_mapping() -> None:
     rk4 = get_stepper_definition("rk4")
     dopri5 = get_stepper_definition("dopri5")
@@ -263,7 +286,7 @@ def test_resolved_observer_spec_splits_persistent_and_event_layout() -> None:
     )
 
 
-def test_resolved_semantic_observer_specs_use_lean_event_layouts() -> None:
+def test_resolved_semantic_observer_specs_expose_current_event_layouts() -> None:
     problem_info = ProblemInfo(
         "stable_linear_aux.cl",
         ["x", "y"],
@@ -287,13 +310,15 @@ def test_resolved_semantic_observer_specs_use_lean_event_layouts() -> None:
         event_output_settings=EventOutputSettings(max_event_timestamps=2),
     )
 
-    assert local_extremum.build_define == "USE_OBSERVER_LOCAL_EXTREMUM"
+    assert local_extremum.build_define == "USE_OBSERVER_LOCAL_MAX"
     assert local_extremum.uses_two_pass is False
     assert tuple(field[0] for field in local_extremum.layout.event_output_fields) == (
-        "tEventList",
-        "xEventList",
+        "tMaxList",
+        "xMaxList",
+        "tMinList",
+        "xMinList",
     )
-    assert "IMI" not in tuple(
+    assert "IMI" in tuple(
         field[0] for field in local_extremum.layout.persistent_fields
     )
 
@@ -302,6 +327,6 @@ def test_resolved_semantic_observer_specs_use_lean_event_layouts() -> None:
     assert tuple(
         field[0] for field in neighborhood_return.layout.event_output_fields
     ) == ("tEventList",)
-    assert "period" not in tuple(
+    assert "period" in tuple(
         field[0] for field in neighborhood_return.layout.persistent_fields
     )

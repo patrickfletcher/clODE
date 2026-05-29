@@ -865,10 +865,9 @@ def test_threshold_2_get_observer_configuration_returns_none() -> None:
     assert simulator.get_observer_configuration() is None
 
 
-def test_feature_simulator_local_extremum_configuration_round_trips() -> None:
-    config = clode.LocalExtremumConfig(
-        variable="y",
-        polarity=clode.ExtremumPolarity.minimum,
+def test_feature_simulator_local_maximum_configuration_round_trips() -> None:
+    config = clode.LocalMaximumConfig(
+        event_var="y",
         max_event_count=7,
         max_event_timestamps=4,
     )
@@ -890,9 +889,9 @@ def test_feature_simulator_local_extremum_configuration_round_trips() -> None:
 
     assert simulator.get_observer_configuration() == config
     assert simulator.get_observer_parameters() == clode.ObserverParams(
+        e_var_ix=1,
         f_var_ix=1,
         max_event_count=7,
-        event_direction=clode.EventDirection.rising,
         max_event_timestamps=4,
     )
 
@@ -1136,21 +1135,20 @@ def test_feature_max_event_timestamps_rebuild_updates_event_storage() -> None:
 
     assert result is not None
     feature_names = result.get_feature_names()
-    assert len([name for name in feature_names if name.startswith("localmax event time")]) == 3
+    assert len([name for name in feature_names if name.startswith("local maximum time")]) == 3
     assert "-DN_STORE_EVENTS=3" in simulator._integrator.get_program_string()
 
 
-def test_feature_max_event_timestamps_rebuild_updates_local_extremum_storage() -> None:
+def test_feature_max_event_timestamps_rebuild_updates_local_maximum_storage() -> None:
     simulator = clode.FeatureSimulator(
         src_file=model_path("hopf_normal_form.cl"),
         variables=HOPF_VARIABLES.copy(),
         parameters=HOPF_PARAMETERS.copy(),
         aux=HOPF_AUX.copy(),
         num_noise=0,
-        observer=clode.Observer.local_extremum,
-        observer_configuration=clode.LocalExtremumConfig(
-            variable="x",
-            polarity=clode.ExtremumPolarity.maximum,
+        observer=clode.Observer.local_max,
+        observer_configuration=clode.LocalMaximumConfig(
+            event_var="x",
             max_event_count=8,
             max_event_timestamps=3,
         ),
@@ -1171,7 +1169,7 @@ def test_feature_max_event_timestamps_rebuild_updates_local_extremum_storage() -
         [
             name
             for name in feature_names
-            if name.startswith("local_extremum event time")
+            if name.startswith("local maximum time")
         ]
     ) == 3
     assert "-DN_STORE_EVENTS=3" in simulator._integrator.get_program_string()
@@ -1297,4 +1295,41 @@ def test_feature_observer_parameter_update_rejects_unknown_variable_names() -> N
 
     with pytest.raises(ValueError, match="Unknown feature_var 'z'"):
         simulator.set_observer_parameters(feature_var="z")
+
+
+def test_threshold_crossing_always_exposes_event_times_and_count() -> None:
+    simulator = clode.FeatureSimulator(
+        src_file=model_path("stable_linear.cl"),
+        variables=STABLE_LINEAR_VARIABLES.copy(),
+        parameters=STABLE_LINEAR_PARAMETERS.copy(),
+        observer=clode.Observer.threshold_crossing,
+        observer_configuration=clode.ThresholdCrossingConfig(
+            event_var="x",
+            threshold=0.5,
+            direction=clode.EventDirection.either,
+            min_amp=0.5,
+            max_event_count=8,
+            max_event_timestamps=3,
+        ),
+        stepper=clode.Stepper.rk4,
+        dt=FIXED_DT,
+        dtmax=FIXED_DT,
+        t_span=(0.0, 1.0),
+        max_steps=FIXED_MAX_STEPS,
+        **device_kwargs_for_tests(),
+    )
+
+    initial = simulator.features(update_x0=False)
+
+    assert initial is not None
+    feature_names = initial.get_feature_names()
+    assert feature_names[:4] == [
+        "event time 0",
+        "event time 1",
+        "event time 2",
+        "event count",
+    ]
+    assert "period max" in feature_names
+    assert "amplitude mean" in feature_names
+    assert int(initial.get_var_count("event")) == 0
 

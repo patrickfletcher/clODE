@@ -96,15 +96,8 @@ The contract should state:
 - Families choose whether the shared history carries event-variable-only samples or full `N_VAR`/`N_AUX` views.
 - Families retain full ownership of event semantics, warmup policy, and readout bundles.
 
-## Recommended follow-on proof
+## Follow-on proof — LANDED
 
-1. Add shared accepted-step history update helpers for `K=2` and `K=3` usage patterns in observer code paths.
-2. Apply the helpers first to one lean family (`threshold_crossing` or `schmitt_trigger`) and one heavier family (`threshold_2` or `neighborhood_2`) to test both ends.
-3. Keep helper scope to history shift/update and interpolation-ready sample exposure only; do not centralize event semantics or bundle accumulation in the same PR.
-4. Measure readability and duplication reduction in touched families before broad rollout.
+The K=2 and K=3 shared accepted-step history update helpers (`advanceAcceptedStepHistory2`, `advanceAcceptedStepHistory2ByVariable`, `advanceAcceptedStepHistory3`, `advanceAcceptedStepHistory3ByVariable`) are now live in `clode/kernels/observers.cl` and have been adopted by all lean observer families: `threshold_crossing`, `normalized_threshold_crossing`, `schmitt_trigger`, `normalized_schmitt_trigger`, `neighborhood_return`, and `neighborhood_2`. Family event semantics and bundle accumulation remain local.
 
-## Non-goals for the proof
-
-- No immediate unification of all observer state structs.
-- No broad `clODE_utilities.cl` reorganization unrelated to accepted-step history updates.
-- No behavior or public-schema changes for existing observer outputs.
+The next planning target is the oscillation-oriented bundle seam: see `next_pr.md` and `.design/ideas.md`.

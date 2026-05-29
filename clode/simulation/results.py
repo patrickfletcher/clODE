@@ -153,20 +153,32 @@ class ObserverOutput:
             type: Event field to read, typically `"time"`.
         """
 
+        field_type = "time" if type is None else str(type)
         event_features = [
             feature_name
             for feature_name in self._feature_names
-            if name in feature_name
-            and "event" in feature_name
-            and "count" not in feature_name
+            if name in feature_name and field_type in feature_name and "count" not in feature_name
         ]
         if len(event_features) == 0:
             raise NotImplementedError(
-                f"{self._observer_type} does not track {name} event {type}s!"
+                f"{self._observer_type} does not track {name} {field_type}s!"
             )
+
+        key_patterns = (
+            f"{name} event {field_type} {{idx}}",
+            f"{name} transition {field_type} {{idx}}",
+            f"{name} {field_type} {{idx}}",
+        )
         data = []
         for event_idx in range(0, self._event_output_settings.max_event_timestamps):
-            datapoint = self._get_var(f"{name} event {type} {event_idx}")
+            datapoint = None
+            for key_pattern in key_patterns:
+                key = key_pattern.format(idx=event_idx)
+                if key in self._feature_names:
+                    datapoint = self._get_var(key)
+                    break
+            if datapoint is None:
+                break
             if np.all(datapoint == 0):
                 break
             data.append(datapoint)
@@ -177,14 +189,33 @@ class ObserverOutput:
     ) -> np.ndarray[Any, np.dtype[np.float64]]:
         """Return tracked event timestamps for one event family."""
 
-        first_key = f"{var} event time 0"
-        if first_key not in self._feature_names:
+        key_patterns = (
+            f"{var} event time {{idx}}",
+            f"{var} transition time {{idx}}",
+            f"{var} time {{idx}}",
+        )
+        first_key_matches = [
+            key_pattern.format(idx=0)
+            for key_pattern in key_patterns
+            if key_pattern.format(idx=0) in self._feature_names
+        ]
+        if not first_key_matches:
             raise NotImplementedError(
-                f"{self._observer_type} does not track {var} event times!"
+                f"{self._observer_type} does not track {var} times!"
             )
+
+        key_pattern = key_patterns[
+            [
+                key_pattern.format(idx=0) in self._feature_names
+                for key_pattern in key_patterns
+            ].index(True)
+        ]
         data = []
         for key_idx in range(0, self._event_output_settings.max_event_timestamps):
-            datapoint = self._get_var(f"{var} event time {key_idx}")
+            key = key_pattern.format(idx=key_idx)
+            if key not in self._feature_names:
+                break
+            datapoint = self._get_var(key)
             if np.all(datapoint == 0):
                 break
             datapoint = (

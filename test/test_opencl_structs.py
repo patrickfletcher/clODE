@@ -145,67 +145,56 @@ def test_basic_observer_double_formula_underestimates_matched_struct_size() -> N
 
 
 @pytest.mark.parametrize(
-    ("observer", "observer_kwargs", "extra_options"),
+    ("observer", "observer_kwargs"),
     [
         (
             clode.Observer.basic_all_variables,
             {},
-            ("-DUSE_OBSERVER_BASIC_ALLVAR", "-DN_VAR=2", "-DN_AUX=0", "-DN_STORE_EVENTS=0"),
         ),
         (
             clode.Observer.local_extremum,
             {"observer_max_event_timestamps": 4},
-            ("-DUSE_OBSERVER_LOCAL_EXTREMUM", "-DN_VAR=2", "-DN_AUX=0", "-DN_STORE_EVENTS=4"),
         ),
         (
             clode.Observer.local_max,
             {"observer_max_event_timestamps": 4},
-            ("-DUSE_OBSERVER_LOCAL_MAX", "-DN_VAR=2", "-DN_AUX=0", "-DN_STORE_EVENTS=4"),
         ),
         (
             clode.Observer.neighbourhood_1,
             {},
-            ("-DUSE_OBSERVER_NEIGHBORHOOD_1", "-DN_VAR=2", "-DN_AUX=0", "-DN_STORE_EVENTS=0"),
         ),
         (
             clode.Observer.neighborhood_return,
             {"observer_max_event_timestamps": 4},
-            ("-DUSE_OBSERVER_NEIGHBORHOOD_RETURN", "-DN_VAR=2", "-DN_AUX=0", "-DN_STORE_EVENTS=4"),
         ),
         (
             clode.Observer.neighbourhood_2,
             {"observer_max_event_timestamps": 4},
-            ("-DUSE_OBSERVER_NEIGHBORHOOD_2", "-DN_VAR=2", "-DN_AUX=0", "-DN_STORE_EVENTS=4"),
         ),
         (
             clode.Observer.threshold_crossing,
             {"observer_max_event_timestamps": 4},
-            ("-DUSE_OBSERVER_THRESHOLD_CROSSING", "-DN_VAR=2", "-DN_AUX=0", "-DN_STORE_EVENTS=4"),
         ),
         (
             clode.Observer.normalized_threshold_crossing,
             {"observer_max_event_timestamps": 4},
-            ("-DUSE_OBSERVER_NORMALIZED_THRESHOLD_CROSSING", "-DN_VAR=2", "-DN_AUX=0", "-DN_STORE_EVENTS=4"),
         ),
         (
             clode.Observer.schmitt_trigger,
             {"observer_max_event_count": 50, "observer_max_event_timestamps": 50},
-            ("-DUSE_OBSERVER_SCHMITT_TRIGGER", "-DN_VAR=2", "-DN_AUX=0", "-DN_STORE_EVENTS=50"),
         ),
         (
             clode.Observer.normalized_schmitt_trigger,
             {"observer_max_event_count": 50, "observer_max_event_timestamps": 50},
-            ("-DUSE_OBSERVER_NORMALIZED_SCHMITT_TRIGGER", "-DN_VAR=2", "-DN_AUX=0", "-DN_STORE_EVENTS=50"),
         ),
         (
             clode.Observer.threshold_2,
             {"observer_max_event_count": 50, "observer_max_event_timestamps": 50},
-            ("-DUSE_OBSERVER_THRESHOLD_2", "-DN_VAR=2", "-DN_AUX=0", "-DN_STORE_EVENTS=50"),
         ),
     ],
 )
 def test_observer_metadata_struct_size_matches_kernel_struct(
-    observer, observer_kwargs, extra_options
+    observer, observer_kwargs
 ) -> None:
     runtime = OpenCLRuntime.create(**_explicit_runtime_kwargs())
     simulator = clode.FeatureSimulator(
@@ -218,16 +207,25 @@ def test_observer_metadata_struct_size_matches_kernel_struct(
         **observer_kwargs,
         **_explicit_runtime_kwargs(),
     )
+    resolved_spec = simulator._integrator._resolved_observer_spec
+    extra_options = (
+        f"-D{resolved_spec.build_define}",
+        "-DN_VAR=2",
+        "-DN_AUX=0",
+        f"-DN_STORE_EVENTS={resolved_spec.n_store_events}",
+    )
+    source_preamble = resolved_spec.source_preamble
 
     program = _build_program(
         runtime,
-        """
+        f"""
+        {source_preamble}
         #include \"clODE_utilities.cl\"
         #include \"observers.cl\"
 
-        __kernel void observer_state_size(__global ulong *out) {
+        __kernel void observer_state_size(__global ulong *out) {{
             out[0] = (ulong)sizeof(ObserverState);
-        }
+        }}
         """,
         extra_options=extra_options,
     )

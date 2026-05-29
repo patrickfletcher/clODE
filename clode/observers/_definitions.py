@@ -370,29 +370,10 @@ def _localmax_feature_names(
     for event_idx in range(n_store_events):
         names.extend(
             [
-                f"localmax event time {event_idx}",
-                f"localmax event evar {event_idx}",
-                f"localmin event time {event_idx}",
-                f"localmin event evar {event_idx}",
-            ]
-        )
-    names.append("event count")
-    return tuple(names)
-
-
-def _local_extremum_feature_names(
-    problem_info: ProblemInfo,
-    observer_runtime_settings: ObserverRuntimeSettings,
-    n_store_events: int,
-) -> tuple[str, ...]:
-    del problem_info
-    del observer_runtime_settings
-    names: list[str] = []
-    for event_idx in range(n_store_events):
-        names.extend(
-            [
-                f"local_extremum event time {event_idx}",
-                f"local_extremum event value {event_idx}",
+                f"local maximum time {event_idx}",
+                f"local maximum value {event_idx}",
+                f"local minimum time {event_idx}",
+                f"local minimum value {event_idx}",
             ]
         )
     names.append("event count")
@@ -471,7 +452,7 @@ def _nhood2_feature_names(
             ]
         )
     for event_idx in range(n_store_events):
-        names.append(f"nhood event time {event_idx}")
+        names.append(f"event time {event_idx}")
     names.append("event count")
     return tuple(names)
 
@@ -481,13 +462,39 @@ def _neighborhood_return_feature_names(
     observer_runtime_settings: ObserverRuntimeSettings,
     n_store_events: int,
 ) -> tuple[str, ...]:
-    del problem_info
-    del observer_runtime_settings
-    names = [
-        f"neighborhood_return event time {event_idx}"
-        for event_idx in range(n_store_events)
-    ]
+    n_vars = len(problem_info.vars)
+    n_aux = len(problem_info.aux)
+    names = [f"event time {event_idx}" for event_idx in range(n_store_events)]
     names.append("event count")
+    
+    # Period statistics (max/min/mean)
+    names.extend(["period max", "period min", "period mean"])
+    
+    # Maxima count statistics (max/min/mean)
+    names.extend(["n maxima max", "n maxima min", "n maxima mean"])
+
+    # Amplitude statistics (max/min/mean)
+    names.extend(["amplitude max", "amplitude min", "amplitude mean"])
+    
+    # Trajectory statistics per variable
+    for var_idx in range(n_vars):
+        names.extend([
+            f"x{var_idx} max",
+            f"x{var_idx} min",
+            f"x{var_idx} mean",
+            f"dx{var_idx} max",
+            f"dx{var_idx} min",
+        ])
+    
+    # Auxiliary trajectory statistics
+    for aux_idx in range(n_aux):
+        names.extend([
+            f"aux{aux_idx} max",
+            f"aux{aux_idx} min",
+            f"aux{aux_idx} mean",
+        ])
+    
+    del observer_runtime_settings
     return tuple(names)
 
 
@@ -496,10 +503,39 @@ def _threshold_crossing_feature_names(
     observer_runtime_settings: ObserverRuntimeSettings,
     n_store_events: int,
 ) -> tuple[str, ...]:
-    del problem_info
-    del observer_runtime_settings
-    names = [f"threshold event time {event_idx}" for event_idx in range(n_store_events)]
+    n_vars = len(problem_info.vars)
+    n_aux = len(problem_info.aux)
+    names = [f"event time {event_idx}" for event_idx in range(n_store_events)]
     names.append("event count")
+    
+    # Period statistics (max/min/mean)
+    names.extend(["period max", "period min", "period mean"])
+    
+    # Maxima count statistics (max/min/mean)
+    names.extend(["n maxima max", "n maxima min", "n maxima mean"])
+
+    # Amplitude statistics (max/min/mean)
+    names.extend(["amplitude max", "amplitude min", "amplitude mean"])
+    
+    # Trajectory statistics per variable
+    for var_idx in range(n_vars):
+        names.extend([
+            f"x{var_idx} max",
+            f"x{var_idx} min",
+            f"x{var_idx} mean",
+            f"dx{var_idx} max",
+            f"dx{var_idx} min",
+        ])
+    
+    # Auxiliary trajectory statistics
+    for aux_idx in range(n_aux):
+        names.extend([
+            f"aux{aux_idx} max",
+            f"aux{aux_idx} min",
+            f"aux{aux_idx} mean",
+        ])
+    
+    del observer_runtime_settings
     return tuple(names)
 
 
@@ -508,10 +544,39 @@ def _normalized_threshold_crossing_feature_names(
     observer_runtime_settings: ObserverRuntimeSettings,
     n_store_events: int,
 ) -> tuple[str, ...]:
-    del problem_info
-    del observer_runtime_settings
-    names = [f"threshold event time {event_idx}" for event_idx in range(n_store_events)]
+    n_vars = len(problem_info.vars)
+    n_aux = len(problem_info.aux)
+    names = [f"event time {event_idx}" for event_idx in range(n_store_events)]
     names.append("event count")
+    
+    # Period statistics (max/min/mean)
+    names.extend(["period max", "period min", "period mean"])
+    
+    # Maxima count statistics (max/min/mean)
+    names.extend(["n maxima max", "n maxima min", "n maxima mean"])
+
+    # Amplitude statistics (max/min/mean)
+    names.extend(["amplitude max", "amplitude min", "amplitude mean"])
+    
+    # Trajectory statistics per variable
+    for var_idx in range(n_vars):
+        names.extend([
+            f"x{var_idx} max",
+            f"x{var_idx} min",
+            f"x{var_idx} mean",
+            f"dx{var_idx} max",
+            f"dx{var_idx} min",
+        ])
+    
+    # Auxiliary trajectory statistics
+    for aux_idx in range(n_aux):
+        names.extend([
+            f"aux{aux_idx} max",
+            f"aux{aux_idx} min",
+            f"aux{aux_idx} mean",
+        ])
+    
+    del observer_runtime_settings
     return tuple(names)
 
 
@@ -520,17 +585,46 @@ def _schmitt_trigger_feature_names(
     observer_runtime_settings: ObserverRuntimeSettings,
     n_store_events: int,
 ) -> tuple[str, ...]:
-    del problem_info
-    del observer_runtime_settings
+    n_vars = len(problem_info.vars)
+    n_aux = len(problem_info.aux)
     names: list[str] = []
     for event_idx in range(n_store_events):
         names.extend(
             [
-                f"up event time {event_idx}",
-                f"down event time {event_idx}",
+                f"up transition time {event_idx}",
+                f"down transition time {event_idx}",
             ]
         )
     names.append("event count")
+    
+    # Period statistics (max/min/mean)
+    names.extend(["period max", "period min", "period mean"])
+    
+    # Maxima count statistics (max/min/mean)
+    names.extend(["n maxima max", "n maxima min", "n maxima mean"])
+
+    # Amplitude statistics (max/min/mean)
+    names.extend(["amplitude max", "amplitude min", "amplitude mean"])
+    
+    # Trajectory statistics per variable
+    for var_idx in range(n_vars):
+        names.extend([
+            f"x{var_idx} max",
+            f"x{var_idx} min",
+            f"x{var_idx} mean",
+            f"dx{var_idx} max",
+            f"dx{var_idx} min",
+        ])
+    
+    # Auxiliary trajectory statistics
+    for aux_idx in range(n_aux):
+        names.extend([
+            f"aux{aux_idx} max",
+            f"aux{aux_idx} min",
+            f"aux{aux_idx} mean",
+        ])
+    
+    del observer_runtime_settings
     return tuple(names)
 
 
@@ -581,8 +675,8 @@ def _threshold_2_feature_names(
     for event_idx in range(n_store_events):
         names.extend(
             [
-                f"up event time {event_idx}",
-                f"down event time {event_idx}",
+                f"up transition time {event_idx}",
+                f"down transition time {event_idx}",
             ]
         )
     names.append("event count")
@@ -872,27 +966,6 @@ def _localmax_layout(
     )
 
 
-def _local_extremum_layout(
-    problem_info: ProblemInfo,
-    real_dtype: np.dtype,
-    n_store_events: int,
-) -> ResolvedObserverLayout:
-    del problem_info
-    return ResolvedObserverLayout(
-        persistent_fields=(
-            _real_field("tbuffer", real_dtype, 3),
-            _real_field("xbuffer", real_dtype, 3),
-            _real_field("dxbuffer", real_dtype, 3),
-            _uint_field("eventcount"),
-            _uint_field("stepcount"),
-        ),
-        event_output_fields=(
-            _real_field("tEventList", real_dtype, n_store_events),
-            _real_field("xEventList", real_dtype, n_store_events),
-        ),
-    )
-
-
 def _nhood1_layout(
     problem_info: ProblemInfo,
     real_dtype: np.dtype,
@@ -973,14 +1046,34 @@ def _neighborhood_return_layout(
 ) -> ResolvedObserverLayout:
     return ResolvedObserverLayout(
         persistent_fields=(
-            _real_field("tbuffer", real_dtype, 2),
-            _real_field("xbuffer", real_dtype, 2 * problem_info.num_var),
+            _real_field("tbuffer", real_dtype, 3),
+            _real_field("elapsedbuffer", real_dtype, 3),
+            _real_field("xbuffer", real_dtype, 3 * problem_info.num_var),
+            _real_field("dxbuffer", real_dtype, 3 * problem_info.num_var),
             _real_field("x0", real_dtype, problem_info.num_var),
+            _real_field("xTrajectoryRange", real_dtype, problem_info.num_var),
             _real_field("xTrajectoryMax", real_dtype, problem_info.num_var),
             _real_field("xTrajectoryMin", real_dtype, problem_info.num_var),
-            _real_field("xTrajectoryRange", real_dtype, problem_info.num_var),
+            _real_field("xTrajectoryMean", real_dtype, problem_info.num_var),
+            _real_field("dxTrajectoryMax", real_dtype, problem_info.num_var),
+            _real_field("dxTrajectoryMin", real_dtype, problem_info.num_var),
+            _real_field("auxTrajectoryMax", real_dtype, problem_info.num_aux),
+            _real_field("auxTrajectoryMin", real_dtype, problem_info.num_aux),
+            _real_field("auxTrajectoryMean", real_dtype, problem_info.num_aux),
+            _real_field("period", real_dtype, 3),
+            _real_field("nMaxima", real_dtype, 3),
+            _real_field("amplitude", real_dtype, 3),
+            _real_field("xWarmupMax", real_dtype),
+            _real_field("xWarmupMin", real_dtype),
             _real_field("xThreshold", real_dtype),
+            _real_field("elapsedTotal", real_dtype),
+            _real_field("elapsedLastEvent", real_dtype),
+            _real_field("tLastMax", real_dtype),
+            _real_field("tLastMin", real_dtype),
+            _real_field("xLastMin", real_dtype),
             _uint_field("foundX0"),
+            _uint_field("thisNMaxima"),
+            _uint_field("nAmplitude"),
             _uint_field("eventcount"),
             _uint_field("stepcount"),
         ),
@@ -995,13 +1088,33 @@ def _threshold_crossing_layout(
     real_dtype: np.dtype,
     n_store_events: int,
 ) -> ResolvedObserverLayout:
-    del problem_info
     return ResolvedObserverLayout(
         persistent_fields=(
-            _real_field("tbuffer", real_dtype, 2),
-            _real_field("xbuffer", real_dtype, 2),
+            _real_field("tbuffer", real_dtype, 3),
+            _real_field("elapsedbuffer", real_dtype, 3),
+            _real_field("xbuffer", real_dtype, 3 * problem_info.num_var),
+            _real_field("dxbuffer", real_dtype, 3 * problem_info.num_var),
+            _real_field("xTrajectoryMax", real_dtype, problem_info.num_var),
+            _real_field("xTrajectoryMin", real_dtype, problem_info.num_var),
+            _real_field("xTrajectoryMean", real_dtype, problem_info.num_var),
+            _real_field("dxTrajectoryMax", real_dtype, problem_info.num_var),
+            _real_field("dxTrajectoryMin", real_dtype, problem_info.num_var),
+            _real_field("auxTrajectoryMax", real_dtype, problem_info.num_aux),
+            _real_field("auxTrajectoryMin", real_dtype, problem_info.num_aux),
+            _real_field("auxTrajectoryMean", real_dtype, problem_info.num_aux),
+            _real_field("period", real_dtype, 3),
+            _real_field("nMaxima", real_dtype, 3),
+            _real_field("amplitude", real_dtype, 3),
             _real_field("xGlobalMax", real_dtype),
             _real_field("xGlobalMin", real_dtype),
+            _real_field("elapsedTotal", real_dtype),
+            _real_field("tLastEvent", real_dtype),
+            _real_field("elapsedLastEvent", real_dtype),
+            _real_field("tLastMax", real_dtype),
+            _real_field("tLastMin", real_dtype),
+            _real_field("xLastMin", real_dtype),
+            _uint_field("thisNMaxima"),
+            _uint_field("nAmplitude"),
             _uint_field("stepcount"),
             _uint_field("eventcount"),
         ),
@@ -1016,14 +1129,34 @@ def _normalized_threshold_crossing_layout(
     real_dtype: np.dtype,
     n_store_events: int,
 ) -> ResolvedObserverLayout:
-    del problem_info
     return ResolvedObserverLayout(
         persistent_fields=(
-            _real_field("tbuffer", real_dtype, 2),
-            _real_field("xbuffer", real_dtype, 2),
+            _real_field("tbuffer", real_dtype, 3),
+            _real_field("elapsedbuffer", real_dtype, 3),
+            _real_field("xbuffer", real_dtype, 3 * problem_info.num_var),
+            _real_field("dxbuffer", real_dtype, 3 * problem_info.num_var),
+            _real_field("xTrajectoryMax", real_dtype, problem_info.num_var),
+            _real_field("xTrajectoryMin", real_dtype, problem_info.num_var),
+            _real_field("xTrajectoryMean", real_dtype, problem_info.num_var),
+            _real_field("dxTrajectoryMax", real_dtype, problem_info.num_var),
+            _real_field("dxTrajectoryMin", real_dtype, problem_info.num_var),
+            _real_field("auxTrajectoryMax", real_dtype, problem_info.num_aux),
+            _real_field("auxTrajectoryMin", real_dtype, problem_info.num_aux),
+            _real_field("auxTrajectoryMean", real_dtype, problem_info.num_aux),
+            _real_field("period", real_dtype, 3),
+            _real_field("nMaxima", real_dtype, 3),
+            _real_field("amplitude", real_dtype, 3),
             _real_field("xGlobalMax", real_dtype),
             _real_field("xGlobalMin", real_dtype),
             _real_field("xThreshold", real_dtype),
+            _real_field("elapsedTotal", real_dtype),
+            _real_field("tLastEvent", real_dtype),
+            _real_field("elapsedLastEvent", real_dtype),
+            _real_field("tLastMax", real_dtype),
+            _real_field("tLastMin", real_dtype),
+            _real_field("xLastMin", real_dtype),
+            _uint_field("thisNMaxima"),
+            _uint_field("nAmplitude"),
             _uint_field("stepcount"),
             _uint_field("eventcount"),
         ),
@@ -1038,20 +1171,35 @@ def _schmitt_trigger_layout(
     real_dtype: np.dtype,
     n_store_events: int,
 ) -> ResolvedObserverLayout:
-    del problem_info
     return ResolvedObserverLayout(
         persistent_fields=(
-            _real_field("tbuffer", real_dtype, 2),
-            _real_field("xbuffer", real_dtype, 2),
-            _real_field("dxbuffer", real_dtype, 2),
+            _real_field("tbuffer", real_dtype, 3),
+            _real_field("elapsedbuffer", real_dtype, 3),
+            _real_field("xbuffer", real_dtype, 3 * problem_info.num_var),
+            _real_field("dxbuffer", real_dtype, 3 * problem_info.num_var),
+            _real_field("xTrajectoryMax", real_dtype, problem_info.num_var),
+            _real_field("xTrajectoryMin", real_dtype, problem_info.num_var),
+            _real_field("xTrajectoryMean", real_dtype, problem_info.num_var),
+            _real_field("dxTrajectoryMax", real_dtype, problem_info.num_var),
+            _real_field("dxTrajectoryMin", real_dtype, problem_info.num_var),
+            _real_field("auxTrajectoryMax", real_dtype, problem_info.num_aux),
+            _real_field("auxTrajectoryMin", real_dtype, problem_info.num_aux),
+            _real_field("auxTrajectoryMean", real_dtype, problem_info.num_aux),
+            _real_field("period", real_dtype, 3),
+            _real_field("nMaxima", real_dtype, 3),
+            _real_field("amplitude", real_dtype, 3),
             _real_field("xGlobalMax", real_dtype),
             _real_field("xGlobalMin", real_dtype),
-            _real_field("dxGlobalMax", real_dtype),
-            _real_field("dxGlobalMin", real_dtype),
             _real_field("xUp", real_dtype),
             _real_field("xDown", real_dtype),
-            _real_field("dxUp", real_dtype),
-            _real_field("dxDown", real_dtype),
+            _real_field("elapsedTotal", real_dtype),
+            _real_field("tLastEvent", real_dtype),
+            _real_field("elapsedLastEvent", real_dtype),
+            _real_field("tLastMax", real_dtype),
+            _real_field("tLastMin", real_dtype),
+            _real_field("xLastMin", real_dtype),
+            _uint_field("thisNMaxima"),
+            _uint_field("nAmplitude"),
             _uint_field("stepcount"),
             _uint_field("eventcount"),
             _uint_field("inUpstate"),
@@ -1117,9 +1265,10 @@ def _threshold_2_layout(
 
 
 def _normalize_observer_name(observer: Observer | str) -> str:
-    if isinstance(observer, Observer):
-        return observer.value
-    return str(observer)
+    observer_name = observer.value if isinstance(observer, Observer) else str(observer)
+    if observer_name == "local_extremum":
+        return "localmax"
+    return observer_name
 
 
 def _name_at(names: list[str], index: int) -> str:
@@ -1174,13 +1323,6 @@ _OBSERVER_DEFINITIONS = {
         uses_two_pass=False,
         feature_name_factory=_summary_placeholder_feature_names,
         layout_factory=_summary_placeholder_layout,
-    ),
-    "local_extremum": ObserverDefinition(
-        observer_name="local_extremum",
-        build_define="USE_OBSERVER_LOCAL_EXTREMUM",
-        uses_two_pass=False,
-        feature_name_factory=_local_extremum_feature_names,
-        layout_factory=_local_extremum_layout,
     ),
     "localmax": ObserverDefinition(
         observer_name="localmax",

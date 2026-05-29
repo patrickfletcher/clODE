@@ -1,7 +1,6 @@
 from clode.observers import (
     EventDirection,
-    ExtremumPolarity,
-    LocalExtremumConfig,
+    LocalMaximumConfig,
     NeighborhoodReturnConfig,
     Observer,
     ObserverParams,
@@ -116,8 +115,7 @@ __all__ = [
     "Simulator",
     "FeatureSimulator",
     "EventDirection",
-    "ExtremumPolarity",
-    "LocalExtremumConfig",
+    "LocalMaximumConfig",
     "NeighborhoodReturnConfig",
     "Observer",
     "ObserverParams",

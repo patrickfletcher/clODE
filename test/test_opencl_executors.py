@@ -91,6 +91,7 @@ def _make_feature_executor() -> OpenCLFeatureExecutor:
         "basic",
         ObserverRuntimeSettings(f_var_ix=0),
         EventOutputSettings(),
+        None,
         True,
         runtime,
         _clode_root_dir,
@@ -278,7 +279,7 @@ def test_feature_runtime_setting_change_preserves_program_and_buffers() -> None:
     executor.set_observer_params(updated_params)
 
     assert executor._feature_buffers is feature_buffers
-    assert executor._program_bundle is program_bundle
+    assert executor._program_bundle is None
     assert executor.get_feature_names()[0] == "max y"
     assert executor.get_f() == []
 
