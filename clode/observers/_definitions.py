@@ -813,7 +813,7 @@ def _localmax_layout(
             _real_field("auxTrajectoryIntegral", real_dtype, problem_info.num_aux),
             _real_field("auxTrajectoryIntegralCorrection", real_dtype, problem_info.num_aux),
             _real_field("IMI", real_dtype, 3),
-            _real_field("amp", real_dtype, 3),
+            _real_field("amplitude", real_dtype, 3),
             _real_field("xGlobalMax", real_dtype),
             _real_field("xGlobalMin", real_dtype),
             _real_field("elapsedTotal", real_dtype),

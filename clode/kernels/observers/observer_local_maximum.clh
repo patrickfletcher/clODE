@@ -255,6 +255,8 @@ static inline void finalizeFeatures(realtype *ti, realtype xi[], realtype dxi[],
 
     int ix = 0;
     F[ix++ * nPts + i] = od->eventcount > 1 ? od->IMI[0] : ZERO;
+    F[ix++ * nPts + i] = od->eventcount > 1 ? od->IMI[1] : ZERO;
+    F[ix++ * nPts + i] = od->eventcount > 1 ? od->IMI[2] : ZERO;
     F[ix++ * nPts + i] = od->eventcount > 1 ? od->amplitude[0] : ZERO;
     F[ix++ * nPts + i] = od->eventcount > 1 ? od->amplitude[1] : ZERO;
     F[ix++ * nPts + i] = od->eventcount > 1 ? od->amplitude[2] : ZERO;
