@@ -487,6 +487,32 @@ def test_neighborhood_return_measures_amplitude_on_feature_var() -> None:
     )
 
 
+def test_neighborhood_return_respects_min_amp_gate() -> None:
+    output = clode.FeatureSimulator(
+        rhs_equation=sine_curve,
+        variables={"x": 0.0},
+        parameters={"dilation": 1.0},
+        observer=clode.Observer.normalized_neighborhood_return,
+        observer_configuration=clode.NeighborhoodReturnConfig(
+            event_var="x",
+            feature_var="x",
+            anchor_threshold=0.25,
+            radius=0.25,
+            min_amp=3.0,
+            max_event_count=8,
+            max_event_timestamps=3,
+        ),
+        stepper=clode.Stepper.rk4,
+        dtmax=0.05,
+        dt=0.05,
+        t_span=(0.0, 8 * pi),
+        **device_kwargs_for_tests(),
+    ).features()
+
+    assert output is not None
+    assert int(output.get_var_count("event")) == 0
+
+
 def test_local_max_coarse_timestamps_use_three_sample_refinement() -> None:
     feature_simulator = clode.FeatureSimulator(
         rhs_equation=sine_curve,
@@ -551,3 +577,26 @@ def test_local_maximum_detects_maxima_with_three_sample_refinement() -> None:
     assert int(output.get_var_count("event")) == 2
     np.testing.assert_allclose(event_times, expected_times, atol=1e-2, rtol=0.0)
     np.testing.assert_allclose(event_values, expected_values, atol=2e-2, rtol=0.0)
+
+
+def test_local_maximum_respects_min_amp_gate() -> None:
+    output = clode.FeatureSimulator(
+        rhs_equation=sine_curve,
+        variables={"x": 0.0},
+        parameters={"dilation": 1.0},
+        observer=clode.Observer.local_max,
+        observer_configuration=clode.LocalMaximumConfig(
+            event_var="x",
+            min_amp=3.0,
+            max_event_count=4,
+            max_event_timestamps=4,
+        ),
+        stepper=clode.Stepper.rk4,
+        dtmax=0.05,
+        dt=0.05,
+        t_span=(0.0, 4 * pi),
+        **device_kwargs_for_tests(),
+    ).features()
+
+    assert output is not None
+    assert int(output.get_var_count("event")) == 0

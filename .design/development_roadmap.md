@@ -41,13 +41,14 @@ Keep the next planning pass centered on one product story: clODE's differentiato
 
 ### 1. Oscillation-oriented observer bundles
 
-The solution-buffer audit is complete: a shared `K`-sample solution-buffer concept was confirmed as a prerequisite, K=2/K=3 shared accepted-step history update helpers are now live and adopted by all canonical event-observer families, and family event semantics remain local. The remaining near-term observer question is whether recurring oscillation-oriented controls and readouts (`min_amp`, `max_event_count`, and future oscillation-targeted outputs) should be factored through a shared seam or kept family-local.
+The solution-buffer audit is complete: a shared `K`-sample solution-buffer concept was confirmed as a prerequisite, K=2/K=3 shared accepted-step history update helpers are now live and adopted by all canonical event-observer families, and family event semantics remain local. The remaining near-term observer question is whether recurring event-trigger controls (`min_amp`, `max_event_count`) plus family-specific oscillation readouts should be factored through a shared seam or kept family-local.
 
 Why next:
 
 - observers are a first-class clODE concept and one of the clearest ways to differentiate the package in engineering and publication terms
-- `min_amp` already has a subtle semantic difference between one-pass and warmup-derived families; naming and documenting that seam will clarify both user docs and future observer authoring
-- the current event families (`threshold_crossing`, `schmitt_trigger`, `local_max`, and `normalized_neighborhood_return`) each carry some version of this oscillation-oriented readout bundle, so a clear shared seam would improve both maintainability and observer UX consistency
+- `max_event_count` is already a general event-loop limiter across the current event-triggering families, so documenting it as a canonical control rather than as legacy baggage will clarify both user docs and future observer authoring
+- `min_amp` already has a subtle semantic difference between one-pass and warmup-derived families; naming it as an event gate on `event_var` variation will clarify that seam before any broader family adoption decision
+- the current event families already share some combination of event-loop controls and oscillation-oriented readouts, so a clear shared seam would improve both maintainability and observer UX consistency without overstating derivative-gate fields such as `eps_dx`
 
 ### 2. Large-ensemble ergonomics: batch-generation helpers and device-capacity batching
 

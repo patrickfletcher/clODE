@@ -45,7 +45,7 @@ simulator = clode.FeatureSimulator(
 - `Observer.threshold_crossing`: `threshold` is an absolute value in state-variable units.
 - `Observer.normalized_threshold_crossing`: `threshold` is a fraction of the warmup-pass amplitude of `event_var`.
 
-`event_var` chooses the threshold geometry and `min_amp` gate for the threshold families. `feature_var` chooses the extrema/amplitude channel, so threshold and Schmitt now share the same trigger-versus-measurement split when you want event detection on one state variable and oscillation readouts on another.
+Across the event-triggering observers, `event_var` owns the trigger geometry and the `min_amp` gate. `feature_var` chooses the extrema/amplitude channel on the families that split trigger geometry from measurement, so threshold, Schmitt, and neighborhood-return can detect events on one state variable and measure oscillation readouts on another.
 
 ### Schmitt-Trigger Observers
 
@@ -74,11 +74,14 @@ Use `LocalMaximumConfig`:
 simulator.set_observer_configuration(
     clode.LocalMaximumConfig(
         event_var="x",
+        min_amp=0.1,
         max_event_timestamps=16,
     ),
     observer=clode.Observer.local_max,
 )
 ```
+
+`LocalMaximumConfig` is intentionally one-channel: the configured `event_var` drives local-extremum detection, extrema values, and the `min_amp` gate.
 
 ### Neighborhood Return Observer
 
@@ -91,13 +94,16 @@ simulator.set_observer_configuration(
         feature_var="x",
         anchor_threshold=0.25,
         radius=0.15,
+        min_amp=0.1,
         max_event_timestamps=16,
     ),
     observer=clode.Observer.normalized_neighborhood_return,
 )
 ```
 
-`anchor_threshold` still picks the falling `event_var` section that latches the sampled anchor. `feature_var` selects the extrema/amplitude channel for neighborhood-return readouts; keep it aligned with `event_var` for one-channel behavior, or point it at another state variable when the return trigger and the measured oscillation should differ.
+`anchor_threshold` still picks the falling `event_var` section that latches the sampled anchor. `event_var` also owns the `min_amp` gate for the neighborhood-return family. `feature_var` selects the extrema/amplitude channel for neighborhood-return readouts; keep it aligned with `event_var` for one-channel behavior, or point it at another state variable when the return trigger and the measured oscillation should differ.
+
+For every event-triggering observer family, `max_event_count` is an early-stop control: once that many accepted events are recorded, the feature solve terminates with a terminal-event status.
 
 ### Summary Observer (Optional Config)
 

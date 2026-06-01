@@ -320,6 +320,7 @@ class LocalMaximumConfig:
     event_var: str = ""
     max_event_count: int = _DEFAULT_MAX_EVENT_COUNT
     max_event_timestamps: int = _DEFAULT_MAX_EVENT_TIMESTAMPS
+    min_amp: float = _DEFAULT_MIN_AMP
 
     def __post_init__(self) -> None:
         object.__setattr__(
@@ -327,6 +328,7 @@ class LocalMaximumConfig:
             "event_var",
             _normalize_optional_variable_name(self.event_var, parameter_name="event_var"),
         )
+        object.__setattr__(self, "min_amp", float(self.min_amp))
         object.__setattr__(self, "max_event_count", int(self.max_event_count))
         object.__setattr__(self, "max_event_timestamps", int(self.max_event_timestamps))
 
@@ -344,6 +346,7 @@ class LocalMaximumConfig:
         return ObserverParams(
             e_var_ix=variable_ix,
             f_var_ix=variable_ix,
+            min_amp=self.min_amp,
             max_event_count=self.max_event_count,
             max_event_timestamps=self.max_event_timestamps,
         )
@@ -360,6 +363,7 @@ class LocalMaximumConfig:
                 observer_params.e_var_ix,
                 parameter_name="e_var_ix",
             ),
+            min_amp=observer_params.min_amp,
             max_event_count=observer_params.max_event_count,
             max_event_timestamps=observer_params.max_event_timestamps,
         )
@@ -375,6 +379,7 @@ class NeighborhoodReturnConfig:
     radius: float = _DEFAULT_NHOOD_RADIUS
     max_event_count: int = _DEFAULT_MAX_EVENT_COUNT
     max_event_timestamps: int = _DEFAULT_MAX_EVENT_TIMESTAMPS
+    min_amp: float = _DEFAULT_MIN_AMP
 
     def __post_init__(self) -> None:
         object.__setattr__(
@@ -392,6 +397,7 @@ class NeighborhoodReturnConfig:
         )
         object.__setattr__(self, "anchor_threshold", float(self.anchor_threshold))
         object.__setattr__(self, "radius", float(self.radius))
+        object.__setattr__(self, "min_amp", float(self.min_amp))
         object.__setattr__(self, "max_event_count", int(self.max_event_count))
         object.__setattr__(self, "max_event_timestamps", int(self.max_event_timestamps))
         _require_unit_interval(
@@ -418,6 +424,7 @@ class NeighborhoodReturnConfig:
                 default_index=_DEFAULT_FEATURE_VAR_INDEX,
                 parameter_name="feature_var",
             ),
+            min_amp=self.min_amp,
             max_event_count=self.max_event_count,
             max_event_timestamps=self.max_event_timestamps,
             nhood_radius=self.radius,
@@ -443,6 +450,7 @@ class NeighborhoodReturnConfig:
             ),
             anchor_threshold=observer_params.x_down_threshold,
             radius=observer_params.nhood_radius,
+            min_amp=observer_params.min_amp,
             max_event_count=observer_params.max_event_count,
             max_event_timestamps=observer_params.max_event_timestamps,
         )

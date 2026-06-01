@@ -69,7 +69,7 @@ integrator = clode.FeatureSimulator(
 )
 ```
 
-`event_var` selects the threshold geometry and `min_amp` gate for the threshold families. `feature_var` selects the extrema/amplitude channel, which keeps threshold and Schmitt aligned when you want one state variable to trigger events and another to supply oscillation readouts.
+Across the event-triggering semantic families, `event_var` selects the trigger geometry and the `min_amp` gate. `feature_var` selects the extrema/amplitude channel on families that split trigger geometry from measurement, which keeps threshold, Schmitt, and neighborhood-return aligned when you want one state variable to trigger events and another to supply oscillation readouts.
 
 Use `clode.SchmittTriggerConfig` for the semantic Schmitt families:
 
@@ -96,11 +96,14 @@ Use `clode.LocalMaximumConfig` with `clode.Observer.local_max` for maxima-trigge
 integrator.set_observer_configuration(
     clode.LocalMaximumConfig(
         event_var="x",
+        min_amp=0.1,
         max_event_timestamps=16,
     ),
     observer=clode.Observer.local_max,
 )
 ```
+
+`LocalMaximumConfig` stays one-channel by design: the same resolved variable drives extrema detection, stored extrema values, and the `min_amp` gate.
 
 Use `clode.NeighborhoodReturnConfig` with `clode.Observer.normalized_neighborhood_return` when you want the lean normalized neighborhood-return trigger:
 
@@ -111,13 +114,14 @@ integrator.set_observer_configuration(
         feature_var="x",
         anchor_threshold=0.25,
         radius=0.15,
+        min_amp=0.1,
         max_event_timestamps=16,
     ),
     observer=clode.Observer.normalized_neighborhood_return,
 )
 ```
 
-`anchor_threshold` picks the falling `event_var` section that latches the anchor point `x0`, while `radius` sets the size of the normalized full-state neighborhood around that anchor. `feature_var` selects the extrema/amplitude channel for the neighborhood observer; leave it equal to `event_var` for one-channel behavior, or point it at another state variable when the return trigger and oscillation readouts should differ. This can be a good fit when a one-variable threshold crossing is too ambiguous to identify one recurrence cleanly. On a simple limit cycle it behaves like a light-weight return-map trigger around one anchored point on the orbit; on a more complex or multi-lobed cycle it can still distinguish nearby passes because the exit test uses the full normalized state rather than only the scalar `event_var`.
+`anchor_threshold` picks the falling `event_var` section that latches the anchor point `x0`, while `radius` sets the size of the normalized full-state neighborhood around that anchor. `event_var` also owns the family `min_amp` gate. `feature_var` selects the extrema/amplitude channel for the neighborhood observer; leave it equal to `event_var` for one-channel behavior, or point it at another state variable when the return trigger and oscillation readouts should differ. This can be a good fit when a one-variable threshold crossing is too ambiguous to identify one recurrence cleanly. On a simple limit cycle it behaves like a light-weight return-map trigger around one anchored point on the orbit; on a more complex or multi-lobed cycle it can still distinguish nearby passes because the exit test uses the full normalized state rather than only the scalar `event_var`.
 
 When you call `set_observer_configuration(...)` with one of the shared config classes, pass `observer=` whenever you are switching families or when the simulator was not already constructed with the desired observer. The config class alone does not determine absolute versus warmup-derived interpretation.
 
@@ -141,28 +145,30 @@ integrator.set_observer_parameters(
 
 Changing `max_event_timestamps` changes observer storage requirements and may trigger a rebuild of the OpenCL program.
 
-Not every observer field affects every built-in observer. For the current threshold families, the most directly useful safeguards are:
+Not every observer field affects every built-in observer. For the current event-triggering families, the most directly useful safeguards are:
 
 - `min_amp` for suppressing oscillation/event measurements below a chosen amplitude floor
+- `max_event_count` for terminating the feature solve after a bounded number of accepted events
 - `threshold` plus `direction` in `clode.ThresholdCrossingConfig` for the threshold-crossing families, with the selected observer deciding whether that threshold is absolute or warmup-derived
 - separate `x_up_threshold` and `x_down_threshold` values in `clode.SchmittTriggerConfig` for the Schmitt families, with the selected observer deciding whether those values are absolute or warmup-derived fractions
+- `anchor_threshold` plus `radius` in `clode.NeighborhoodReturnConfig` for sampled-anchor neighborhood-return workflows
 - semantic Schmitt-trigger families (`clode.Observer.schmitt_trigger` and `clode.Observer.normalized_schmitt_trigger`) when you need explicit up/down hysteresis around a threshold band
 
 See [numerical_accuracy.md](numerical_accuracy.md) for empirical examples and practical tuning guidance.
 
 `clode.Observer.schmitt_trigger` and `clode.Observer.normalized_schmitt_trigger` store up/down transition times with inverse-linear interpolation of the active `x` boundary only. The normalized semantic family converts its configured thresholds into concrete live-pass values after warmup; the absolute family uses the configured values directly. `clode.Observer.local_max` stores extrema using bounded three-sample quadratic refinement. `clode.Observer.normalized_neighborhood_return` keeps sampled anchors `x0`, then refines each stored exit time by linearly interpolating the full normalized state between the last inside sample and the first outside sample of the radius ball. See [numerical_accuracy.md](numerical_accuracy.md) for empirical tradeoffs and comparisons with alternative interpolation choices.
 
-`min_amp` is intentionally not one identical concept across all threshold-style families.
+`min_amp` is intentionally not one identical concept across all event-triggering families.
 
-- **One-pass absolute families** (`threshold_crossing`, `schmitt_trigger`): `min_amp` acts as a live-pass range gate on `event_var`. The threshold is compared directly against `min_amp` to suppress events from oscillations below that amplitude.
-- **Two-pass normalized families** (`normalized_threshold_crossing`, `normalized_schmitt_trigger`): `min_amp` is compared against the warmup-derived amplitude used to define the normalized thresholds. This means the effective amplitude floor adapts to your warmup trajectory.
-- **Normalized Schmitt**: Follows two-pass semantics (warmup-derived amplitude floor).
+- **One-pass families** (`threshold_crossing`, `schmitt_trigger`, `local_max`): `min_amp` acts as a live-pass range gate on `event_var`.
+- **Two-pass normalized threshold and Schmitt families** (`normalized_threshold_crossing`, `normalized_schmitt_trigger`): `min_amp` uses the same warmup-seeded `event_var` range that defines the normalized trigger geometry.
+- **Normalized neighborhood return** (`normalized_neighborhood_return`): `min_amp` uses the warmup-seeded `event_var` range gate, while the sampled anchor threshold and normalized-ball exit geometry remain neighborhood-specific.
 
 That difference is usually fine for steady-state workflows after a transient, but it is worth keeping in mind when you compare one-pass and two-pass event counts directly. If you need consistent amplitude semantics across a comparison, either normalize your thresholds explicitly or stick to one family.
 
 The trigger-geometry examples now live in `examples/visualize_events_threshold_crossing.py`, `examples/visualize_events_schmitt_trigger.py`, `examples/visualize_events_localmax.py`, and `examples/visualize_events_neighborhood_return.py`. The neighborhood-return example mirrors the live sampled-anchor plus interpolated-exit geometry directly.
 
-Recurring controls such as `min_amp`, `max_event_count`, and `max_event_timestamps` stay on the family configs where they are active.
+Recurring controls such as `min_amp`, `max_event_count`, and `max_event_timestamps` are now active across the current event-triggering family configs and remain family-local until the broader bundle-seam decision is settled.
 
 ## Observer readout inventory
 

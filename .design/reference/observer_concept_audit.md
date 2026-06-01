@@ -10,7 +10,7 @@ Update when: observer family behavior, observer config classes, kernel observer 
 - Canonical semantic observer families are `summary`, `threshold_crossing`, `normalized_threshold_crossing`, `schmitt_trigger`, `normalized_schmitt_trigger`, `local_max`, and `normalized_neighborhood_return`.
 - Family-specific semantic config classes are live for threshold, Schmitt, local-maximum, and neighborhood-return observers.
 - Compatibility surfaces (`ObserverParams`, legacy `observer_*` constructor kwargs, and `set_observer_parameters(...)`) remain supported.
-- The active open design question is the oscillation-oriented bundle seam tracked in `.design/next_pr.md`.
+- The active open design question is the shared seam for recurring event-trigger controls plus family-local readouts tracked in `.design/next_pr.md`.
 
 ## Fast path
 
@@ -83,9 +83,9 @@ See:
 
 ## Active design work (explicitly not implementation facts)
 
-- Bundle packaging remains open: should oscillation-oriented controls/readouts be shared through one config seam or remain family-local?
+- Bundle packaging remains open: should recurring event-trigger controls and family-local readouts be shared through one config seam or remain family-local?
 - Schmitt duration outputs (`up duration`, `down duration`, `duty`) are now part of the current canonical Schmitt readout schemas; the remaining open question is whether any broader oscillation bundle seam should absorb them.
-- Threshold, Schmitt, and neighborhood config follow-through now matches the live split: threshold and Schmitt use `event_var` for trigger geometry and `feature_var` for extrema/amplitude readouts, while neighborhood keeps anchor/warmup routing on `event_var` and maxima/amplitude routing on `feature_var`.
+- `min_amp` and `max_event_count` now have clearer intended roles than the broader `ObserverParams` bundle suggests, and both now have live semantic homes across the current event-triggering families; the remaining open design question is packaging rather than adoption.
 
 These are planning/implementation-tracking items, not all landed behavior yet; active tracking surfaces remain `.design/next_pr.md` and `.design/ideas.md`.
 

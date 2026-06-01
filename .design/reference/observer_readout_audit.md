@@ -42,7 +42,7 @@ All semantic event observers now emit event timestamps plus observer-local summa
 
 ### Variable-routing implications
 
-- Threshold event detection is keyed to `e_var_ix`, and current threshold-family extrema tracking also stays on the event channel.
+- Threshold event detection is keyed to `e_var_ix`, while threshold-family extrema and amplitude tracking now use `f_var_ix`.
 - Schmitt event detection is keyed to `e_var_ix`, while maxima/amplitude/active-dip tracking uses `f_var_ix`.
 - `local_max` detection is keyed to `f_var_ix`.
 - Neighborhood-return uses `e_var_ix` for anchor/threshold behavior and `f_var_ix` for maxima/amplitude tracking.
@@ -55,8 +55,14 @@ All semantic event observers now emit event timestamps plus observer-local summa
 
 ## Open policy decisions
 
-- Whether oscillation-oriented controls/readouts should be factored through a shared config seam or remain family-local: active target in `.design/next_pr.md`.
+- Whether recurring event-trigger controls plus oscillation-oriented readouts should be factored through a shared config seam or remain family-local: active target in `.design/next_pr.md`.
 - Whether a family-level readout-selection surface should be introduced: an open packaging question; any such surface should not depend on historical family labeling.
+
+## Cross-family control semantics
+
+- `max_event_count` is the current cross-family event-loop limiter across the event-triggering observer families; users can treat it as an early-stop control when they only need a bounded number of events.
+- `min_amp` is a user-specified gate on variation in `event_var` that suppresses tiny or noisy oscillations when they are not of interest. It is now part of every current event-triggering semantic config surface, with one-pass and warmup-seeded families differing only in how that variation is accumulated.
+- `eps_dx` and `min_imi` remain compatibility-only controls on `ObserverParams`; they do not currently define the preferred semantic observer UX.
 
 ## Guardrails
 

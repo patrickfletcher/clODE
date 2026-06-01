@@ -153,6 +153,8 @@ On a tiny sinusoid with total range about $10^{-3}$:
 
 This encodes the smallest oscillation that is physically or scientifically meaningful for the workflow.
 
+Across the current event-triggering semantic observers, `min_amp` is always a gate on variation in `event_var`. One-pass families evaluate that gate on the live pass directly, while the normalized families seed it from warmup-derived `event_var` variation before continuing the observed pass.
+
 ### Schmitt-trigger-style hysteresis with separate up/down thresholds
 
 In `normalized_schmitt_trigger`, `x_up_threshold` and `x_down_threshold` are interpreted as fractions of the warmup-pass amplitude range on `event_var`, not as absolute state-variable values.

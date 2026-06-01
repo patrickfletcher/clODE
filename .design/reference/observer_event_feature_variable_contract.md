@@ -10,7 +10,7 @@ Update when: any observer family changes how `e_var_ix`/`f_var_ix` are set or co
 - Threshold and Schmitt families detect events from `e_var_ix`.
 - `local_max` detects extrema from `f_var_ix` (with `LocalMaximumConfig` currently forcing `e_var_ix == f_var_ix`).
 - `normalized_neighborhood_return` uses both: anchor/warmup logic from `e_var_ix`, maxima/amplitude tracking from `f_var_ix`.
-- Threshold, Schmitt, and neighborhood semantic configs now expose both `event_var` and `feature_var` where those families split trigger geometry from extrema/amplitude measurement; `LocalMaximumConfig` remains the one-channel exception for now.
+- All current event-triggering semantic configs now expose `min_amp` and `max_event_count`; threshold, Schmitt, and neighborhood semantic configs also expose both `event_var` and `feature_var` where those families split trigger geometry from extrema/amplitude measurement, while `LocalMaximumConfig` remains the one-channel exception for variable selection.
 
 ## Current implementation contract
 
@@ -41,27 +41,31 @@ Update when: any observer family changes how `e_var_ix`/`f_var_ix` are set or co
 
 ### Local maximum family
 
-- Public config: `LocalMaximumConfig(event_var=...)`
+- Public config: `LocalMaximumConfig(event_var=..., min_amp=...)`
 - Routed fields:
   - config `event_var` sets one index, then maps to both `e_var_ix` and `f_var_ix`
 - Kernel behavior (`observer_local_maximum.clh`):
   - event detection and event-value extraction use `fVarIx`
+  - `min_amp` gating follows the same resolved one-channel `event_var`
   - this is effectively one-variable extrema detection by design
 
 ### Normalized neighborhood return family
 
-- Public config: `NeighborhoodReturnConfig(event_var=..., feature_var=..., anchor_threshold=..., radius=...)`
+- Public config: `NeighborhoodReturnConfig(event_var=..., feature_var=..., anchor_threshold=..., radius=..., min_amp=...)`
 - Routed fields:
   - `event_var` -> `e_var_ix`
   - `feature_var` -> `f_var_ix`
 - Kernel behavior (`observer_normalized_neighborhood_return.clh`):
   - warmup anchor threshold and anchor latch logic use `eVarIx`
+  - `min_amp` gating follows `eVarIx`
   - maxima/amplitude tracking path uses `fVarIx`
   - semantic config now exposes the same trigger/measurement split as the live kernel
 
 ## Compatibility surface behavior
 
 `ObserverParams`, constructor `observer_*` args, and `set_observer_parameters(...)` can still set both `event_var` and `feature_var` directly for all families. That path remains the broad compatibility adapter.
+
+Within that broader compatibility surface, `max_event_count` and `min_amp` now both have semantic-config homes across the current event-triggering families, while compatibility-only fields such as `eps_dx` and `min_imi` still do not.
 
 ## Evidence anchors
 
@@ -83,4 +87,5 @@ Direction is now explicit:
 Current live split:
 
 - `ThresholdCrossingConfig` now exposes `feature_var`; threshold event geometry and `min_amp` stay on `eVarIx`, while extrema/amplitude tracking uses `fVarIx`.
-- `NeighborhoodReturnConfig` now exposes `feature_var`; `observer_normalized_neighborhood_return.clh` already consumes `fVarIx` for maxima/amplitude tracking.
+- `LocalMaximumConfig` now exposes `min_amp`; its one resolved variable continues to supply both event geometry and extrema measurement.
+- `NeighborhoodReturnConfig` now exposes `feature_var` and `min_amp`; `observer_normalized_neighborhood_return.clh` consumes `eVarIx` for trigger geometry and gating, and `fVarIx` for maxima/amplitude tracking.

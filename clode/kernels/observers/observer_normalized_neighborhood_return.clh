@@ -36,6 +36,8 @@ struct ObserverState_normalized_neighborhood_return {
     realtype nMaxima[3];
     realtype amplitude[3];
 
+    realtype xGlobalMax;
+    realtype xGlobalMin;
     realtype xWarmupMax;
     realtype xWarmupMin;
     realtype xThreshold;
@@ -136,6 +138,8 @@ static inline void initializeObserverState(realtype *ti, realtype xi[], realtype
     od->amplitude[1] = BIG_REAL;
     od->amplitude[2] = ZERO;
 
+    od->xGlobalMax = -BIG_REAL;
+    od->xGlobalMin = BIG_REAL;
     od->xWarmupMax = -BIG_REAL;
     od->xWarmupMin = BIG_REAL;
     od->xThreshold = ZERO;
@@ -158,6 +162,8 @@ static inline void warmupObserverState(realtype *ti, realtype xi[], realtype dxi
     (void)ti;
     (void)dxi;
     (void)auxi;
+    od->xGlobalMax = fmax(od->xGlobalMax, xi[op->eVarIx]);
+    od->xGlobalMin = fmin(od->xGlobalMin, xi[op->eVarIx]);
     od->xWarmupMax = fmax(od->xWarmupMax, xi[op->eVarIx]);
     od->xWarmupMin = fmin(od->xWarmupMin, xi[op->eVarIx]);
 
@@ -225,6 +231,9 @@ static inline bool eventFunction(realtype *ti, realtype xi[], realtype dxi[], re
     (void)auxi;
 
     if (od->stepcount < 1 || !od->foundX0)
+        return false;
+
+    if (od->xGlobalMax - od->xGlobalMin < op->minXamp)
         return false;
 
     realtype radiusSq = op->nHoodRadius * op->nHoodRadius;
@@ -301,6 +310,9 @@ static inline void updateObserverState(realtype *ti, realtype xi[], realtype dxi
         od->auxTrajectoryMin[j] = fmin(auxi[j], od->auxTrajectoryMin[j]);
         od->auxTrajectoryMean[j] = runningMeanTime(od->auxTrajectoryMean[j], auxi[j], stepDt, od->elapsedTotal);
     }
+
+    od->xGlobalMax = fmax(od->xGlobalMax, xi[op->eVarIx]);
+    od->xGlobalMin = fmin(od->xGlobalMin, xi[op->eVarIx]);
 
     if (!od->foundX0
         && od->xbuffer[op->eVarIx * 3 + 1] > od->xThreshold

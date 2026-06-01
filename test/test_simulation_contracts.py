@@ -407,6 +407,42 @@ def test_feature_status_reports_terminal_event_stop() -> None:
     assert float(simulator.get_final_time().reshape(-1)[0]) < 8.0
 
 
+def test_feature_status_reports_terminal_event_stop_for_neighborhood_return() -> None:
+    simulator = clode.FeatureSimulator(
+        src_file=model_path("hopf_normal_form.cl"),
+        variables=HOPF_VARIABLES.copy(),
+        parameters=HOPF_PARAMETERS.copy(),
+        aux=HOPF_AUX.copy(),
+        num_noise=0,
+        observer=clode.Observer.normalized_neighborhood_return,
+        observer_configuration=clode.NeighborhoodReturnConfig(
+            event_var="x",
+            feature_var="x",
+            anchor_threshold=0.35,
+            radius=0.2,
+            max_event_count=1,
+            max_event_timestamps=1,
+        ),
+        stepper=clode.Stepper.rk4,
+        dt=FIXED_DT,
+        dtmax=FIXED_DT,
+        t_span=(0.0, 8.0),
+        max_steps=FIXED_MAX_STEPS,
+        single_precision=True,
+        **device_kwargs_for_tests(),
+    )
+
+    result = simulator.features(update_x0=False)
+
+    assert result is not None
+    assert int(result.get_var_count("event")) == 1
+    np.testing.assert_array_equal(
+        simulator.get_status().reshape(-1),
+        [clode.SolverStatus.TERMINAL_EVENT_REACHED],
+    )
+    assert float(simulator.get_final_time().reshape(-1)[0]) < 8.0
+
+
 def test_get_initial_state_after_update_x0_pulls_runtime_state_back_into_ivp() -> None:
     simulator = make_simulator(
         "stable_linear",
@@ -800,6 +836,7 @@ def test_neighborhood_return_config_rejects_invalid_normalized_inputs() -> None:
 def test_feature_simulator_local_maximum_configuration_round_trips() -> None:
     config = clode.LocalMaximumConfig(
         event_var="y",
+        min_amp=0.125,
         max_event_count=7,
         max_event_timestamps=4,
     )
@@ -823,6 +860,7 @@ def test_feature_simulator_local_maximum_configuration_round_trips() -> None:
     assert simulator.get_observer_parameters() == clode.ObserverParams(
         e_var_ix=1,
         f_var_ix=1,
+        min_amp=0.125,
         max_event_count=7,
         max_event_timestamps=4,
     )
@@ -834,6 +872,7 @@ def test_feature_simulator_neighborhood_return_configuration_round_trips() -> No
         feature_var="x",
         anchor_threshold=0.35,
         radius=0.2,
+        min_amp=0.125,
         max_event_count=7,
         max_event_timestamps=4,
     )
@@ -857,6 +896,7 @@ def test_feature_simulator_neighborhood_return_configuration_round_trips() -> No
     assert simulator.get_observer_parameters() == clode.ObserverParams(
         e_var_ix=1,
         f_var_ix=0,
+        min_amp=0.125,
         max_event_count=7,
         max_event_timestamps=4,
         nhood_radius=0.2,

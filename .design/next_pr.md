@@ -10,12 +10,16 @@ Oscillation-oriented observer bundle seam: decide and first implementation slice
 
 ## Scope
 
-Determine how recurring oscillation-oriented controls and readouts (`min_amp`, `max_event_count`, and readouts such as Schmitt up/down duration and duty) should be packaged through a shared seam versus family-local composition across event-observer families.
+Determine how recurring event-trigger-family controls (`min_amp`, `max_event_count`) and observer-family readouts (for example Schmitt `up duration`, `down duration`, and `duty`) should be packaged through a shared seam versus family-local composition across event-observer families.
 
 Resolved policy inputs for this PR target:
 
 - Schmitt duration readouts (`up duration`, `down duration`, `duty`) are core canonical Schmitt measurements.
 - Semantic config surfaces should expose `feature_var` whenever kernels consume both `eVarIx` and `fVarIx` semantics.
+- `max_event_count` is a canonical event-trigger-family limiter and early-stop control rather than merely a legacy compatibility field.
+- `min_amp` is a user-specified event gate on variation in `event_var`; current family differences are about how that variation is measured, not about its purpose.
+- The current event-triggering semantic configs now all expose `min_amp` and `max_event_count`; the remaining question is packaging, not whether those controls belong semantically.
+- `eps_dx` currently has no semantic-family use case and should remain compatibility-only unless a later audit finds one.
 
 Land the decision as either a first shared seam or an explicit kept-separate record with rationale, and update the relevant docs and planning notes to reflect it.
 
@@ -32,9 +36,9 @@ The solution-buffer audit is settled, K=2/K=3 shared helpers are live across can
 
 ## Acceptance Criteria
 
-- [ ] `min_amp`, `max_event_count`, and at least one candidate additional oscillation readout are surveyed across `threshold_crossing`, `schmitt_trigger`, `local_max`, and `normalized_neighborhood_return` families; similarities and differences are documented.
+- [x] `min_amp` and `max_event_count` are surveyed across the current event-triggering families, their live semantics and current adoption scope are documented, and at least one candidate additional family-local readout is surveyed alongside them.
 - [x] Canonical Schmitt readout direction is documented explicitly: `up duration`, `down duration`, and `duty` are core Schmitt outputs and are now exposed on canonical Schmitt schemas.
-- [x] Config-surface direction is documented explicitly: threshold/neighborhood config follow-through should expose `feature_var` where kernels use `fVarIx` semantics.
+- [x] Config-surface direction is documented explicitly: threshold, Schmitt, and neighborhood families that split trigger geometry from extrema/amplitude behavior expose `feature_var`.
 - [ ] A decision is recorded in `.design/reference/compatibility_boundary_audit.md`: either (a) a shared oscillation-bundle seam design with a named config object and at least one family adoption, or (b) an explicit keep-separate rationale explaining why family-local duplication is preferable.
 - [ ] If a shared seam is chosen: at least one event-observer family adopts it, a test covers the new config surface, and docs reflect the new preferred authoring pattern.
 - [ ] If keep-separate is chosen: `ideas.md` oscillation-bundle item is updated to reflect the decision, and the `compatibility_boundary_audit.md` bundle question is closed with rationale.

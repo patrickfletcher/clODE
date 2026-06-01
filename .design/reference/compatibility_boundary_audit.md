@@ -19,7 +19,7 @@ Update when: a compatibility alias is added, removed, deprecated, promoted to ca
 
 - `Observer.normalized_schmitt_trigger` keeps derivative-gate controls on the compatibility surface; those controls are no longer part of `SchmittTriggerConfig`.
 - Observer names in the `Observer` enum are canonical; compatibility is provided via parameter/config surfaces and constructor keyword adapters.
-- `ObserverParams` remains the broad compatibility bundle for observer settings.
+- `ObserverParams` remains the broad compatibility bundle for observer settings, including canonical event-trigger controls such as `max_event_count` and `min_amp`, plus compatibility-only fields such as `eps_dx` and `min_imi`.
 - `FeatureSimulator` constructor `observer_*` keyword arguments and `set_observer_parameters(...)` remain supported compatibility paths.
 - Flat root barrels and re-exports such as `clode.__init__`, `clode.features`, and the older top-level compatibility modules remain compatibility import surfaces unless a later audit explicitly promotes or deprecates them.
 
@@ -39,13 +39,15 @@ Update when: a compatibility alias is added, removed, deprecated, promoted to ca
 - `SchmittTriggerConfig` round-trips both semantic Schmitt variants, including `Observer.normalized_schmitt_trigger`, through `get_observer_configuration()` and `set_observer_configuration(...)`.
 - Schmitt state-machine duration outputs (`up duration`, `down duration`, `duty`) are considered core Schmitt measurements for canonical observer behavior.
 - Threshold, Schmitt, and neighborhood semantic configs now expose `feature_var` where their kernels split trigger geometry from extrema/amplitude semantics.
+- `max_event_count` is a canonical event-trigger-family limiter and early-stop control, even though it still passes through `ObserverParams` on compatibility paths.
+- `min_amp` should be documented as a user-specified gate on variation in `event_var`; it is now canonical across the current event-triggering semantic families, with one-pass and warmup-seeded families differing only in how they accumulate that variation.
+- `eps_dx` has no current semantic-family use case and remains compatibility-only pending a dedicated audit.
 
 ## Questions for follow-through
 
-- Should `ObserverParams` and constructor `observer_*` compatibility paths eventually receive a formal deprecation posture once family-specific config surfaces settle further?
-- Should `ObserverParams` and the `observer_*` keyword path stay lightly documented compatibility helpers, or should they get a tighter long-term support statement?
+- Should `ObserverParams` and the `observer_*` compatibility paths eventually receive either a formal deprecation posture or a tighter long-term support statement once family-specific config surfaces settle further?
 - When the package eventually audits flat compatibility barrels, which ones should remain public convenience surfaces and which should move toward retirement?
-- Does the current threshold-family reuse justify a shared oscillation-oriented bundle seam, or is the cleaner next step still to keep family-local config objects and duplication where needed?
+- Does the current mix of shared event-trigger controls and family-local readouts justify a shared seam, or is the cleaner next step still to keep family-local config objects and duplication where needed?
 
 ## Touchpoints
 

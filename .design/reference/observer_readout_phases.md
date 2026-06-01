@@ -7,7 +7,7 @@ Update when: rollout status changes or a previously open readout decision is clo
 ## Fast path
 
 - Phases 1-3 (baseline readout rollout) are landed.
-- Current active planning is the oscillation-oriented bundle seam in `.design/next_pr.md`.
+- Current active planning is the shared seam for recurring event-trigger controls plus family-local readouts in `.design/next_pr.md`.
 - No public family-level readout-selection dataclasses are currently live.
 - Historical phase detail and prior implementation checklists are archived in `.design/archived/observer_readout_cleanup_2026_05_31/observer_readout_phases.md`.
 
@@ -22,7 +22,7 @@ Update when: rollout status changes or a previously open readout decision is clo
 
 ## Remaining open decision set
 
-- Shared seam vs family-local duplication for oscillation-oriented controls/readouts.
+- Shared seam vs family-local duplication for recurring event-trigger controls plus oscillation-oriented readouts.
 - Whether the now-live canonical Schmitt duration outputs (`up duration`, `down duration`, `duty`) should stay family-local or later be folded into any shared oscillation bundle/readout seam.
 - Whether any future readout-selection surface is warranted by evidence.
 
