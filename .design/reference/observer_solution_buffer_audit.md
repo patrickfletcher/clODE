@@ -103,4 +103,4 @@ The K=2 and K=3 shared accepted-step history update helpers (`advanceAcceptedSte
 - Families choose whether the shared history carries event-variable-only samples or full `N_VAR`/`N_AUX` views.
 - Families retain full ownership of event semantics, warmup policy, and readout bundles.
 
-**Next planning target**: The oscillation-oriented bundle seam. See `next_pr.md` and `.design/ideas.md`.
+**Next planning target**: a build-specialized readout bundle/selectability proof on top of the now-standardized history and compensated-mean helpers. See `next_pr.md` and `.design/ideas.md`.

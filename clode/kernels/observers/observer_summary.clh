@@ -261,6 +261,7 @@ static inline void updateObserverState(realtype *ti, realtype xi[], realtype dxi
         );
     }
 #endif
+    //TODO: one could check for local maxima/minima in fVarIx and compute IMI and amplitude without events.
 }
 
 static inline void finalizeFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op, __global realtype *F, const int i, const int nPts) {

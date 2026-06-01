@@ -55,8 +55,19 @@ All semantic event observers now emit event timestamps plus observer-local summa
 
 ## Open policy decisions
 
-- Whether recurring event-trigger controls plus oscillation-oriented readouts should be factored through a shared config seam or remain family-local: active target in `.design/next_pr.md`.
-- Whether a family-level readout-selection surface should be introduced: an open packaging question; any such surface should not depend on historical family labeling.
+- Family-specific semantic config objects remain the preferred observer UX; a new cross-family "oscillation bundle" config seam is not the recommended next step.
+- Whether a build-specialized readout-selection surface should be introduced, and which family should adopt it first, is the active packaging question in `.design/next_pr.md`.
+
+## 2026-06 audit findings
+
+- Readout coverage is effectively maximal for the current canonical family semantics. Threshold and neighborhood-return already expose the full one-stream oscillation core, Schmitt adds the phase-state extras that its state machine uniquely defines, `local_max` already exposes the extremum-specific event streams plus IMI, and neighborhood-return's anchor/range outputs remain appropriately family-local.
+- The natural bundle inventory is now clear:
+	- event geometry: timestamp streams plus `event count`
+	- oscillation core: `period` or IMI, `amplitude`, and `n maxima` where a non-extremum inter-event interval exists
+	- trajectory summary: state and auxiliary max/min/mean plus slope extrema
+	- Schmitt phase-state: `up duration`, `down duration`, `duty`, and `active dip`
+	- family-local context: neighborhood anchor/range outputs and `local_max` event value streams
+- The strongest reuse opportunity is build-specialized bundle declaration or selection on the Python observer-definition side, analogous to `Observer.summary`. Kernel-side helper reuse should stay narrow: keep math primitives in `clODE_utilities.cl` and accepted-step history shifts in `observers.cl`, but leave array-heavy accumulation loops family-local unless explicit address-space-safe contracts are proven.
 
 ## Cross-family control semantics
 

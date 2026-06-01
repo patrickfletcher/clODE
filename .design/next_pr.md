@@ -6,49 +6,47 @@ Update when: the active target changes, the scope narrows or broadens, or the ac
 
 ## Title
 
-Oscillation-oriented observer bundle seam: decide and first implementation slice
+Observer readout bundle/selectability proof
 
 ## Scope
 
-Determine how recurring event-trigger-family controls (`min_amp`, `max_event_count`) and observer-family readouts (for example Schmitt `up duration`, `down duration`, and `duty`) should be packaged through a shared seam versus family-local composition across event-observer families.
+Define the first shared readout-bundle vocabulary for the current event observers, keep family-specific semantic config objects in place, and land a build-specialized selection proof on the threshold-family observers.
 
-Resolved policy inputs for this PR target:
+Current audit findings that shape this target:
 
-- Schmitt duration readouts (`up duration`, `down duration`, `duty`) are core canonical Schmitt measurements.
-- Semantic config surfaces should expose `feature_var` whenever kernels consume both `eVarIx` and `fVarIx` semantics.
-- `max_event_count` is a canonical event-trigger-family limiter and early-stop control rather than merely a legacy compatibility field.
-- `min_amp` is a user-specified event gate on variation in `event_var`; current family differences are about how that variation is measured, not about its purpose.
-- The current event-triggering semantic configs now all expose `min_amp` and `max_event_count`; the remaining question is packaging, not whether those controls belong semantically.
-- `eps_dx` currently has no semantic-family use case and should remain compatibility-only unless a later audit finds one.
+- The semantic event observers now have standardized kernel numerics and helper usage; the remaining work is packaging/selectability, not baseline mean/interpolation cleanup.
+- The family-defining readouts are already close to maximal: threshold and neighborhood-return cover the one-stream oscillation core, Schmitt owns the phase-state extras, and `local_max` owns the extremum-stream/IMI path.
+- The natural shared bundles are `event geometry`, `oscillation core`, and `trajectory summary`; Schmitt phase-state outputs and neighborhood/local-max extras should stay family-local for the first proof.
+- `min_amp` and `max_event_count` already have semantic homes on family-specific config objects, so the next reuse seam should be on readout declarations rather than on another cross-family config bundle.
 
-Land the decision as either a first shared seam or an explicit kept-separate record with rationale, and update the relevant docs and planning notes to reflect it.
+The proof target is: document the bundle inventory, choose the build-specialized selectability mechanism, and adopt it first on `Observer.threshold_crossing` plus `Observer.normalized_threshold_crossing` without changing their default public schemas.
 
 **Strictly out of scope:**
 
-- Observer-state or register-pressure cleanup (later pass)
-- New observer families beyond what the bundle decision requires
-- Compatibility-barrel retirement
-- Numerical evidence or publication work
+- More kernel time/mean/interpolation refactors
+- Observer-state or register-pressure cleanup
+- New observer families
+- A new cross-family semantic config object for recurring event-trigger controls
 
 ## Why Now
 
-The solution-buffer audit is settled, K=2/K=3 shared helpers are live across canonical event-observer families, and the `compatibility_boundary_audit.md` already surfaces the bundle question as an open follow-up. The decision about whether to share or separate the oscillation-oriented seam is what determines the authoring and docs story for all future observer additions.
+The helper-hardening pass is now landed: semantic event observers share K=3 history updates, compensated trajectory/auxiliary means, and family-consistent interpolation behavior. The readout audit also shows that the remaining ambiguity is not "which extra outputs are missing?" but "how should the existing outputs be grouped and selectively exposed without bloating every family?"
 
 ## Acceptance Criteria
 
-- [x] `min_amp` and `max_event_count` are surveyed across the current event-triggering families, their live semantics and current adoption scope are documented, and at least one candidate additional family-local readout is surveyed alongside them.
-- [x] Canonical Schmitt readout direction is documented explicitly: `up duration`, `down duration`, and `duty` are core Schmitt outputs and are now exposed on canonical Schmitt schemas.
-- [x] Config-surface direction is documented explicitly: threshold, Schmitt, and neighborhood families that split trigger geometry from extrema/amplitude behavior expose `feature_var`.
-- [ ] A decision is recorded in `.design/reference/compatibility_boundary_audit.md`: either (a) a shared oscillation-bundle seam design with a named config object and at least one family adoption, or (b) an explicit keep-separate rationale explaining why family-local duplication is preferable.
-- [ ] If a shared seam is chosen: at least one event-observer family adopts it, a test covers the new config surface, and docs reflect the new preferred authoring pattern.
-- [ ] If keep-separate is chosen: `ideas.md` oscillation-bundle item is updated to reflect the decision, and the `compatibility_boundary_audit.md` bundle question is closed with rationale.
-- [ ] `package_state.md` is updated to reflect whichever direction lands.
-- [ ] No regressions in `test/test_features.py`, `test/test_simulation_contracts.py`, or `test/kernel_components/`.
+- [ ] `.design/reference/observer_readout_audit.md` records the shared bundle inventory and the rationale for keeping family-specific semantic configs.
+- [ ] `.design/reference/compatibility_boundary_audit.md` records that a control-only oscillation-bundle config is not the preferred next step.
+- [ ] A build-specialized readout-selection surface exists for the threshold family with at least `event geometry`, `oscillation core`, and `trajectory summary` bundles.
+- [ ] `Observer.threshold_crossing` and `Observer.normalized_threshold_crossing` adopt the new bundle declarations without changing their default public feature schemas.
+- [ ] The family-local status of Schmitt phase-state outputs and neighborhood/local-max extras is documented explicitly.
+- [ ] `package_state.md`, `ideas.md`, and the relevant observer reference notes reflect the landed direction.
+- [ ] No regressions in `test/test_features.py`, `test/test_simulation_contracts.py`, `test/test_opencl_structs.py`, or `test/kernel_components/`.
 
 ## Key Refs
 
-- `.design/reference/observer_concept_audit.md` — deeper observer rationale and bundle design axes
-- `.design/reference/compatibility_boundary_audit.md` — current canonical/compatibility boundary and open bundle question
-- `.design/tmp/observer_threshold_2.clh` — Schmitt duration/duty prototype reference for canonical-surface integration work
-- `clode/observers/types.py`, `clode/simulation/features.py` — Python observer surface
-- `docs/feature_extraction.md`, `docs/observers.md` — user-facing observer docs
+- `.design/reference/observer_readout_audit.md` — current readout contract plus the 2026-06 audit findings
+- `.design/reference/observer_concept_audit.md` — deeper observer rationale and remaining design questions
+- `.design/reference/compatibility_boundary_audit.md` — canonical vs compatibility surface policy after the audit
+- `.design/reference/observer_solution_buffer_audit.md` — landed shared-history/helper contract
+- `clode/observers/_definitions.py`, `clode/observers/types.py`, `clode/simulation/features.py` — Python observer surface and schema definitions
+- `clode/kernels/observers/` — kernel-side family implementations

@@ -20,13 +20,15 @@ struct ObserverState_schmitt_trigger {
     // Trajectory statistics
     realtype xTrajectoryMax[N_VAR];
     realtype xTrajectoryMin[N_VAR];
-    realtype xTrajectoryMean[N_VAR];
+    realtype xTrajectoryIntegral[N_VAR];
+    realtype xTrajectoryIntegralCorrection[N_VAR];
     realtype dxTrajectoryMax[N_VAR];
     realtype dxTrajectoryMin[N_VAR];
     
     realtype auxTrajectoryMax[N_AUX];
     realtype auxTrajectoryMin[N_AUX];
-    realtype auxTrajectoryMean[N_AUX];
+    realtype auxTrajectoryIntegral[N_AUX];
+    realtype auxTrajectoryIntegralCorrection[N_AUX];
     
     // Period and maxima count statistics
     realtype period[3];  // max/min/mean
@@ -43,9 +45,11 @@ struct ObserverState_schmitt_trigger {
     realtype xUp;
     realtype xDown;
     realtype elapsedTotal;
+    realtype elapsedTotalCorrection;
     realtype tThisDown;
     realtype elapsedThisDown;
-    realtype fVarDownstateMean;
+    realtype fVarDownstateIntegral;
+    realtype fVarDownstateIntegralCorrection;
     realtype tLastEvent;
     realtype elapsedLastEvent;
     realtype tLastMax;
@@ -62,7 +66,6 @@ struct ObserverState_schmitt_trigger {
 typedef struct ObserverState_schmitt_trigger ObserverState;
 
 static inline void initializeObserverState(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op) {
-    (void)dxi;
     (void)auxi;
     od->tbuffer[2] = *ti;
     od->elapsedbuffer[2] = ZERO;
@@ -81,14 +84,16 @@ static inline void initializeObserverState(realtype *ti, realtype xi[], realtype
     for (int j = 0; j < N_VAR; ++j) {
         od->xTrajectoryMax[j] = -BIG_REAL;
         od->xTrajectoryMin[j] = BIG_REAL;
-        od->xTrajectoryMean[j] = ZERO;
+        od->xTrajectoryIntegral[j] = ZERO;
+        od->xTrajectoryIntegralCorrection[j] = ZERO;
         od->dxTrajectoryMax[j] = -BIG_REAL;
         od->dxTrajectoryMin[j] = BIG_REAL;
     }
     for (int j = 0; j < N_AUX; ++j) {
         od->auxTrajectoryMax[j] = -BIG_REAL;
         od->auxTrajectoryMin[j] = BIG_REAL;
-        od->auxTrajectoryMean[j] = ZERO;
+        od->auxTrajectoryIntegral[j] = ZERO;
+        od->auxTrajectoryIntegralCorrection[j] = ZERO;
     }
     
     // Initialize period and maxima statistics
@@ -125,9 +130,11 @@ static inline void initializeObserverState(realtype *ti, realtype xi[], realtype
     od->xUp = ZERO;
     od->xDown = ZERO;
     od->elapsedTotal = ZERO;
+    od->elapsedTotalCorrection = ZERO;
     od->tThisDown = ZERO;
     od->elapsedThisDown = ZERO;
-    od->fVarDownstateMean = ZERO;
+    od->fVarDownstateIntegral = ZERO;
+    od->fVarDownstateIntegralCorrection = ZERO;
     od->tLastEvent = ZERO;
     od->elapsedLastEvent = ZERO;
     od->tLastMax = ZERO;
@@ -181,7 +188,6 @@ static inline bool eventFunction(realtype *ti, realtype xi[], realtype dxi[], re
 
 static inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op) {
     (void)ti;
-    (void)xi;
     (void)dxi;
     (void)auxi;
 
@@ -202,6 +208,14 @@ static inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dx
         );
         od->tThisDown = tThisDown;
         od->elapsedThisDown = elapsedThisDown;
+        od->fVarDownstateIntegral = ZERO;
+        od->fVarDownstateIntegralCorrection = ZERO;
+        compensatedIntegrateConstant(
+            &od->fVarDownstateIntegral,
+            &od->fVarDownstateIntegralCorrection,
+            od->elapsedbuffer[2] - elapsedThisDown,
+            xi[op->fVarIx]
+        );
         od->inUpstate = 0;
 #if N_STORE_EVENTS > 0
         if (od->eventcount > 0 && od->eventcount <= N_STORE_EVENTS)
@@ -264,7 +278,11 @@ static inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dx
         od->duty[1] = fmin(thisDuty, od->duty[1]);
         runningMean(&od->duty[2], thisDuty, nPeriods);
 
-        realtype thisActiveDip = od->fVarDownstateMean - od->xLastMin;
+        realtype thisActiveDip = meanFromCompensatedIntegral(
+            od->fVarDownstateIntegral,
+            od->fVarDownstateIntegralCorrection,
+            thisDownDuration
+        ) - od->xLastMin;
         od->activeDip[0] = fmax(thisActiveDip, od->activeDip[0]);
         od->activeDip[1] = fmin(thisActiveDip, od->activeDip[1]);
         runningMean(&od->activeDip[2], thisActiveDip, nPeriods);
@@ -273,46 +291,51 @@ static inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dx
     od->tLastEvent = tThisEvent;
     od->elapsedLastEvent = elapsedThisEvent;
     od->thisNMaxima = 0;  // Reset maxima counter for next inter-event interval
-    od->fVarDownstateMean = xi[op->fVarIx];
 
     return od->eventcount == op->maxEventCount;
 }
 
 static inline void updateObserverState(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], const realtype stepDt, ObserverState *od, __constant struct ObserverRuntimeSettings *op) {
-    (void)op;
     ++od->stepcount;
-    od->elapsedTotal += stepDt;
+    compensatedIntegrateConstant(
+        &od->elapsedTotal,
+        &od->elapsedTotalCorrection,
+        stepDt,
+        ONE
+    );
+    const realtype elapsedTotal = compensatedSumValue(
+        od->elapsedTotal,
+        od->elapsedTotalCorrection
+    );
     
     // Advance 3-sample buffers (time, elapsed, state, slope for all variables)
-    od->tbuffer[0] = od->tbuffer[1];
-    od->tbuffer[1] = od->tbuffer[2];
-    od->tbuffer[2] = *ti;
-    
-    od->elapsedbuffer[0] = od->elapsedbuffer[1];
-    od->elapsedbuffer[1] = od->elapsedbuffer[2];
-    od->elapsedbuffer[2] = od->elapsedTotal;
-    
-    for (int j = 0; j < N_VAR; ++j) {
-        od->xbuffer[j * 3 + 0] = od->xbuffer[j * 3 + 1];
-        od->xbuffer[j * 3 + 1] = od->xbuffer[j * 3 + 2];
-        od->xbuffer[j * 3 + 2] = xi[j];
-        od->dxbuffer[j * 3 + 0] = od->dxbuffer[j * 3 + 1];
-        od->dxbuffer[j * 3 + 1] = od->dxbuffer[j * 3 + 2];
-        od->dxbuffer[j * 3 + 2] = dxi[j];
-    }
+    advanceAcceptedStepHistory3(od->tbuffer, *ti);
+    advanceAcceptedStepHistory3(od->elapsedbuffer, elapsedTotal);
+    advanceAcceptedStepHistory3ByVariable(od->xbuffer, xi, N_VAR);
+    advanceAcceptedStepHistory3ByVariable(od->dxbuffer, dxi, N_VAR);
     
     // Update trajectory statistics
     for (int j = 0; j < N_VAR; ++j) {
         od->xTrajectoryMax[j] = fmax(xi[j], od->xTrajectoryMax[j]);
         od->xTrajectoryMin[j] = fmin(xi[j], od->xTrajectoryMin[j]);
-        od->xTrajectoryMean[j] = runningMeanTime(od->xTrajectoryMean[j], xi[j], stepDt, od->elapsedTotal);
+        compensatedIntegrateConstant(
+            &od->xTrajectoryIntegral[j],
+            &od->xTrajectoryIntegralCorrection[j],
+            stepDt,
+            xi[j]
+        );
         od->dxTrajectoryMax[j] = fmax(dxi[j], od->dxTrajectoryMax[j]);
         od->dxTrajectoryMin[j] = fmin(dxi[j], od->dxTrajectoryMin[j]);
     }
     for (int j = 0; j < N_AUX; ++j) {
         od->auxTrajectoryMax[j] = fmax(auxi[j], od->auxTrajectoryMax[j]);
         od->auxTrajectoryMin[j] = fmin(auxi[j], od->auxTrajectoryMin[j]);
-        od->auxTrajectoryMean[j] = runningMeanTime(od->auxTrajectoryMean[j], auxi[j], stepDt, od->elapsedTotal);
+        compensatedIntegrateConstant(
+            &od->auxTrajectoryIntegral[j],
+            &od->auxTrajectoryIntegralCorrection[j],
+            stepDt,
+            auxi[j]
+        );
     }
     
     // Update global x extent for minXamp check
@@ -355,17 +378,13 @@ static inline void updateObserverState(realtype *ti, realtype xi[], realtype dxi
         localMinimumFromThreeSamples(thisTbuffer, thisXbuffer, &od->tLastMin, &od->xLastMin);
     }
 
-    if (!od->inUpstate) {
-        realtype elapsedDownTime = od->elapsedTotal - od->elapsedThisDown;
-        if (elapsedDownTime > ZERO) {
-            od->fVarDownstateMean = runningMeanTime(
-                od->fVarDownstateMean,
-                xi[op->fVarIx],
-                stepDt,
-                elapsedDownTime
-            );
-        }
-    }
+    if (!od->inUpstate)
+        compensatedIntegrateConstant(
+            &od->fVarDownstateIntegral,
+            &od->fVarDownstateIntegralCorrection,
+            stepDt,
+            xi[op->fVarIx]
+        );
 }
 
 static inline void finalizeFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op, __global realtype *F, int i, int nPts) {
@@ -374,6 +393,11 @@ static inline void finalizeFeatures(realtype *ti, realtype xi[], realtype dxi[],
     (void)dxi;
     (void)auxi;
     (void)op;
+
+    const realtype elapsedTotal = compensatedSumValue(
+        od->elapsedTotal,
+        od->elapsedTotalCorrection
+    );
 
     int ix = 0;
 #if N_STORE_EVENTS > 0
@@ -419,7 +443,11 @@ static inline void finalizeFeatures(realtype *ti, realtype xi[], realtype dxi[],
     for (int j = 0; j < N_VAR; ++j) {
         F[ix++ * nPts + i] = od->xTrajectoryMax[j];
         F[ix++ * nPts + i] = od->xTrajectoryMin[j];
-        F[ix++ * nPts + i] = od->xTrajectoryMean[j];
+        F[ix++ * nPts + i] = meanFromCompensatedIntegral(
+            od->xTrajectoryIntegral[j],
+            od->xTrajectoryIntegralCorrection[j],
+            elapsedTotal
+        );
         F[ix++ * nPts + i] = od->dxTrajectoryMax[j];
         F[ix++ * nPts + i] = od->dxTrajectoryMin[j];
     }
@@ -428,7 +456,11 @@ static inline void finalizeFeatures(realtype *ti, realtype xi[], realtype dxi[],
     for (int j = 0; j < N_AUX; ++j) {
         F[ix++ * nPts + i] = od->auxTrajectoryMax[j];
         F[ix++ * nPts + i] = od->auxTrajectoryMin[j];
-        F[ix++ * nPts + i] = od->auxTrajectoryMean[j];
+        F[ix++ * nPts + i] = meanFromCompensatedIntegral(
+            od->auxTrajectoryIntegral[j],
+            od->auxTrajectoryIntegralCorrection[j],
+            elapsedTotal
+        );
     }
 }
 

@@ -42,12 +42,13 @@ Update when: a compatibility alias is added, removed, deprecated, promoted to ca
 - `max_event_count` is a canonical event-trigger-family limiter and early-stop control, even though it still passes through `ObserverParams` on compatibility paths.
 - `min_amp` should be documented as a user-specified gate on variation in `event_var`; it is now canonical across the current event-triggering semantic families, with one-pass and warmup-seeded families differing only in how they accumulate that variation.
 - `eps_dx` has no current semantic-family use case and remains compatibility-only pending a dedicated audit.
+- The readout/kernel audit did not justify a new cross-family "oscillation bundle" config object. Keep family-specific semantic config objects, and treat future sharing as build-specialized readout bundle declarations or selectors instead.
 
 ## Questions for follow-through
 
 - Should `ObserverParams` and the `observer_*` compatibility paths eventually receive either a formal deprecation posture or a tighter long-term support statement once family-specific config surfaces settle further?
 - When the package eventually audits flat compatibility barrels, which ones should remain public convenience surfaces and which should move toward retirement?
-- Does the current mix of shared event-trigger controls and family-local readouts justify a shared seam, or is the cleaner next step still to keep family-local config objects and duplication where needed?
+- How should build-specialized readout bundle declarations or selectors surface without re-expanding `ObserverParams` or the `observer_*` compatibility paths?
 
 ## Touchpoints
 
