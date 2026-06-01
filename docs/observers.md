@@ -46,7 +46,7 @@ Threshold crossing and Schmitt triggering stay separate user-facing concepts eve
 ## Choosing an extremum or neighborhood workflow
 
 - `clode.Observer.local_max`: canonical maxima-oriented workflow with IMI, amplitude, all-state summaries, and separate local-maximum/local-minimum event streams.
-- `clode.Observer.normalized_neighborhood_return`: lean two-pass normalized neighborhood-return detector. Warmup fixes the normalization range, the live pass anchors on the first sampled point where `event_var` drops below `anchor_threshold`, and the observer stores linearly refined neighborhood-exit times plus event count.
+- `clode.Observer.normalized_neighborhood_return`: lean two-pass normalized neighborhood-return detector. Warmup fixes the normalization range, the live pass anchors on the first sampled point where `event_var` drops below `anchor_threshold`, and the observer stores linearly refined neighborhood-exit times plus event count, period/maxima/amplitude aggregates, and per-variable anchor/range fields.
 
 ## Observer parameters
 
@@ -60,6 +60,7 @@ integrator = clode.FeatureSimulator(
     observer=clode.Observer.normalized_threshold_crossing,
     observer_configuration=clode.ThresholdCrossingConfig(
         event_var="x",
+        feature_var="x",
         threshold=0.75,
         direction=clode.EventDirection.rising,
         min_amp=0.1,
@@ -67,6 +68,8 @@ integrator = clode.FeatureSimulator(
     ),
 )
 ```
+
+`event_var` selects the threshold geometry and `min_amp` gate for the threshold families. `feature_var` selects the extrema/amplitude channel, which keeps threshold and Schmitt aligned when you want one state variable to trigger events and another to supply oscillation readouts.
 
 Use `clode.SchmittTriggerConfig` for the semantic Schmitt families:
 
@@ -105,6 +108,7 @@ Use `clode.NeighborhoodReturnConfig` with `clode.Observer.normalized_neighborhoo
 integrator.set_observer_configuration(
     clode.NeighborhoodReturnConfig(
         event_var="x",
+        feature_var="x",
         anchor_threshold=0.25,
         radius=0.15,
         max_event_timestamps=16,
@@ -113,7 +117,7 @@ integrator.set_observer_configuration(
 )
 ```
 
-`anchor_threshold` picks the falling `event_var` section that latches the anchor point `x0`, while `radius` sets the size of the normalized full-state neighborhood around that anchor. This can be a good fit when a one-variable threshold crossing is too ambiguous to identify one recurrence cleanly. On a simple limit cycle it behaves like a light-weight return-map trigger around one anchored point on the orbit; on a more complex or multi-lobed cycle it can still distinguish nearby passes because the exit test uses the full normalized state rather than only the scalar `event_var`.
+`anchor_threshold` picks the falling `event_var` section that latches the anchor point `x0`, while `radius` sets the size of the normalized full-state neighborhood around that anchor. `feature_var` selects the extrema/amplitude channel for the neighborhood observer; leave it equal to `event_var` for one-channel behavior, or point it at another state variable when the return trigger and oscillation readouts should differ. This can be a good fit when a one-variable threshold crossing is too ambiguous to identify one recurrence cleanly. On a simple limit cycle it behaves like a light-weight return-map trigger around one anchored point on the orbit; on a more complex or multi-lobed cycle it can still distinguish nearby passes because the exit test uses the full normalized state rather than only the scalar `event_var`.
 
 When you call `set_observer_configuration(...)` with one of the shared config classes, pass `observer=` whenever you are switching families or when the simulator was not already constructed with the desired observer. The config class alone does not determine absolute versus warmup-derived interpretation.
 
@@ -183,7 +187,7 @@ The following table shows which readouts are available for each observer family:
 - **Event timestamps**: Refined to sub-timestep precision with interpolation.
 - **Event count**: Total number of events detected during integration. Always available for event-detector families; never available for `summary`.
 - **Period**: Time between consecutive events. Meaning varies by family (inter-maxima interval for `local_max`, inter-exit time for `normalized_neighborhood_return`, etc.). Accuracy depends on event-detection strategy and oscillation regularity.
-- **Amplitude**: Measured as `local_max_value - last_local_min_value` on each family's extrema-tracking channel. Schmitt, `local_max`, and neighborhood-return use `feature_var`; threshold-crossing families currently use the event channel.
+- **Amplitude**: Measured as `local_max_value - last_local_min_value` on each family's extrema-tracking channel. Threshold, Schmitt, and neighborhood-return use `feature_var`; `local_max` uses its one resolved extrema channel.
 - **Peak count**: Number of local maxima detected between consecutive events. Only available for observers that track local extrema.
 - **Schmitt-specific readouts**: Semantic Schmitt families now expose `up duration`, `down duration`, `duty`, and `active dip` in addition to transition times and event counts. `active dip` is the mean feature-channel value during the down state minus the last local minimum.
 - **Trajectory summary statistics**: Observed extrema (`max`, `min`) and time-integrated mean for each state variable and auxiliary.
@@ -192,7 +196,7 @@ The following table shows which readouts are available for each observer family:
 
 - `threshold_crossing`, `normalized_threshold_crossing`: One event stream plus period/maxima/amplitude aggregates and trajectory summary statistics.
 - `schmitt_trigger`, `normalized_schmitt_trigger`: Up/down transition times plus period/maxima/duration/duty/active-dip aggregates and trajectory summary statistics.
-- `normalized_neighborhood_return`: Neighborhood-exit times, count, plus trajectory summary statistics.
+- `normalized_neighborhood_return`: Neighborhood-exit times, count, period/maxima/amplitude aggregates, sampled anchor/range fields, plus trajectory summary statistics.
 - `summary`: Trajectory statistics (extrema and means) without event detection.
 
 ## Reading observer output
@@ -204,7 +208,7 @@ print(observer_output.get_var_mean("period"))
 print(observer_output.get_event_data("up", type="time"))
 ```
 
-The available names depend on the selected observer. Threshold-crossing families expose one `event` stream with `event time {index}` plus count. `clode.Observer.local_max` exposes two extrema streams (`localmax time/value` and `localmin time/value`) plus event count and summary readouts. `clode.Observer.schmitt_trigger` and `clode.Observer.normalized_schmitt_trigger` expose separate `up transition` and `down transition` streams plus event count, period/maxima aggregates, Schmitt duration/duty readouts, the Schmitt-local `active dip` readout, and amplitude. `clode.Observer.normalized_neighborhood_return` exposes one `event` stream of interpolated normalized-ball exit times plus an event count.
+The available names depend on the selected observer. Threshold-crossing families expose one `event` stream with `event time {index}` plus event count, period/maxima/amplitude aggregates, and trajectory summaries. `clode.Observer.local_max` exposes two extrema streams (`localmax time/value` and `localmin time/value`) plus event count and summary readouts. `clode.Observer.schmitt_trigger` and `clode.Observer.normalized_schmitt_trigger` expose separate `up transition` and `down transition` streams plus event count, period/maxima aggregates, Schmitt duration/duty readouts, the Schmitt-local `active dip` readout, and amplitude. `clode.Observer.normalized_neighborhood_return` exposes one `event` stream of interpolated normalized-ball exit times plus event count, period/maxima/amplitude aggregates, and per-variable `{var}0`/`range {var}` fields.
 
 Trajectory-summary outputs use model variable names directly (for example `max v`, `min v`, `max dv/dt`). `clode.Observer.normalized_neighborhood_return` additionally emits per-variable center and scale fields as `{var}0` and `range {var}` (for example `v0`, `range v`).
 

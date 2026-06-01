@@ -11,12 +11,12 @@ clODE includes seven observer families, each optimized for a different workflow.
 | Your Question | Best Observer | Configuration | Output |
 | --- | --- | --- | --- |
 | What are the min/max/mean of state variables or their time derivatives? | `Observer.summary` | `SummaryObserverSelection` (optional) | Summary statistics, no event detection |
-| When do I cross a fixed threshold (e.g., voltage = 0)? | `Observer.threshold_crossing` | `ThresholdCrossingConfig` with absolute threshold | Event times, event count |
-| When do I cross a threshold _relative to my amplitude range_? | `Observer.normalized_threshold_crossing` | `ThresholdCrossingConfig` with fractional threshold | Event times (warmup-scaled), event count |
-| When do I transition across two state boundaries (hysteresis)? | `Observer.schmitt_trigger` | `SchmittTriggerConfig` with up/down thresholds | Up/down transition times, event count |
-| When do I transition with hysteresis _relative to amplitude_? | `Observer.normalized_schmitt_trigger` | `SchmittTriggerConfig` (warmup-scaled) | Up/down transition times (warmup-scaled), event count |
+| When do I cross a fixed threshold (e.g., voltage = 0)? | `Observer.threshold_crossing` | `ThresholdCrossingConfig` with absolute threshold | Event times, event count, period/peak-count/amplitude aggregates |
+| When do I cross a threshold _relative to my amplitude range_? | `Observer.normalized_threshold_crossing` | `ThresholdCrossingConfig` with fractional threshold | Event times (warmup-scaled), event count, period/peak-count/amplitude aggregates |
+| When do I transition across two state boundaries (hysteresis)? | `Observer.schmitt_trigger` | `SchmittTriggerConfig` with up/down thresholds | Up/down transition times, event count, period/peak-count/duration/duty/amplitude aggregates |
+| When do I transition with hysteresis _relative to amplitude_? | `Observer.normalized_schmitt_trigger` | `SchmittTriggerConfig` (warmup-scaled) | Up/down transition times (warmup-scaled), event count, period/peak-count/duration/duty/amplitude aggregates |
 | When do I reach local maxima or minima? | `Observer.local_max` | `LocalMaximumConfig` | Max/min times and values, IMI, amplitude, trajectory summaries |
-| When do I return to a sampled neighborhood on a limit cycle? | `Observer.normalized_neighborhood_return` | `NeighborhoodReturnConfig` | Exit times (neighborhood-exit), event count, sampled anchor state |
+| When do I return to a sampled neighborhood on a limit cycle? | `Observer.normalized_neighborhood_return` | `NeighborhoodReturnConfig` | Exit times, event count, period/peak-count/amplitude aggregates, sampled anchor state |
 
 Use `get_feature_names()` on a simulator or the returned `ObserverOutput` to see all available feature names for your chosen observer.
 
@@ -28,14 +28,13 @@ Each observer family has a preferred semantic configuration class. Pass it to th
 
 Use `ThresholdCrossingConfig` for either `threshold_crossing` family:
 
-Use `ThresholdCrossingConfig` for either `threshold_crossing` family:
-
 ```python
 simulator = clode.FeatureSimulator(
     ...,
     observer=clode.Observer.normalized_threshold_crossing,
     observer_configuration=clode.ThresholdCrossingConfig(
         event_var="x",
+        feature_var="x",
         threshold=0.75,  # fraction of warmup amplitude for normalized_threshold_crossing
         direction=clode.EventDirection.rising,
         max_event_timestamps=16,
@@ -45,6 +44,8 @@ simulator = clode.FeatureSimulator(
 
 - `Observer.threshold_crossing`: `threshold` is an absolute value in state-variable units.
 - `Observer.normalized_threshold_crossing`: `threshold` is a fraction of the warmup-pass amplitude of `event_var`.
+
+`event_var` chooses the threshold geometry and `min_amp` gate for the threshold families. `feature_var` chooses the extrema/amplitude channel, so threshold and Schmitt now share the same trigger-versus-measurement split when you want event detection on one state variable and oscillation readouts on another.
 
 ### Schmitt-Trigger Observers
 
@@ -87,6 +88,7 @@ Use `NeighborhoodReturnConfig`:
 simulator.set_observer_configuration(
     clode.NeighborhoodReturnConfig(
         event_var="x",
+        feature_var="x",
         anchor_threshold=0.25,
         radius=0.15,
         max_event_timestamps=16,
@@ -94,6 +96,8 @@ simulator.set_observer_configuration(
     observer=clode.Observer.normalized_neighborhood_return,
 )
 ```
+
+`anchor_threshold` still picks the falling `event_var` section that latches the sampled anchor. `feature_var` selects the extrema/amplitude channel for neighborhood-return readouts; keep it aligned with `event_var` for one-channel behavior, or point it at another state variable when the return trigger and the measured oscillation should differ.
 
 ### Summary Observer (Optional Config)
 

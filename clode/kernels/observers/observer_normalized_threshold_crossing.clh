@@ -1,7 +1,7 @@
 // Threshold-based event detection with one warmup-derived normalized threshold
-// in x[eVarIx]. This keeps the same lean timestamp-plus-count readout as
-// threshold_crossing while deriving the concrete threshold from the warmup
-// amplitude observed on the event variable.
+// in x[eVarIx]. This keeps the same one-stream threshold geometry as
+// threshold_crossing while measuring extrema-derived readouts on x[fVarIx]
+// and deriving the concrete threshold from the warmup amplitude of x[eVarIx].
 
 #ifndef OBSERVER_NORMALIZED_THRESHOLD_CROSSING_H
 #define OBSERVER_NORMALIZED_THRESHOLD_CROSSING_H
@@ -250,17 +250,17 @@ static inline void updateObserverState(realtype *ti, realtype xi[], realtype dxi
         od->auxTrajectoryMean[j] = runningMeanTime(od->auxTrajectoryMean[j], auxi[j], stepDt, od->elapsedTotal);
     }
     
-    // Track local extrema for maxima counting
+    // Track local extrema for maxima counting and amplitude on the feature channel.
     if (od->stepcount < 2)
         return;
     
-    // Check for local maximum in monitored variable
-    if (od->dxbuffer[op->eVarIx * 3 + 1] > 0.0 && od->dxbuffer[op->eVarIx * 3 + 2] < 0.0) {
+    // Check for local maximum in the configured feature variable.
+    if (od->dxbuffer[op->fVarIx * 3 + 1] > 0.0 && od->dxbuffer[op->fVarIx * 3 + 2] < 0.0) {
         realtype thisTbuffer[3];
         realtype thisXbuffer[3];
         for (int j = 0; j < 3; ++j) {
             thisTbuffer[j] = od->tbuffer[j];
-            thisXbuffer[j] = od->xbuffer[op->eVarIx * 3 + j];
+            thisXbuffer[j] = od->xbuffer[op->fVarIx * 3 + j];
         }
         realtype xThisMax;
         localMaximumFromThreeSamples(thisTbuffer, thisXbuffer, &od->tLastMax, &xThisMax);
@@ -275,13 +275,13 @@ static inline void updateObserverState(realtype *ti, realtype xi[], realtype dxi
         }
     }
     
-    // Check for local minimum in monitored variable
-    if (od->dxbuffer[op->eVarIx * 3 + 1] < 0.0 && od->dxbuffer[op->eVarIx * 3 + 2] > 0.0) {
+    // Check for local minimum in the configured feature variable.
+    if (od->dxbuffer[op->fVarIx * 3 + 1] < 0.0 && od->dxbuffer[op->fVarIx * 3 + 2] > 0.0) {
         realtype thisTbuffer[3];
         realtype thisXbuffer[3];
         for (int j = 0; j < 3; ++j) {
             thisTbuffer[j] = od->tbuffer[j];
-            thisXbuffer[j] = od->xbuffer[op->eVarIx * 3 + j];
+            thisXbuffer[j] = od->xbuffer[op->fVarIx * 3 + j];
         }
         localMinimumFromThreeSamples(thisTbuffer, thisXbuffer, &od->tLastMin, &od->xLastMin);
     }

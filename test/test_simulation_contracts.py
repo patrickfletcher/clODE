@@ -553,6 +553,7 @@ def test_feature_simulator_threshold_crossing_configuration_round_trips() -> Non
     )
     config = clode.ThresholdCrossingConfig(
         event_var="y",
+        feature_var="x",
         threshold=0.75,
         direction=clode.EventDirection.falling,
         min_amp=0.125,
@@ -568,6 +569,7 @@ def test_feature_simulator_threshold_crossing_configuration_round_trips() -> Non
     assert simulator.get_observer_configuration() == config
     assert simulator.get_observer_parameters() == clode.ObserverParams(
         e_var_ix=1,
+        f_var_ix=0,
         max_event_count=7,
         event_direction=clode.EventDirection.falling,
         max_event_timestamps=2,
@@ -580,6 +582,7 @@ def test_feature_simulator_threshold_crossing_configuration_round_trips() -> Non
 def test_feature_simulator_normalized_threshold_crossing_configuration_round_trips() -> None:
     config = clode.ThresholdCrossingConfig(
         event_var="y",
+        feature_var="x",
         threshold=0.6,
         direction=clode.EventDirection.falling,
         min_amp=0.125,
@@ -606,6 +609,7 @@ def test_feature_simulator_normalized_threshold_crossing_configuration_round_tri
     assert simulator.get_observer_configuration() == config
     assert simulator.get_observer_parameters() == clode.ObserverParams(
         e_var_ix=1,
+        f_var_ix=0,
         max_event_count=7,
         event_direction=clode.EventDirection.falling,
         max_event_timestamps=4,
@@ -827,6 +831,7 @@ def test_feature_simulator_local_maximum_configuration_round_trips() -> None:
 def test_feature_simulator_neighborhood_return_configuration_round_trips() -> None:
     config = clode.NeighborhoodReturnConfig(
         event_var="y",
+        feature_var="x",
         anchor_threshold=0.35,
         radius=0.2,
         max_event_count=7,
@@ -851,6 +856,7 @@ def test_feature_simulator_neighborhood_return_configuration_round_trips() -> No
     assert simulator.get_observer_configuration() == config
     assert simulator.get_observer_parameters() == clode.ObserverParams(
         e_var_ix=1,
+        f_var_ix=0,
         max_event_count=7,
         max_event_timestamps=4,
         nhood_radius=0.2,

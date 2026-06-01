@@ -230,6 +230,86 @@ def test_threshold_crossing_exposes_event_times_and_event_count() -> None:
     assert int(output.get_var_count("event")) == 2
 
 
+@pytest.mark.parametrize(
+    ("observer", "threshold"),
+    [
+        (clode.Observer.threshold_crossing, 0.5),
+        (clode.Observer.normalized_threshold_crossing, 0.75),
+    ],
+)
+def test_threshold_crossing_measures_amplitude_on_feature_var(
+    observer: clode.Observer,
+    threshold: float,
+) -> None:
+    output_on_event_var = clode.FeatureSimulator(
+        rhs_equation=dual_sine_curve,
+        variables={"x": 0.0, "y": 0.0},
+        parameters={"dilation": 1.0},
+        observer=observer,
+        observer_configuration=clode.ThresholdCrossingConfig(
+            event_var="x",
+            feature_var="x",
+            threshold=threshold,
+            direction=clode.EventDirection.rising,
+            min_amp=0.5,
+            max_event_count=8,
+            max_event_timestamps=3,
+        ),
+        stepper=clode.Stepper.rk4,
+        dtmax=0.05,
+        dt=0.05,
+        t_span=(0.0, 4 * pi),
+        **device_kwargs_for_tests(),
+    ).features()
+    output_on_feature_var = clode.FeatureSimulator(
+        rhs_equation=dual_sine_curve,
+        variables={"x": 0.0, "y": 0.0},
+        parameters={"dilation": 1.0},
+        observer=observer,
+        observer_configuration=clode.ThresholdCrossingConfig(
+            event_var="x",
+            feature_var="y",
+            threshold=threshold,
+            direction=clode.EventDirection.rising,
+            min_amp=0.5,
+            max_event_count=8,
+            max_event_timestamps=3,
+        ),
+        stepper=clode.Stepper.rk4,
+        dtmax=0.05,
+        dt=0.05,
+        t_span=(0.0, 4 * pi),
+        **device_kwargs_for_tests(),
+    ).features()
+
+    assert output_on_event_var is not None
+    assert output_on_feature_var is not None
+    np.testing.assert_allclose(
+        np.asarray(output_on_event_var.get_timestamps("event"), dtype=np.float64),
+        np.asarray(output_on_feature_var.get_timestamps("event"), dtype=np.float64),
+        atol=1e-3,
+        rtol=0.0,
+    )
+    np.testing.assert_allclose(
+        output_on_event_var.get_var_mean("period"),
+        output_on_feature_var.get_var_mean("period"),
+        atol=1e-3,
+        rtol=0.0,
+    )
+    np.testing.assert_allclose(
+        output_on_event_var.get_var_mean("amplitude"),
+        2.0,
+        atol=1e-1,
+        rtol=0.0,
+    )
+    np.testing.assert_allclose(
+        output_on_feature_var.get_var_mean("amplitude"),
+        4.0,
+        atol=1e-1,
+        rtol=0.0,
+    )
+
+
 def test_absolute_schmitt_trigger_uses_absolute_thresholds() -> None:
     feature_simulator = clode.FeatureSimulator(
         rhs_equation=sine_curve,
@@ -341,6 +421,70 @@ def test_schmitt_trigger_measures_amplitude_on_feature_var() -> None:
 
     assert output is not None
     np.testing.assert_allclose(output.get_var_mean("amplitude"), 4.0, atol=1e-1, rtol=0.0)
+
+
+def test_neighborhood_return_measures_amplitude_on_feature_var() -> None:
+    output_on_event_var = clode.FeatureSimulator(
+        rhs_equation=dual_sine_curve,
+        variables={"x": 0.0, "y": 0.0},
+        parameters={"dilation": 1.0},
+        observer=clode.Observer.normalized_neighborhood_return,
+        observer_configuration=clode.NeighborhoodReturnConfig(
+            event_var="x",
+            feature_var="x",
+            anchor_threshold=0.25,
+            radius=0.25,
+            max_event_count=8,
+            max_event_timestamps=3,
+        ),
+        stepper=clode.Stepper.rk4,
+        dtmax=0.05,
+        dt=0.05,
+        t_span=(0.0, 8 * pi),
+        **device_kwargs_for_tests(),
+    ).features()
+    output_on_feature_var = clode.FeatureSimulator(
+        rhs_equation=dual_sine_curve,
+        variables={"x": 0.0, "y": 0.0},
+        parameters={"dilation": 1.0},
+        observer=clode.Observer.normalized_neighborhood_return,
+        observer_configuration=clode.NeighborhoodReturnConfig(
+            event_var="x",
+            feature_var="y",
+            anchor_threshold=0.25,
+            radius=0.25,
+            max_event_count=8,
+            max_event_timestamps=3,
+        ),
+        stepper=clode.Stepper.rk4,
+        dtmax=0.05,
+        dt=0.05,
+        t_span=(0.0, 8 * pi),
+        **device_kwargs_for_tests(),
+    ).features()
+
+    assert output_on_event_var is not None
+    assert output_on_feature_var is not None
+    assert int(output_on_event_var.get_var_count("event")) == 8
+    assert int(output_on_feature_var.get_var_count("event")) == 8
+    np.testing.assert_allclose(
+        output_on_event_var.get_var_mean("period"),
+        output_on_feature_var.get_var_mean("period"),
+        atol=1e-3,
+        rtol=0.0,
+    )
+    np.testing.assert_allclose(
+        output_on_event_var.get_var_mean("amplitude"),
+        2.0,
+        atol=1e-1,
+        rtol=0.0,
+    )
+    np.testing.assert_allclose(
+        output_on_feature_var.get_var_mean("amplitude"),
+        4.0,
+        atol=1e-1,
+        rtol=0.0,
+    )
 
 
 def test_local_max_coarse_timestamps_use_three_sample_refinement() -> None:

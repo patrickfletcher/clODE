@@ -36,7 +36,7 @@ All semantic event observers now emit event timestamps plus observer-local summa
 
 - For threshold/Schmitt/neighborhood families, `period` names mean inter-event interval; interpretation is family-specific by trigger geometry.
 - For `local_max`, inter-event interval is surfaced as IMI (`max IMI`, `min IMI`, `mean IMI`) in the current schema.
-- `amplitude` is tracked from extrema bookkeeping in the family-specific feature channel. Schmitt, `local_max`, and neighborhood-return use `f_var_ix`; threshold-crossing families currently track extrema on the event channel.
+- `amplitude` is tracked from extrema bookkeeping in the family-specific feature channel. Threshold, Schmitt, and neighborhood-return use `f_var_ix`; `local_max` uses its one resolved extrema channel.
 - `n maxima` is present for non-extremum event families and intentionally absent for `local_max`.
 - Schmitt-only state-machine extras now include `up duration`, `down duration`, `duty`, and the family-local `active dip` readout.
 
@@ -51,7 +51,7 @@ All semantic event observers now emit event timestamps plus observer-local summa
 ## Resolved policy decisions
 
 - Schmitt-specific duration outputs (`up duration`, `down duration`, `duty`) are core Schmitt measurements and are now exposed on canonical Schmitt readout surfaces.
-- Threshold/neighborhood semantic config follow-through should expose `feature_var` whenever both `eVarIx` and `fVarIx` drive kernel behavior.
+- Threshold, Schmitt, and neighborhood semantic configs now expose `feature_var` wherever their live kernels split trigger geometry from extrema/amplitude behavior; `local_max` remains the one-channel exception.
 
 ## Open policy decisions
 

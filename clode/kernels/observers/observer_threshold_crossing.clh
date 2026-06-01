@@ -1,6 +1,6 @@
 // Threshold-based event detection with an absolute threshold in x[eVarIx].
-// This observer intentionally keeps one event stream and a lean readout:
-// crossing timestamps plus event count, with direction chosen at runtime.
+// This observer keeps one event stream and threshold geometry on the event
+// channel while measuring extrema-derived readouts on x[fVarIx].
 
 #ifndef OBSERVER_THRESHOLD_CROSSING_H
 #define OBSERVER_THRESHOLD_CROSSING_H
@@ -252,17 +252,17 @@ static inline void updateObserverState(realtype *ti, realtype xi[], realtype dxi
     od->xGlobalMax = fmax(od->xGlobalMax, xi[op->eVarIx]);
     od->xGlobalMin = fmin(od->xGlobalMin, xi[op->eVarIx]);
     
-    // Track local extrema for maxima counting
+    // Track local extrema for maxima counting and amplitude on the feature channel.
     if (od->stepcount < 2)
         return;
     
-    // Check for local maximum in monitored variable
-    if (od->dxbuffer[op->eVarIx * 3 + 1] > 0.0 && od->dxbuffer[op->eVarIx * 3 + 2] < 0.0) {
+    // Check for local maximum in the configured feature variable.
+    if (od->dxbuffer[op->fVarIx * 3 + 1] > 0.0 && od->dxbuffer[op->fVarIx * 3 + 2] < 0.0) {
         realtype thisTbuffer[3];
         realtype thisXbuffer[3];
         for (int j = 0; j < 3; ++j) {
             thisTbuffer[j] = od->tbuffer[j];
-            thisXbuffer[j] = od->xbuffer[op->eVarIx * 3 + j];
+            thisXbuffer[j] = od->xbuffer[op->fVarIx * 3 + j];
         }
         realtype xThisMax;
         localMaximumFromThreeSamples(thisTbuffer, thisXbuffer, &od->tLastMax, &xThisMax);
@@ -277,13 +277,13 @@ static inline void updateObserverState(realtype *ti, realtype xi[], realtype dxi
         }
     }
     
-    // Check for local minimum in monitored variable
-    if (od->dxbuffer[op->eVarIx * 3 + 1] < 0.0 && od->dxbuffer[op->eVarIx * 3 + 2] > 0.0) {
+    // Check for local minimum in the configured feature variable.
+    if (od->dxbuffer[op->fVarIx * 3 + 1] < 0.0 && od->dxbuffer[op->fVarIx * 3 + 2] > 0.0) {
         realtype thisTbuffer[3];
         realtype thisXbuffer[3];
         for (int j = 0; j < 3; ++j) {
             thisTbuffer[j] = od->tbuffer[j];
-            thisXbuffer[j] = od->xbuffer[op->eVarIx * 3 + j];
+            thisXbuffer[j] = od->xbuffer[op->fVarIx * 3 + j];
         }
         localMinimumFromThreeSamples(thisTbuffer, thisXbuffer, &od->tLastMin, &od->xLastMin);
     }

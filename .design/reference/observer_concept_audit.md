@@ -85,7 +85,7 @@ See:
 
 - Bundle packaging remains open: should oscillation-oriented controls/readouts be shared through one config seam or remain family-local?
 - Schmitt duration outputs (`up duration`, `down duration`, `duty`) are now part of the current canonical Schmitt readout schemas; the remaining open question is whether any broader oscillation bundle seam should absorb them.
-- Threshold/neighborhood config follow-through should expose `feature_var` where kernels use both `eVarIx` and `fVarIx`; the remaining work is API rollout and compatibility staging.
+- Threshold, Schmitt, and neighborhood config follow-through now matches the live split: threshold and Schmitt use `event_var` for trigger geometry and `feature_var` for extrema/amplitude readouts, while neighborhood keeps anchor/warmup routing on `event_var` and maxima/amplitude routing on `feature_var`.
 
 These are planning/implementation-tracking items, not all landed behavior yet; active tracking surfaces remain `.design/next_pr.md` and `.design/ideas.md`.
 

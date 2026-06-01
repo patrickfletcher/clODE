@@ -34,7 +34,7 @@ The solution-buffer audit is settled, K=2/K=3 shared helpers are live across can
 
 - [ ] `min_amp`, `max_event_count`, and at least one candidate additional oscillation readout are surveyed across `threshold_crossing`, `schmitt_trigger`, `local_max`, and `normalized_neighborhood_return` families; similarities and differences are documented.
 - [x] Canonical Schmitt readout direction is documented explicitly: `up duration`, `down duration`, and `duty` are core Schmitt outputs and are now exposed on canonical Schmitt schemas.
-- [ ] Config-surface direction is documented explicitly: threshold/neighborhood config follow-through should expose `feature_var` where kernels use `fVarIx` semantics.
+- [x] Config-surface direction is documented explicitly: threshold/neighborhood config follow-through should expose `feature_var` where kernels use `fVarIx` semantics.
 - [ ] A decision is recorded in `.design/reference/compatibility_boundary_audit.md`: either (a) a shared oscillation-bundle seam design with a named config object and at least one family adoption, or (b) an explicit keep-separate rationale explaining why family-local duplication is preferable.
 - [ ] If a shared seam is chosen: at least one event-observer family adopts it, a test covers the new config surface, and docs reflect the new preferred authoring pattern.
 - [ ] If keep-separate is chosen: `ideas.md` oscillation-bundle item is updated to reflect the decision, and the `compatibility_boundary_audit.md` bundle question is closed with rationale.

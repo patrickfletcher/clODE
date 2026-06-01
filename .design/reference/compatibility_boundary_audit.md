@@ -38,7 +38,7 @@ Update when: a compatibility alias is added, removed, deprecated, promoted to ca
 - Future observer-family work should treat the compatibility bundle as an adapter boundary, not as the vocabulary source for new semantic config objects.
 - `SchmittTriggerConfig` round-trips both semantic Schmitt variants, including `Observer.normalized_schmitt_trigger`, through `get_observer_configuration()` and `set_observer_configuration(...)`.
 - Schmitt state-machine duration outputs (`up duration`, `down duration`, `duty`) are considered core Schmitt measurements for canonical observer behavior.
-- Threshold/neighborhood semantic config follow-through should expose `feature_var` where kernels consume both `eVarIx` and `fVarIx` semantics.
+- Threshold, Schmitt, and neighborhood semantic configs now expose `feature_var` where their kernels split trigger geometry from extrema/amplitude semantics.
 
 ## Questions for follow-through
 

@@ -10,19 +10,20 @@ Update when: any observer family changes how `e_var_ix`/`f_var_ix` are set or co
 - Threshold and Schmitt families detect events from `e_var_ix`.
 - `local_max` detects extrema from `f_var_ix` (with `LocalMaximumConfig` currently forcing `e_var_ix == f_var_ix`).
 - `normalized_neighborhood_return` uses both: anchor/warmup logic from `e_var_ix`, maxima/amplitude tracking from `f_var_ix`.
-- The semantic config surfaces are not symmetric yet: only Schmitt exposes both `event_var` and `feature_var` directly.
+- Threshold, Schmitt, and neighborhood semantic configs now expose both `event_var` and `feature_var` where those families split trigger geometry from extrema/amplitude measurement; `LocalMaximumConfig` remains the one-channel exception for now.
 
 ## Current implementation contract
 
 ### Threshold crossing families
 
-- Public config: `ThresholdCrossingConfig(event_var=..., threshold=..., direction=...)`
+- Public config: `ThresholdCrossingConfig(event_var=..., feature_var=..., threshold=..., direction=...)`
 - Routed fields:
   - `event_var` -> `e_var_ix`
-  - `f_var_ix` is not configurable on this semantic surface
+  - `feature_var` -> `f_var_ix`
 - Kernel behavior (`observer_threshold_crossing.clh`, normalized variant):
   - event detection and threshold interpolation use `eVarIx`
-  - maxima/amplitude tracking in these families currently follows the same observed channel (`eVarIx`)
+  - maxima/amplitude tracking uses `fVarIx`
+  - `min_amp` gating still follows the trigger channel (`eVarIx`)
 
 ### Schmitt families
 
@@ -32,7 +33,7 @@ Update when: any observer family changes how `e_var_ix`/`f_var_ix` are set or co
   - `feature_var` -> `f_var_ix`
 - Kernel behavior (`observer_schmitt_trigger.clh`, normalized variant):
   - Schmitt state transitions and threshold logic use `eVarIx`
-  - maxima/amplitude tracking uses `eVarIx` in current kernels
+  - maxima/amplitude and active-dip tracking use `fVarIx`
 - Validation behavior:
   - semantic Schmitt rejects non-default `dx_*` thresholds
   - `x_up_threshold >= x_down_threshold` is required
@@ -49,14 +50,14 @@ Update when: any observer family changes how `e_var_ix`/`f_var_ix` are set or co
 
 ### Normalized neighborhood return family
 
-- Public config: `NeighborhoodReturnConfig(event_var=..., anchor_threshold=..., radius=...)`
+- Public config: `NeighborhoodReturnConfig(event_var=..., feature_var=..., anchor_threshold=..., radius=...)`
 - Routed fields:
   - `event_var` -> `e_var_ix`
-  - semantic config does not currently expose `feature_var`
+  - `feature_var` -> `f_var_ix`
 - Kernel behavior (`observer_normalized_neighborhood_return.clh`):
   - warmup anchor threshold and anchor latch logic use `eVarIx`
   - maxima/amplitude tracking path uses `fVarIx`
-  - with semantic config, `f_var_ix` currently stays at its default unless compatibility params are used
+  - semantic config now exposes the same trigger/measurement split as the live kernel
 
 ## Compatibility surface behavior
 
@@ -79,7 +80,7 @@ Direction is now explicit:
 
 - where kernels consume both `eVarIx` and `fVarIx` semantics, semantic config surfaces should expose both `event_var` and `feature_var`.
 
-Current follow-through still pending (tracked in `.design/next_pr.md`):
+Current live split:
 
-- `ThresholdCrossingConfig` does not expose `feature_var`; current threshold kernels track amplitude from the `eVarIx` slice only.
-- `NeighborhoodReturnConfig` does not expose `feature_var`; `observer_normalized_neighborhood_return.clh` already consumes `fVarIx` for maxima/amplitude tracking.
+- `ThresholdCrossingConfig` now exposes `feature_var`; threshold event geometry and `min_amp` stay on `eVarIx`, while extrema/amplitude tracking uses `fVarIx`.
+- `NeighborhoodReturnConfig` now exposes `feature_var`; `observer_normalized_neighborhood_return.clh` already consumes `fVarIx` for maxima/amplitude tracking.

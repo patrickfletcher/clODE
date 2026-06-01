@@ -135,6 +135,7 @@ class ThresholdCrossingConfig:
     """Semantic config for absolute and fractional threshold-crossing observers."""
 
     event_var: str = ""
+    feature_var: str = ""
     threshold: float = _DEFAULT_THRESHOLD
     direction: EventDirection | str | int = _DEFAULT_EVENT_DIRECTION
     min_amp: float = _DEFAULT_MIN_AMP
@@ -146,6 +147,14 @@ class ThresholdCrossingConfig:
             self,
             "event_var",
             _normalize_optional_variable_name(self.event_var, parameter_name="event_var"),
+        )
+        object.__setattr__(
+            self,
+            "feature_var",
+            _normalize_optional_variable_name(
+                self.feature_var,
+                parameter_name="feature_var",
+            ),
         )
         object.__setattr__(self, "threshold", float(self.threshold))
         object.__setattr__(self, "direction", _normalize_event_direction(self.direction))
@@ -169,6 +178,12 @@ class ThresholdCrossingConfig:
                 default_index=_DEFAULT_EVENT_VAR_INDEX,
                 parameter_name="event_var",
             ),
+            f_var_ix=_resolve_variable_index(
+                variable_names,
+                self.feature_var or None,
+                default_index=_DEFAULT_FEATURE_VAR_INDEX,
+                parameter_name="feature_var",
+            ),
             max_event_count=self.max_event_count,
             event_direction=self.direction,
             max_event_timestamps=self.max_event_timestamps,
@@ -188,6 +203,11 @@ class ThresholdCrossingConfig:
                 variable_names,
                 observer_params.e_var_ix,
                 parameter_name="e_var_ix",
+            ),
+            feature_var=_resolve_variable_name(
+                variable_names,
+                observer_params.f_var_ix,
+                parameter_name="f_var_ix",
             ),
             threshold=observer_params.x_up_threshold,
             direction=observer_params.event_direction,
@@ -350,6 +370,7 @@ class NeighborhoodReturnConfig:
     """Semantic config for the lean normalized neighborhood-return observer."""
 
     event_var: str = ""
+    feature_var: str = ""
     anchor_threshold: float = _DEFAULT_X_DOWN_THRESHOLD
     radius: float = _DEFAULT_NHOOD_RADIUS
     max_event_count: int = _DEFAULT_MAX_EVENT_COUNT
@@ -360,6 +381,14 @@ class NeighborhoodReturnConfig:
             self,
             "event_var",
             _normalize_optional_variable_name(self.event_var, parameter_name="event_var"),
+        )
+        object.__setattr__(
+            self,
+            "feature_var",
+            _normalize_optional_variable_name(
+                self.feature_var,
+                parameter_name="feature_var",
+            ),
         )
         object.__setattr__(self, "anchor_threshold", float(self.anchor_threshold))
         object.__setattr__(self, "radius", float(self.radius))
@@ -383,6 +412,12 @@ class NeighborhoodReturnConfig:
                 default_index=_DEFAULT_EVENT_VAR_INDEX,
                 parameter_name="event_var",
             ),
+            f_var_ix=_resolve_variable_index(
+                variable_names,
+                self.feature_var or None,
+                default_index=_DEFAULT_FEATURE_VAR_INDEX,
+                parameter_name="feature_var",
+            ),
             max_event_count=self.max_event_count,
             max_event_timestamps=self.max_event_timestamps,
             nhood_radius=self.radius,
@@ -400,6 +435,11 @@ class NeighborhoodReturnConfig:
                 variable_names,
                 observer_params.e_var_ix,
                 parameter_name="e_var_ix",
+            ),
+            feature_var=_resolve_variable_name(
+                variable_names,
+                observer_params.f_var_ix,
+                parameter_name="f_var_ix",
             ),
             anchor_threshold=observer_params.x_down_threshold,
             radius=observer_params.nhood_radius,
