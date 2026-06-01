@@ -1,7 +1,7 @@
 # Compatibility Boundary Audit
 
 Purpose: record which observer-related public surfaces are canonical, which remain compatibility-only, and which names should stay internal-only.
-Read when: changing observer naming, config surfaces, root exports, or public docs for semantic observer families and retained legacy observers.
+Read when: changing observer naming, config surfaces, root exports, or public docs for canonical observer families.
 Update when: a compatibility alias is added, removed, deprecated, promoted to canonical status, or explicitly limited to compatibility-only documentation.
 
 ## Current boundary
@@ -10,12 +10,12 @@ Update when: a compatibility alias is added, removed, deprecated, promoted to ca
 
 - `Observer.threshold_crossing`, `Observer.normalized_threshold_crossing`, `Observer.schmitt_trigger`, and `Observer.normalized_schmitt_trigger` are the preferred public observer names for the current threshold catalog.
 - `ThresholdCrossingConfig` is the preferred semantic config surface for the two one-boundary threshold observers.
-- `SchmittTriggerConfig` is the preferred semantic config surface for the two lean Schmitt families.
+- `SchmittTriggerConfig` is the preferred semantic config surface for the two canonical Schmitt families.
 - `Observer.local_max` is the preferred public observer name for extremum workflows, and `LocalMaximumConfig` is its preferred semantic config surface.
-- `Observer.normalized_neighborhood_return` is the preferred public observer name for the lean two-pass normalized neighborhood-return family, and `NeighborhoodReturnConfig` is its preferred semantic config surface.
+- `Observer.normalized_neighborhood_return` is the preferred public observer name for the canonical two-pass normalized neighborhood-return family, and `NeighborhoodReturnConfig` is its preferred semantic config surface.
 - The selected observer, not the config class alone, determines whether a shared config is interpreted in absolute units or as warmup-derived fractions.
 
-### Supported compatibility and legacy surfaces
+### Supported compatibility surfaces
 
 - `Observer.normalized_schmitt_trigger` keeps derivative-gate controls on the compatibility surface; those controls are no longer part of `SchmittTriggerConfig`.
 - Observer names in the `Observer` enum are canonical; compatibility is provided via parameter/config surfaces and constructor keyword adapters.
@@ -31,12 +31,14 @@ Update when: a compatibility alias is added, removed, deprecated, promoted to ca
 
 ## Current decisions
 
-- There is no public `Observer.threshold_1` or `Observer.threshold_3` alias.
+- Removed historical observer labels are not part of the current public observer surface.
 - Observer enum names are canonical for public use.
 - User docs should prefer semantic names and shared config classes, and should mention compatibility aliases only when that helps users translate older code.
 - Public docs should describe `ObserverParams` and `observer_*` keyword arguments as compatibility surfaces rather than as the preferred observer UX.
 - Future observer-family work should treat the compatibility bundle as an adapter boundary, not as the vocabulary source for new semantic config objects.
-- `SchmittTriggerConfig` no longer round-trips `Observer.normalized_schmitt_trigger`; `get_observer_configuration()` is intentionally `None` for that retained legacy observer.
+- `SchmittTriggerConfig` round-trips both semantic Schmitt variants, including `Observer.normalized_schmitt_trigger`, through `get_observer_configuration()` and `set_observer_configuration(...)`.
+- Schmitt state-machine duration outputs (`up duration`, `down duration`, `duty`) are considered core Schmitt measurements for canonical observer behavior.
+- Threshold/neighborhood semantic config follow-through should expose `feature_var` where kernels consume both `eVarIx` and `fVarIx` semantics.
 
 ## Questions for follow-through
 

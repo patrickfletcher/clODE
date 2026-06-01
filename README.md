@@ -7,14 +7,20 @@
 [![Release](https://github.com/patrickfletcher/clODE/actions/workflows/python_package_release.yml/badge.svg)](https://github.com/patrickfletcher/clODE/actions/workflows/python_package_release.yml)
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/patrickfletcher/clODE/badge)](https://securityscorecards.dev/viewer/?uri=github.com/patrickfletcher/clODE)
 
-clODE is a Python package for large-scale simulation of ordinary differential equation ensembles on OpenCL-capable CPUs and GPUs. It is built for workloads where you want to sweep parameters, run many independent systems in parallel, and choose between final-state simulation, online feature extraction, or stored trajectories.
+clODE is a Python package for large-scale simulation of ODE ensembles on OpenCL-capable CPUs and GPUs. It is built for parameter sweeps and ensemble studies where you need to run many related solves in parallel and extract features or summary statistics on the device, avoiding the memory and I/O cost of storing full trajectories.
 
-clODE supports:
+clODE is particularly useful when you want to:
 
-- typed Python RHS functions, OpenCL source files, and XPP models
+- sweep parameters across a dense grid and study ensemble behavior rather than individual trajectories
+- compute periods, extrema, event counts, or event timestamps without storing all time samples
+- leverage OpenCL for high throughput while keeping model authoring in Python
+
+The package supports:
+
+- models defined as typed Python RHS functions, OpenCL source files, or XPP files
 - deterministic and stochastic ODE systems
-- feature extraction without storing full trajectories
-- explicit OpenCL device inspection and runtime selection from Python
+- on-device feature and event extraction through stateful observers
+- explicit OpenCL device inspection and single-device runtime selection from Python
 
 ## Installation
 
@@ -26,72 +32,66 @@ An OpenCL runtime for your target device is required. See the [installation guid
 
 ## Quick Start
 
-The example below measures oscillation period for an ensemble of Van der Pol systems without storing full trajectories.
+Here is a minimal example: create an ensemble of Van der Pol oscillators with different damping parameters, run a feature extraction pass to measure oscillation period without storing trajectories, and report the mean period:
 
 ```python
 from typing import List
-
 import clode
 import numpy as np
 
-
-def van_der_pol(
-    t: float,
-    variables: List[float],
-    parameters: List[float],
-    derivatives: List[float],
-    aux: List[float],
-    wiener: List[float],
-) -> None:
-    x: float = variables[0]
-    y: float = variables[1]
-    mu: float = parameters[0]
-
+def van_der_pol(t, variables, parameters, derivatives, aux, wiener):
+    x, y = variables[0], variables[1]
+    mu = parameters[0]
     derivatives[0] = y
-    derivatives[1] = mu * (1.0 - x * x) * y - x
+    derivatives[1] = mu * (1.0 - x*x) * y - x
 
-
-integrator = clode.FeatureSimulator(
+simulator = clode.FeatureSimulator(
     rhs_equation=van_der_pol,
     variables={"x": 1.0, "y": 1.0},
     parameters={"mu": 0.1},
     observer=clode.Observer.normalized_schmitt_trigger,
-    stepper=clode.Stepper.dormand_prince,
     t_span=(0.0, 1000.0),
 )
 
-integrator.set_ensemble(parameters={"mu": np.array([0.01, 0.5, 2.0, 4.0])})
-integrator.transient()
-
-observer_output = integrator.features()
-print(observer_output.get_var_mean("period"))
+simulator.set_ensemble(parameters={"mu": np.array([0.01, 0.5, 2.0, 4.0])})
+simulator.transient()
+features = simulator.features()
+print(features.get_var_mean("period"))
 ```
 
-For a fuller walkthrough, see [Getting started](https://patrickfletcher.github.io/clODE/getting_started/).
+For a step-by-step walkthrough, concepts, and multiple workflow examples, see [Getting started](https://patrickfletcher.github.io/clODE/getting_started/).
 
 ## Documentation
 
-- [Documentation site](https://patrickfletcher.github.io/clODE/)
-- [Installation guide](https://patrickfletcher.github.io/clODE/install/)
-- [Getting started](https://patrickfletcher.github.io/clODE/getting_started/)
+Start with [Installation](https://patrickfletcher.github.io/clODE/install/) to set up your OpenCL runtime, then [Getting started](https://patrickfletcher.github.io/clODE/getting_started/) for your first end-to-end example.
+
+Workflow guides:
+
+- [Feature extraction](https://patrickfletcher.github.io/clODE/feature_extraction/) — compute periods, extrema, and event data without storing trajectories
+- [Trajectory simulation](https://patrickfletcher.github.io/clODE/trajectory_simulation/) — store time samples for plotting and inspection
+- [Specifying ODE systems](https://patrickfletcher.github.io/clODE/specifying_odes/) — Python, OpenCL, and XPP model definition
+- [Stochastic simulation](https://patrickfletcher.github.io/clODE/Ornstein-Uhlenbeck_process.md) — add Wiener-process terms
+
+Reference and examples:
+
+- [API reference](https://patrickfletcher.github.io/clODE/api_reference/)
 - [Examples](https://patrickfletcher.github.io/clODE/examples/)
 - [Performance notes](https://patrickfletcher.github.io/clODE/performance_notes/)
-- [Feature extraction](https://patrickfletcher.github.io/clODE/feature_extraction/)
-- [Trajectory simulation](https://patrickfletcher.github.io/clODE/trajectory_simulation/)
-- [Specifying ODE systems](https://patrickfletcher.github.io/clODE/specifying_odes/)
-- [API reference](https://patrickfletcher.github.io/clODE/api_reference/)
+- [Full docs](https://patrickfletcher.github.io/clODE/)
 
 ## Repository Layout
 
-- [clode/](https://github.com/patrickfletcher/clODE/tree/main/clode) contains the maintained Python package source.
-- [docs/](https://github.com/patrickfletcher/clODE/tree/main/docs) contains the MkDocs documentation source.
-- [examples/](https://github.com/patrickfletcher/clODE/tree/main/examples) contains runnable examples and sample model files.
-- [test/](https://github.com/patrickfletcher/clODE/tree/main/test) contains the regression suite.
-- [paper/](https://github.com/patrickfletcher/clODE/tree/main/paper) contains the software paper materials.
+- `clode/` — maintained Python package source.
+- `docs/` — MkDocs documentation.
+- `examples/` — runnable workflow examples.
+- `test/` — regression suite, including `core_numerics/` for the release gate.
+- `paper/` — software paper source.
 
 ## Contributing
 
-See [CONTRIBUTING.md](https://github.com/patrickfletcher/clODE/blob/main/CONTRIBUTING.md) for local setup, test bundles, docs commands, and contributor expectations.
+**Contributing:**
+
+See [CONTRIBUTING.md](https://github.com/patrickfletcher/clODE/blob/main/CONTRIBUTING.md) for local setup, test bundles, docs commands, and contributor expectations. The package uses a release gate over `test/core_numerics/`, an extended test suite, and automated CI for reproducibility.
 
 ## License
 

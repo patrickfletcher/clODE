@@ -15,6 +15,9 @@ Long notes should be read in layers: start with `## Bottom line` and any `## Fas
 - `project_principles.md`: settled project principles and open cross-cutting design questions.
 - `compatibility_boundary_audit.md`: current canonical versus compatibility-only observer surfaces and the follow-on cleanup questions they create.
 - `observer_concept_audit.md`: current observer semantics, current state/bundle question, and implementation-path guidance for observer authoring and memory-footprint control.
+- `observer_readout_audit.md`: current observer readout contract, naming guardrails, and open seam decisions.
+- `observer_readout_phases.md`: short readout-rollout status board and pointer to archived rollout history.
+- `observer_event_feature_variable_contract.md`: family-by-family `e_var_ix`/`f_var_ix` routing contract.
 - `observer_solution_buffer_audit.md`: accepted-step `K`-sample buffer audit, current prerequisite decision, and smallest follow-on proof target.
 - `semantic_layout_audit.md`: stable package-layout and ownership guidance. Use for durable placement principles, not the active PR sequence.
 - `solver_state_implementation_plan.md`: current solver-state boundary and the durable guardrails it leaves in place.

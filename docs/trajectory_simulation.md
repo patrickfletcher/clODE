@@ -1,6 +1,12 @@
-# Trajectory simulation
+# Trajectory Simulation
 
 `TrajectorySimulator` stores sampled trajectories for plotting, post-processing, and inspection.
+
+## Understanding Device State and Outputs
+
+When you call `trajectory()`, clODE returns only the trajectory samples generated during that call. However, the **solver state persists on the device** between calls. This is important for continuation: if you run `trajectory()` a second time without explicitly advancing the time window, the solver will resume from where it left off, not restart.
+
+Each call to `trajectory()` returns a new `TrajectoryOutput` object containing only the samples from that particular window—not the samples from all previous calls. The device tracks where the solver is in continuous time, so you need to explicitly advance the requested time window before calling `trajectory()` again if you want to continue from the attained final time.
 
 ## Example - FitzHugh-Nagumo oscillator
 
@@ -77,20 +83,19 @@ plt.title("FitzHugh-Nagumo time series")
 plt.show()
 ```
 
-## Continuation and split windows
+## Continuation and Split Windows
 
-`trajectory()` continues the device state by default, but each returned `TrajectoryOutput`
-contains only the samples from the current requested window.
+By default, `trajectory()` continues the device state and returns only the samples from the current requested window. To reproduce one long run using multiple windows:
 
-To reproduce one long run with multiple windows:
+1. Run `trajectory()` once with your first time window.
+2. Get the attained final time from the device: `final_time = simulator.get_final_time()`.
+3. For the next window, set the requested `t_span` to start from that attained final time: `simulator.set_tspan((final_time, final_time + window_length))`.
+4. Run `trajectory()` again. The solver continues from `final_time` and returns only the new samples.
+5. Concatenate the returned windows and drop the duplicate boundary sample from later windows if needed.
 
-- advance the next requested window from `get_final_time()` rather than the requested end time
-- run `trajectory()` again
-- concatenate the returned windows on the host and drop the duplicated boundary sample from the
-    later window
+This is more accurate than using the originally requested end time, especially for adaptive steppers where the attained final time may differ from what was requested.
 
-See `continuation.md` for the full continuation semantics and `examples/continuation.py` for a
-complete runnable example.
+For a complete runnable example and detailed continuation semantics, see [continuation.md](continuation.md) and [examples/continuation.py](https://github.com/patrickfletcher/clODE/blob/main/examples/continuation.py).
 
 ## Solver diagnostics
 

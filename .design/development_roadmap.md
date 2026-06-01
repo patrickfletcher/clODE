@@ -10,7 +10,7 @@ Use `.design/ideas.md` as the short living board. This file is the longer ration
 
 ### Strengths
 
-- The numerical core is still strong: one work-item per trajectory, compile-time specialization, and a clean separation between stepper kernels and observer kernels.
+- The numerical core is strong: one work-item per trajectory, compile-time specialization, and a clean separation between stepper kernels and observer kernels.
 - The PyOpenCL migration put runtime ownership, source assembly, build keys, and program caching in Python where they are easier to reason about and test.
 - `FeatureSimulator` remains a distinctive strength because it can extract useful oscillation and event statistics without forcing full trajectory storage.
 - Observer definitions, resolved specs, stepper definitions, solver-state boundaries, and cache invalidation are now coherent enough that future work can target measured gaps rather than basic ownership cleanup.
@@ -41,13 +41,25 @@ Keep the next planning pass centered on one product story: clODE's differentiato
 
 ### 1. Oscillation-oriented observer bundles
 
-The solution-buffer audit is complete: a shared `K`-sample solution-buffer concept was confirmed as a prerequisite, K=2/K=3 shared accepted-step history update helpers are now live and adopted by all lean observer families, and family event semantics remain local. The remaining near-term observer question is whether recurring oscillation-oriented controls and readouts (`min_amp`, `max_event_count`, and future oscillation-targeted outputs) should be factored through a shared seam or kept family-local.
+The solution-buffer audit is complete: a shared `K`-sample solution-buffer concept was confirmed as a prerequisite, K=2/K=3 shared accepted-step history update helpers are now live and adopted by all canonical event-observer families, and family event semantics remain local. The remaining near-term observer question is whether recurring oscillation-oriented controls and readouts (`min_amp`, `max_event_count`, and future oscillation-targeted outputs) should be factored through a shared seam or kept family-local.
 
 Why next:
 
 - observers are a first-class clODE concept and one of the clearest ways to differentiate the package in engineering and publication terms
 - `min_amp` already has a subtle semantic difference between one-pass and warmup-derived families; naming and documenting that seam will clarify both user docs and future observer authoring
-- the retained heavy observers (`threshold_2`, `local_max`, `neighbourhood_2`) all carry a version of this oscillation-oriented readout bundle, so a clear shared seam would also improve the path toward leaner legacy-observer replacements
+- the current event families (`threshold_crossing`, `schmitt_trigger`, `local_max`, and `normalized_neighborhood_return`) each carry some version of this oscillation-oriented readout bundle, so a clear shared seam would improve both maintainability and observer UX consistency
+
+### 2. Large-ensemble ergonomics: batch-generation helpers and device-capacity batching
+
+Two open P1 items form a natural second pass once the observer-bundle direction is settled enough that the batch layer does not have to accommodate large structural observer changes: IVP-side helpers for grid, random, and quasi-random ensemble construction (currently buried in `Simulator`), and device-capacity batching for ensembles that exceed buffer limits.
+
+Why second:
+
+- large-ensemble use cases are one of clODE's stated strengths and both items are blocked on a clearer IVP ownership model that is already mostly in place
+- the batch-generation helpers and the device-capacity batching share the same IVP-owned shape and output-policy prerequisites, so tackling them together avoids revisiting the same boundary twice
+- landing this pass would make the quick-start story and example suite significantly stronger before the publication push
+
+refs: `.design/ideas.md` → "Batch-generation helpers" and "Ensemble batching for device-capacity limits", `.design/reference/chunked_execution_audit.md`, `.design/reference/semantic_layout_audit.md`
 
 ### 3. Numerical evidence and publication follow-through
 
@@ -57,6 +69,7 @@ Why third:
 
 - it strengthens the JOSS case without letting public-surface work outrun the internal execution and observer model
 - it keeps docs, benchmarks, and the paper tied to a clearer and more stable package story
+- the release gate is now explicit and scriptable through `tools/run_test_bundle.py` (`release` alias), so numerical/publication follow-through can target concrete evidence surfaces instead of ad-hoc test runs
 
 ### 4. Later and lower leverage
 

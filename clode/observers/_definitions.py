@@ -520,6 +520,12 @@ def _schmitt_trigger_feature_names(
     # Maxima count statistics (max/min/mean)
     names.extend(["n maxima max", "n maxima min", "n maxima mean"])
 
+    # Schmitt period-shape statistics (max/min/mean)
+    names.extend(["up duration max", "up duration min", "up duration mean"])
+    names.extend(["down duration max", "down duration min", "down duration mean"])
+    names.extend(["duty max", "duty min", "duty mean"])
+    names.extend(["active dip max", "active dip min", "active dip mean"])
+
     # Amplitude statistics (max/min/mean)
     names.extend(["amplitude max", "amplitude min", "amplitude mean"])
     
@@ -971,12 +977,19 @@ def _schmitt_trigger_layout(
             _real_field("auxTrajectoryMean", real_dtype, problem_info.num_aux),
             _real_field("period", real_dtype, 3),
             _real_field("nMaxima", real_dtype, 3),
+            _real_field("upDuration", real_dtype, 3),
+            _real_field("downDuration", real_dtype, 3),
+            _real_field("duty", real_dtype, 3),
+            _real_field("activeDip", real_dtype, 3),
             _real_field("amplitude", real_dtype, 3),
             _real_field("xGlobalMax", real_dtype),
             _real_field("xGlobalMin", real_dtype),
             _real_field("xUp", real_dtype),
             _real_field("xDown", real_dtype),
             _real_field("elapsedTotal", real_dtype),
+            _real_field("tThisDown", real_dtype),
+            _real_field("elapsedThisDown", real_dtype),
+            _real_field("fVarDownstateMean", real_dtype),
             _real_field("tLastEvent", real_dtype),
             _real_field("elapsedLastEvent", real_dtype),
             _real_field("tLastMax", real_dtype),

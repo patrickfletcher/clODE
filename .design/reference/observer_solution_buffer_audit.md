@@ -9,8 +9,8 @@ Update when: the shared-buffer decision changes, a follow-on proof lands, or obs
 - A shared accepted-step `K`-sample solution-buffer concept should come before further observer bundle work.
 - The shared concept should start as a layout-and-update contract, not a single forced `ObserverState` struct.
 - The strongest overlap is in accepted-step history advancement (`t`, `x`, and sometimes `dx`) for `K=2` and `K=3` families.
-- Event refinement guidance should default to linear or inverse-linear threshold timing where already proven stable, keep bounded three-sample quadratic extrema for current extremum families, and treat cubic Hermite refinement as a targeted follow-on where endpoint slopes are already reliable.
-- Heavy legacy observers still need family-local state and bundle logic beyond that shared history core.
+- Event refinement guidance should default to linear or inverse-linear threshold timing where already proven stable, keep bounded three-sample quadratic extrema for current extremum families, and prioritize three-point quadratic threshold-crossing time/state refinement as the higher-order path.
+- Feature-rich observer families still need family-local state and bundle logic beyond that shared history core.
 - For the active observer path, the work-item-local accepted-step buffer belongs to observer-owned state and observer helper contracts, not as an ad hoc local buffer in `features.cl`.
 - The smallest follow-on proof target is shared accepted-step history update helpers for `K=2` and `K=3`, while retaining family-local event semantics and feature accumulation.
 
@@ -27,20 +27,24 @@ Stop after this section unless you are implementing the follow-on helper proof o
 
 ## Family inventory
 
-### Families that already match a common accepted-step history core
+After the readout rollout, all semantic event families adopted the shared K=3 accepted-step history update helpers. The earlier lean-shell design used event-variable-only K=2 buffers for threshold and Schmitt families; that design no longer reflects the live kernels.
 
-- `observer_threshold_crossing.clh`: `K=2` with `tbuffer[2]` and one event-variable sample buffer `xbuffer[2]`.
-- `observer_normalized_threshold_crossing.clh`: same `K=2` core as absolute threshold crossing.
-- `observer_schmitt_trigger.clh`: `K=2` with `tbuffer[2]` and event-variable `xbuffer[2]` plus Schmitt state.
-- `observer_normalized_schmitt_trigger.clh`: same `K=2` core with warmup-derived thresholds.
-- `observer_normalized_neighborhood_return.clh`: `K=3` with `tbuffer[3]`, elapsed buffers, and full-state history for normalized distance checks and exit interpolation.
-- `observer_local_maximum.clh`: `K=3` with `tbuffer[3]`, `xbuffer[3]`, and `dxbuffer[3]` for three-sample extremum refinement.
+### Families that match the common K=3 accepted-step history core
 
-### Families that share history mechanics but carry larger legacy bundles
+- `observer_threshold_crossing.clh`: `K=3` with `tbuffer[3]`, `xbuffer[3 * N_VAR]`, and `dxbuffer[3 * N_VAR]`; event detection reads only the `eVarIx` slice at positions 1–2.
+- `observer_normalized_threshold_crossing.clh`: same `K=3` layout as absolute threshold crossing.
+- `observer_schmitt_trigger.clh`: `K=3` with `tbuffer[3]`, `xbuffer[3 * N_VAR]`, and `dxbuffer[3 * N_VAR]`; Schmitt state transitions read the `eVarIx` slice at positions 1–2.
+- `observer_normalized_schmitt_trigger.clh`: same `K=3` layout as absolute Schmitt, with warmup-derived thresholds.
+- `observer_local_maximum.clh`: `K=3` with `tbuffer[3]`, `xbuffer[3 * N_VAR]`, and `dxbuffer[3 * N_VAR]` for three-sample extremum detection and refinement.
+- `observer_normalized_neighborhood_return.clh`: `K=3` with `tbuffer[3]`, `elapsedbuffer[3]`, `xbuffer[3 * N_VAR]`, and `dxbuffer[3 * N_VAR]`; the `elapsedbuffer` tracks intra-period elapsed time for anchor interpolation.
 
-- `observer_normalized_schmitt_trigger.clh`: `K=3` over full state and slope plus elapsed-time buffers and broader period/summary bundle behavior.
-- `observer_local_maximum.clh`: `K=3` over full state and slope plus elapsed-time buffers and broader summary/event lists.
-- `observer_normalized_neighborhood_return.clh`: `K=3` over full state and slope plus warmup ranges, center-point state, and broader period/summary bundles.
+### Families that carry additional per-family state beyond the K=3 history core
+
+The shared K=3 layout is not the full picture for heavier families; these carry per-family readout state that remains local:
+
+- `observer_normalized_schmitt_trigger.clh`: warmup-derived threshold state (`xUp`, `xDown`) plus period, amplitude, and duration bundle fields.
+- `observer_local_maximum.clh`: sparse event lists (`tEventList`, `xEventList`), full trajectory-stat fields (`xTrajectoryMax`, `xTrajectoryMin`, etc.), and period/amplitude bundle.
+- `observer_normalized_neighborhood_return.clh`: center-point `x0`, warmup range state, per-event elapsed bookkeeping (`elapsedTotal`, `tLastMax`, `tLastMin`), and full trajectory-stat fields with period/amplitude bundle.
 
 ### Families where a `K`-sample event-history concept is not the main abstraction
 
@@ -65,7 +69,7 @@ Stop after this section unless you are implementing the follow-on helper proof o
 
 - Warmup-derived threshold/range learning and detector initialization policy.
 - Event semantics (`threshold`, `Schmitt`, `extremum`, `neighborhood`) and state-machine logic.
-- Heavy legacy bundle accumulation (period, duty, amplitude, aux/state aggregate outputs).
+- Family-specific bundle accumulation (period, duration, duty, amplitude, aux/state aggregate outputs).
 - Family-specific retained sparse output arrays and continuation-reset policy.
 
 ## Interpolation and event-refinement guidance
@@ -75,7 +79,7 @@ This section incorporates the recommendations in `ode_event_interpolation_note.m
 - Keep detection and refinement distinct: detection remains family semantics, refinement improves stored event time or event state after detection.
 - Threshold crossings remain the easiest and best-conditioned refinement target; current linear or inverse-linear crossing time helpers remain the baseline.
 - Extremum refinement remains intrinsically harder; retain bounded three-sample quadratic extrema as the stable default for current extremum families.
-- Where endpoint slope samples are already present and reliable for the event variable, cubic Hermite refinement is a valid follow-on option for selected families, not a cross-family requirement for slice 2.
+- For threshold crossing time/state refinement beyond inverse-linear timing, evaluate three-point quadratic interpolation on accepted-step buffers as the preferred higher-order path.
 - Do not widen interpolation order globally in this proof; higher-order dense output belongs to a separate numerics-driven decision.
 
 ## Relation to future user-selectable feature bundles
@@ -88,15 +92,15 @@ This section incorporates the recommendations in `ode_event_interpolation_note.m
 
 A shared accepted-step solution-buffer concept is a prerequisite for clearer observer bundle work, but only as a narrow core contract.
 
-The contract should state:
+**Status**: The contract is established and the follow-on proof is landed.
+
+The K=2 and K=3 shared accepted-step history update helpers (`advanceAcceptedStepHistory2`, `advanceAcceptedStepHistory2ByVariable`, `advanceAcceptedStepHistory3`, `advanceAcceptedStepHistory3ByVariable`) are now live in `clode/kernels/observers.cl` and adopted by the semantic observer families: `threshold_crossing`, `normalized_threshold_crossing`, `schmitt_trigger`, `normalized_schmitt_trigger`, `local_max`, and `normalized_neighborhood_return`. Family event semantics and bundle accumulation remain local.
+
+**The contract states**:
 
 - `K` is family-specific (`K=2` or `K=3` in current families).
 - The shared layer owns accepted-step history shift/update mechanics.
 - Families choose whether the shared history carries event-variable-only samples or full `N_VAR`/`N_AUX` views.
 - Families retain full ownership of event semantics, warmup policy, and readout bundles.
 
-## Follow-on proof — LANDED
-
-The K=2 and K=3 shared accepted-step history update helpers (`advanceAcceptedStepHistory2`, `advanceAcceptedStepHistory2ByVariable`, `advanceAcceptedStepHistory3`, `advanceAcceptedStepHistory3ByVariable`) are now live in `clode/kernels/observers.cl` and have been adopted by the semantic observer families: `threshold_crossing`, `normalized_threshold_crossing`, `schmitt_trigger`, `normalized_schmitt_trigger`, `local_max`, and `normalized_neighborhood_return`. Family event semantics and bundle accumulation remain local.
-
-The next planning target is the oscillation-oriented bundle seam: see `next_pr.md` and `.design/ideas.md`.
+**Next planning target**: The oscillation-oriented bundle seam. See `next_pr.md` and `.design/ideas.md`.

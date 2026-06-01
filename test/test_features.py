@@ -22,6 +22,20 @@ def sine_curve(
     dx_[0] = dx
 
 
+def dual_sine_curve(
+    t: float,
+    x_: List[float],
+    p_: List[float],
+    dx_: List[float],
+    aux_: List[float],
+    w_: List[float],
+) -> None:
+    dilation: float = p_[0]
+    base_dx: float = cos(t * dilation)
+    dx_[0] = base_dx
+    dx_[1] = 2.0 * base_dx
+
+
 
 @pytest.mark.parametrize(
     ("event_direction", "expected_times"),
@@ -242,6 +256,44 @@ def test_absolute_schmitt_trigger_uses_absolute_thresholds() -> None:
     output = feature_simulator.features()
 
     assert output is not None
+    assert output.get_feature_names() == [
+        "up transition time 0",
+        "down transition time 0",
+        "up transition time 1",
+        "down transition time 1",
+        "up transition time 2",
+        "down transition time 2",
+        "event count",
+        "period max",
+        "period min",
+        "period mean",
+        "n maxima max",
+        "n maxima min",
+        "n maxima mean",
+        "up duration max",
+        "up duration min",
+        "up duration mean",
+        "down duration max",
+        "down duration min",
+        "down duration mean",
+        "duty max",
+        "duty min",
+        "duty mean",
+        "active dip max",
+        "active dip min",
+        "active dip mean",
+        "amplitude max",
+        "amplitude min",
+        "amplitude mean",
+        "max x",
+        "min x",
+        "mean x",
+        "max dx/dt",
+        "min dx/dt",
+        "max dx",
+        "min dx",
+        "mean dx",
+    ]
     up_times = np.asarray(output.get_timestamps("up"), dtype=np.float64)
     down_times = np.asarray(output.get_timestamps("down"), dtype=np.float64)
     assert int(output.get_var_count("event")) == 2
@@ -257,6 +309,38 @@ def test_absolute_schmitt_trigger_uses_absolute_thresholds() -> None:
         atol=3e-2,
         rtol=0.0,
     )
+    np.testing.assert_allclose(output.get_var_mean("period"), 2 * pi, atol=5e-2, rtol=0.0)
+    np.testing.assert_allclose(output.get_var_mean("up duration"), pi, atol=5e-2, rtol=0.0)
+    np.testing.assert_allclose(output.get_var_mean("down duration"), pi, atol=5e-2, rtol=0.0)
+    np.testing.assert_allclose(output.get_var_mean("duty"), 0.5, atol=2e-2, rtol=0.0)
+
+
+def test_schmitt_trigger_measures_amplitude_on_feature_var() -> None:
+    feature_simulator = clode.FeatureSimulator(
+        rhs_equation=dual_sine_curve,
+        variables={"x": 0.0, "y": 0.0},
+        parameters={"dilation": 1.0},
+        observer=clode.Observer.schmitt_trigger,
+        observer_configuration=clode.SchmittTriggerConfig(
+            event_var="x",
+            feature_var="y",
+            x_up_threshold=0.5,
+            x_down_threshold=-0.5,
+            min_amp=0.5,
+            max_event_count=8,
+            max_event_timestamps=3,
+        ),
+        stepper=clode.Stepper.rk4,
+        dtmax=0.05,
+        dt=0.05,
+        t_span=(0.0, 4 * pi),
+        **device_kwargs_for_tests(),
+    )
+
+    output = feature_simulator.features()
+
+    assert output is not None
+    np.testing.assert_allclose(output.get_var_mean("amplitude"), 4.0, atol=1e-1, rtol=0.0)
 
 
 def test_local_max_coarse_timestamps_use_three_sample_refinement() -> None:

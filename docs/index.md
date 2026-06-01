@@ -1,31 +1,30 @@
-# clODE documentation
+# clODE Documentation
 
-clODE is a Python package for large-scale simulation of ordinary differential equation ensembles on OpenCL-capable CPUs and GPUs. This site is organized around the current supported workflows: install the package, define a model, choose a simulator, and inspect results.
+Welcome to clODE, a Python package for large-scale ODE ensemble simulation on OpenCL-capable devices. This site is organized around actual research workflows: define a model, run an ensemble across parameter grids, and extract or inspect the results you need—all without always storing full trajectories.
 
-## Start here
+Use this site to:
 
-- [Install clODE](install.md) and verify that your OpenCL runtime is visible.
-- [Work through the getting started guide](getting_started.md) for a first end-to-end ensemble run.
-- [Inspect available platforms and devices](querying_opencl.md) before pinning platform or device IDs.
+1. **Set up clODE** ([Install](install.md), [runtime setup](init_runtime.md))
+2. **Learn the basics** ([Getting started](getting_started.md), [model definition](specifying_odes.md))
+3. **Choose your workflow** ([Feature extraction](feature_extraction.md), [trajectory storage](trajectory_simulation.md), [stochastic simulation](Ornstein-Uhlenbeck_process.md))
+4. **Find examples and reference** ([Examples](examples.md), [API reference](api_reference.md))
 
-## Choose a workflow
+## Quick Navigation
 
-- [Feature extraction](feature_extraction.md): compute periods, extrema, counts, and event data without storing full trajectories.
-- [Trajectory simulation](trajectory_simulation.md): store time samples for plotting, post-processing, and inspection.
-- [Stochastic simulation](Ornstein-Uhlenbeck_process.md): add Wiener-process terms and stochastic steppers.
+**I want to...**
 
-## Define a model
+- Measure oscillation periods across a parameter grid → Start with [Feature extraction](feature_extraction.md)
+- Store and plot time series for visualization → Start with [Trajectory simulation](trajectory_simulation.md)
+- Add stochasticity to my model → See [Stochastic simulation](Ornstein-Uhlenbeck_process.md)
+- Load a model from XPP/XPPAUT → See [XPP files](xpp_files.md)
+- Choose the right observer for my events → See [Observers](observers.md) and the decision table in [Feature extraction](feature_extraction.md)
+- Understand performance trade-offs → See [Performance notes](performance_notes.md) and [Numerical accuracy](numerical_accuracy.md)
+- Query my OpenCL device and platform → See [Querying OpenCL](querying_opencl.md)
 
-- [Specify ODEs in Python or OpenCL](specifying_odes.md).
-- [Load and convert XPP models](xpp_files.md).
-- [Initialize and configure the runtime](init_runtime.md).
+## Core Concepts
 
-## Examples and reference
+- **Ensemble**: many independent ODE solves run in parallel on the device, one per work item.
+- **Observer**: stateful feature detector that runs on the device during integration, accumulating periods, extrema, or event data without storing full trajectories.
+- **Continuation**: state persists on the device between calls, so you can split long runs into windows and continue exactly from where you left off.
 
-- [Examples](examples.md) collects runnable scripts from the repository by workflow.
-- [Performance notes](performance_notes.md) documents the current benchmark scripts and the context needed to compare results responsibly.
-- [Observers](observers.md) describes the built-in observer modes and related concepts.
-- [API reference](api_reference.md) documents the public Python API.
-- [Logging and diagnostics](logging_levels.md) covers runtime logging and PyOpenCL diagnostics.
-
-The documentation stays focused on the current Python package and public workflows.
+For technical reference and API details, see [API reference](api_reference.md), [Logging](logging_levels.md), and the full [Performance notes](performance_notes.md).

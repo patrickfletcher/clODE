@@ -170,6 +170,9 @@ The following table shows which readouts are available for each observer family:
 | **Event values** | — | — | — | — | ✓ | — | — |
 | **Event count** | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | — |
 | **Period** (time between events) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | — |
+| **Peak count** (local maxima between events) | ✓ | ✓ | ✓ | ✓ | — | ✓ | — |
+| **Schmitt duration/duty** | — | — | ✓ | ✓ | — | — | — |
+| **Schmitt active dip** | — | — | ✓ | ✓ | — | — | — |
 | **Amplitude** (extrema tracking) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | — |
 | **Trajectory max/min/mean per variable** | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | **Derivative extrema per variable** | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
@@ -180,15 +183,15 @@ The following table shows which readouts are available for each observer family:
 - **Event timestamps**: Refined to sub-timestep precision with interpolation.
 - **Event count**: Total number of events detected during integration. Always available for event-detector families; never available for `summary`.
 - **Period**: Time between consecutive events. Meaning varies by family (inter-maxima interval for `local_max`, inter-exit time for `normalized_neighborhood_return`, etc.). Accuracy depends on event-detection strategy and oscillation regularity.
-- **Amplitude**: Measured as `local_max_value - last_local_min_value` in the variable specified by `feature_var`. Only available for extrema-tracking families.
+- **Amplitude**: Measured as `local_max_value - last_local_min_value` on each family's extrema-tracking channel. Schmitt, `local_max`, and neighborhood-return use `feature_var`; threshold-crossing families currently use the event channel.
 - **Peak count**: Number of local maxima detected between consecutive events. Only available for observers that track local extrema.
-- **Schmitt-specific readouts** (up/down duration, duty cycle): Semantic Schmitt families store transition times and event counts; additional Schmitt period-shape statistics are not currently exposed.
+- **Schmitt-specific readouts**: Semantic Schmitt families now expose `up duration`, `down duration`, `duty`, and `active dip` in addition to transition times and event counts. `active dip` is the mean feature-channel value during the down state minus the last local minimum.
 - **Trajectory summary statistics**: Observed extrema (`max`, `min`) and time-integrated mean for each state variable and auxiliary.
 
 **Semantic families** (current):
 
-- `threshold_crossing`, `normalized_threshold_crossing`: Narrow event-stream readouts (timestamps ± count). Minimal state footprint.
-- `schmitt_trigger`, `normalized_schmitt_trigger`: Up/down transition times ± count. Minimal state footprint.
+- `threshold_crossing`, `normalized_threshold_crossing`: One event stream plus period/maxima/amplitude aggregates and trajectory summary statistics.
+- `schmitt_trigger`, `normalized_schmitt_trigger`: Up/down transition times plus period/maxima/duration/duty/active-dip aggregates and trajectory summary statistics.
 - `normalized_neighborhood_return`: Neighborhood-exit times, count, plus trajectory summary statistics.
 - `summary`: Trajectory statistics (extrema and means) without event detection.
 
@@ -201,7 +204,7 @@ print(observer_output.get_var_mean("period"))
 print(observer_output.get_event_data("up", type="time"))
 ```
 
-The available names depend on the selected observer. Threshold-crossing families expose one `event` stream with `event time {index}` plus count. `clode.Observer.local_max` exposes two extrema streams (`localmax time/value` and `localmin time/value`) plus event count and summary readouts. `clode.Observer.schmitt_trigger` and `clode.Observer.normalized_schmitt_trigger` expose separate `up transition` and `down transition` streams plus an event count. `clode.Observer.normalized_neighborhood_return` exposes one `event` stream of interpolated normalized-ball exit times plus an event count.
+The available names depend on the selected observer. Threshold-crossing families expose one `event` stream with `event time {index}` plus count. `clode.Observer.local_max` exposes two extrema streams (`localmax time/value` and `localmin time/value`) plus event count and summary readouts. `clode.Observer.schmitt_trigger` and `clode.Observer.normalized_schmitt_trigger` expose separate `up transition` and `down transition` streams plus event count, period/maxima aggregates, Schmitt duration/duty readouts, the Schmitt-local `active dip` readout, and amplitude. `clode.Observer.normalized_neighborhood_return` exposes one `event` stream of interpolated normalized-ball exit times plus an event count.
 
 Trajectory-summary outputs use model variable names directly (for example `max v`, `min v`, `max dv/dt`). `clode.Observer.normalized_neighborhood_return` additionally emits per-variable center and scale fields as `{var}0` and `range {var}` (for example `v0`, `range v`).
 
