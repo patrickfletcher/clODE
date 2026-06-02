@@ -191,8 +191,8 @@ class TrajectorySimulator(Simulator):
 		self._trajectory_cache.mark_result_pending()
 
 		if update_x0:
-			self._integrator.shift_x0()
-			self._solver_state.continue_problem_time()
+			self.shift_x0()
+			self.shift_tspan()
 
 		if fetch_results:
 			return self.get_trajectory()

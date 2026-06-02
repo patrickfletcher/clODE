@@ -49,6 +49,30 @@ static inline void advanceAcceptedStepHistory3ByVariable(realtype *packedHistory
 	}
 }
 
+static inline realtype observerElapsedValue(
+	const realtype elapsedAtChunkStart,
+	const realtype elapsedAtChunkStartCorrection,
+	const realtype solveElapsedTotal
+) {
+	return compensatedTimeValueAfterStep(
+		elapsedAtChunkStart,
+		elapsedAtChunkStartCorrection,
+		solveElapsedTotal
+	);
+}
+
+static inline void advanceObserverElapsedChunk(
+	realtype *elapsedAtChunkStart,
+	realtype *elapsedAtChunkStartCorrection,
+	const realtype solveElapsedTotal
+) {
+	compensatedTimeAdd(
+		elapsedAtChunkStart,
+		elapsedAtChunkStartCorrection,
+		solveElapsedTotal
+	);
+}
+
 // should replicate:
 // for (int j = 0; j < N_VAR; ++j) {
 // 	od->xbuffer[j * 3 + 0] = od->xbuffer[j * 3 + 1];

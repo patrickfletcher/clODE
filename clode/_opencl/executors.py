@@ -302,7 +302,7 @@ class OpenCLTransientExecutor:
             (buffers.ensemble_size, self._problem_shape.n_par), order="F"
         )
         self._buffer_manager.upload_pars(buffers, matrix)
-        self._reset_solver_state_cache()
+        self._reset_solver_state_cache(reset_timebase=True)
 
     def set_problem_data(
         self, initial_state: Sequence[float], parameters: Sequence[float]
@@ -320,6 +320,7 @@ class OpenCLTransientExecutor:
                 shape=self._problem_shape,
             )
             self._buffer_manager.upload_tspan(self._buffers, self._tspan)
+            self._buffer_manager.reset_timebase(self._buffers, self._tspan[0])
             self._buffer_manager.upload_integration_settings(
                 self._buffers,
                 self._integration_settings,
@@ -337,7 +338,10 @@ class OpenCLTransientExecutor:
 
         self._buffer_manager.upload_problem_data(self._buffers, x0_matrix, pars_matrix)
         self._buffer_manager.clear_prepared_wiener_state(self._buffers)
-        self._reset_solver_state_cache(initial_state=initial_state_host)
+        self._reset_solver_state_cache(
+            initial_state=initial_state_host,
+            reset_timebase=True,
+        )
 
         if buffers_reallocated:
             pending_seed = self._pending_seed
@@ -365,6 +369,7 @@ class OpenCLTransientExecutor:
         self._tspan = (float(tspan[0]), float(tspan[1]))
         if self._buffers is not None:
             self._buffer_manager.upload_tspan(self._buffers, self._tspan)
+            self._buffer_manager.reset_timebase(self._buffers, self._tspan[0])
         self._transient_cache.invalidate_result()
 
     def set_x0(self, initial_state: Sequence[float]) -> None:
@@ -380,12 +385,25 @@ class OpenCLTransientExecutor:
         )
         self._buffer_manager.upload_x0(buffers, matrix)
         self._buffer_manager.clear_prepared_wiener_state(buffers)
-        self._reset_solver_state_cache(initial_state=host)
+        self._reset_solver_state_cache(
+            initial_state=host,
+            reset_timebase=True,
+        )
 
     def shift_tspan(self) -> None:
+        buffers = self._require_buffers()
         start, end = self._tspan
         duration = end - start
-        self.set_tspan((end, end + duration))
+        self._tspan = (end, end + duration)
+        self._buffer_manager.upload_tspan(buffers, self._tspan)
+        self._opencl_binding.enqueue_copy(
+            self._runtime.queue,
+            buffers.t0,
+            buffers.tf,
+            byte_count=buffers.t0.size,
+            src_offset=0,
+            dst_offset=0,
+        ).wait()
 
     def shift_x0(self) -> None:
         buffers = self._require_buffers()
@@ -406,6 +424,7 @@ class OpenCLTransientExecutor:
         kernel = self._program_bundle.kernels["transient"]
         kernel.set_args(
             buffers.tspan,
+            buffers.t0,
             buffers.x0,
             buffers.pars,
             buffers.integration_settings,
@@ -455,8 +474,11 @@ class OpenCLTransientExecutor:
         self,
         *,
         initial_state: np.ndarray | None = None,
+        reset_timebase: bool = False,
     ) -> None:
         buffers = self._require_buffers()
+        if reset_timebase:
+            self._buffer_manager.reset_timebase(buffers, self._tspan[0])
         current_dt = self._buffer_manager.reset_solver_dt(
             buffers,
             self._integration_settings,
@@ -664,6 +686,7 @@ class OpenCLTrajectoryExecutor(OpenCLTransientExecutor):
         kernel = self._program_bundle.kernels["trajectory"]
         kernel.set_args(
             buffers.tspan,
+            buffers.t0,
             buffers.x0,
             buffers.pars,
             buffers.integration_settings,
@@ -779,6 +802,7 @@ class OpenCLFeatureExecutor(OpenCLTransientExecutor):
         kernel = self._program_bundle.kernels["features"]
         kernel.set_args(
             buffers.tspan,
+            buffers.t0,
             buffers.x0,
             buffers.pars,
             buffers.integration_settings,
@@ -844,6 +868,7 @@ class OpenCLFeatureExecutor(OpenCLTransientExecutor):
         kernel = self._program_bundle.kernels["initializeObserver"]
         kernel.set_args(
             buffers.tspan,
+            buffers.t0,
             buffers.x0,
             buffers.pars,
             buffers.integration_settings,

@@ -10,6 +10,7 @@
 
 __kernel void features(
     __constant realtype *tspan,         //time interval
+	__global realtype *t0,              //per-item absolute chunk start [nPts]
     __global realtype *x0,              //initial state 	   [nPts*nVar]
     __constant realtype *pars,          //parameter values	   [nPts*nPar]
 	__constant struct IntegrationSettings *settings, //dtmin/max, tols
@@ -38,7 +39,8 @@ __kernel void features(
 	struct rngData rd;
 
 	//get private copy of ODE parameters, initial data, and compute slope at initial state
-	ti = tspan[0];
+	realtype tOrigin = t0[i];
+	ti = tOrigin;
     dt = d_dt[i];
 	solveElapsed = ZERO;
 	solveElapsedCorrection = ZERO;
@@ -93,7 +95,8 @@ __kernel void features(
 			settings,
 			&dt,
 			&acceptedStepDt,
-			tspan,
+			tOrigin,
+			solveDuration,
 			auxi,
 			wi,
 			&rd
@@ -110,7 +113,20 @@ __kernel void features(
 		}
 		acceptedSteps = step;
 		lastAcceptedStepDt = acceptedStepDt;
-		updateObserverState(&ti, xi, dxi, auxi, acceptedStepDt, &observer_state, opars);
+		const realtype observerElapsedTotal = compensatedTimeValue(
+			solveElapsed,
+			solveElapsedCorrection
+		);
+		updateObserverState(
+			&ti,
+			xi,
+			dxi,
+			auxi,
+			acceptedStepDt,
+			observerElapsedTotal,
+			&observer_state,
+			opars
+		);
 
 		eventOccurred = eventFunction(&ti, xi, dxi, auxi, &observer_state, opars);
 		if (eventOccurred)
@@ -130,13 +146,35 @@ __kernel void features(
 		terminalEvent,
 		false
 	);
+	const realtype finalObserverElapsedTotal = compensatedTimeValue(
+		solveElapsed,
+		solveElapsedCorrection
+	);
 
 	//readout features of interest and write to global F:
-	finalizeFeatures(&ti, xi, dxi, auxi, &observer_state, opars, F, i, nPts);
+	finalizeFeatures(
+		&ti,
+		xi,
+		dxi,
+		auxi,
+		&observer_state,
+		opars,
+		finalObserverElapsedTotal,
+		F,
+		i,
+		nPts
+	);
 
 	// Finalize persistent observer state for possible continuation.
-	// TODO: this should advance the time vectors using the final ti, not the tspan[1]
-	finalizeObserverState(&ti, xi, dxi, auxi, &observer_state, opars, tspan);
+	finalizeObserverState(
+		&ti,
+		xi,
+		dxi,
+		auxi,
+		&observer_state,
+		opars,
+		finalObserverElapsedTotal
+	);
 
 	// Store the persistent observer state in global memory.
 	observer_states[i] = observer_state;

@@ -8,6 +8,7 @@
 
 __kernel void initializeObserver(
     __constant realtype *tspan,         //time interval
+	__global realtype *t0,              //per-item absolute chunk start [nPts]
     __global realtype *x0,              //initial state 	   [nPts*nVar]
     __constant realtype *pars,          //parameter values	   [nPts*nPar]
     __constant struct IntegrationSettings *settings, //dtmin/max, tols
@@ -30,7 +31,8 @@ __kernel void initializeObserver(
 	struct rngData rd;
 
 	//get private copy of ODE parameters, initial data, and compute slope at initial state
-	ti = tspan[0];
+	realtype tOrigin = t0[i];
+	ti = tOrigin;
     dt = d_dt[i];
 	solveElapsed = ZERO;
 	solveElapsedCorrection = ZERO;
@@ -84,7 +86,8 @@ __kernel void initializeObserver(
 			settings,
 			&dt,
 			&acceptedStepDt,
-			tspan,
+			tOrigin,
+			solveDuration,
 			auxi,
 			wi,
 			&rd
@@ -95,7 +98,7 @@ __kernel void initializeObserver(
 		warmupObserverState(&ti, xi, dxi, auxi, &observer_state, opars);
 	}
 	//rewind the time and state so initializeEventDetector gets the right values
-	ti = tspan[0];
+	ti = tOrigin;
 	solveElapsed = ZERO;
 	solveElapsedCorrection = ZERO;
 	for (int j = 0; j < N_VAR; ++j)

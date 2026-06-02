@@ -9,6 +9,7 @@
 // the most basic trajectory solver that stores nothing but the final variable values (and RNG state)
 __kernel void transient(
     __constant realtype *tspan,         //time interval
+    __global realtype *t0,              //per-item absolute chunk start [nPts]
     __global realtype *x0,              //initial state 	   [nPts*nVar]
     __constant realtype *pars,          //parameter values	   [nPts*nPar]
     __constant struct IntegrationSettings *settings, //dtmin/max, tols
@@ -34,7 +35,8 @@ __kernel void transient(
     struct rngData rd;
 
     //get private copy of ODE parameters, initial data, and compute slope at initial state
-    ti = tspan[0];
+    realtype tOrigin = t0[i];
+    ti = tOrigin;
     dt = d_dt[i];
     solveElapsed = ZERO;
     solveElapsedCorrection = ZERO;
@@ -85,7 +87,8 @@ __kernel void transient(
             settings,
             &dt,
             &acceptedStepDt,
-            tspan,
+            tOrigin,
+            solveDuration,
             auxi,
             wi,
             &rd

@@ -19,7 +19,8 @@ static inline int stepper(
     __constant struct IntegrationSettings *settings,
     realtype *dt,
     realtype *acceptedDt,
-    __constant realtype *tspan,
+    const realtype tOrigin,
+    const realtype solveDuration,
     realtype aux[],
     realtype wi[],
     __private struct rngData *rd
@@ -32,12 +33,12 @@ static inline int stepper(
     *acceptedDt = ZERO;
     realtype threshold = settings->abstol / settings->reltol;
     realtype acceptedTime = compensatedTimeFromOrigin(
-        tspan[0],
+        tOrigin,
         *solveElapsed,
         *solveElapsedCorrection
     );
-    realtype hmin = RCONST(16.0) * fabs(fabs(nextafter(acceptedTime, RCONST(1.1)*tspan[1])) - acceptedTime); //matches Matlab: hmin=16*eps(t)
-    realtype solveDuration = tspan[1] - tspan[0];
+    realtype targetEnd = tOrigin + solveDuration;
+    realtype hmin = RCONST(16.0) * fabs(fabs(nextafter(acceptedTime, RCONST(1.1) * targetEnd)) - acceptedTime); //matches Matlab: hmin=16*eps(t)
 
     bool noFailedSteps = true;
     while (true)
@@ -53,7 +54,7 @@ static inline int stepper(
 
         proposedDt = clamp(proposedDt, hmin, settings->dtmax); //limiters
         realtype stepDt = do_step(
-            tspan[0],
+            tOrigin,
             &trialElapsed,
             &trialElapsedCorrection,
             &trialTime,

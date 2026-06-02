@@ -86,8 +86,8 @@ struct ObserverState_summary
     realtype auxIntegral[CLODE_SUMMARY_AUX_MEAN_COUNT];
     realtype auxIntegralCorrection[CLODE_SUMMARY_AUX_MEAN_COUNT];
 #endif
-    realtype elapsed_total;
-    realtype elapsed_total_correction;
+    realtype elapsed_at_chunk_start;
+    realtype elapsed_at_chunk_start_correction;
 };
 
 typedef struct ObserverState_summary ObserverState;
@@ -140,8 +140,8 @@ static inline void initializeObserverState(realtype *ti, realtype xi[], realtype
         od->auxIntegralCorrection[j] = ZERO;
     }
 #endif
-    od->elapsed_total = ZERO;
-    od->elapsed_total_correction = ZERO;
+    od->elapsed_at_chunk_start = ZERO;
+    od->elapsed_at_chunk_start_correction = ZERO;
 }
 
 static inline void warmupObserverState(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op) {
@@ -182,15 +182,10 @@ static inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dx
     return false;
 }
 
-static inline void updateObserverState(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], const realtype stepDt, ObserverState *od, __constant struct ObserverRuntimeSettings *op) {
+static inline void updateObserverState(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], const realtype stepDt, const realtype solveElapsedTotal, ObserverState *od, __constant struct ObserverRuntimeSettings *op) {
     (void)ti;
     (void)op;
-    compensatedIntegrateConstant(
-        &od->elapsed_total,
-        &od->elapsed_total_correction,
-        stepDt,
-        ONE
-    );
+    (void)solveElapsedTotal;
 
 #if CLODE_SUMMARY_STATE_MAX_COUNT > 0
     for (int j = 0; j < CLODE_SUMMARY_STATE_MAX_COUNT; ++j) {
@@ -264,16 +259,17 @@ static inline void updateObserverState(realtype *ti, realtype xi[], realtype dxi
     //TODO: one could check for local maxima/minima in fVarIx and compute IMI and amplitude without events.
 }
 
-static inline void finalizeFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op, __global realtype *F, const int i, const int nPts) {
+static inline void finalizeFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op, const realtype solveElapsedTotal, __global realtype *F, const int i, const int nPts) {
     (void)ti;
     (void)xi;
     (void)dxi;
     (void)auxi;
     (void)op;
 #if CLODE_SUMMARY_OUTPUT_COUNT > 0
-    const realtype elapsedTotal = compensatedSumValue(
-        od->elapsed_total,
-        od->elapsed_total_correction
+    const realtype elapsedTotal = observerElapsedValue(
+        od->elapsed_at_chunk_start,
+        od->elapsed_at_chunk_start_correction,
+        solveElapsedTotal
     );
     for (int outputIx = 0; outputIx < CLODE_SUMMARY_OUTPUT_COUNT; ++outputIx) {
         const uint outputKind = CLODE_SUMMARY_OUTPUT_KINDS[outputIx];
@@ -344,14 +340,17 @@ static inline void finalizeFeatures(realtype *ti, realtype xi[], realtype dxi[],
 #endif
 }
 
-static inline void finalizeObserverState(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op, __constant realtype *tspan) {
+static inline void finalizeObserverState(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op, const realtype solveElapsedTotal) {
     (void)ti;
     (void)xi;
     (void)dxi;
     (void)auxi;
-    (void)od;
     (void)op;
-    (void)tspan;
+    advanceObserverElapsedChunk(
+        &od->elapsed_at_chunk_start,
+        &od->elapsed_at_chunk_start_correction,
+        solveElapsedTotal
+    );
 }
 
 #endif // USE_OBSERVER_SUMMARY

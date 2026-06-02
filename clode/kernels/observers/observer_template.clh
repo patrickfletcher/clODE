@@ -50,16 +50,41 @@ static inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dx
 // Accepted-step state update before eventFunction runs. This is the place to
 // advance rolling history buffers and continuous per-step reducers, not the
 // primary place to decide that the observer's public event fired.
-static inline void updateObserverState(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op) {
+static inline void updateObserverState(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], const realtype stepDt, const realtype solveElapsedTotal, ObserverState *od, __constant struct ObserverRuntimeSettings *op) {
+    (void)ti;
+    (void)xi;
+    (void)dxi;
+    (void)auxi;
+    (void)od;
+    (void)op;
     ++od->stepcount;
+    (void)stepDt;
+    (void)solveElapsedTotal;
 }
 
 //Perform and post-integration cleanup and write desired features into the global array F
-static inline void finalizeFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op, __global realtype *F, int i, int nPts) {
+static inline void finalizeFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op, const realtype solveElapsedTotal, __global realtype *F, int i, int nPts) {
+    (void)ti;
+    (void)xi;
+    (void)dxi;
+    (void)auxi;
+    (void)od;
+    (void)op;
+    (void)F;
+    (void)i;
+    (void)nPts;
+    (void)solveElapsedTotal;
 }
 
 //Perform and post-integration cleanup of observer state to ensure it is ready for continuation if needed
-static inline void finalizeObserverState(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op, __constant realtype *tspan) {//eg. times of last events need to be shifted left of t0
+static inline void finalizeObserverState(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op, const realtype solveElapsedTotal) {//eg. times of last events need to be shifted left of t0
+    (void)ti;
+    (void)xi;
+    (void)dxi;
+    (void)auxi;
+    (void)od;
+    (void)op;
+    (void)solveElapsedTotal;
 }
 
 #endif

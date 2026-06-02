@@ -118,7 +118,7 @@ def test_get_tspan_returns_current_device_window() -> None:
     assert simulator.get_tspan() == (1.25, 2.5)
 
 
-def test_advance_tspan_to_attained_final_time_uses_attained_fixed_step_end() -> None:
+def test_shift_tspan_continues_from_attained_fixed_step_end() -> None:
     simulator = make_simulator(
         "stable_linear",
         stepper=clode.Stepper.rk4,
@@ -131,10 +131,18 @@ def test_advance_tspan_to_attained_final_time_uses_attained_fixed_step_end() -> 
     simulator.transient(update_x0=False, fetch_results=False)
     attained_final_time = float(simulator.get_final_time().reshape(-1)[0])
     expected_attained = float(fixed_step_time_grid(0.0, 1.0, 0.3)[-1])
+    expected_next = float(
+        fixed_step_time_grid(expected_attained, expected_attained + 1.0, 0.3)[-1]
+    )
 
     assert attained_final_time == expected_attained
-    assert simulator.advance_tspan_to_attained_final_time() == (expected_attained, expected_attained + 1.0)
-    assert simulator.get_tspan() == (expected_attained, expected_attained + 1.0)
+    simulator.shift_tspan()
+
+    assert simulator.get_tspan() == (1.0, 2.0)
+
+    simulator.transient(update_x0=False, fetch_results=False)
+
+    assert float(simulator.get_final_time().reshape(-1)[0]) == expected_next
 
 
 def test_shift_tspan_keeps_requested_window_semantics_after_fixed_step_run() -> None:
@@ -151,21 +159,6 @@ def test_shift_tspan_keeps_requested_window_semantics_after_fixed_step_run() -> 
     simulator.shift_tspan()
 
     assert simulator.get_tspan() == pytest.approx((1.0, 2.0))
-
-
-def test_advance_tspan_to_attained_final_time_rejects_diverged_final_times() -> None:
-    simulator = make_simulator(
-        "stable_linear",
-        stepper=clode.Stepper.rk4,
-        t_span=(0.0, 1.0),
-        dt=FIXED_DT,
-        max_steps=FIXED_MAX_STEPS,
-    )
-    simulator.set_repeat_ensemble(2)
-    simulator._solver_state.final_time = np.array([0.5, 0.75], dtype=np.float64)
-
-    with pytest.raises(ValueError, match="different final times"):
-        simulator.advance_tspan_to_attained_final_time()
 
 
 def test_get_final_state_can_be_fetched_twice() -> None:
@@ -459,6 +452,20 @@ def test_get_initial_state_after_update_x0_pulls_runtime_state_back_into_ivp() -
 
     np.testing.assert_allclose(next_initial_state, final_state)
     np.testing.assert_allclose(simulator.ivp.get_initial_state(), final_state)
+
+
+def test_update_x0_also_advances_requested_window() -> None:
+    simulator = make_simulator(
+        "stable_linear",
+        stepper=clode.Stepper.rk4,
+        t_span=(0.0, 1.0),
+        dt=FIXED_DT,
+        max_steps=FIXED_MAX_STEPS,
+    )
+
+    simulator.transient(update_x0=True, fetch_results=False)
+
+    assert simulator.get_tspan() == (1.0, 2.0)
 
 
 def test_set_tspan_invalidates_previous_transient_results() -> None:

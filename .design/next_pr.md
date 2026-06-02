@@ -10,43 +10,41 @@ Observer readout bundle/selectability proof
 
 ## Scope
 
-With full event geometry and elapsed-buffer-only event-time storage now landed across the semantic event observers, define the first shared readout-bundle vocabulary for those observers, keep family-specific semantic config objects in place, and land a build-specialized selection proof on the threshold-family observers.
+Resume the threshold-family readout-bundle proof now that solver-owned time-base ownership and continuation semantics are landed. The next narrow target is to define a small set of build-specialized readout bundles on top of the current full-event-geometry defaults without reopening the time-ownership work.
 
-Current audit findings that shape this target:
+This target should:
 
-- The semantic event observers now have standardized kernel numerics, elapsed-buffer-only event-time refinement, and full event-geometry capture; the remaining work is packaging/selectability, not baseline mean/interpolation cleanup.
-- The family-defining readouts are already close to maximal: threshold and neighborhood-return cover the one-stream oscillation core, Schmitt owns the phase-state extras, and `local_max` owns the extremum-stream/IMI path.
-- The natural shared bundles are `event geometry`, `oscillation core`, and `trajectory summary`; Schmitt phase-state outputs and neighborhood/local-max extras should stay family-local for the first proof.
-- `min_amp` and `max_event_count` already have semantic homes on family-specific config objects, so the next reuse seam should be on readout declarations rather than on another cross-family config bundle.
-
-The proof target is: document the bundle inventory, choose the build-specialized selectability mechanism, and adopt it first on `Observer.threshold_crossing` plus `Observer.normalized_threshold_crossing` without changing their default public schemas.
+- define the first `event geometry`, `oscillation core`, and `trajectory summary` bundles on top of the threshold-family observers
+- keep family-specific semantic configs rather than inventing a new cross-family config object
+- prove that bundle selection specializes feature schema and persistent layout without regressing existing full-geometry outputs
+- keep the landed continuation semantics unchanged and treat the new time-base note as a dependency, not as scope to revisit
 
 **Strictly out of scope:**
 
-- More kernel time/mean/interpolation refactors
-- Observer-state or register-pressure cleanup
+- Reopening `set_tspan()` or `shift_tspan()` semantics
 - New observer families
-- A new cross-family semantic config object for recurring event-trigger controls
+- Generic chunk orchestration or progress APIs
+- Register-pressure cleanup unrelated to bundle specialization
 
 ## Why Now
 
-The helper-hardening and event-geometry pass is now landed: semantic event observers share K=3 history updates, elapsed-buffer-only time refinement, compensated trajectory/auxiliary means, and family-consistent interpolation behavior while exposing full retained event geometry. The readout audit also shows that the remaining ambiguity is not "which extra outputs are missing?" but "how should the existing outputs be grouped and selectively exposed without bloating every family?"
+The continuation blocker is gone. The next highest-value observer work is to make readout scope intentional and testable instead of leaving every event family at one coarse always-on schema.
 
 ## Acceptance Criteria
 
-- [ ] `.design/reference/observer_readout_audit.md` records the shared bundle inventory, including the landed full-event-geometry contract, and the rationale for keeping family-specific semantic configs.
-- [ ] `.design/reference/compatibility_boundary_audit.md` records that a control-only oscillation-bundle config is not the preferred next step.
-- [ ] A build-specialized readout-selection surface exists for the threshold family with at least `event geometry`, `oscillation core`, and `trajectory summary` bundles.
-- [ ] `Observer.threshold_crossing` and `Observer.normalized_threshold_crossing` adopt the new bundle declarations without changing their landed default public feature schemas.
-- [ ] The family-local status of Schmitt phase-state outputs and neighborhood/local-max extras is documented explicitly.
-- [ ] `package_state.md`, `ideas.md`, and the relevant observer reference notes reflect the landed direction.
-- [ ] No regressions in `test/test_features.py`, `test/test_simulation_contracts.py`, `test/test_opencl_structs.py`, or `test/kernel_components/`.
+- [ ] Threshold-family observers expose at least the first proved `event geometry`, `oscillation core`, and `trajectory summary` bundles.
+- [ ] Bundle choice specializes feature schema and persistent layout through the existing observer-definition and build-key machinery.
+- [ ] Full-geometry threshold outputs remain available and backward-compatible.
+- [ ] Tests cover schema selection, output naming, persistent-layout specialization, and a no-regression path for the current full threshold outputs.
+- [ ] The landed continuation note remains authoritative and no new time-ownership drift appears in docs or code.
 
 ## Key Refs
 
-- `.design/reference/observer_readout_audit.md` — current readout contract plus the 2026-06 audit findings
-- `.design/reference/observer_concept_audit.md` — deeper observer rationale and remaining design questions
-- `.design/reference/compatibility_boundary_audit.md` — canonical vs compatibility surface policy after the audit
-- `.design/reference/observer_solution_buffer_audit.md` — landed shared-history/helper contract
-- `clode/observers/_definitions.py`, `clode/observers/types.py`, `clode/simulation/features.py` — Python observer surface and schema definitions
-- `clode/kernels/observers/` — kernel-side family implementations
+- `.design/reference/observer_readout_audit.md`
+- `.design/reference/compatibility_boundary_audit.md`
+- `.design/reference/continuation_timebase_note.md`
+- `clode/observers/_definitions.py`
+- `clode/observers/types.py`
+- `clode/simulation/features.py`
+- `test/test_features.py`
+- `test/test_simulation_contracts.py`

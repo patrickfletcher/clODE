@@ -27,6 +27,7 @@ class CommonBuffers:
     ensemble_size: int
     problem_shape: ProblemShape
     tspan: object
+    t0: object
     integration_settings: object
     x0: object
     pars: object
@@ -110,6 +111,9 @@ class BufferManager:
             problem_shape=shape,
             tspan=self._opencl_binding.Buffer(
                 self._runtime.context, flags.READ_ONLY, size=2 * real_bytes
+            ),
+            t0=self._opencl_binding.Buffer(
+                self._runtime.context, flags.READ_WRITE, size=ensemble_size * real_bytes
             ),
             integration_settings=self._opencl_binding.Buffer(
                 self._runtime.context,
@@ -252,6 +256,15 @@ class BufferManager:
         host = np.asarray(tspan, dtype=self._real_dtype)
         self._enqueue_copy(buffers.tspan, host)
         return host
+
+    def upload_t0(self, buffers: CommonBuffers, t0_values: np.ndarray) -> np.ndarray:
+        host = np.asarray(t0_values, dtype=self._real_dtype)
+        self._enqueue_copy(buffers.t0, host)
+        return host
+
+    def reset_timebase(self, buffers: CommonBuffers, start_time: float) -> np.ndarray:
+        host = np.full(buffers.ensemble_size, start_time, dtype=self._real_dtype)
+        return self.upload_t0(buffers, host)
 
     def upload_integration_settings(
         self, buffers: CommonBuffers, integration_settings: IntegrationSettings

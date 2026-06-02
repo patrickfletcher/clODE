@@ -253,11 +253,12 @@ def test_basic_observer_component_kernel_reports_expected_features() -> None:
                     dxi,
                     auxi,
                     times[idx] - times[idx - 1],
+                    times[idx] - times[0],
                     &observer_state,
                     &TEST_PARAMS
                 );
             }
-            finalizeFeatures(&ti, xi, dxi, auxi, &observer_state, &TEST_PARAMS, features, 0, 1);
+            finalizeFeatures(&ti, xi, dxi, auxi, &observer_state, &TEST_PARAMS, times[n_values - 1] - times[0], features, 0, 1);
         }
         """,
         extra_options=("-DUSE_OBSERVER_SUMMARY", "-DN_VAR=1", "-DN_AUX=0"),
@@ -352,11 +353,12 @@ def test_basic_observer_constant_signal_preserves_exact_unit_mean() -> None:
                     dxi,
                     auxi,
                     times[idx] - times[idx - 1],
+                    times[idx] - times[0],
                     &observer_state,
                     &TEST_PARAMS
                 );
             }
-            finalizeFeatures(&ti, xi, dxi, auxi, &observer_state, &TEST_PARAMS, features, 0, 1);
+            finalizeFeatures(&ti, xi, dxi, auxi, &observer_state, &TEST_PARAMS, times[n_values - 1] - times[0], features, 0, 1);
         }
         """,
         extra_options=("-DUSE_OBSERVER_SUMMARY", "-DN_VAR=1", "-DN_AUX=0"),
@@ -445,11 +447,12 @@ def test_summary_observer_component_kernel_reports_expected_feature_layout() -> 
                     dxi,
                     auxi,
                     times[idx] - times[idx - 1],
+                    times[idx] - times[0],
                     &observer_state,
                     &TEST_PARAMS
                 );
             }
-            finalizeFeatures(&ti, xi, dxi, auxi, &observer_state, &TEST_PARAMS, features, 0, 1);
+            finalizeFeatures(&ti, xi, dxi, auxi, &observer_state, &TEST_PARAMS, times[n_values - 1] - times[0], features, 0, 1);
         }
         """,
         extra_options=("-DUSE_OBSERVER_SUMMARY", "-DN_VAR=2", "-DN_AUX=1"),
@@ -572,6 +575,7 @@ def test_schmitt_observer_kernels_store_up_and_down_transitions_in_event_feature
                     dxi,
                     auxi,
                     times[idx] - times[idx - 1],
+                    times[idx] - times[0],
                     &observer_state,
                     &TEST_PARAMS
                 );
@@ -693,6 +697,7 @@ def test_threshold_crossing_observer_kernel_tracks_absolute_crossings(
                     dxi,
                     auxi,
                     times[idx] - times[idx - 1],
+                    times[idx] - times[0],
                     &observer_state,
                     &TEST_PARAMS
                 );
@@ -813,6 +818,7 @@ def test_normalized_threshold_crossing_observer_kernel_tracks_normalized_crossin
                     dxi,
                     auxi,
                     times[idx] - times[idx - 1],
+                    times[idx] - times[0],
                     &observer_state,
                     &TEST_PARAMS
                 );
@@ -910,6 +916,7 @@ def test_local_maximum_observer_kernel_tracks_maxima_only() -> None:
                     dxi,
                     auxi,
                     times[idx] - times[idx - 1],
+                    times[idx] - times[0],
                     &observer_state,
                     &TEST_PARAMS
                 );
@@ -1017,6 +1024,7 @@ def test_local_max_observer_kernel_uses_three_sample_extremum_helpers() -> None:
                     dxi,
                     auxi,
                     times[idx] - times[idx - 1],
+                    times[idx] - times[0],
                     &observer_state,
                     &TEST_PARAMS
                 );
@@ -1132,6 +1140,7 @@ def test_neighborhood_return_observer_kernel_interpolates_exit_events() -> None:
                     dxi,
                     auxi,
                     times[idx] - times[idx - 1],
+                    times[idx] - times[0],
                     &observer_state,
                     &TEST_PARAMS
                 );
@@ -1244,6 +1253,7 @@ def test_neighborhood_return_observer_interpolates_using_full_state_geometry() -
                     dxi,
                     auxi,
                     times[idx] - times[idx - 1],
+                    times[idx] - times[0],
                     &observer_state,
                     &TEST_PARAMS
                 );
@@ -1663,7 +1673,8 @@ def test_fixed_stepper_reports_accepted_step_width_without_elapsed_differencing(
                 &TEST_SETTINGS,
                 &dt,
                 &accepted_dt,
-                TEST_TSPAN,
+                TEST_TSPAN[0],
+                TEST_TSPAN[1] - TEST_TSPAN[0],
                 aux,
                 wi,
                 &rd

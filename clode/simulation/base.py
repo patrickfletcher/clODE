@@ -403,6 +403,8 @@ class Simulator:
 		"""
 		self._solver_state.set_requested_window(t_span)
 		self._integrator.set_tspan(t_span)
+		if hasattr(self, "_ensemble_shape"):
+			self._solver_state.reset_problem_time(self._ensemble_shape)
 		self._invalidate_runtime_caches()
 
 	def get_tspan(self) -> tuple[float, float]:
@@ -411,44 +413,19 @@ class Simulator:
 		return self._solver_state.t_span
 
 	def shift_tspan(self) -> None:
-		"""Advance the stored integration interval by one interval length."""
+		"""Advance the stored interval and continue the device-side timebase.
+
+		This preserves the requested duration while copying the attained per-item
+		final time into the solver-owned `t0` buffer for the next solve.
+		"""
 		self._integrator.shift_tspan()
 		self._solver_state.set_requested_window(tuple(self._integrator.get_tspan()))
-		self._invalidate_runtime_caches()
+		self._solver_state.continue_timebase()
 
-	def advance_tspan_to_attained_final_time(
-		self,
-		*,
-		atol: float = 1e-12,
-		rtol: float = 0.0,
-	) -> tuple[float, float]:
-		"""Advance the requested window so it starts at the attained final time.
-
-		Unlike `shift_tspan()`, this preserves the current requested duration but
-		starts the next window from the attained `tf` returned by the previous
-		solve. This is the exact split-window continuation path when the ensemble
-		shares one final time.
-
-		Args:
-			atol: Absolute tolerance used when checking that the ensemble agrees on
-				one attained final time.
-			rtol: Relative tolerance used when checking that the ensemble agrees on
-				one attained final time.
-
-		Returns:
-			The new requested time window.
-
-		Raises:
-			ValueError: If no solve has been run yet or the ensemble reached
-				different final times.
-		"""
-		self.get_final_time()
-		next_tspan = self._solver_state.attained_final_time_window(
-			atol=atol,
-			rtol=rtol,
-		)
-		self.set_tspan(next_tspan)
-		return next_tspan
+	def shift_x0(self) -> None:
+		"""Promote the attained final state to the next initial state."""
+		self._integrator.shift_x0()
+		self._solver_state.continue_problem_time()
 
 	def set_solver_parameters(
 		self,
@@ -542,8 +519,8 @@ class Simulator:
 		self._invalidate_solution_cache()
 
 		if update_x0:
-			self._integrator.shift_x0()
-			self._solver_state.continue_problem_time()
+			self.shift_x0()
+			self.shift_tspan()
 
 		if fetch_results:
 			return self.get_final_state()

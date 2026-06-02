@@ -260,6 +260,58 @@ def test_threshold_crossing_exposes_event_times_and_event_count() -> None:
     assert int(output.get_var_count("event")) == 2
 
 
+def test_threshold_crossing_continuation_matches_single_run() -> None:
+    common_kwargs = dict(
+        rhs_equation=sine_curve_with_dx_aux,
+        variables={"x": 0.0},
+        parameters={"dilation": 1.0},
+        observer=clode.Observer.threshold_crossing,
+        observer_configuration=clode.ThresholdCrossingConfig(
+            event_var="x",
+            feature_var="x",
+            threshold=0.5,
+            direction=clode.EventDirection.either,
+            min_amp=0.5,
+            max_event_count=8,
+            max_event_timestamps=4,
+        ),
+        stepper=clode.Stepper.rk4,
+        dtmax=0.05,
+        dt=0.05,
+        **device_kwargs_for_tests(),
+    )
+
+    single_run = clode.FeatureSimulator(
+        **common_kwargs,
+        t_span=(0.0, 4 * pi),
+    )
+    split_run = clode.FeatureSimulator(
+        **common_kwargs,
+        t_span=(0.0, 2 * pi),
+    )
+
+    full_output = single_run.features()
+    assert full_output is not None
+
+    split_run.features()
+    split_output = split_run.features()
+    assert split_output is not None
+
+    np.testing.assert_allclose(
+        np.asarray(split_output.get_timestamps("event"), dtype=np.float64),
+        np.asarray(full_output.get_timestamps("event"), dtype=np.float64),
+        atol=3e-2,
+        rtol=0.0,
+    )
+    assert int(split_output.get_var_count("event")) == int(full_output.get_var_count("event"))
+    np.testing.assert_allclose(
+        split_output.get_var_mean("period"),
+        full_output.get_var_mean("period"),
+        atol=3e-2,
+        rtol=0.0,
+    )
+
+
 def test_threshold_crossing_exposes_event_state_and_zero_aux_geometry() -> None:
     feature_simulator = clode.FeatureSimulator(
         rhs_equation=sine_curve_with_zero_aux,

@@ -50,8 +50,8 @@ struct ObserverState_normalized_schmitt_trigger {
     realtype xGlobalMin;
     realtype xUp;
     realtype xDown;
-    realtype elapsedTotal;
-    realtype elapsedTotalCorrection;
+    realtype elapsedAtChunkStart;
+    realtype elapsedAtChunkStartCorrection;
     realtype elapsedThisDown;
     realtype fVarDownstateIntegral;
     realtype fVarDownstateIntegralCorrection;
@@ -138,8 +138,8 @@ static inline void initializeObserverState(realtype *ti, realtype xi[], realtype
     od->xGlobalMin = BIG_REAL;
     od->xUp = ZERO;
     od->xDown = ZERO;
-    od->elapsedTotal = ZERO;
-    od->elapsedTotalCorrection = ZERO;
+    od->elapsedAtChunkStart = ZERO;
+    od->elapsedAtChunkStartCorrection = ZERO;
     od->elapsedThisDown = ZERO;
     od->fVarDownstateIntegral = ZERO;
     od->fVarDownstateIntegralCorrection = ZERO;
@@ -326,17 +326,12 @@ static inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dx
     return od->eventcount == op->maxEventCount;
 }
 
-static inline void updateObserverState(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], const realtype stepDt, ObserverState *od, __constant struct ObserverRuntimeSettings *op) {
+static inline void updateObserverState(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], const realtype stepDt, const realtype solveElapsedTotal, ObserverState *od, __constant struct ObserverRuntimeSettings *op) {
     ++od->stepcount;
-    compensatedIntegrateConstant(
-        &od->elapsedTotal,
-        &od->elapsedTotalCorrection,
-        stepDt,
-        ONE
-    );
-    const realtype elapsedTotal = compensatedSumValue(
-        od->elapsedTotal,
-        od->elapsedTotalCorrection
+    const realtype elapsedTotal = observerElapsedValue(
+        od->elapsedAtChunkStart,
+        od->elapsedAtChunkStartCorrection,
+        solveElapsedTotal
     );
 
     advanceAcceptedStepHistory3(od->elapsedbuffer, elapsedTotal);
@@ -414,16 +409,17 @@ static inline void updateObserverState(realtype *ti, realtype xi[], realtype dxi
         );
 }
 
-static inline void finalizeFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op, __global realtype *F, int i, int nPts) {
+static inline void finalizeFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op, const realtype solveElapsedTotal, __global realtype *F, int i, int nPts) {
     (void)ti;
     (void)xi;
     (void)dxi;
     (void)auxi;
     (void)op;
 
-    const realtype elapsedTotal = compensatedSumValue(
-        od->elapsedTotal,
-        od->elapsedTotalCorrection
+    const realtype elapsedTotal = observerElapsedValue(
+        od->elapsedAtChunkStart,
+        od->elapsedAtChunkStartCorrection,
+        solveElapsedTotal
     );
 
     int ix = 0;
@@ -494,14 +490,17 @@ static inline void finalizeFeatures(realtype *ti, realtype xi[], realtype dxi[],
     }
 }
 
-static inline void finalizeObserverState(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op, __constant realtype *tspan) {
+static inline void finalizeObserverState(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op, const realtype solveElapsedTotal) {
     (void)ti;
     (void)xi;
     (void)dxi;
     (void)auxi;
-    (void)od;
     (void)op;
-    (void)tspan;
+    advanceObserverElapsedChunk(
+        &od->elapsedAtChunkStart,
+        &od->elapsedAtChunkStartCorrection,
+        solveElapsedTotal
+    );
 }
 
 #endif // USE_OBSERVER_NORMALIZED_SCHMITT_TRIGGER

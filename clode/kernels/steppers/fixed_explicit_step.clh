@@ -17,18 +17,20 @@ static inline int stepper(
     __constant struct IntegrationSettings *settings,
     realtype *dt,
     realtype *acceptedDt,
-    __constant realtype *tspan,
+    const realtype tOrigin,
+    const realtype solveDuration,
     realtype aux[],
     realtype wi[],
     __private struct rngData *rd
 )
 {
     (void)settings;
+    (void)solveDuration;
     realtype stepDt = *dt;
     *acceptedDt = stepDt;
 
     realtype stepEndTime = compensatedTimeFromOriginAfterStep(
-        tspan[0],
+        tOrigin,
         *solveElapsed,
         *solveElapsedCorrection,
         stepDt
@@ -44,7 +46,7 @@ static inline int stepper(
     // bookkeeping. Fixed-step has no controller state, so dt is also the
     // accepted step width for this call.
     do_step(
-        tspan[0],
+        tOrigin,
         solveElapsed,
         solveElapsedCorrection,
         ti,
