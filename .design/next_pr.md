@@ -10,11 +10,11 @@ Observer readout bundle/selectability proof
 
 ## Scope
 
-Define the first shared readout-bundle vocabulary for the current event observers, keep family-specific semantic config objects in place, and land a build-specialized selection proof on the threshold-family observers.
+With full event geometry and elapsed-buffer-only event-time storage now landed across the semantic event observers, define the first shared readout-bundle vocabulary for those observers, keep family-specific semantic config objects in place, and land a build-specialized selection proof on the threshold-family observers.
 
 Current audit findings that shape this target:
 
-- The semantic event observers now have standardized kernel numerics and helper usage; the remaining work is packaging/selectability, not baseline mean/interpolation cleanup.
+- The semantic event observers now have standardized kernel numerics, elapsed-buffer-only event-time refinement, and full event-geometry capture; the remaining work is packaging/selectability, not baseline mean/interpolation cleanup.
 - The family-defining readouts are already close to maximal: threshold and neighborhood-return cover the one-stream oscillation core, Schmitt owns the phase-state extras, and `local_max` owns the extremum-stream/IMI path.
 - The natural shared bundles are `event geometry`, `oscillation core`, and `trajectory summary`; Schmitt phase-state outputs and neighborhood/local-max extras should stay family-local for the first proof.
 - `min_amp` and `max_event_count` already have semantic homes on family-specific config objects, so the next reuse seam should be on readout declarations rather than on another cross-family config bundle.
@@ -30,14 +30,14 @@ The proof target is: document the bundle inventory, choose the build-specialized
 
 ## Why Now
 
-The helper-hardening pass is now landed: semantic event observers share K=3 history updates, compensated trajectory/auxiliary means, and family-consistent interpolation behavior. The readout audit also shows that the remaining ambiguity is not "which extra outputs are missing?" but "how should the existing outputs be grouped and selectively exposed without bloating every family?"
+The helper-hardening and event-geometry pass is now landed: semantic event observers share K=3 history updates, elapsed-buffer-only time refinement, compensated trajectory/auxiliary means, and family-consistent interpolation behavior while exposing full retained event geometry. The readout audit also shows that the remaining ambiguity is not "which extra outputs are missing?" but "how should the existing outputs be grouped and selectively exposed without bloating every family?"
 
 ## Acceptance Criteria
 
-- [ ] `.design/reference/observer_readout_audit.md` records the shared bundle inventory and the rationale for keeping family-specific semantic configs.
+- [ ] `.design/reference/observer_readout_audit.md` records the shared bundle inventory, including the landed full-event-geometry contract, and the rationale for keeping family-specific semantic configs.
 - [ ] `.design/reference/compatibility_boundary_audit.md` records that a control-only oscillation-bundle config is not the preferred next step.
 - [ ] A build-specialized readout-selection surface exists for the threshold family with at least `event geometry`, `oscillation core`, and `trajectory summary` bundles.
-- [ ] `Observer.threshold_crossing` and `Observer.normalized_threshold_crossing` adopt the new bundle declarations without changing their default public feature schemas.
+- [ ] `Observer.threshold_crossing` and `Observer.normalized_threshold_crossing` adopt the new bundle declarations without changing their landed default public feature schemas.
 - [ ] The family-local status of Schmitt phase-state outputs and neighborhood/local-max extras is documented explicitly.
 - [ ] `package_state.md`, `ideas.md`, and the relevant observer reference notes reflect the landed direction.
 - [ ] No regressions in `test/test_features.py`, `test/test_simulation_contracts.py`, `test/test_opencl_structs.py`, or `test/kernel_components/`.

@@ -8,10 +8,11 @@
 
 struct ObserverState_localmax
 {
-    realtype tbuffer[3];
+    realtype tStart;
     realtype elapsedbuffer[3];
     realtype xbuffer[3 * N_VAR];
     realtype dxbuffer[3 * N_VAR];
+    realtype auxbuffer[3 * N_AUX];
 
     realtype xTrajectoryMax[N_VAR];
     realtype xTrajectoryMin[N_VAR];
@@ -32,19 +33,18 @@ struct ObserverState_localmax
     realtype xGlobalMin;
     realtype elapsedTotal;
     realtype elapsedTotalCorrection;
-    realtype tLastMax;
     realtype elapsedLastMax;
-    //realtype xLastMax;
-    realtype tLastMin;
     realtype xLastMin;
 
     unsigned int eventcount;
     unsigned int stepcount;
 
     realtype tMaxList[N_STORE_EVENTS];
-    realtype xMaxList[N_STORE_EVENTS];
+    realtype xMaxList[N_STORE_EVENTS * N_VAR];
+    realtype auxMaxList[N_STORE_EVENTS * N_AUX];
     realtype tMinList[N_STORE_EVENTS];
-    realtype xMinList[N_STORE_EVENTS];
+    realtype xMinList[N_STORE_EVENTS * N_VAR];
+    realtype auxMinList[N_STORE_EVENTS * N_AUX];
 
 };
 
@@ -52,12 +52,14 @@ typedef struct ObserverState_localmax ObserverState;
 
 //set initial values to relevant fields in ObserverState
 static inline void initializeObserverState(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op) {
-    od->tbuffer[2] = *ti;
+    od->tStart = *ti;
     od->elapsedbuffer[2] = ZERO;
     for (int j = 0; j < N_VAR; ++j) {
         od->xbuffer[j * 3 + 2] = xi[j];
         od->dxbuffer[j * 3 + 2] = dxi[j];
     }
+    for (int j = 0; j < N_AUX; ++j)
+        od->auxbuffer[j * 3 + 2] = auxi[j];
 
     for (int j = 0; j < N_VAR; ++j) {
         od->xTrajectoryMax[j] = -BIG_REAL;
@@ -76,9 +78,15 @@ static inline void initializeObserverState(realtype *ti, realtype xi[], realtype
 
     for (int j = 0; j < N_STORE_EVENTS; ++j) {
 		od->tMaxList[j] = ZERO;
-		od->xMaxList[j] = ZERO;
+        for (int k = 0; k < N_VAR; ++k)
+            od->xMaxList[j * N_VAR + k] = ZERO;
+        for (int k = 0; k < N_AUX; ++k)
+            od->auxMaxList[j * N_AUX + k] = ZERO;
 		od->tMinList[j] = ZERO;
-		od->xMinList[j] = ZERO;
+        for (int k = 0; k < N_VAR; ++k)
+            od->xMinList[j * N_VAR + k] = ZERO;
+        for (int k = 0; k < N_AUX; ++k)
+            od->auxMinList[j * N_AUX + k] = ZERO;
 	}
 
     od->IMI[0] = -BIG_REAL;
@@ -93,9 +101,7 @@ static inline void initializeObserverState(realtype *ti, realtype xi[], realtype
     od->xGlobalMin = xi[op->eVarIx];
     od->elapsedTotal = ZERO;
     od->elapsedTotalCorrection = ZERO;
-    od->tLastMax = ZERO;
     od->elapsedLastMax = ZERO;
-    od->tLastMin = ZERO;
     od->xLastMin = BIG_REAL;
 
     od->eventcount = 0;
@@ -128,20 +134,17 @@ static inline bool eventFunction(realtype *ti, realtype xi[], realtype dxi[], re
 static inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op) {
     
     // Refine the buffered extremum with the shared bounded quadratic helper.
-    realtype thisTbuffer[3];
     realtype thisElapsedBuffer[3];
     realtype thisXbuffer[3];
     for (int j = 0; j < 3; ++j) {
-	 	thisTbuffer[j] = od->tbuffer[j];
 	 	thisElapsedBuffer[j] = od->elapsedbuffer[j];
 	 	thisXbuffer[j] = od->xbuffer[op->fVarIx * 3 + j];
     }
 
-    realtype tThisMax;
     realtype elapsedThisMax;
     realtype xThisMax;
-    localMaximumFromThreeSamples(thisTbuffer, thisXbuffer, &tThisMax, &xThisMax);
     localMaximumFromThreeSamples(thisElapsedBuffer, thisXbuffer, &elapsedThisMax, &xThisMax);
+    realtype tThisMax = compensatedTimeFromOrigin(od->tStart, elapsedThisMax, ZERO);
 
 
     ++od->eventcount;
@@ -162,13 +165,35 @@ static inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dx
     }
 
     //update stored "last" values
-    od->tLastMax = tThisMax;
     od->elapsedLastMax = elapsedThisMax;
-    // od->xLastMax = xThisMax;
 
 	if (od->eventcount <= N_STORE_EVENTS){
-        od->tMaxList[od->eventcount-1] = tThisMax;
-        od->xMaxList[od->eventcount-1] = xThisMax;
+        const int eventIndex = od->eventcount - 1;
+        od->tMaxList[eventIndex] = tThisMax;
+        for (int j = 0; j < N_VAR; ++j) {
+            if (j == op->eVarIx) {
+                od->xMaxList[eventIndex * N_VAR + j] = xThisMax;
+                continue;
+            }
+            realtype thisVarBuffer[3];
+            for (int k = 0; k < 3; ++k)
+                thisVarBuffer[k] = od->xbuffer[j * 3 + k];
+            od->xMaxList[eventIndex * N_VAR + j] = quadraticInterp(
+                thisElapsedBuffer,
+                thisVarBuffer,
+                elapsedThisMax
+            );
+        }
+        for (int j = 0; j < N_AUX; ++j) {
+            realtype thisAuxBuffer[3];
+            for (int k = 0; k < 3; ++k)
+                thisAuxBuffer[k] = od->auxbuffer[j * 3 + k];
+            od->auxMaxList[eventIndex * N_AUX + j] = quadraticInterp(
+                thisElapsedBuffer,
+                thisAuxBuffer,
+                elapsedThisMax
+            );
+        }
     }
 
     return od->eventcount == op->maxEventCount;
@@ -192,10 +217,10 @@ static inline void updateObserverState(realtype *ti, realtype xi[], realtype dxi
     );
 
     // advance solution buffer
-    advanceAcceptedStepHistory3(od->tbuffer, *ti);
     advanceAcceptedStepHistory3(od->elapsedbuffer, elapsedTotal);
     advanceAcceptedStepHistory3ByVariable(od->xbuffer, xi, N_VAR);
     advanceAcceptedStepHistory3ByVariable(od->dxbuffer, dxi, N_VAR);
+    advanceAcceptedStepHistory3ByVariable(od->auxbuffer, auxi, N_AUX);
 
     //global extent of all vars, var slopes, and aux vars
     for (int j = 0; j < N_VAR; ++j) {
@@ -229,17 +254,44 @@ static inline void updateObserverState(realtype *ti, realtype xi[], realtype dxi
 
     //local min check
     if (od->dxbuffer[op->fVarIx * 3 + 1] < 0.0 && od->dxbuffer[op->fVarIx * 3 + 2] > 0.0) {
-        realtype thisTbuffer[3];
+        realtype thisElapsedBuffer[3];
         realtype thisXbuffer[3];
         for (int j = 0; j < 3; ++j) {
-            thisTbuffer[j] = od->tbuffer[j];
+            thisElapsedBuffer[j] = od->elapsedbuffer[j];
             thisXbuffer[j] = od->xbuffer[op->fVarIx * 3 + j];
         }
-        localMinimumFromThreeSamples(thisTbuffer, thisXbuffer, &od->tLastMin, &od->xLastMin);
+        realtype elapsedThisMin;
+        realtype xThisMin;
+        localMinimumFromThreeSamples(thisElapsedBuffer, thisXbuffer, &elapsedThisMin, &xThisMin);
+        od->xLastMin = xThisMin;
 
         if (od->eventcount > 0 && od->eventcount <= N_STORE_EVENTS) {
-            od->tMinList[od->eventcount-1] = od->tLastMin;
-            od->xMinList[od->eventcount-1] = od->xLastMin;
+            const int eventIndex = od->eventcount - 1;
+            od->tMinList[eventIndex] = compensatedTimeFromOrigin(od->tStart, elapsedThisMin, ZERO);
+            for (int j = 0; j < N_VAR; ++j) {
+                if (j == op->eVarIx) {
+                    od->xMinList[eventIndex * N_VAR + j] = xThisMin;
+                    continue;
+                }
+                realtype thisVarBuffer[3];
+                for (int k = 0; k < 3; ++k)
+                    thisVarBuffer[k] = od->xbuffer[j * 3 + k];
+                od->xMinList[eventIndex * N_VAR + j] = quadraticInterp(
+                    thisElapsedBuffer,
+                    thisVarBuffer,
+                    elapsedThisMin
+                );
+            }
+            for (int j = 0; j < N_AUX; ++j) {
+                realtype thisAuxBuffer[3];
+                for (int k = 0; k < 3; ++k)
+                    thisAuxBuffer[k] = od->auxbuffer[j * 3 + k];
+                od->auxMinList[eventIndex * N_AUX + j] = quadraticInterp(
+                    thisElapsedBuffer,
+                    thisAuxBuffer,
+                    elapsedThisMin
+                );
+            }
         }
     }
 }
@@ -282,9 +334,21 @@ static inline void finalizeFeatures(realtype *ti, realtype xi[], realtype dxi[],
     }
     for (int j = 0; j < N_STORE_EVENTS; ++j) {
 		F[ix++ * nPts + i] = od->tMaxList[j];
-		F[ix++ * nPts + i] = od->xMaxList[j];
+        F[ix++ * nPts + i] = od->xMaxList[j * N_VAR + op->eVarIx];
+        for (int k = 0; k < N_VAR; ++k) {
+            if (k != op->eVarIx)
+                F[ix++ * nPts + i] = od->xMaxList[j * N_VAR + k];
+        }
+        for (int k = 0; k < N_AUX; ++k)
+            F[ix++ * nPts + i] = od->auxMaxList[j * N_AUX + k];
 		F[ix++ * nPts + i] = od->tMinList[j];
-		F[ix++ * nPts + i] = od->xMinList[j];
+        F[ix++ * nPts + i] = od->xMinList[j * N_VAR + op->eVarIx];
+        for (int k = 0; k < N_VAR; ++k) {
+            if (k != op->eVarIx)
+                F[ix++ * nPts + i] = od->xMinList[j * N_VAR + k];
+        }
+        for (int k = 0; k < N_AUX; ++k)
+            F[ix++ * nPts + i] = od->auxMinList[j * N_AUX + k];
     }
     F[ix++ * nPts + i] = od->eventcount;
 }

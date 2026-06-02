@@ -6,7 +6,7 @@ static inline void do_step(
     const realtype tOrigin,
     realtype *elapsed,
     realtype *elapsedCorrection,
-    realtype *stepEndTime,
+    realtype *ti,
     realtype xi[],
     realtype k1[],
     const realtype pars[],
@@ -51,5 +51,5 @@ static inline void do_step(
 
     getRHS(tEnd, xi, pars, k1, aux, wi);
     compensatedTimeAdd(elapsed, elapsedCorrection, dt);
-    *stepEndTime = tEnd;
+    *ti = tEnd;
 }

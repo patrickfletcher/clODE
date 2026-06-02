@@ -21,16 +21,16 @@ Update when: a readout schema changes, a family gains/removes readouts, or an op
 
 ### Event-observer families
 
-All semantic event observers now emit event timestamps plus observer-local summary/readout groups from `clode/observers/_definitions.py`.
+All semantic event observers now emit full retained event geometry plus observer-local summary/readout groups from `clode/observers/_definitions.py`.
 
 | Family | Event streams | Oscillation-oriented readouts | Notes |
 | --- | --- | --- | --- |
-| `Observer.threshold_crossing` | one event-time stream + event count | period, maxima count, amplitude | one-pass absolute threshold semantics |
-| `Observer.normalized_threshold_crossing` | one event-time stream + event count | period, maxima count, amplitude | two-pass warmup-derived threshold semantics |
-| `Observer.schmitt_trigger` | up/down transition streams + event count | period, maxima count, up/down duration, duty, active dip, amplitude | one-pass absolute Schmitt semantics |
-| `Observer.normalized_schmitt_trigger` | up/down transition streams + event count | period, maxima count, up/down duration, duty, active dip, amplitude | two-pass warmup-derived Schmitt semantics |
-| `Observer.local_max` | max/min event time + value streams + event count | IMI-period statistics, amplitude | intentionally omits maxima count |
-| `Observer.normalized_neighborhood_return` | one event-time stream + event count | period, maxima count, amplitude | includes neighborhood range/anchor-oriented outputs |
+| `Observer.threshold_crossing` | one event stream of time + state + aux samples, plus event count | period, maxima count, amplitude | one-pass absolute threshold semantics |
+| `Observer.normalized_threshold_crossing` | one event stream of time + state + aux samples, plus event count | period, maxima count, amplitude | two-pass warmup-derived threshold semantics |
+| `Observer.schmitt_trigger` | up/down transition streams of time + state + aux samples, plus event count | period, maxima count, up/down duration, duty, active dip, amplitude | one-pass absolute Schmitt semantics |
+| `Observer.normalized_schmitt_trigger` | up/down transition streams of time + state + aux samples, plus event count | period, maxima count, up/down duration, duty, active dip, amplitude | two-pass warmup-derived Schmitt semantics |
+| `Observer.local_max` | max/min event streams of time + state + aux samples, plus event count | IMI-period statistics, amplitude | keeps `value` aliases for the extrema channel and intentionally omits maxima count |
+| `Observer.normalized_neighborhood_return` | one event stream of time + state + aux samples, plus event count | period, maxima count, amplitude | includes neighborhood range/anchor-oriented outputs |
 
 ### Cross-family naming contract
 
@@ -39,6 +39,7 @@ All semantic event observers now emit event timestamps plus observer-local summa
 - `amplitude` is tracked from extrema bookkeeping in the family-specific feature channel. Threshold, Schmitt, and neighborhood-return use `f_var_ix`; `local_max` uses its one resolved extrema channel.
 - `n maxima` is present for non-extremum event families and intentionally absent for `local_max`.
 - Schmitt-only state-machine extras now include `up duration`, `down duration`, `duty`, and the family-local `active dip` readout.
+- `ObserverOutput.get_event_data(name, type="time")` reads timestamps, `type="<var-or-aux>"` reads the retained state or auxiliary coordinate for the named stream, and `local_max` retains `type="value"` as the public alias for the extrema channel itself.
 
 ### Variable-routing implications
 
@@ -62,11 +63,11 @@ All semantic event observers now emit event timestamps plus observer-local summa
 
 - Readout coverage is effectively maximal for the current canonical family semantics. Threshold and neighborhood-return already expose the full one-stream oscillation core, Schmitt adds the phase-state extras that its state machine uniquely defines, `local_max` already exposes the extremum-specific event streams plus IMI, and neighborhood-return's anchor/range outputs remain appropriately family-local.
 - The natural bundle inventory is now clear:
-	- event geometry: timestamp streams plus `event count`
+	- event geometry: timestamp streams plus retained state/auxiliary samples and `event count`
 	- oscillation core: `period` or IMI, `amplitude`, and `n maxima` where a non-extremum inter-event interval exists
 	- trajectory summary: state and auxiliary max/min/mean plus slope extrema
 	- Schmitt phase-state: `up duration`, `down duration`, `duty`, and `active dip`
-	- family-local context: neighborhood anchor/range outputs and `local_max` event value streams
+	- family-local context: neighborhood anchor/range outputs and `local_max`'s dual-stream/value-alias semantics
 - The strongest reuse opportunity is build-specialized bundle declaration or selection on the Python observer-definition side, analogous to `Observer.summary`. Kernel-side helper reuse should stay narrow: keep math primitives in `clODE_utilities.cl` and accepted-step history shifts in `observers.cl`, but leave array-heavy accumulation loops family-local unless explicit address-space-safe contracts are proven.
 
 ## Cross-family control semantics

@@ -18,7 +18,7 @@ Update when: rollout status changes or a previously open readout decision is clo
 - Phase 3 (amplitude rollout across semantic event families): landed.
 - Phase 4 (family-alignment decisions): landed far enough to keep family-specific semantic configs and stop chasing a control-only oscillation bundle.
 - Phase 5 (possible readout-selection surfaces): now active as a narrow build-specialized proof target.
-- Phase 6 (event-state value capture): future/lower priority.
+- Phase 6 (full event-geometry capture): landed.
 
 ## Remaining open decision set
 

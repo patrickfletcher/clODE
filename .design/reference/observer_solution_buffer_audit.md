@@ -8,7 +8,8 @@ Update when: the shared-buffer decision changes, a follow-on proof lands, or obs
 
 - A shared accepted-step `K`-sample solution-buffer concept should come before further observer bundle work.
 - The shared concept should start as a layout-and-update contract, not a single forced `ObserverState` struct.
-- The strongest overlap is in accepted-step history advancement (`t`, `x`, and sometimes `dx`) for `K=2` and `K=3` families.
+- The strongest overlap is in accepted-step history advancement for solver-relative elapsed time plus aligned `x`, `dx`, and optional `aux` samples across the current `K=3` families.
+- The semantic event observers no longer need mirrored absolute-time history buffers; they now retain a start-time origin plus solver-relative elapsed history and reconstruct absolute event timestamps when events are stored.
 - Event refinement guidance should default to linear or inverse-linear threshold timing where already proven stable, keep bounded three-sample quadratic extrema for current extremum families, and prioritize three-point quadratic threshold-crossing time/state refinement as the higher-order path.
 - Feature-rich observer families still need family-local state and bundle logic beyond that shared history core.
 - For the active observer path, the work-item-local accepted-step buffer belongs to observer-owned state and observer helper contracts, not as an ad hoc local buffer in `features.cl`.
@@ -31,20 +32,20 @@ After the readout rollout, all semantic event families adopted the shared K=3 ac
 
 ### Families that match the common K=3 accepted-step history core
 
-- `observer_threshold_crossing.clh`: `K=3` with `tbuffer[3]`, `xbuffer[3 * N_VAR]`, and `dxbuffer[3 * N_VAR]`; event detection reads only the `eVarIx` slice at positions 1–2.
-- `observer_normalized_threshold_crossing.clh`: same `K=3` layout as absolute threshold crossing.
-- `observer_schmitt_trigger.clh`: `K=3` with `tbuffer[3]`, `xbuffer[3 * N_VAR]`, and `dxbuffer[3 * N_VAR]`; Schmitt state transitions read the `eVarIx` slice at positions 1–2.
-- `observer_normalized_schmitt_trigger.clh`: same `K=3` layout as absolute Schmitt, with warmup-derived thresholds.
-- `observer_local_maximum.clh`: `K=3` with `tbuffer[3]`, `xbuffer[3 * N_VAR]`, and `dxbuffer[3 * N_VAR]` for three-sample extremum detection and refinement.
-- `observer_normalized_neighborhood_return.clh`: `K=3` with `tbuffer[3]`, `elapsedbuffer[3]`, `xbuffer[3 * N_VAR]`, and `dxbuffer[3 * N_VAR]`; the `elapsedbuffer` tracks intra-period elapsed time for anchor interpolation.
+- `observer_threshold_crossing.clh`: `K=3` with `elapsedbuffer[3]`, `xbuffer[3 * N_VAR]`, `dxbuffer[3 * N_VAR]`, and `auxbuffer[3 * N_AUX]`; event detection reads only the `eVarIx` slice at positions 1–2 while stored event timestamps are rebuilt from `tStart + elapsed`.
+- `observer_normalized_threshold_crossing.clh`: same `K=3` elapsed-buffer layout as absolute threshold crossing.
+- `observer_schmitt_trigger.clh`: `K=3` with `elapsedbuffer[3]`, `xbuffer[3 * N_VAR]`, `dxbuffer[3 * N_VAR]`, and `auxbuffer[3 * N_AUX]`; Schmitt state transitions read the `eVarIx` slice at positions 1–2 and store full up/down transition geometry.
+- `observer_normalized_schmitt_trigger.clh`: same `K=3` elapsed-buffer layout as absolute Schmitt, with warmup-derived thresholds.
+- `observer_local_maximum.clh`: `K=3` with `elapsedbuffer[3]`, `xbuffer[3 * N_VAR]`, `dxbuffer[3 * N_VAR]`, and `auxbuffer[3 * N_AUX]` for three-sample extremum detection and refinement.
+- `observer_normalized_neighborhood_return.clh`: `K=3` with `elapsedbuffer[3]`, `xbuffer[3 * N_VAR]`, `dxbuffer[3 * N_VAR]`, and `auxbuffer[3 * N_AUX]`; the `elapsedbuffer` tracks intra-period elapsed time for anchor interpolation and full event geometry.
 
 ### Families that carry additional per-family state beyond the K=3 history core
 
 The shared K=3 layout is not the full picture for heavier families; these carry per-family readout state that remains local:
 
 - `observer_normalized_schmitt_trigger.clh`: warmup-derived threshold state (`xUp`, `xDown`) plus period, amplitude, and duration bundle fields.
-- `observer_local_maximum.clh`: sparse event lists (`tEventList`, `xEventList`), full trajectory-stat fields (`xTrajectoryMax`, `xTrajectoryMin`, etc.), and period/amplitude bundle.
-- `observer_normalized_neighborhood_return.clh`: center-point `x0`, warmup range state, per-event elapsed bookkeeping (`elapsedTotal`, `tLastMax`, `tLastMin`), and full trajectory-stat fields with period/amplitude bundle.
+- `observer_local_maximum.clh`: sparse max/min event geometry lists, full trajectory-stat fields (`xTrajectoryMax`, `xTrajectoryMin`, etc.), and period/amplitude bundle.
+- `observer_normalized_neighborhood_return.clh`: center-point `x0`, warmup range state, per-event elapsed bookkeeping, and full trajectory-stat fields with period/amplitude bundle.
 
 ### Families where a `K`-sample event-history concept is not the main abstraction
 
@@ -54,8 +55,9 @@ The shared K=3 layout is not the full picture for heavier families; these carry 
 
 ### Shared candidate surface
 
-- Accepted-step index advancement for `K=2` and `K=3` time buffers.
+- Accepted-step index advancement for solver-relative elapsed buffers.
 - Accepted-step index advancement for aligned state and slope buffers when present.
+- Accepted-step index advancement for aligned auxiliary buffers when a family retains full event geometry.
 - Small interpolation-ready local sample views consumed by event or refinement helpers.
 
 ### Scope and ownership for the shared buffer contract

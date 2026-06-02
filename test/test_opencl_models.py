@@ -211,10 +211,19 @@ def test_threshold_feature_name_helper_always_includes_event_times_and_count() -
         ObserverParams(max_event_timestamps=3),
     )
 
-    assert feature_names[:4] == (
+    assert feature_names[:13] == (
         "event time 0",
+        "event x 0",
+        "event y 0",
+        "event aux0 0",
         "event time 1",
+        "event x 1",
+        "event y 1",
+        "event aux0 1",
         "event time 2",
+        "event x 2",
+        "event y 2",
+        "event aux0 2",
         "event count",
     )
 
@@ -264,8 +273,10 @@ def test_resolved_observer_spec_splits_persistent_and_event_layout() -> None:
     assert tuple(field[0] for field in resolved_spec.layout.event_output_fields) == (
         "tMaxList",
         "xMaxList",
+        "auxMaxList",
         "tMinList",
         "xMinList",
+        "auxMinList",
     )
     assert "tMaxList" not in tuple(
         field[0] for field in resolved_spec.layout.persistent_fields
@@ -304,8 +315,10 @@ def test_resolved_semantic_observer_specs_expose_current_event_layouts() -> None
     assert tuple(field[0] for field in local_max.layout.event_output_fields) == (
         "tMaxList",
         "xMaxList",
+        "auxMaxList",
         "tMinList",
         "xMinList",
+        "auxMinList",
     )
     assert "IMI" in tuple(
         field[0] for field in local_max.layout.persistent_fields
@@ -315,7 +328,7 @@ def test_resolved_semantic_observer_specs_expose_current_event_layouts() -> None
     assert normalized_neighborhood_return.uses_two_pass is True
     assert tuple(
         field[0] for field in normalized_neighborhood_return.layout.event_output_fields
-    ) == ("tEventList",)
+    ) == ("tEventList", "xEventList", "auxEventList")
     assert "period" in tuple(
         field[0] for field in normalized_neighborhood_return.layout.persistent_fields
     )

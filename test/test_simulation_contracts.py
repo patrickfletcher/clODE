@@ -1293,10 +1293,16 @@ def test_threshold_crossing_always_exposes_event_times_and_count() -> None:
 
     assert initial is not None
     feature_names = initial.get_feature_names()
-    assert feature_names[:4] == [
+    assert feature_names[:10] == [
         "event time 0",
+        "event x 0",
+        "event y 0",
         "event time 1",
+        "event x 1",
+        "event y 1",
         "event time 2",
+        "event x 2",
+        "event y 2",
         "event count",
     ]
     assert "period max" in feature_names

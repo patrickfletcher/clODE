@@ -36,6 +36,33 @@ def dual_sine_curve(
     dx_[1] = 2.0 * base_dx
 
 
+def sine_curve_with_zero_aux(
+    t: float,
+    x_: List[float],
+    p_: List[float],
+    dx_: List[float],
+    aux_: List[float],
+    w_: List[float],
+) -> None:
+    dilation: float = p_[0]
+    dx_[0] = cos(t * dilation)
+    aux_[0] = 0.0
+
+
+def sine_curve_with_dx_aux(
+    t: float,
+    x_: List[float],
+    p_: List[float],
+    dx_: List[float],
+    aux_: List[float],
+    w_: List[float],
+) -> None:
+    dilation: float = p_[0]
+    dx: float = cos(t * dilation)
+    dx_[0] = dx
+    aux_[0] = dx
+
+
 
 @pytest.mark.parametrize(
     ("event_direction", "expected_times"),
@@ -53,7 +80,7 @@ def test_threshold_1_absolute_crossings_respect_direction(
     expected_times: np.ndarray,
 ) -> None:
     feature_simulator = clode.FeatureSimulator(
-        rhs_equation=sine_curve,
+        rhs_equation=sine_curve_with_dx_aux,
         variables={"x": 0.0},
         parameters={"dilation": 1.0},
         observer=clode.Observer.threshold_crossing,
@@ -84,7 +111,7 @@ def test_threshold_1_absolute_crossings_respect_direction(
 
 def test_threshold_1_absolute_crossings_respect_min_amp_gate() -> None:
     feature_simulator = clode.FeatureSimulator(
-        rhs_equation=sine_curve,
+        rhs_equation=sine_curve_with_dx_aux,
         variables={"x": 0.0},
         parameters={"dilation": 1.0},
         observer=clode.Observer.threshold_crossing,
@@ -125,7 +152,7 @@ def test_normalized_threshold_crossing_uses_warmup_relative_thresholds(
     expected_times: np.ndarray,
 ) -> None:
     feature_simulator = clode.FeatureSimulator(
-        rhs_equation=sine_curve,
+        rhs_equation=sine_curve_with_dx_aux,
         variables={"x": 0.0},
         parameters={"dilation": 1.0},
         observer=clode.Observer.normalized_threshold_crossing,
@@ -209,8 +236,11 @@ def test_threshold_crossing_exposes_event_times_and_event_count() -> None:
     assert output is not None
     assert output.get_feature_names() == [
         "event time 0",
+        "event x 0",
         "event time 1",
+        "event x 1",
         "event time 2",
+        "event x 2",
         "event count",
         "period max",
         "period min",
@@ -228,6 +258,45 @@ def test_threshold_crossing_exposes_event_times_and_event_count() -> None:
         "min dx/dt",
     ]
     assert int(output.get_var_count("event")) == 2
+
+
+def test_threshold_crossing_exposes_event_state_and_zero_aux_geometry() -> None:
+    feature_simulator = clode.FeatureSimulator(
+        rhs_equation=sine_curve_with_zero_aux,
+        variables={"x": 0.0},
+        parameters={"dilation": 1.0},
+        aux=["zero"],
+        observer=clode.Observer.threshold_crossing,
+        observer_configuration=clode.ThresholdCrossingConfig(
+            event_var="x",
+            threshold=0.5,
+            direction=clode.EventDirection.either,
+            min_amp=0.5,
+            max_event_count=8,
+            max_event_timestamps=3,
+        ),
+        stepper=clode.Stepper.rk4,
+        dtmax=0.05,
+        dt=0.05,
+        t_span=(0.0, 2 * pi),
+        **device_kwargs_for_tests(),
+    )
+
+    output = feature_simulator.features()
+
+    assert output is not None
+    np.testing.assert_allclose(
+        np.asarray(output.get_event_data("event", type="x"), dtype=np.float64),
+        np.array([0.5, 0.5], dtype=np.float64),
+        atol=5e-2,
+        rtol=0.0,
+    )
+    np.testing.assert_allclose(
+        np.asarray(output.get_event_data("event", type="zero"), dtype=np.float64),
+        np.array([0.0, 0.0], dtype=np.float64),
+        atol=0.0,
+        rtol=0.0,
+    )
 
 
 @pytest.mark.parametrize(
@@ -312,7 +381,7 @@ def test_threshold_crossing_measures_amplitude_on_feature_var(
 
 def test_absolute_schmitt_trigger_uses_absolute_thresholds() -> None:
     feature_simulator = clode.FeatureSimulator(
-        rhs_equation=sine_curve,
+        rhs_equation=sine_curve_with_dx_aux,
         variables={"x": 0.0},
         parameters={"dilation": 1.0},
         aux=["dx"],
@@ -338,11 +407,23 @@ def test_absolute_schmitt_trigger_uses_absolute_thresholds() -> None:
     assert output is not None
     assert output.get_feature_names() == [
         "up transition time 0",
+        "up transition x 0",
+        "up transition dx 0",
         "down transition time 0",
+        "down transition x 0",
+        "down transition dx 0",
         "up transition time 1",
+        "up transition x 1",
+        "up transition dx 1",
         "down transition time 1",
+        "down transition x 1",
+        "down transition dx 1",
         "up transition time 2",
+        "up transition x 2",
+        "up transition dx 2",
         "down transition time 2",
+        "down transition x 2",
+        "down transition dx 2",
         "event count",
         "period max",
         "period min",
@@ -376,6 +457,10 @@ def test_absolute_schmitt_trigger_uses_absolute_thresholds() -> None:
     ]
     up_times = np.asarray(output.get_timestamps("up"), dtype=np.float64)
     down_times = np.asarray(output.get_timestamps("down"), dtype=np.float64)
+    up_values = np.asarray(output.get_event_data("up", type="x"), dtype=np.float64)
+    down_values = np.asarray(output.get_event_data("down", type="x"), dtype=np.float64)
+    up_slopes = np.asarray(output.get_event_data("up", type="dx"), dtype=np.float64)
+    down_slopes = np.asarray(output.get_event_data("down", type="dx"), dtype=np.float64)
     assert int(output.get_var_count("event")) == 2
     np.testing.assert_allclose(
         up_times,
@@ -387,6 +472,20 @@ def test_absolute_schmitt_trigger_uses_absolute_thresholds() -> None:
         down_times,
         np.array([7 * pi / 6, 19 * pi / 6], dtype=np.float64),
         atol=3e-2,
+        rtol=0.0,
+    )
+    np.testing.assert_allclose(up_values, np.array([0.5, 0.5], dtype=np.float64), atol=5e-2, rtol=0.0)
+    np.testing.assert_allclose(down_values, np.array([-0.5, -0.5], dtype=np.float64), atol=5e-2, rtol=0.0)
+    np.testing.assert_allclose(
+        up_slopes,
+        np.full(2, sqrt(3.0) / 2.0, dtype=np.float64),
+        atol=5e-2,
+        rtol=0.0,
+    )
+    np.testing.assert_allclose(
+        down_slopes,
+        np.full(2, -sqrt(3.0) / 2.0, dtype=np.float64),
+        atol=5e-2,
         rtol=0.0,
     )
     np.testing.assert_allclose(output.get_var_mean("period"), 2 * pi, atol=5e-2, rtol=0.0)
@@ -569,6 +668,10 @@ def test_local_maximum_detects_maxima_with_three_sample_refinement() -> None:
         output.get_event_data("local maximum", type="value"),
         dtype=np.float64,
     )
+    event_aux_values = np.asarray(
+        output.get_event_data("local maximum", type="dx"),
+        dtype=np.float64,
+    )
 
     # local_max should detect maxima at pi/2 and 5*pi/2 for sine.
     expected_times = np.array([pi / 2, 5 * pi / 2], dtype=np.float64)
@@ -577,6 +680,7 @@ def test_local_maximum_detects_maxima_with_three_sample_refinement() -> None:
     assert int(output.get_var_count("event")) == 2
     np.testing.assert_allclose(event_times, expected_times, atol=1e-2, rtol=0.0)
     np.testing.assert_allclose(event_values, expected_values, atol=2e-2, rtol=0.0)
+    np.testing.assert_allclose(event_aux_values, np.array([0.0, 0.0], dtype=np.float64), atol=2e-2, rtol=0.0)
 
 
 def test_local_maximum_respects_min_amp_gate() -> None:

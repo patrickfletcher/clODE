@@ -144,15 +144,16 @@ min_slope = output.get_var_min_slope("x")
 
 # Get event data
 event_times = output.get_event_data("event", type="time")
-event_count = output.get_event_data("event", type="count")
+event_x = output.get_event_data("event", type="x")
+event_count = output.get_var_count("event")
 ```
 
 Each observer family exposes different feature names and streams. For example:
 
 - `Observer.summary` exposes state variable summaries and optionally derivative summaries.
-- `Observer.threshold_crossing` exposes one `event` stream with crossing times.
-- `Observer.schmitt_trigger` exposes separate `up` and `down` streams with transition times.
-- `Observer.local_max` exposes `local maximum` and `local minimum` streams plus IMI and amplitude.
+- `Observer.threshold_crossing` exposes one `event` stream with crossing times plus retained state and auxiliary samples.
+- `Observer.schmitt_trigger` exposes separate `up` and `down` streams with transition times plus retained state and auxiliary samples.
+- `Observer.local_max` exposes `local maximum` and `local minimum` streams plus IMI, amplitude, and retained event geometry (`type="value"` for the extrema channel, `type="<var-or-aux>"` for the remaining coordinates).
 
 Use `get_feature_names()` to explore what is available for your observer configuration, or see the examples below for visual demonstrations.
 

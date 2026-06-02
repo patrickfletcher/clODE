@@ -284,6 +284,14 @@ static inline realtype linearInterpTimeOfValue(realtype t0, realtype t1, realtyp
 	return t0 + (yi - y0) * (t1 - t0) / (y1 - y0);
 }
 
+static inline realtype linearInterpFractionOfValue(realtype y0, realtype y1, realtype yi) {
+	return linearInterpTimeOfValue(ZERO, ONE, y0, y1, yi);
+}
+
+static inline realtype linearInterpByFraction(realtype y0, realtype y1, realtype alpha) {
+	return linearInterp(ZERO, ONE, y0, y1, alpha);
+}
+
 //estimate yi at specified ti, using linear interpolation between the first or second pair of values, given three values 
 // - the solution buffer in clode keeps t/y values of the most recent 3 time steps
 static inline realtype linearInterpArray(realtype t[], realtype y[], realtype ti) {

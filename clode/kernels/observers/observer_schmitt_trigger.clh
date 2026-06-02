@@ -8,13 +8,18 @@
 // channel, while extrema-derived readouts are measured on x[fVarIx].
 
 struct ObserverState_schmitt_trigger {
-    realtype tbuffer[3];
+    realtype tStart;
     realtype elapsedbuffer[3];
     realtype xbuffer[3 * N_VAR];
     realtype dxbuffer[3 * N_VAR];
+    realtype auxbuffer[3 * N_AUX];
 #if N_STORE_EVENTS > 0
     realtype tUpTransition[N_STORE_EVENTS];
+    realtype xUpTransition[N_STORE_EVENTS * N_VAR];
+    realtype auxUpTransition[N_STORE_EVENTS * N_AUX];
     realtype tDownTransition[N_STORE_EVENTS];
+    realtype xDownTransition[N_STORE_EVENTS * N_VAR];
+    realtype auxDownTransition[N_STORE_EVENTS * N_AUX];
 #endif
     
     // Trajectory statistics
@@ -46,14 +51,10 @@ struct ObserverState_schmitt_trigger {
     realtype xDown;
     realtype elapsedTotal;
     realtype elapsedTotalCorrection;
-    realtype tThisDown;
     realtype elapsedThisDown;
     realtype fVarDownstateIntegral;
     realtype fVarDownstateIntegralCorrection;
-    realtype tLastEvent;
     realtype elapsedLastEvent;
-    realtype tLastMax;
-    realtype tLastMin;
     realtype xLastMin;
     
     unsigned int thisNMaxima;  // Local maxima count for current inter-event interval
@@ -66,17 +67,26 @@ struct ObserverState_schmitt_trigger {
 typedef struct ObserverState_schmitt_trigger ObserverState;
 
 static inline void initializeObserverState(realtype *ti, realtype xi[], realtype dxi[], realtype auxi[], ObserverState *od, __constant struct ObserverRuntimeSettings *op) {
-    (void)auxi;
-    od->tbuffer[2] = *ti;
+    od->tStart = *ti;
     od->elapsedbuffer[2] = ZERO;
     for (int j = 0; j < N_VAR; ++j) {
         od->xbuffer[j * 3 + 2] = xi[j];
         od->dxbuffer[j * 3 + 2] = dxi[j];
     }
+    for (int j = 0; j < N_AUX; ++j)
+        od->auxbuffer[j * 3 + 2] = auxi[j];
 #if N_STORE_EVENTS > 0
     for (int j = 0; j < N_STORE_EVENTS; ++j) {
         od->tUpTransition[j] = ZERO;
+        for (int k = 0; k < N_VAR; ++k)
+            od->xUpTransition[j * N_VAR + k] = ZERO;
+        for (int k = 0; k < N_AUX; ++k)
+            od->auxUpTransition[j * N_AUX + k] = ZERO;
         od->tDownTransition[j] = ZERO;
+        for (int k = 0; k < N_VAR; ++k)
+            od->xDownTransition[j * N_VAR + k] = ZERO;
+        for (int k = 0; k < N_AUX; ++k)
+            od->auxDownTransition[j * N_AUX + k] = ZERO;
     }
 #endif
     
@@ -131,14 +141,10 @@ static inline void initializeObserverState(realtype *ti, realtype xi[], realtype
     od->xDown = ZERO;
     od->elapsedTotal = ZERO;
     od->elapsedTotalCorrection = ZERO;
-    od->tThisDown = ZERO;
     od->elapsedThisDown = ZERO;
     od->fVarDownstateIntegral = ZERO;
     od->fVarDownstateIntegralCorrection = ZERO;
-    od->tLastEvent = ZERO;
     od->elapsedLastEvent = ZERO;
-    od->tLastMax = ZERO;
-    od->tLastMin = ZERO;
     od->xLastMin = BIG_REAL;
     
     od->thisNMaxima = 0;
@@ -192,21 +198,21 @@ static inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dx
     (void)auxi;
 
     if (od->inUpstate) {
-        realtype tThisDown = linearInterpTimeOfValue(
-            od->tbuffer[1],
-            od->tbuffer[2],
+        const realtype alpha = linearInterpFractionOfValue(
             od->xbuffer[op->eVarIx * 3 + 1],
             od->xbuffer[op->eVarIx * 3 + 2],
             od->xDown
         );
-        realtype elapsedThisDown = linearInterpTimeOfValue(
+        const realtype elapsedThisDown = linearInterpByFraction(
             od->elapsedbuffer[1],
             od->elapsedbuffer[2],
-            od->xbuffer[op->eVarIx * 3 + 1],
-            od->xbuffer[op->eVarIx * 3 + 2],
-            od->xDown
+            alpha
         );
-        od->tThisDown = tThisDown;
+        const realtype tThisDown = compensatedTimeFromOrigin(
+            od->tStart,
+            elapsedThisDown,
+            ZERO
+        );
         od->elapsedThisDown = elapsedThisDown;
         od->fVarDownstateIntegral = ZERO;
         od->fVarDownstateIntegralCorrection = ZERO;
@@ -218,8 +224,24 @@ static inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dx
         );
         od->inUpstate = 0;
 #if N_STORE_EVENTS > 0
-        if (od->eventcount > 0 && od->eventcount <= N_STORE_EVENTS)
+        if (od->eventcount > 0 && od->eventcount <= N_STORE_EVENTS) {
+            const int eventIndex = od->eventcount - 1;
             od->tDownTransition[od->eventcount - 1] = tThisDown;
+            for (int j = 0; j < N_VAR; ++j) {
+                od->xDownTransition[eventIndex * N_VAR + j] = linearInterpByFraction(
+                    od->xbuffer[j * 3 + 1],
+                    od->xbuffer[j * 3 + 2],
+                    alpha
+                );
+            }
+            for (int j = 0; j < N_AUX; ++j) {
+                od->auxDownTransition[eventIndex * N_AUX + j] = linearInterpByFraction(
+                    od->auxbuffer[j * 3 + 1],
+                    od->auxbuffer[j * 3 + 2],
+                    alpha
+                );
+            }
+        }
 #endif
         return false;
     }
@@ -227,25 +249,41 @@ static inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dx
     ++od->eventcount;
     od->inUpstate = 1;
 
-    realtype tThisEvent = linearInterpTimeOfValue(
-        od->tbuffer[1],
-        od->tbuffer[2],
+    const realtype alpha = linearInterpFractionOfValue(
         od->xbuffer[op->eVarIx * 3 + 1],
         od->xbuffer[op->eVarIx * 3 + 2],
         od->xUp
     );
-    
-    realtype elapsedThisEvent = linearInterpTimeOfValue(
+    const realtype elapsedThisEvent = linearInterpByFraction(
         od->elapsedbuffer[1],
         od->elapsedbuffer[2],
-        od->xbuffer[op->eVarIx * 3 + 1],
-        od->xbuffer[op->eVarIx * 3 + 2],
-        od->xUp
+        alpha
+    );
+    const realtype tThisEvent = compensatedTimeFromOrigin(
+        od->tStart,
+        elapsedThisEvent,
+        ZERO
     );
 
 #if N_STORE_EVENTS > 0
-    if (od->eventcount <= N_STORE_EVENTS)
-        od->tUpTransition[od->eventcount - 1] = tThisEvent;
+    if (od->eventcount <= N_STORE_EVENTS) {
+        const int eventIndex = od->eventcount - 1;
+        od->tUpTransition[eventIndex] = tThisEvent;
+        for (int j = 0; j < N_VAR; ++j) {
+            od->xUpTransition[eventIndex * N_VAR + j] = linearInterpByFraction(
+                od->xbuffer[j * 3 + 1],
+                od->xbuffer[j * 3 + 2],
+                alpha
+            );
+        }
+        for (int j = 0; j < N_AUX; ++j) {
+            od->auxUpTransition[eventIndex * N_AUX + j] = linearInterpByFraction(
+                od->auxbuffer[j * 3 + 1],
+                od->auxbuffer[j * 3 + 2],
+                alpha
+            );
+        }
+    }
 #endif
 
     // Update period and maxima count statistics
@@ -288,7 +326,6 @@ static inline bool computeEventFeatures(realtype *ti, realtype xi[], realtype dx
         runningMean(&od->activeDip[2], thisActiveDip, nPeriods);
     }
 
-    od->tLastEvent = tThisEvent;
     od->elapsedLastEvent = elapsedThisEvent;
     od->thisNMaxima = 0;  // Reset maxima counter for next inter-event interval
 
@@ -308,11 +345,11 @@ static inline void updateObserverState(realtype *ti, realtype xi[], realtype dxi
         od->elapsedTotalCorrection
     );
     
-    // Advance 3-sample buffers (time, elapsed, state, slope for all variables)
-    advanceAcceptedStepHistory3(od->tbuffer, *ti);
+    // Advance 3-sample buffers (elapsed, state, slope, and auxiliary values).
     advanceAcceptedStepHistory3(od->elapsedbuffer, elapsedTotal);
     advanceAcceptedStepHistory3ByVariable(od->xbuffer, xi, N_VAR);
     advanceAcceptedStepHistory3ByVariable(od->dxbuffer, dxi, N_VAR);
+    advanceAcceptedStepHistory3ByVariable(od->auxbuffer, auxi, N_AUX);
     
     // Update trajectory statistics
     for (int j = 0; j < N_VAR; ++j) {
@@ -348,14 +385,15 @@ static inline void updateObserverState(realtype *ti, realtype xi[], realtype dxi
     
     // Check for local maximum in monitored variable
     if (od->dxbuffer[op->fVarIx * 3 + 1] > 0.0 && od->dxbuffer[op->fVarIx * 3 + 2] < 0.0) {
-        realtype thisTbuffer[3];
+        realtype thisElapsedBuffer[3];
         realtype thisXbuffer[3];
         for (int j = 0; j < 3; ++j) {
-            thisTbuffer[j] = od->tbuffer[j];
+            thisElapsedBuffer[j] = od->elapsedbuffer[j];
             thisXbuffer[j] = od->xbuffer[op->fVarIx * 3 + j];
         }
+        realtype elapsedThisMax;
         realtype xThisMax;
-        localMaximumFromThreeSamples(thisTbuffer, thisXbuffer, &od->tLastMax, &xThisMax);
+        localMaximumFromThreeSamples(thisElapsedBuffer, thisXbuffer, &elapsedThisMax, &xThisMax);
         ++od->thisNMaxima;
 
         if (od->xLastMin < BIG_REAL) {
@@ -369,13 +407,14 @@ static inline void updateObserverState(realtype *ti, realtype xi[], realtype dxi
     
     // Check for local minimum in monitored variable
     if (od->dxbuffer[op->fVarIx * 3 + 1] < 0.0 && od->dxbuffer[op->fVarIx * 3 + 2] > 0.0) {
-        realtype thisTbuffer[3];
+        realtype thisElapsedBuffer[3];
         realtype thisXbuffer[3];
         for (int j = 0; j < 3; ++j) {
-            thisTbuffer[j] = od->tbuffer[j];
+            thisElapsedBuffer[j] = od->elapsedbuffer[j];
             thisXbuffer[j] = od->xbuffer[op->fVarIx * 3 + j];
         }
-        localMinimumFromThreeSamples(thisTbuffer, thisXbuffer, &od->tLastMin, &od->xLastMin);
+        realtype elapsedThisMin;
+        localMinimumFromThreeSamples(thisElapsedBuffer, thisXbuffer, &elapsedThisMin, &od->xLastMin);
     }
 
     if (!od->inUpstate)
@@ -403,7 +442,15 @@ static inline void finalizeFeatures(realtype *ti, realtype xi[], realtype dxi[],
 #if N_STORE_EVENTS > 0
     for (int j = 0; j < N_STORE_EVENTS; ++j) {
         F[ix++ * nPts + i] = od->tUpTransition[j];
+        for (int k = 0; k < N_VAR; ++k)
+            F[ix++ * nPts + i] = od->xUpTransition[j * N_VAR + k];
+        for (int k = 0; k < N_AUX; ++k)
+            F[ix++ * nPts + i] = od->auxUpTransition[j * N_AUX + k];
         F[ix++ * nPts + i] = od->tDownTransition[j];
+        for (int k = 0; k < N_VAR; ++k)
+            F[ix++ * nPts + i] = od->xDownTransition[j * N_VAR + k];
+        for (int k = 0; k < N_AUX; ++k)
+            F[ix++ * nPts + i] = od->auxDownTransition[j * N_AUX + k];
     }
 #endif
     F[ix++ * nPts + i] = (realtype)od->eventcount;
@@ -418,7 +465,6 @@ static inline void finalizeFeatures(realtype *ti, realtype xi[], realtype dxi[],
     F[ix++ * nPts + i] = od->eventcount > 1 ? od->nMaxima[1] : ZERO;
     F[ix++ * nPts + i] = od->eventcount > 1 ? od->nMaxima[2] : ZERO;
 
-
     F[ix++ * nPts + i] = od->eventcount > 1 ? od->upDuration[0] : ZERO;
     F[ix++ * nPts + i] = od->eventcount > 1 ? od->upDuration[1] : ZERO;
     F[ix++ * nPts + i] = od->eventcount > 1 ? od->upDuration[2] : ZERO;
@@ -430,11 +476,11 @@ static inline void finalizeFeatures(realtype *ti, realtype xi[], realtype dxi[],
     F[ix++ * nPts + i] = od->eventcount > 1 ? od->duty[0] : ZERO;
     F[ix++ * nPts + i] = od->eventcount > 1 ? od->duty[1] : ZERO;
     F[ix++ * nPts + i] = od->eventcount > 1 ? od->duty[2] : ZERO;
-    // Amplitude statistics (max/min/mean), based on local extrema tracking.
 
     F[ix++ * nPts + i] = od->eventcount > 1 ? od->activeDip[0] : ZERO;
     F[ix++ * nPts + i] = od->eventcount > 1 ? od->activeDip[1] : ZERO;
     F[ix++ * nPts + i] = od->eventcount > 1 ? od->activeDip[2] : ZERO;
+
     F[ix++ * nPts + i] = od->nAmplitude > 0 ? od->amplitude[0] : ZERO;
     F[ix++ * nPts + i] = od->nAmplitude > 0 ? od->amplitude[1] : ZERO;
     F[ix++ * nPts + i] = od->nAmplitude > 0 ? od->amplitude[2] : ZERO;

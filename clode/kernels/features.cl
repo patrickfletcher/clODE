@@ -97,7 +97,8 @@ __kernel void features(
 			auxi,
 			wi,
 			&rd
-		);
+		); 
+		// here, ti is the compensated accepted time after the step (in units of the original time span), xi is the accepted state, dxi is the slope at the accepted state, auxi is the auxiliary state, and wi is the Wiener state. acceptedStepDt is the last accepted step size, dt is the proposed next step size.  
 		if (stepflag != 0)
 		{
 			solveStatus = (

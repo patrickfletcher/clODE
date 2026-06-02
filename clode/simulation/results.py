@@ -167,35 +167,48 @@ class ObserverOutput:
 
         normalized_name = self._normalize_event_stream_name(name)
         field_type = "time" if type is None else str(type)
-        event_features = [
-            feature_name
-            for feature_name in self._feature_names
-            if normalized_name in feature_name and field_type in feature_name and "count" not in feature_name
-        ]
-        if len(event_features) == 0:
-            raise NotImplementedError(
-                f"{self._observer_type} does not track {name} {field_type}s!"
-            )
-
         key_patterns = (
             f"{normalized_name} event {field_type} {{idx}}",
             f"{normalized_name} transition {field_type} {{idx}}",
             f"{normalized_name} {field_type} {{idx}}",
         )
+        selected_key_pattern = next(
+            (
+                key_pattern
+                for key_pattern in key_patterns
+                if key_pattern.format(idx=0) in self._feature_names
+            ),
+            None,
+        )
+        if selected_key_pattern is None:
+            raise NotImplementedError(
+                f"{self._observer_type} does not track {name} {field_type}s!"
+            )
+
+        selected_time_pattern = (
+            selected_key_pattern
+            if field_type == "time"
+            else selected_key_pattern.replace(f" {field_type} ", " time ")
+        )
         data = []
         for event_idx in range(0, self._event_output_settings.max_event_timestamps):
-            datapoint = None
-            for key_pattern in key_patterns:
-                key = key_pattern.format(idx=event_idx)
-                if key in self._feature_names:
-                    datapoint = self._get_var(key)
-                    break
-            if datapoint is None:
+            time_key = selected_time_pattern.format(idx=event_idx)
+            if time_key not in self._feature_names:
                 break
-            if np.all(datapoint == 0):
+            time_datapoint = self._get_var(time_key)
+            if np.all(time_datapoint == 0):
                 break
+            key = selected_key_pattern.format(idx=event_idx)
+            if key not in self._feature_names:
+                break
+            datapoint = self._get_var(key)
+            datapoint = (
+                datapoint[np.newaxis] if len(datapoint.shape) == 0 else datapoint
+            )
             data.append(datapoint)
-        return np.stack(data, axis=-1).squeeze()
+        if data:
+            return np.stack(data, axis=1).squeeze()
+        return np.array([], dtype=np.float64)
 
     def get_timestamps(
         self, var: str = "event"

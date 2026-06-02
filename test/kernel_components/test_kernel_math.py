@@ -581,10 +581,14 @@ def test_schmitt_observer_kernels_store_up_and_down_transitions_in_event_feature
             }
 
             out[0] = observer_state.tUpTransition[0];
-            out[1] = observer_state.tDownTransition[0];
-            out[2] = observer_state.tUpTransition[1];
-            out[3] = observer_state.tDownTransition[1];
-            out[4] = (realtype)observer_state.eventcount;
+            out[1] = observer_state.xUpTransition[0];
+            out[2] = observer_state.tDownTransition[0];
+            out[3] = observer_state.xDownTransition[0];
+            out[4] = observer_state.tUpTransition[1];
+            out[5] = observer_state.xUpTransition[1];
+            out[6] = observer_state.tDownTransition[1];
+            out[7] = observer_state.xDownTransition[1];
+            out[8] = (realtype)observer_state.eventcount;
         }
         """
         )
@@ -596,7 +600,7 @@ def test_schmitt_observer_kernels_store_up_and_down_transitions_in_event_feature
 
     sample_times = np.array([0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0], dtype=np.float32)
     x_values = np.array([-1.0, 0.0, 1.0, 0.0, -1.0, 0.0, 1.0, 0.0, -1.0], dtype=np.float32)
-    out = np.empty(5, dtype=np.float32)
+    out = np.empty(9, dtype=np.float32)
 
     time_buffer = pyopencl.Buffer(
         runtime.context,
@@ -621,13 +625,15 @@ def test_schmitt_observer_kernels_store_up_and_down_transitions_in_event_feature
     )
     pyopencl.enqueue_copy(runtime.queue, out, out_buffer).wait()
 
+    expected_up_value = 0.5 if needs_warmup else x_up_threshold
+    expected_down_value = -0.5 if needs_warmup else x_down_threshold
     np.testing.assert_allclose(
-        out[:4],
-        np.array([1.5, 3.5, 5.5, 7.5], dtype=np.float32),
+        out[:8],
+        np.array([1.5, expected_up_value, 3.5, expected_down_value, 5.5, expected_up_value, 7.5, expected_down_value], dtype=np.float32),
         atol=1e-6,
         rtol=0.0,
     )
-    assert out[4] == pytest.approx(2.0)
+    assert out[8] == pytest.approx(2.0)
 
 
 @pytest.mark.parametrize(
@@ -695,9 +701,11 @@ def test_threshold_crossing_observer_kernel_tracks_absolute_crossings(
                 }
             }
 
-            for (int idx = 0; idx < 4; ++idx)
+            for (int idx = 0; idx < 4; ++idx) {
                 out[idx] = observer_state.tEventList[idx];
-            out[4] = (realtype)observer_state.eventcount;
+                out[4 + idx] = observer_state.xEventList[idx];
+            }
+            out[8] = (realtype)observer_state.eventcount;
         }
         """
         ).replace("__EVENT_DIRECTION__", str(int(event_direction))),
@@ -706,7 +714,7 @@ def test_threshold_crossing_observer_kernel_tracks_absolute_crossings(
 
     sample_times = np.array([0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0], dtype=np.float32)
     x_values = np.array([-1.0, 0.0, 1.0, 0.0, -1.0, 0.0, 1.0], dtype=np.float32)
-    out = np.empty(5, dtype=np.float32)
+    out = np.empty(9, dtype=np.float32)
 
     time_buffer = pyopencl.Buffer(
         runtime.context,
@@ -734,7 +742,14 @@ def test_threshold_crossing_observer_kernel_tracks_absolute_crossings(
     observed_times = out[: len(expected_times)]
     np.testing.assert_allclose(observed_times, expected_times, atol=1e-6, rtol=0.0)
     assert np.all(out[len(expected_times) : 4] == 0.0)
-    assert out[4] == pytest.approx(float(len(expected_times)))
+    np.testing.assert_allclose(
+        out[4 : 4 + len(expected_times)],
+        np.full(len(expected_times), 0.5, dtype=np.float32),
+        atol=1e-6,
+        rtol=0.0,
+    )
+    assert np.all(out[4 + len(expected_times) : 8] == 0.0)
+    assert out[8] == pytest.approx(float(len(expected_times)))
 
 
 @pytest.mark.parametrize(
@@ -1126,8 +1141,10 @@ def test_neighborhood_return_observer_kernel_interpolates_exit_events() -> None:
             }
 
             out[0] = observer_state.tEventList[0];
-            out[1] = observer_state.tEventList[1];
-            out[2] = (realtype)observer_state.eventcount;
+            out[1] = observer_state.xEventList[0];
+            out[2] = observer_state.tEventList[1];
+            out[3] = observer_state.xEventList[1];
+            out[4] = (realtype)observer_state.eventcount;
         }
         """,
         extra_options=("-DUSE_OBSERVER_NORMALIZED_NEIGHBORHOOD_RETURN", "-DN_VAR=1", "-DN_AUX=0", "-DN_STORE_EVENTS=4"),
@@ -1135,7 +1152,7 @@ def test_neighborhood_return_observer_kernel_interpolates_exit_events() -> None:
 
     sample_times = np.arange(8, dtype=np.float32)
     x_values = np.array([0.0, -0.2, -0.6, -1.0, 0.0, -0.8, -1.0, 0.0], dtype=np.float32)
-    out = np.empty(3, dtype=np.float32)
+    out = np.empty(5, dtype=np.float32)
 
     time_buffer = pyopencl.Buffer(
         runtime.context,
@@ -1162,7 +1179,7 @@ def test_neighborhood_return_observer_kernel_interpolates_exit_events() -> None:
 
     np.testing.assert_allclose(
         out,
-        np.array([3.25, 6.25, 2.0], dtype=np.float32),
+        np.array([3.25, -0.75, 6.25, -0.75, 2.0], dtype=np.float32),
         atol=1e-6,
         rtol=0.0,
     )

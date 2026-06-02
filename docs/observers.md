@@ -127,7 +127,7 @@ When you call `set_observer_configuration(...)` with one of the shared config cl
 
 Single-observer configs such as `clode.LocalMaximumConfig` and `clode.NeighborhoodReturnConfig` are unambiguous, so clODE can infer their observer when you construct a simulator from the config alone. Passing `observer=` explicitly is still useful when you want the selection to be obvious at the call site.
 
-`clode.Observer.threshold_crossing` and `clode.Observer.normalized_threshold_crossing` always expose retained event times and event count. Readout-selection surfaces are intentionally removed until a broader cross-family observer UX is standardized.
+`clode.Observer.threshold_crossing` and `clode.Observer.normalized_threshold_crossing` always expose retained full event geometry (times plus state/auxiliary samples) and event count. Readout-selection surfaces are intentionally removed until a broader cross-family observer UX is standardized.
 
 Tune observer behavior with `set_observer_parameters(...)` when you want the older compatibility surface or need to pass the broad `ObserverParams` bundle.
 
@@ -156,7 +156,7 @@ Not every observer field affects every built-in observer. For the current event-
 
 See [numerical_accuracy.md](numerical_accuracy.md) for empirical examples and practical tuning guidance.
 
-`clode.Observer.schmitt_trigger` and `clode.Observer.normalized_schmitt_trigger` store up/down transition times with inverse-linear interpolation of the active `x` boundary only. The normalized semantic family converts its configured thresholds into concrete live-pass values after warmup; the absolute family uses the configured values directly. `clode.Observer.local_max` stores extrema using bounded three-sample quadratic refinement. `clode.Observer.normalized_neighborhood_return` keeps sampled anchors `x0`, then refines each stored exit time by linearly interpolating the full normalized state between the last inside sample and the first outside sample of the radius ball. See [numerical_accuracy.md](numerical_accuracy.md) for empirical tradeoffs and comparisons with alternative interpolation choices.
+`clode.Observer.schmitt_trigger` and `clode.Observer.normalized_schmitt_trigger` store full up/down transition geometry: the event time comes from inverse-linear interpolation of the active `x` boundary, and the retained state/auxiliary coordinates are interpolated on the same accepted-step segment. The normalized semantic family converts its configured thresholds into concrete live-pass values after warmup; the absolute family uses the configured values directly. `clode.Observer.local_max` stores extrema using bounded three-sample quadratic refinement and now retains the remaining state/auxiliary coordinates at each retained max/min event as well. `clode.Observer.normalized_neighborhood_return` keeps sampled anchors `x0`, then refines each stored exit time by linearly interpolating the full normalized state between the last inside sample and the first outside sample of the radius ball while retaining the corresponding event-state samples. See [numerical_accuracy.md](numerical_accuracy.md) for empirical tradeoffs and comparisons with alternative interpolation choices.
 
 `min_amp` is intentionally not one identical concept across all event-triggering families.
 
@@ -177,7 +177,7 @@ The following table shows which readouts are available for each observer family:
 | Readout Type | `threshold_crossing` | `normalized_threshold_crossing` | `schmitt_trigger` | `normalized_schmitt_trigger` | `local_max` | `normalized_neighborhood_return` | `summary` |
 | -------------- | :----: | :----: | :----: | :----: | :----: | :----: | :----: |
 | **Event timestamps** | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | — |
-| **Event values** | — | — | — | — | ✓ | — | — |
+| **Event state / aux geometry** | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | — |
 | **Event count** | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | — |
 | **Period** (time between events) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | — |
 | **Peak count** (local maxima between events) | ✓ | ✓ | ✓ | ✓ | — | ✓ | — |
@@ -191,6 +191,7 @@ The following table shows which readouts are available for each observer family:
 **Notes on specific readout types**:
 
 - **Event timestamps**: Refined to sub-timestep precision with interpolation.
+- **Event state / aux geometry**: Use `get_event_data(name, type="<var-or-aux>")` to read the retained state or auxiliary coordinate for one event stream. `local_max` additionally keeps `type="value"` as the extrema-channel alias.
 - **Event count**: Total number of events detected during integration. Always available for event-detector families; never available for `summary`.
 - **Period**: Time between consecutive events. Meaning varies by family (inter-maxima interval for `local_max`, inter-exit time for `normalized_neighborhood_return`, etc.). Accuracy depends on event-detection strategy and oscillation regularity.
 - **Amplitude**: Measured as `local_max_value - last_local_min_value` on each family's extrema-tracking channel. Threshold, Schmitt, and neighborhood-return use `feature_var`; `local_max` uses its one resolved extrema channel.
@@ -212,9 +213,10 @@ observer_output = integrator.features()
 print(observer_output.get_feature_names())
 print(observer_output.get_var_mean("period"))
 print(observer_output.get_event_data("up", type="time"))
+print(observer_output.get_event_data("up", type="x"))
 ```
 
-The available names depend on the selected observer. Threshold-crossing families expose one `event` stream with `event time {index}` plus event count, period/maxima/amplitude aggregates, and trajectory summaries. `clode.Observer.local_max` exposes two extrema streams (`localmax time/value` and `localmin time/value`) plus event count and summary readouts. `clode.Observer.schmitt_trigger` and `clode.Observer.normalized_schmitt_trigger` expose separate `up transition` and `down transition` streams plus event count, period/maxima aggregates, Schmitt duration/duty readouts, the Schmitt-local `active dip` readout, and amplitude. `clode.Observer.normalized_neighborhood_return` exposes one `event` stream of interpolated normalized-ball exit times plus event count, period/maxima/amplitude aggregates, and per-variable `{var}0`/`range {var}` fields.
+The available names depend on the selected observer. Threshold-crossing families expose one `event` stream with `event time {index}`, retained `event {var} {index}` / `event {aux} {index}` geometry, event count, period/maxima/amplitude aggregates, and trajectory summaries. `clode.Observer.local_max` exposes two extrema streams (`localmax time/value` and `localmin time/value`) plus retained non-extrema-channel state/auxiliary coordinates, event count, and summary readouts. `clode.Observer.schmitt_trigger` and `clode.Observer.normalized_schmitt_trigger` expose separate `up transition` and `down transition` streams with retained state/auxiliary geometry plus event count, period/maxima aggregates, Schmitt duration/duty readouts, the Schmitt-local `active dip` readout, and amplitude. `clode.Observer.normalized_neighborhood_return` exposes one `event` stream of interpolated normalized-ball exit times plus retained state/auxiliary geometry, event count, period/maxima/amplitude aggregates, and per-variable `{var}0`/`range {var}` fields.
 
 Trajectory-summary outputs use model variable names directly (for example `max v`, `min v`, `max dv/dt`). `clode.Observer.normalized_neighborhood_return` additionally emits per-variable center and scale fields as `{var}0` and `range {var}` (for example `v0`, `range v`).
 
