@@ -32,7 +32,7 @@ Use `.design/ideas.md` as the short living board. This file is the longer ration
 - Keep the current semantic package split: `problem`, `observers`, `simulation`, `runtime`, and `_opencl`.
 - Keep the root compatibility barrels for now; they still carry import-compatibility and collaborator-orientation value.
 - Treat `InitialValueProblem`, first-pass solver state, observer definitions, stepper definitions, and the output-policy split as landed foundations.
-- Treat shared-final-time continuation via `advance_tspan_to_attained_final_time()` as the current exact-continuation convenience path, and keep broader diverged-time work deferred.
+- Treat the landed per-item `t0` plus `shift_tspan()` model as the continuation foundation, and keep broader chunk-loop or diverged-time orchestration work deferred.
 - Treat the current fixed-step, adaptive-time, and observer-helper adoption slice as landed; future helper rollout should be evidence-driven rather than speculative.
 
 ## Recommended Near-Term Sequence

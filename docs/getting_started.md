@@ -16,11 +16,12 @@ The main workflow is:
 3. broadcast an ensemble with `set_ensemble(...)`
 4. run `transient()`, `features()`, or `trajectory()`
 
-Repeated runs are stateful by default, but exact continuation also depends on how
-the requested `t_span` is advanced between calls. See `continuation.md` before
-building long-running split-window workflows.
+Repeated runs with the default `update_x0=True` continue both state and the nominal
+time window. See [continuation.md](continuation.md) when you want to reset the
+timebase, branch from a saved state, or inspect the difference between
+`get_tspan()` and `get_final_time()`.
 
-## Example: Van der Pol period measurement
+## Example: Van der Pol summaries without stored trajectories
 
 [The Van der Pol oscillator](https://en.wikipedia.org/wiki/Van_der_Pol_oscillator) is
 
@@ -50,7 +51,7 @@ def van_der_pol(
     derivatives[1] = mu * (1.0 - x * x) * y - x
 ```
 
-The feature example below measures oscillation period for an ensemble of `mu` values without storing full trajectories.
+The first example below uses the default summary observer to measure one simple readout across an ensemble of `mu` values without storing full trajectories. Richer event observers for periods, threshold crossings, and extrema are covered in [feature_extraction.md](feature_extraction.md).
 
 ```python
 from typing import List
@@ -82,17 +83,15 @@ integrator = clode.FeatureSimulator(
     rhs_equation=van_der_pol,
     variables={"x": 1.0, "y": 1.0},
     parameters={"mu": 0.1},
-    observer=clode.Observer.normalized_schmitt_trigger,
-    stepper=clode.Stepper.dormand_prince,
     t_span=t_span,
 )
 
 integrator.set_ensemble(parameters={"mu": mu_values})
-integrator.transient()
-
-observer_output = integrator.features()
-print(observer_output.get_var_mean("period"))
+summary_output = integrator.features()
+print(summary_output.get_var_max("x"))
 ```
+
+Because `FeatureSimulator` defaults to `Observer.summary`, this is the lightest-weight way to compute means, minima, and maxima on the device. When you want periods, threshold events, or local maxima, continue to [feature_extraction.md](feature_extraction.md).
 
 ## Trajectories
 
@@ -108,7 +107,6 @@ trajectory_simulator = clode.TrajectorySimulator(
     rhs_equation=van_der_pol,
     variables={"x": 1.0, "y": 1.0},
     parameters={"mu": 0.1},
-    stepper=clode.Stepper.dormand_prince,
     t_span=t_span,
 )
 
@@ -130,6 +128,8 @@ Each `TrajectoryOutput` exposes:
 - `x`: structured array of state variables
 - `dx`: structured array of derivatives
 - `aux`: structured array of auxiliary variables when present
+
+A second `trajectory()` call with the default `update_x0=True` advances to the next window instead of rerunning the same one. See [continuation.md](continuation.md) when you want that handoff to be explicit.
 
 ## Ensemble inputs and layout
 

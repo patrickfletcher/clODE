@@ -23,12 +23,12 @@ def stable_linear(
     aux: List[float],
     wiener: List[float],
 ) -> None:
-     x: float = variables[0]
-     y: float = variables[1]
-     a: float = parameters[0]
-     b: float = parameters[1]
-     derivatives[0] = -a * x
-     derivatives[1] = -b * y
+    x: float = variables[0]
+    y: float = variables[1]
+    a: float = parameters[0]
+    b: float = parameters[1]
+    derivatives[0] = -a * x
+    derivatives[1] = -b * y
 
 def make_trajectory_simulator(t_span: tuple[float, float]) -> clode.TrajectorySimulator:
     return clode.TrajectorySimulator(
@@ -78,7 +78,7 @@ def main() -> None:
 
     full_trajectory = full_trajectory_simulator.trajectory()
     first_window = split_trajectory_simulator.trajectory()
-    split_trajectory_simulator.advance_tspan_to_attained_final_time()
+    # Repeated calls continue both state and time by default.
     second_window = split_trajectory_simulator.trajectory()
 
     stitched_time, stitched_state = concatenate_trajectory_segments(
@@ -104,7 +104,6 @@ def main() -> None:
 
     full_features = full_feature_simulator.features()
     split_feature_simulator.features()
-    split_feature_simulator.advance_tspan_to_attained_final_time()
     split_features = split_feature_simulator.features()
 
     assert full_features is not None

@@ -7,7 +7,7 @@
 [![Release](https://github.com/patrickfletcher/clODE/actions/workflows/python_package_release.yml/badge.svg)](https://github.com/patrickfletcher/clODE/actions/workflows/python_package_release.yml)
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/patrickfletcher/clODE/badge)](https://securityscorecards.dev/viewer/?uri=github.com/patrickfletcher/clODE)
 
-clODE is a Python package for large-scale simulation of ODE ensembles on OpenCL-capable CPUs and GPUs. It is built for parameter sweeps and ensemble studies where you need to run many related solves in parallel and extract features or summary statistics on the device, avoiding the memory and I/O cost of storing full trajectories.
+clODE is a Python package for large-scale simulation of ODE ensembles on OpenCL-capable CPUs and GPUs. It is built for parameter sweeps and ensemble studies where you need to run many related solves in parallel and extract features or summary statistics on the device, avoiding the memory and I/O cost of storing full trajectories. The package also includes numerically hardened single-precision timekeeping and summary accumulation paths for long ensemble workflows, with the tradeoffs documented in the numerical-accuracy guide.
 
 clODE is particularly useful when you want to:
 
@@ -32,7 +32,7 @@ An OpenCL runtime for your target device is required. See the [installation guid
 
 ## Quick Start
 
-Here is a minimal example: create an ensemble of Van der Pol oscillators with different damping parameters, run a feature extraction pass to measure oscillation period without storing trajectories, and report the mean period:
+Here is a minimal example: create an ensemble of Van der Pol oscillators with different damping parameters, run an on-device summary pass without storing trajectories, and report the window-mean `x` value for each ensemble member:
 
 ```python
 from typing import List
@@ -49,17 +49,15 @@ simulator = clode.FeatureSimulator(
     rhs_equation=van_der_pol,
     variables={"x": 1.0, "y": 1.0},
     parameters={"mu": 0.1},
-    observer=clode.Observer.normalized_schmitt_trigger,
-    t_span=(0.0, 1000.0),
+    t_span=(0.0, 200.0),
 )
 
 simulator.set_ensemble(parameters={"mu": np.array([0.01, 0.5, 2.0, 4.0])})
-simulator.transient()
-features = simulator.features()
-print(features.get_var_mean("period"))
+summary = simulator.features()
+print(summary.get_var_mean("x"))
 ```
 
-For a step-by-step walkthrough, concepts, and multiple workflow examples, see [Getting started](https://patrickfletcher.github.io/clODE/getting_started/).
+For a step-by-step walkthrough, richer event observers, and multiple workflow examples, see [Getting started](https://patrickfletcher.github.io/clODE/getting_started/) and [Feature extraction](https://patrickfletcher.github.io/clODE/feature_extraction/).
 
 ## Documentation
 
@@ -69,13 +67,15 @@ Workflow guides:
 
 - [Feature extraction](https://patrickfletcher.github.io/clODE/feature_extraction/) — compute periods, extrema, and event data without storing trajectories
 - [Trajectory simulation](https://patrickfletcher.github.io/clODE/trajectory_simulation/) — store time samples for plotting and inspection
+- [Continuation and repeated runs](https://patrickfletcher.github.io/clODE/continuation/) — default continued solves, explicit resets, and split-window behavior
 - [Specifying ODE systems](https://patrickfletcher.github.io/clODE/specifying_odes/) — Python, OpenCL, and XPP model definition
-- [Stochastic simulation](https://patrickfletcher.github.io/clODE/Ornstein-Uhlenbeck_process.md) — add Wiener-process terms
+- [Stochastic simulation](https://patrickfletcher.github.io/clODE/Ornstein-Uhlenbeck_process/) — add Wiener-process terms
 
 Reference and examples:
 
 - [API reference](https://patrickfletcher.github.io/clODE/api_reference/)
 - [Examples](https://patrickfletcher.github.io/clODE/examples/)
+- [Numerical accuracy](https://patrickfletcher.github.io/clODE/numerical_accuracy/)
 - [Performance notes](https://patrickfletcher.github.io/clODE/performance_notes/)
 - [Full docs](https://patrickfletcher.github.io/clODE/)
 

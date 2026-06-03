@@ -31,6 +31,8 @@ The package works through three complementary workflows: (1) advancing an ensemb
 
 Models can be supplied as typed Python right-hand-side functions, OpenCL source files, or XPP models. The observer architecture includes seven canonical families—summary statistics, threshold crossing (absolute and warmup-normalized), Schmitt triggering, local extrema, and neighborhood-return triggers—designed to cover common dynamical-systems workflows without storing full trajectories.
 
+The package also emphasizes numerically robust single-precision ensemble workflows by keeping solver time and on-device summaries in compensated relative forms where that materially improves long OpenCL runs.
+
 # Statement of Need
 
 Large-scale ensemble simulation of dynamical systems is a common research need: parameter sweeps, bifurcation analysis, sensitivity studies, and repeated stochastic realizations all require running many related ODE solves. However, storing trajectories for every ensemble member is often unnecessary and can dominate both memory and runtime, especially when the research question is about ensemble behavior or specific features such as oscillation periods, local extrema, or event detection rather than full trajectory inspection.
@@ -66,7 +68,7 @@ without mandatory full-trajectory storage.
 
 clODE is currently in use for computational neuroscience workflows including pituitary-cell population studies [@fletcher:2016; @fletcher:2017], bifurcation parameter sweeps, and phase-response analysis where large ensembles of closely related ODE models must be explored efficiently. The package's support for XPP model ingestion makes it a natural bridge between XPPAUT-based model authoring and OpenCL-backed ensemble execution on modern hardware.
 
-Near-term development focuses on strengthening the public evidence base and user experience. Key priorities are: benchmark and reproducibility material that demonstrates speedups on real research workloads; clearer documentation of feature-extraction observer trade-offs through numerical accuracy studies; continued refinement of continuation and state-management semantics so the public API surface accurately reflects the internal solver state model; and expanded guidance for common dynamical-systems workflows such as bifurcation analysis and phase-space exploration.
+Near-term development focuses on strengthening the public evidence base and user experience. Key priorities are: benchmark and reproducibility material that demonstrates speedups on real research workloads; clearer numerical-accuracy and observer-tradeoff material around the compensated single-precision paths already used in the package; and expanded guidance for common dynamical-systems workflows such as bifurcation analysis and phase-space exploration.
 
 The current architecture deliberately stays narrow—high-throughput ensemble simulation with on-device features—allowing it to stay maintainable and numerically robust rather than attempting to be a universal ODE solver platform.
 

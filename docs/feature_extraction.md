@@ -159,11 +159,20 @@ Use `get_feature_names()` to explore what is available for your observer configu
 
 ## Continuation and Repeated Calls
 
-By default, `features()` continues device state and observer state from where the previous call left off. The requested `t_span` does not auto-advance.
+With the default `update_x0=True`, a second `features()` call continues all three parts of the workflow that matter:
 
-For multi-window feature extraction:
+- the previous final state becomes the next initial state
+- the persistent observer state is kept
+- the solver timebase advances to the next nominal window using the attained per-item final times internally
 
-- Before calling `features()` again, advance the next window from `get_final_time()` instead of using the requested end time from the previous call.
-- This is especially important for event timestamps and non-autonomous systems.
+That is the simplest way to split one long feature-extraction run into repeated chunks.
+
+Use the explicit controls when you want something else:
+
+- `set_tspan((start, end))` resets the shared requested window and hidden timebase to `start`
+- `shift_x0()` and `shift_tspan()` expose the state and time handoff separately when you want to manage them yourself
+- `initialize_observer=True` reruns the observer initialization path instead of continuing the previous observer state
+
+`get_tspan()` reports the nominal requested window stored on the simulator. `get_final_time()` reports the attained absolute final time for each ensemble member. That distinction matters mostly when you are branching from an existing solve or resetting a workflow to a new shared start time.
 
 For full continuation semantics, solver diagnostics, and split-window examples, see [continuation.md](continuation.md).

@@ -4,9 +4,9 @@
 
 ## Understanding Device State and Outputs
 
-When you call `trajectory()`, clODE returns only the trajectory samples generated during that call. However, the **solver state persists on the device** between calls. This is important for continuation: if you run `trajectory()` a second time without explicitly advancing the time window, the solver will resume from where it left off, not restart.
+When you call `trajectory()`, clODE returns only the trajectory samples generated during that call. Each call produces a new `TrajectoryOutput` object for that window only; it does not concatenate past windows for you.
 
-Each call to `trajectory()` returns a new `TrajectoryOutput` object containing only the samples from that particular window—not the samples from all previous calls. The device tracks where the solver is in continuous time, so you need to explicitly advance the requested time window before calling `trajectory()` again if you want to continue from the attained final time.
+With the default `update_x0=True`, repeated `trajectory()` calls continue both state and time into the next nominal window automatically. Pass `update_x0=False` when you want to inspect a window without applying that default continuation handoff afterward.
 
 ## Example - FitzHugh-Nagumo oscillator
 
@@ -85,15 +85,15 @@ plt.show()
 
 ## Continuation and Split Windows
 
-By default, `trajectory()` continues the device state and returns only the samples from the current requested window. To reproduce one long run using multiple windows:
+By default, repeated `trajectory()` calls already march forward window by window: after each solve, clODE promotes `xf -> x0`, continues the hidden timebase from the attained per-item final times, and shifts the nominal requested window by one duration.
+
+To reproduce one long run using multiple windows:
 
 1. Run `trajectory()` once with your first time window.
-2. Get the attained final time from the device: `final_time = simulator.get_final_time()`.
-3. For the next window, set the requested `t_span` to start from that attained final time: `simulator.set_tspan((final_time, final_time + window_length))`.
-4. Run `trajectory()` again. The solver continues from `final_time` and returns only the new samples.
-5. Concatenate the returned windows and drop the duplicate boundary sample from later windows if needed.
+2. Run `trajectory()` again for each additional window.
+3. Concatenate the returned windows on the host and drop the duplicate boundary sample from later windows if needed.
 
-This is more accurate than using the originally requested end time, especially for adaptive steppers where the attained final time may differ from what was requested.
+Use `set_tspan((start, end))` only when you intentionally want to reset or branch to a new shared absolute start time. `get_tspan()` reports the nominal requested window; `get_final_time()` reports the attained absolute final time for each ensemble member.
 
 For a complete runnable example and detailed continuation semantics, see [continuation.md](continuation.md) and [examples/continuation.py](https://github.com/patrickfletcher/clODE/blob/main/examples/continuation.py).
 

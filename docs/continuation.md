@@ -1,125 +1,99 @@
 # Continuation and repeated runs
 
-clODE supports repeated calls on the same simulator object. For users, the important
-question is what state persists across calls and what has to be advanced explicitly.
+Repeated calls on the same simulator are stateful. With the default `update_x0=True`, clODE treats each new solve as the next chunk of the same run: it promotes the previous final state to the next initial state, advances the hidden solver timebase from the attained final times, and shifts the public `t_span` forward by one nominal duration.
 
-## What persists across calls
+## What continues automatically
 
-By default, repeated calls preserve solver-side state:
+By default, repeated calls preserve and advance solver-side state:
 
-- `x0` is replaced with the previous `xf` when `update_x0=True`
-- device `dt` is preserved as continuation/controller state
+- `transient()`, `trajectory()`, and `features()` all continue both state and time when `update_x0=True`
+- device `dt` is preserved as continuation or controller state
 - RNG state is preserved
-- `FeatureSimulator` also preserves the persistent observer state unless the observer is reinitialized
+- `FeatureSimulator` also preserves persistent observer state unless you explicitly reinitialize it
 
-For solver diagnostics after a run:
+If you pass `update_x0=False`, clODE still runs the requested window, but it does not perform that default state-and-time handoff afterward.
 
-- `get_dt()` returns the continuation step size currently stored on the device
-- `get_last_accepted_dt()` returns the width of the last accepted step
-- `get_step_count()` returns accepted step counts
-- `get_status()` returns the solver-owned stop reason
+## Requested window versus attained time
 
-For adaptive steppers, `get_dt()` and `get_last_accepted_dt()` can differ because the controller proposes a next step size after each accepted step.
+Two public time views are intentionally different:
 
-What does **not** change automatically is the requested time window. The next kernel
-still starts from whatever `t_span` is currently configured on the simulator.
+- `get_tspan()` returns the nominal requested window stored on the simulator
+- `get_final_time()` returns the attained absolute final time for each ensemble member from the last solve
 
-## Common continuation patterns
+They can differ after fixed-step overshoot, early termination, or diverged ensemble timing. In normal continued solves, clODE keeps using the attained per-item times internally even though `get_tspan()` still reports only the nominal window you requested.
 
-There are two common workflows:
+## The explicit controls
 
-- requested-window continuation: continue the solver state while reusing or shifting the
-  nominal window you asked for
-- exact absolute-time continuation: make the next window start from the attained final
-  time of the previous run
+- `set_tspan((start, end))` resets both the nominal requested window and the hidden solver timebase to `start`
+- `shift_x0()` promotes `xf -> x0` without changing the nominal requested window
+- `shift_tspan()` advances the nominal requested window by one duration and continues the solver-owned timebase from the attained per-item `tf`
 
-For autonomous systems, state continuation is often the main thing you care about.
-For non-autonomous systems, exact absolute time matters because the RHS depends on `t`.
+These helpers are useful when you want to split the state and time handoff yourself instead of relying on the default repeated-call behavior.
 
-## Fixed-step overshoot and `get_final_time()`
+## Common workflows
 
-Adaptive steppers such as Dormand-Prince target the requested end time exactly. Fixed-step
-methods do not: the attained final time can overshoot `t_span[1]` by up to one step.
+### Keep solving forward in equal windows
 
-For exact continuation across split windows, use the attained final time from
-`get_final_time()` rather than the requested endpoint. This matters for:
-
-- non-autonomous RHS evaluations
-- observer timestamps and elapsed-time statistics
-- exact parity between one long run and multiple split runs
-
-The convenience method `shift_tspan()` advances the requested window by its requested
-duration. That is still useful for requested-window continuation, but it is not guaranteed
-to produce exact absolute-time continuation after a fixed-step run or an early stop.
-
-## What to do in practice
-
-For exact split-window continuation:
-
-1. run `transient()`, `features()`, or `trajectory()`
-2. call `advance_tspan_to_attained_final_time()` when the ensemble shares one attained final time
-3. otherwise, read `get_final_time()` and choose an explicit next-window policy in user code
-4. run the next window
-
-## Trajectory continuation
-
-`TrajectorySimulator.trajectory()` returns only the samples from the current requested
-window. If you split a long run into windows, concatenate the returned `TrajectoryOutput`
-objects on the host and drop the duplicated boundary sample from the later window.
-
-## Feature continuation
-
-Repeated `features()` calls continue the persistent observer state by default. Exact continuation of
-time-based feature accumulators and event timestamps therefore requires the next requested
-window to start from the previous attained final time.
-
-For autonomous systems, prefer feature windows whose local origin stays near `t = 0` when
-absolute time is not part of the model. Large absolute times still coarsen stored float32
-absolute timestamps even when the elapsed-time statistics stay accurate.
-
-If you call `features()` repeatedly without advancing `t_span`, you are not asking for the
-same thing as a single long run. For time-based observers, that can make the accumulated
-statistics inconsistent.
-
-## Built-in exact-continuation helper
-
-For the common case where the ensemble shares one attained final time, use
-`advance_tspan_to_attained_final_time()`:
+For the common case, just call the same solve method again:
 
 ```python
-simulator.transient()
-simulator.advance_tspan_to_attained_final_time()
-simulator.transient()
+simulator.features()
+simulator.features()
+simulator.features()
 ```
 
-This keeps the current requested duration but moves the next window start to the attained
-`tf` from the previous solve. Unlike `shift_tspan()`, it uses the attained final time rather
-than the requested endpoint.
+With the default `update_x0=True`, each call continues the previous one.
 
-If ensemble members finish at different times, `advance_tspan_to_attained_final_time()`
-raises `ValueError`. In that case the caller still has to choose an explicit policy with
-`get_final_time()` and `set_tspan()` because there is no single correct shared-window update.
+### Reset or branch to a new shared start time
 
-## Current float32 limitation
+Use `set_tspan()` when you want the next solve to use a specific shared absolute start time:
 
-Fixed-step and adaptive methods both keep a compensated solve-relative elapsed pair and reconstruct
-absolute times from `t0 + elapsed`.
+```python
+simulator.set_tspan((200.0, 250.0))
+simulator.features(update_x0=False)
+```
 
-Those choices materially improve endpoint accuracy, elapsed-time bookkeeping, and split-window
-continuation behavior, but they do not change float32 spacing itself. At large absolute times,
-stored absolute timestamps are still quantized in `ulp(t)`-sized jumps, and once `dt < ulp(t)` no
-single float32 timestamp can resolve every intermediate step.
+This changes the timebase only. Use it together with a fresh simulator or new initial conditions when you also want a full state reset.
 
-Implications:
+### Manage the handoff explicitly
 
-- for autonomous systems, shorter windows or local origins near zero still give cleaner float32 timestamps
-- for non-autonomous systems or workflows that need fine absolute-time resolution, double precision remains the safer choice
+If you need host-side logic between solves, disable the automatic handoff and apply the pieces yourself:
 
-For a reproducible float32 demonstration of this behavior, plus comparisons against compensated and
-structured comparison baselines, see [numerical_accuracy.md](numerical_accuracy.md).
+```python
+simulator.transient(update_x0=False)
+simulator.shift_x0()
+simulator.shift_tspan()
+```
+
+Apply only one of those helpers when that is the behavior you want.
+
+## Trajectory windows
+
+`TrajectorySimulator.trajectory()` returns only the samples from the current window. If you split a long run into multiple windows, concatenate the returned `TrajectoryOutput` objects on the host and drop the duplicated boundary sample from later windows when needed.
+
+## Feature windows and observer state
+
+Repeated `features()` calls continue persistent observer state by default, which is what you want when multiple windows should behave like one long observation window.
+
+When you want a fresh observer pass on the current state instead, rerun the observer initialization path with `initialize_observer=True` or start from a fresh simulator configuration.
+
+## Solver diagnostics after a run
+
+- `get_status()` returns the solver-owned stop reason
+- `get_step_count()` returns accepted step counts
+- `get_last_accepted_dt()` returns the width of the last accepted step
+- `get_dt()` returns the continuation step size currently stored on the device
+
+For adaptive steppers, `get_dt()` and `get_last_accepted_dt()` can differ because the controller proposes the next step size after each accepted step.
+
+## Single-precision note
+
+clODE keeps solver time in compensated solve-relative form and lets observers consume that solver-owned elapsed time instead of rebuilding large float32 time differences on every step. That materially improves endpoint accuracy, periods, durations, and time-weighted summaries in long single-precision runs, especially when the solve window starts at a large absolute time.
+
+It does not change float32 spacing itself. Absolute timestamps can still quantize in `ulp(t)`-sized jumps, and double precision or shorter windows remain the safer choice when fine absolute-time fidelity is the requirement.
+
+For the detailed demonstrations and tradeoffs, see [numerical_accuracy.md](numerical_accuracy.md).
 
 ## Runnable example
 
-The repository includes a full example script in `examples/continuation.py` that compares a
-single long run against split-window continuation for both `TrajectorySimulator` and
-`FeatureSimulator`.
+The repository includes a full example script in `examples/continuation.py` that compares a single long run against split-window continuation for both `TrajectorySimulator` and `FeatureSimulator`.

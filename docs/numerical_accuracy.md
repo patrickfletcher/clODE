@@ -1,6 +1,8 @@
 # Numerical Accuracy in Single Precision
 
-clODE runs efficiently in single precision, but float32 arithmetic has several predictable limits that matter for long integrations and online feature extraction:
+clODE runs efficiently in single precision, and the live solver and observer paths already use compensated timekeeping and summary accumulation where they materially help long ensemble and feature-extraction workloads. This page is the deeper dive: it explains what those mitigation choices buy you, what they do not buy you, and when double precision or shorter windows are still the safer choice.
+
+Float32 arithmetic still has several predictable limits that matter for long integrations and online feature extraction:
 
 - time-weighted mean updates can stop responding to late small contributions
 - elapsed-time differences can lose significance when both endpoints are large
@@ -49,7 +51,7 @@ $$
 I_n = \sum_{k=1}^{n} \Delta t_k x_k
 $$
 
-with Neumaier compensation and compute the mean once at the end as $I_n / T_n$. A useful comparison baseline is the naive incremental mean recurrence `runningMeanTime(...)`.
+with Neumaier compensation and computes the mean once at the end as $I_n / T_n$. A useful comparison baseline is the naive incremental mean recurrence `runningMeanTime(...)`.
 
 The example script compares those two formulas on two synthetic float32 workloads:
 
@@ -63,7 +65,7 @@ With the default script parameters:
 - the compensated integral path returns about `1.00005007`, keeping the error near $7 \times 10^{-8}$
 - on the smooth oscillation, `runningMeanTime` drifts by about $7.1 \times 10^{-6}$ while the compensated integral path stays near $7.5 \times 10^{-8}$
 
-This is the clearest current empirical justification for the compensated helper used in `summary`.
+This is the clearest current empirical justification for the Neumaier-style integral path used in `summary`.
 
 ## Feature Windows and Elapsed-Time Origin
 
@@ -80,7 +82,7 @@ With `dt = 0.01` over a 100-unit feature window:
 - at `t0 = 1e4`, the `ti - t_start` path already biases the mean to about `1.02405` because the elapsed time snaps to `97.65625` instead of about `100`
 - at `t0 = 1e6`, the `ti - t_start` path collapses completely because the float32 absolute time no longer advances relative to `t_start`
 
-In clODE, the affected observers track elapsed feature time from accepted step sizes instead of reconstructing it as `ti - t_start` or `t_this - t_last` in float32. That keeps time-weighted means, periods, and durations much more stable when a solve window starts at a large absolute time.
+In clODE, the affected observers track elapsed feature time from solver-owned accepted step sizes instead of reconstructing it as `ti - t_start` or `t_this - t_last` in float32. That keeps time-weighted means, periods, and durations much more stable when a solve window starts at a large absolute time.
 
 What remains limited is absolute timestamp resolution itself. Stored event timestamps and other absolute-time outputs are still float32 values, so a large origin can still quantize them in `ulp(t)`-sized jumps even when elapsed-time statistics stay accurate. For autonomous workflows where absolute timestamps are only labels, starting near `t = 0` is still the simpler float32 setup.
 
@@ -125,8 +127,8 @@ So `t = t0 + step * dt` is a bounded-error float32 strategy, not a complete fix 
 
 The example keeps that structured fixed-step reconstruction as a comparison baseline because it is easy to inspect and it explains why direct repeated addition drifts. clODE uses one time-base story across steppers:
 
-- fixed-step steppers keep a compensated solve-relative elapsed pair and reconstruct stage and endpoint times from `t0 + elapsed`
-- adaptive steppers use the same compensated solve-relative elapsed pair, with accepted step sizes instead of one constant `dt`
+- fixed-step steppers keep a Kahan-style compensated solve-relative elapsed pair and reconstruct stage and endpoint times from `t0 + elapsed`
+- adaptive steppers use the same Kahan-style compensated solve-relative elapsed pair, with accepted step sizes instead of one constant `dt`
 
 That unified compensated bookkeeping materially improves endpoint and elapsed-time stability, but it still does not change the underlying float32 spacing of absolute timestamps.
 
@@ -199,7 +201,7 @@ This comparison shows why `local_max` uses bounded three-sample refinement, but 
 
 ## Neighborhood-Return Exit Times
 
-The neighborhood-return triggers use different geometry from the threshold families, so a one-variable threshold inversion is not the right timestamp model. The live `Observer.normalized_neighborhood_return` and `Observer.normalized_neighborhood_return` paths keep their existing sampled anchors `x0`, but when a step leaves the normalized neighborhood they linearly interpolate the full normalized state between the last inside sample and the first outside sample and solve for the boundary hit on that segment.
+The neighborhood-return triggers use different geometry from the threshold families, so a one-variable threshold inversion is not the right timestamp model. The live `Observer.normalized_neighborhood_return` path keeps its existing sampled anchor `x0`, but when a step leaves the normalized neighborhood it linearly interpolates the full normalized state between the last inside sample and the first outside sample and solves for the boundary hit on that segment.
 
 That reduces coarse-step bias in the stored exit times without changing the sampled-anchor contract. If the anchor location itself is the dominant source of error for a workflow, a smaller `dt` or double precision is still the safer fix than trying to infer too much from one coarse threshold-qualified step.
 
